@@ -72,6 +72,8 @@ jobs:
     name: release-candidates
     needs: [release-readiness]
     runs-on: ubuntu-latest
+    env:
+      SC_PRODUCTION_API_BASE_URL: https://cms.50sols.com/wp-json/safecontracts/v1/
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -85,6 +87,8 @@ jobs:
         run: |
           python3 scripts/package_plugin.py build --output dist/SafeContracts-plugin-candidate.zip
           python3 scripts/package_plugin.py check dist/SafeContracts-plugin-candidate.zip
+      - name: Verify production SafeContracts health
+        run: python3 scripts/verify_production_health.py "$SC_PRODUCTION_API_BASE_URL"
       - name: Bootstrap Android release platform
         run: bash scripts/bootstrap_android.sh
       - name: Create CI-only candidate signing key
@@ -113,7 +117,7 @@ jobs:
           flutter pub get
           flutter build apk --release \
             --dart-define=SC_ENV=production \
-            --dart-define=SC_API_BASE_URL=https://release-candidate.invalid/wp-json/safecontracts/v1/
+            --dart-define=SC_API_BASE_URL="$SC_PRODUCTION_API_BASE_URL"
       - name: Verify candidate APK and collect artifacts
         shell: bash
         run: |
@@ -128,12 +132,14 @@ jobs:
             dist/SafeContracts-plugin-candidate.zip \
             dist/SafeContracts-apk-release-candidate.apk \
             > dist/SHA256SUMS.txt
-          cat > dist/CANDIDATE-NOTICE.txt <<'EOF'
+          cat > dist/CANDIDATE-NOTICE.txt <<EOF
           These files are release-engineering candidates from the exact CI source.
-          The APK uses a short-lived CI-only signing key and a reserved .invalid HTTPS API URL.
-          It MUST NOT be copied to Last verified apk/ or deployed as production.
-          Production APK publication requires real signing secrets, production HTTPS API URL,
-          real-device evidence and business UAT evidence.
+          The APK targets the real production SafeContracts API at:
+          $SC_PRODUCTION_API_BASE_URL
+          It still uses a short-lived CI-only signing key and MUST NOT be copied to
+          Last verified apk/ or deployed as the production Android release.
+          Production APK publication still requires production signing secrets,
+          signature verification, real-device evidence and business UAT evidence.
           EOF
       - name: Upload release candidates
         uses: actions/upload-artifact@v4
