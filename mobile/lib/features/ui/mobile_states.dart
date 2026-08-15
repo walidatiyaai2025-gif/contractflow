@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/api/io_api_transport.dart';
+import '../../core/api/api_transport.dart';
 
 enum MobileFailureKind {
   unauthorized,
