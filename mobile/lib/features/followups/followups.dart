@@ -29,8 +29,8 @@ final class FollowUpQueueItem {
       contractId: _positiveInt(data['contract_id'], 'followup.contract_id'),
       reference: _optionalText(data['reference']),
       dueDate: _requiredDateText(data['due_date'], 'followup.due_date'),
-      expectedPaymentDate:
-          _optionalDateText(data['expected_payment_date'], 'followup.expected_payment_date'),
+      expectedPaymentDate: _optionalDateText(
+          data['expected_payment_date'], 'followup.expected_payment_date'),
       remainingAmount:
           _moneyText(data['remaining_amount'], 'followup.remaining_amount'),
       paymentStatus: _requiredText(data['status'], 'followup.status'),
@@ -59,13 +59,15 @@ final class FollowUpQueuePage {
     final ids = <int>{};
     for (final item in items) {
       if (!ids.add(item.paymentId)) {
-        throw const FormatException('follow-up queue contains duplicate payment IDs.');
+        throw const FormatException(
+            'follow-up queue contains duplicate payment IDs.');
       }
     }
     final sort = _requiredText(meta['sort'], 'meta.sort');
     final order = _requiredText(meta['order'], 'meta.order').toLowerCase();
     if (sort != 'due_date' || order != 'asc') {
-      throw const FormatException('Follow-up queue ordering is not deterministic.');
+      throw const FormatException(
+          'Follow-up queue ordering is not deterministic.');
     }
     return FollowUpQueuePage(
       items: List<FollowUpQueueItem>.unmodifiable(items),
@@ -103,11 +105,12 @@ final class FollowUpHistoryItem {
           _positiveInt(data['payment_id'], 'followup_history.payment_id'),
       state: _requiredText(data['state'], 'followup_history.state'),
       note: _boundedOptionalText(data['note'], 'followup_history.note', 5000),
-      promisedDate:
-          _optionalDateText(data['promised_date'], 'followup_history.promised_date'),
-      deferredUntil:
-          _optionalDateText(data['deferred_until'], 'followup_history.deferred_until'),
-      createdAt: _requiredText(data['created_at'], 'followup_history.created_at'),
+      promisedDate: _optionalDateText(
+          data['promised_date'], 'followup_history.promised_date'),
+      deferredUntil: _optionalDateText(
+          data['deferred_until'], 'followup_history.deferred_until'),
+      createdAt:
+          _requiredText(data['created_at'], 'followup_history.created_at'),
     );
   }
 }
@@ -122,7 +125,8 @@ final class FollowUpReceipt {
     final data = apiObjectMap(value, 'followup_receipt');
     return FollowUpReceipt(
       id: _positiveInt(data['id'], 'followup_receipt.id'),
-      paymentId: _positiveInt(data['payment_id'], 'followup_receipt.payment_id'),
+      paymentId:
+          _positiveInt(data['payment_id'], 'followup_receipt.payment_id'),
     );
   }
 }
@@ -176,13 +180,15 @@ final class FollowUpsRepository {
         throw const FormatException('Follow-up history payment ID mismatch.');
       }
       if (!ids.add(item.id)) {
-        throw const FormatException('Follow-up history contains duplicate IDs.');
+        throw const FormatException(
+            'Follow-up history contains duplicate IDs.');
       }
     }
     if (_requiredText(envelope.meta['sort'], 'meta.sort') != 'created_at' ||
         _requiredText(envelope.meta['order'], 'meta.order').toLowerCase() !=
             'desc') {
-      throw const FormatException('Follow-up history ordering is not deterministic.');
+      throw const FormatException(
+          'Follow-up history ordering is not deterministic.');
     }
     return List<FollowUpHistoryItem>.unmodifiable(history);
   }
@@ -201,8 +207,10 @@ final class FollowUpsRepository {
       throw ArgumentError('Follow-up operation is not supported.');
     }
     final normalizedNote = _inputOptionalText(note, 5000, 'note');
-    final normalizedPromised = _inputNullableDate(promisedDate, 'promised date');
-    final normalizedDeferred = _inputNullableDate(deferredUntil, 'deferred date');
+    final normalizedPromised =
+        _inputNullableDate(promisedDate, 'promised date');
+    final normalizedDeferred =
+        _inputNullableDate(deferredUntil, 'deferred date');
 
     switch (normalizedOperation) {
       case 'note':
@@ -212,7 +220,8 @@ final class FollowUpsRepository {
           throw ArgumentError('A note is required for this follow-up action.');
         }
         if (normalizedPromised != null || normalizedDeferred != null) {
-          throw ArgumentError('This follow-up action does not accept date fields.');
+          throw ArgumentError(
+              'This follow-up action does not accept date fields.');
         }
         break;
       case 'promise':
@@ -299,7 +308,8 @@ String? _optionalDateText(Object? value, String field) {
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
-    throw const FormatException('Optional follow-up text must be string or null.');
+    throw const FormatException(
+        'Optional follow-up text must be string or null.');
   }
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;
@@ -323,7 +333,8 @@ String? _inputOptionalText(String? value, int maxLength, String field) {
 String? _inputNullableDate(String? value, String field) {
   final text = value?.trim() ?? '';
   if (text.isEmpty) return null;
-  if (!_validDate(text)) throw ArgumentError('$field must use valid YYYY-MM-DD.');
+  if (!_validDate(text))
+    throw ArgumentError('$field must use valid YYYY-MM-DD.');
   return text;
 }
 
