@@ -41,6 +41,7 @@ final class Router
         NotificationsController::register();
         DevicesController::register();
         ContractMutationController::register();
+        MobileMutationController::register();
     }
 
     public static function health(WP_REST_Request $request): WP_REST_Response

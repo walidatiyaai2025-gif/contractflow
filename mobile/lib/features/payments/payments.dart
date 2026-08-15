@@ -54,13 +54,15 @@ final class SafeContractsPayment {
       dueDate: _requiredText(data['due_date'], 'payment.due_date'),
       expectedPaymentDate: _optionalText(data['expected_payment_date']),
       originalAmount:
-          _scalarText(data['original_amount'], 'payment.original_amount'),
-      paidAmount: _scalarText(data['paid_amount'], 'payment.paid_amount'),
+          _moneyText(data['original_amount'], 'payment.original_amount'),
+      paidAmount: _moneyText(data['paid_amount'], 'payment.paid_amount'),
       remainingAmount:
-          _scalarText(data['remaining_amount'], 'payment.remaining_amount'),
+          _moneyText(data['remaining_amount'], 'payment.remaining_amount'),
       status: _requiredText(data['status'], 'payment.status'),
       contractIsArchived: _boolish(
-          data['contract_is_archived'], 'payment.contract_is_archived'),
+        data['contract_is_archived'],
+        'payment.contract_is_archived',
+      ),
     );
   }
 }
@@ -103,6 +105,47 @@ final class PaymentPage {
   }
 }
 
+final class PaymentMethodOption {
+  const PaymentMethodOption({
+    required this.id,
+    required this.code,
+    required this.name,
+    required this.displayOrder,
+  });
+
+  final int id;
+  final String code;
+  final String name;
+  final int displayOrder;
+
+  factory PaymentMethodOption.fromData(Object? value) {
+    final data = apiObjectMap(value, 'payment_method');
+    return PaymentMethodOption(
+      id: _positiveInt(data['id'], 'payment_method.id'),
+      code: _boundedText(data['code'], 'payment_method.code', 64),
+      name: _boundedText(data['name'], 'payment_method.name', 191),
+      displayOrder: _nonNegativeInt(
+          data['display_order'], 'payment_method.display_order'),
+    );
+  }
+}
+
+final class CollectionReceipt {
+  const CollectionReceipt({required this.id, required this.paymentId});
+
+  final int id;
+  final int paymentId;
+
+  factory CollectionReceipt.fromData(Object? value) {
+    final data = apiObjectMap(value, 'collection_receipt');
+    return CollectionReceipt(
+      id: _positiveInt(data['id'], 'collection_receipt.id'),
+      paymentId:
+          _positiveInt(data['payment_id'], 'collection_receipt.payment_id'),
+    );
+  }
+}
+
 final class PaymentsRepository {
   PaymentsRepository(this.client);
 
@@ -130,7 +173,8 @@ final class PaymentsRepository {
     final result = PaymentPage.fromEnvelope(envelope);
     if (result.sort != 'due_date' || result.order != 'asc') {
       throw const FormatException(
-          'Payment paging metadata is not deterministic.');
+        'Payment paging metadata is not deterministic.',
+      );
     }
     return result;
   }
@@ -141,9 +185,81 @@ final class PaymentsRepository {
     final payment = SafeContractsPayment.fromData(envelope.data);
     if (payment.id != id) {
       throw const FormatException(
-          'Payment detail ID does not match the request.');
+        'Payment detail ID does not match the request.',
+      );
     }
     return payment;
+  }
+
+  Future<void> updateExpectedPaymentDate(int id, String? date) async {
+    if (id <= 0) throw ArgumentError('Payment ID must be positive.');
+    final normalized = _nullableDate(date, 'expected payment date');
+    await client.patch(
+      'payments/$id/expected-date',
+      body: <String, Object?>{'expected_payment_date': normalized},
+    );
+  }
+
+  Future<List<PaymentMethodOption>> paymentMethods() async {
+    final envelope = await client.get('reference-data');
+    final data = apiObjectMap(envelope.data, 'reference_data.data');
+    final rows = apiObjectList(
+      data['payment_methods'],
+      'reference_data.payment_methods',
+    );
+    final methods = rows.map(PaymentMethodOption.fromData).toList();
+    final ids = <int>{};
+    for (final method in methods) {
+      if (!ids.add(method.id)) {
+        throw const FormatException('payment methods contain duplicate IDs.');
+      }
+    }
+    return List<PaymentMethodOption>.unmodifiable(methods);
+  }
+
+  Future<CollectionReceipt> recordCollection({
+    required int paymentId,
+    required String amount,
+    required String collectionDate,
+    required int paymentMethodId,
+    String? reference,
+    int? proofMediaId,
+  }) async {
+    if (paymentId <= 0) throw ArgumentError('Payment ID must be positive.');
+    if (paymentMethodId <= 0) {
+      throw ArgumentError('Payment method ID must be positive.');
+    }
+    final normalizedAmount = amount.trim();
+    if (!_validPositiveMoney(normalizedAmount)) {
+      throw ArgumentError(
+        'Collection amount must be positive with up to 4 decimals.',
+      );
+    }
+    final normalizedDate = _requiredDate(collectionDate, 'collection date');
+    final normalizedReference =
+        _boundedOptionalText(reference, 191, 'reference');
+    if (proofMediaId != null && proofMediaId <= 0) {
+      throw ArgumentError('Proof media ID must be positive when supplied.');
+    }
+
+    final envelope = await client.post(
+      'collections/record',
+      body: <String, Object?>{
+        'payment_id': paymentId,
+        'amount': normalizedAmount,
+        'collection_date': normalizedDate,
+        'payment_method_id': paymentMethodId,
+        if (normalizedReference != null) 'reference': normalizedReference,
+        if (proofMediaId != null) 'proof_media_id': proofMediaId,
+      },
+    );
+    final receipt = CollectionReceipt.fromData(envelope.data);
+    if (receipt.paymentId != paymentId) {
+      throw const FormatException(
+        'Collection receipt payment ID does not match the request.',
+      );
+    }
+    return receipt;
   }
 }
 
@@ -155,6 +271,18 @@ int _positiveInt(Object? value, String field) {
   };
   if (parsed == null || parsed <= 0) {
     throw FormatException('$field must be a positive integer.');
+  }
+  return parsed;
+}
+
+int _nonNegativeInt(Object? value, String field) {
+  final parsed = switch (value) {
+    final int value => value,
+    final String value => int.tryParse(value),
+    _ => null,
+  };
+  if (parsed == null || parsed < 0) {
+    throw FormatException('$field must be non-negative.');
   }
   return parsed;
 }
@@ -182,20 +310,71 @@ String _requiredText(Object? value, String field) {
   throw FormatException('$field must be present.');
 }
 
-String _scalarText(Object? value, String field) {
-  if (value is String) return value;
-  if (value is num) return value.toString();
-  throw FormatException('$field must be scalar.');
+String _boundedText(Object? value, String field, int maxLength) {
+  final text = _requiredText(value, field);
+  if (text.length > maxLength) {
+    throw FormatException('$field is too long.');
+  }
+  return text;
+}
+
+String _moneyText(Object? value, String field) {
+  if (value is! String ||
+      !RegExp(r'^\d+(?:\.\d{4})$').hasMatch(value) ||
+      value.length > 40) {
+    throw FormatException(
+      '$field must be an exact four-decimal money string.',
+    );
+  }
+  return value;
 }
 
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
     throw const FormatException(
-        'Optional payment text must be string or null.');
+      'Optional payment text must be string or null.',
+    );
   }
   final text = value.trim();
   return text.isEmpty ? null : text;
+}
+
+String? _boundedOptionalText(String? value, int maxLength, String field) {
+  final text = value?.trim() ?? '';
+  if (text.isEmpty) return null;
+  if (text.length > maxLength) {
+    throw ArgumentError('$field is too long.');
+  }
+  return text;
+}
+
+String _requiredDate(String value, String field) {
+  final normalized = _nullableDate(value, field);
+  if (normalized == null) throw ArgumentError('$field is required.');
+  return normalized;
+}
+
+String? _nullableDate(String? value, String field) {
+  final normalized = value?.trim() ?? '';
+  if (normalized.isEmpty) return null;
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(normalized);
+  if (match == null) throw ArgumentError('$field must use YYYY-MM-DD.');
+  final parsed = DateTime.tryParse(normalized);
+  if (parsed == null ||
+      parsed.year != int.parse(match.group(1)!) ||
+      parsed.month != int.parse(match.group(2)!) ||
+      parsed.day != int.parse(match.group(3)!)) {
+    throw ArgumentError('$field must be a valid calendar date.');
+  }
+  return normalized;
+}
+
+bool _validPositiveMoney(String value) {
+  if (value.isEmpty || value.length > 32) return false;
+  if (!RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(value)) return false;
+  final digits = value.replaceAll('.', '').replaceFirst(RegExp(r'^0+'), '');
+  return digits.isNotEmpty;
 }
 
 String _order(Object? value) {
