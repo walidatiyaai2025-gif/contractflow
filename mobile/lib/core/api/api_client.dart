@@ -75,6 +75,20 @@ final class SafeContractsApiClient {
     return request('PATCH', path, query: query, body: body);
   }
 
+  Future<ApiEnvelope> postJson(
+    String path, {
+    required Map<String, Object?> body,
+  }) {
+    return post(path, body: body);
+  }
+
+  Future<ApiEnvelope> patchJson(
+    String path, {
+    required Map<String, Object?> body,
+  }) {
+    return patch(path, body: body);
+  }
+
   Future<ApiEnvelope> request(
     String method,
     String path, {
