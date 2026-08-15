@@ -25,7 +25,7 @@ $required = [
         "l10n.t('Username')",
         "l10n.t('Password')",
         "'Sign in'",
-        'SafeContractsLocalizations',
+        'context.scL10n',
     ],
     'mobile/lib/core/auth/mobile_token_store.dart' => [
         'FlutterSecureStorage',
