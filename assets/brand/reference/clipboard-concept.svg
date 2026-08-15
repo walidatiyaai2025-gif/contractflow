@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" role="img" aria-labelledby="title desc">
+<title id="title">SafeContracts clipboard brand illustration</title>
+<desc id="desc">Blue clipboard holding a SafeContracts contract document with a green tracking checkmark.</desc>
+<defs><filter id="s"><feDropShadow dx="0" dy="28" stdDeviation="24" flood-opacity=".2"/></filter></defs>
+<rect width="1200" height="1200" fill="#F4F7FA"/>
+<g transform="rotate(-8 600 610)" filter="url(#s)">
+  <rect x="245" y="180" width="710" height="840" rx="70" fill="#2F6FB2"/>
+  <rect x="300" y="245" width="600" height="700" rx="34" fill="#FFFFFF"/>
+  <rect x="430" y="130" width="340" height="150" rx="48" fill="#9FB3C8"/>
+  <circle cx="600" cy="170" r="42" fill="#F4F7FA" stroke="#7B93AA" stroke-width="16"/>
+  <text x="600" y="375" text-anchor="middle" font-family="Arial, sans-serif" font-size="53" font-weight="800" fill="#102A43">SAFECONTRACTS</text>
+  <text x="600" y="430" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" fill="#627D98">CONTRACT #1024</text>
+  <line x1="390" y1="475" x2="810" y2="475" stroke="#D9E2EC" stroke-width="6"/>
+  <path d="M435 620 L545 730 L770 505" fill="none" stroke="#24B34B" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="600" y="835" text-anchor="middle" font-family="Arial, sans-serif" font-size="70" font-weight="800" fill="#24B34B">TRACKED</text>
+  <line x1="420" y1="875" x2="780" y2="875" stroke="#D9E2EC" stroke-width="6"/>
+</g>
+<text x="600" y="1120" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#627D98">Contract • Receivables • Follow-up</text>
+</svg>
