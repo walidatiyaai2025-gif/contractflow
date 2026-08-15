@@ -76,3 +76,5 @@ This validation slice hardens the first ten SafeContracts mobile workstreams wit
 ## Regression evidence
 
 `mobile/test/mobile_validation_026_035_test.dart` provides deterministic behavioral coverage for every task ID in this slice. Existing P9 implementation suites remain unchanged and run alongside it through the repository Quality Gates (`dart format`, `flutter analyze`, `flutter test`, PHP regressions and repository standards).
+
+The final merge candidate is revalidated after the team's SC-P9-012 contract-details implementation landed on `main`, so the validation slice and the protected contract-detail workflow are tested together before merge.
