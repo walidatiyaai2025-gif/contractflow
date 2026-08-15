@@ -8,6 +8,7 @@ enum MobileDestination {
   payments,
   collections,
   followUps,
+  notifications,
   export,
   profile,
 }
@@ -45,6 +46,7 @@ final class MobileNavigationPolicy {
         MobileDestination.payments,
         MobileDestination.collections,
         MobileDestination.followUps,
+        MobileDestination.notifications,
       ]);
       if (config.features.excelExport &&
           session.can(viewReportsCapability) &&
