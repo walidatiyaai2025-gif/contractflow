@@ -29,7 +29,9 @@ final class FirebaseSettingsPage
 
     public static function handleSave(): void
     {
-        self::assertManage();
+        if (! current_user_can(Capabilities::MANAGE_SYSTEM)) {
+            wp_die(__('You do not have permission to manage Firebase settings.', 'safecontracts'));
+        }
         check_admin_referer(self::SAVE_ACTION);
         $status = 'saved';
         try {
@@ -140,7 +142,9 @@ final class FirebaseSettingsPage
 
     public static function render(): void
     {
-        self::assertManage();
+        if (! current_user_can(Capabilities::MANAGE_SYSTEM)) {
+            wp_die(__('You do not have permission to manage Firebase settings.', 'safecontracts'));
+        }
         $settings = new FirebaseSettings();
         $summary = $settings->safeSummary();
         $reference = $settings->credentialReference();
