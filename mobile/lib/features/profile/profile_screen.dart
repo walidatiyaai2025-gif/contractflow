@@ -155,7 +155,8 @@ final class _ProfileScreenState extends State<ProfileScreen> {
         child: ListTile(
           leading: const Icon(Icons.notifications_off_outlined),
           title: Text(
-            l10n.t('Push notifications are disabled by mobile configuration.'),
+            l10n.t(
+                'Push notifications are disabled by mobile configuration.'),
           ),
           subtitle: Text(
             l10n.t(
@@ -222,10 +223,10 @@ final class _ProfileScreenState extends State<ProfileScreen> {
                 if (!registered) ...[
                   const SizedBox(height: 12),
                   FilledButton.tonalIcon(
-                    onPressed: status.backendState ==
-                            MobilePushBackendState.registering
-                        ? null
-                        : () => unawaited(_retryPushRegistration()),
+                    onPressed:
+                        status.backendState == MobilePushBackendState.registering
+                            ? null
+                            : () => unawaited(_retryPushRegistration()),
                     icon: const Icon(Icons.refresh),
                     label: Text(l10n.t('Retry device registration')),
                   ),
@@ -284,7 +285,8 @@ final class _ProfileScreenState extends State<ProfileScreen> {
                     ? l10n.t('No last-seen timestamp')
                     : '${l10n.t('Last seen')}: ${device.lastSeenAt}',
               ),
-              trailing: Text(l10n.status(device.isActive ? 'active' : 'inactive')),
+              trailing: Text(
+                  l10n.status(device.isActive ? 'active' : 'inactive')),
             ),
           )
           .toList(growable: false),
