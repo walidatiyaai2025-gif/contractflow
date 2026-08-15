@@ -11,6 +11,14 @@ use SafeContracts\Roles\RoleRegistrar;
 final class NotificationRule
 {
     public const TRIGGER_BEFORE_DUE = 'before_due';
+    public const TRIGGER_DUE_DAY = 'due_day';
+    public const TRIGGER_OVERDUE = 'overdue';
+
+    /** @return list<string> */
+    public static function allowedTriggers(): array
+    {
+        return [self::TRIGGER_BEFORE_DUE, self::TRIGGER_DUE_DAY, self::TRIGGER_OVERDUE];
+    }
 
     /** @return list<string> */
     public static function allowedRecipientRoles(): array
@@ -44,8 +52,8 @@ final class NotificationRule
     public static function normalizeTrigger(mixed $value): string
     {
         $trigger = strtolower(trim((string) $value));
-        if ($trigger !== self::TRIGGER_BEFORE_DUE) {
-            throw new InvalidArgumentException('Unsupported notification trigger type for this delivery slice.');
+        if (! in_array($trigger, self::allowedTriggers(), true)) {
+            throw new InvalidArgumentException('Unsupported notification trigger type.');
         }
         return $trigger;
     }
@@ -60,6 +68,17 @@ final class NotificationRule
             throw new InvalidArgumentException('Before-due notification rules must use 1 to 365 days.');
         }
         return $days;
+    }
+
+    private static function normalizeDaysBeforeForTrigger(string $trigger, mixed $value): int
+    {
+        if ($trigger === self::TRIGGER_BEFORE_DUE) {
+            return self::normalizeDaysBefore($value);
+        }
+        if ($value === null || $value === '' || $value === 0 || $value === '0') {
+            return 0;
+        }
+        throw new InvalidArgumentException('Due-day and overdue notification rules must use zero days-before.');
     }
 
     /** @return list<string> */
@@ -97,6 +116,60 @@ final class NotificationRule
         throw new InvalidArgumentException('Notification boolean value is invalid.');
     }
 
+    public static function normalizeRepeatInterval(mixed $value): int
+    {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        if (filter_var($value, FILTER_VALIDATE_INT) === false) {
+            throw new InvalidArgumentException('Notification repeat interval must be an integer.');
+        }
+        $days = (int) $value;
+        if ($days < 0 || $days > 365) {
+            throw new InvalidArgumentException('Notification repeat interval must be between 0 and 365 days.');
+        }
+        return $days;
+    }
+
+    public static function normalizeMaxRepeats(mixed $value): int
+    {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        if (filter_var($value, FILTER_VALIDATE_INT) === false) {
+            throw new InvalidArgumentException('Notification max repeats must be an integer.');
+        }
+        $count = (int) $value;
+        if ($count < 0 || $count > 30) {
+            throw new InvalidArgumentException('Notification max repeats must be between 0 and 30.');
+        }
+        return $count;
+    }
+
+    public static function normalizeEscalationAfterRepeat(mixed $value, int $maxRepeats): int
+    {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        if (filter_var($value, FILTER_VALIDATE_INT) === false) {
+            throw new InvalidArgumentException('Notification escalation threshold must be an integer.');
+        }
+        $threshold = (int) $value;
+        if ($threshold < 0 || $threshold > $maxRepeats) {
+            throw new InvalidArgumentException('Notification escalation threshold must be between 0 and max repeats.');
+        }
+        return $threshold;
+    }
+
+    public static function normalizeTemplateCode(mixed $value): string
+    {
+        $code = sanitize_key(trim((string) $value));
+        if ($code === '' || strlen($code) > 100) {
+            throw new InvalidArgumentException('Notification template code is required and must not exceed 100 characters.');
+        }
+        return $code;
+    }
+
     /** @return array<string, mixed> */
     public static function normalizeInput(array $input): array
     {
@@ -106,13 +179,33 @@ final class NotificationRule
             throw new InvalidArgumentException('Notification rule must target at least one role or the assigned Accountant.');
         }
 
+        $trigger = self::normalizeTrigger($input['trigger_type'] ?? self::TRIGGER_BEFORE_DUE);
+        $repeatInterval = self::normalizeRepeatInterval($input['repeat_interval_days'] ?? 0);
+        $maxRepeats = self::normalizeMaxRepeats($input['max_repeats'] ?? 0);
+        if (($repeatInterval === 0) !== ($maxRepeats === 0)) {
+            throw new InvalidArgumentException('Notification repeat interval and max repeats must either both be zero or both be configured.');
+        }
+        $escalationAfter = self::normalizeEscalationAfterRepeat($input['escalation_after_repeat'] ?? 0, $maxRepeats);
+        $escalationRoles = self::normalizeRecipientRoles($input['escalation_roles'] ?? []);
+        if ($escalationAfter > 0 && $escalationRoles === []) {
+            throw new InvalidArgumentException('Escalation roles are required when an escalation threshold is configured.');
+        }
+        if ($escalationAfter === 0 && $escalationRoles !== []) {
+            throw new InvalidArgumentException('Escalation roles require a positive escalation threshold.');
+        }
+
         return [
             'code' => self::normalizeCode($input['code'] ?? ''),
             'name' => self::normalizeName($input['name'] ?? ''),
-            'trigger_type' => self::normalizeTrigger($input['trigger_type'] ?? self::TRIGGER_BEFORE_DUE),
-            'days_before' => self::normalizeDaysBefore($input['days_before'] ?? 0),
+            'trigger_type' => $trigger,
+            'days_before' => self::normalizeDaysBeforeForTrigger($trigger, $input['days_before'] ?? 0),
             'recipient_roles' => $roles,
             'target_assigned_accountant' => $assigned,
+            'repeat_interval_days' => $repeatInterval,
+            'max_repeats' => $maxRepeats,
+            'escalation_after_repeat' => $escalationAfter,
+            'escalation_roles' => $escalationRoles,
+            'template_code' => self::normalizeTemplateCode($input['template_code'] ?? 'payment_due'),
             'is_active' => self::normalizeBool($input['is_active'] ?? true),
         ];
     }
@@ -120,24 +213,69 @@ final class NotificationRule
     /** @param array<string, mixed> $rule */
     public static function matchesContractualDueDate(array $rule, mixed $dueDate, DateTimeImmutable $today): bool
     {
-        if (self::normalizeTrigger($rule['trigger_type'] ?? '') !== self::TRIGGER_BEFORE_DUE) {
-            return false;
-        }
-        $days = self::normalizeDaysBefore($rule['days_before'] ?? 0);
+        return self::occurrenceIndex($rule, $dueDate, $today) !== null;
+    }
+
+    /**
+     * Return 0 for the first trigger occurrence, 1..N for bounded repeats, or null when no reminder is due.
+     * Contractual due_date is the only date accepted by this calculation.
+     *
+     * @param array<string, mixed> $rule
+     */
+    public static function occurrenceIndex(array $rule, mixed $dueDate, DateTimeImmutable $today): ?int
+    {
+        $trigger = self::normalizeTrigger($rule['trigger_type'] ?? '');
         $date = trim((string) $dueDate);
-        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
-        if (! $parsed || $parsed->format('Y-m-d') !== $date) {
+        $due = DateTimeImmutable::createFromFormat('!Y-m-d', $date, $today->getTimezone());
+        if (! $due || $due->format('Y-m-d') !== $date) {
             throw new InvalidArgumentException('Notification contractual due date must be a valid YYYY-MM-DD date.');
         }
-        return $today->modify('+' . $days . ' days')->format('Y-m-d') === $date;
+        $current = DateTimeImmutable::createFromFormat('!Y-m-d', $today->format('Y-m-d'), $today->getTimezone());
+        if (! $current) {
+            throw new InvalidArgumentException('Notification current date is invalid.');
+        }
+
+        $base = match ($trigger) {
+            self::TRIGGER_BEFORE_DUE => $due->modify('-' . self::normalizeDaysBefore($rule['days_before'] ?? 0) . ' days'),
+            self::TRIGGER_DUE_DAY => $due,
+            self::TRIGGER_OVERDUE => $due->modify('+1 day'),
+        };
+
+        $delta = (int) $base->diff($current)->format('%r%a');
+        if ($delta < 0) {
+            return null;
+        }
+        if ($delta === 0) {
+            return 0;
+        }
+
+        $repeatInterval = self::normalizeRepeatInterval($rule['repeat_interval_days'] ?? 0);
+        $maxRepeats = self::normalizeMaxRepeats($rule['max_repeats'] ?? 0);
+        if ($repeatInterval === 0 || $maxRepeats === 0 || $delta % $repeatInterval !== 0) {
+            return null;
+        }
+        $index = intdiv($delta, $repeatInterval);
+        return $index <= $maxRepeats ? $index : null;
+    }
+
+    /** @param array<string, mixed> $rule */
+    public static function isEscalated(array $rule, int $occurrenceIndex): bool
+    {
+        $maxRepeats = self::normalizeMaxRepeats($rule['max_repeats'] ?? 0);
+        $threshold = self::normalizeEscalationAfterRepeat($rule['escalation_after_repeat'] ?? 0, $maxRepeats);
+        return $threshold > 0 && $occurrenceIndex >= $threshold;
     }
 
     /** @return array<string, mixed> */
     public static function fromRow(array $row): array
     {
         $roles = json_decode((string) ($row['recipient_roles_json'] ?? '[]'), true);
+        $escalationRoles = json_decode((string) ($row['escalation_roles_json'] ?? '[]'), true);
         if (! is_array($roles)) {
             $roles = [];
+        }
+        if (! is_array($escalationRoles)) {
+            $escalationRoles = [];
         }
 
         return [
@@ -148,6 +286,11 @@ final class NotificationRule
             'days_before' => (int) ($row['days_before'] ?? 0),
             'recipient_roles' => array_values(array_map('strval', $roles)),
             'target_assigned_accountant' => (bool) ($row['target_assigned_accountant'] ?? false),
+            'repeat_interval_days' => (int) ($row['repeat_interval_days'] ?? 0),
+            'max_repeats' => (int) ($row['max_repeats'] ?? 0),
+            'escalation_after_repeat' => (int) ($row['escalation_after_repeat'] ?? 0),
+            'escalation_roles' => array_values(array_map('strval', $escalationRoles)),
+            'template_code' => (string) ($row['template_code'] ?? 'payment_due'),
             'is_active' => (bool) ($row['is_active'] ?? false),
             'created_by' => isset($row['created_by']) ? (int) $row['created_by'] : null,
             'updated_by' => isset($row['updated_by']) ? (int) $row['updated_by'] : null,
