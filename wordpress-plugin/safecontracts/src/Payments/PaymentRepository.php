@@ -59,17 +59,22 @@ final class PaymentRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
-        $referenceSql = $reference === null ? 'NULL' : "'" . addslashes($reference) . "'";
-        $expectedSql = $expectedPaymentDate === null ? 'NULL' : "'" . addslashes($expectedPaymentDate) . "'";
-        $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (contract_id, sequence_no, reference, original_amount, due_date, expected_payment_date, created_by, updated_by, created_at, updated_at) VALUES (%d, %d, {$referenceSql}, %s, %s, {$expectedSql}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
-            $contractId,
-            $sequenceNo,
-            $originalAmount,
-            $dueDate,
-            $actorId,
-            $actorId
-        );
+        $referencePlaceholder = $reference === null ? 'NULL' : '%s';
+        $expectedPlaceholder = $expectedPaymentDate === null ? 'NULL' : '%s';
+        $statement = "INSERT INTO {$table} (contract_id, sequence_no, reference, original_amount, due_date, expected_payment_date, created_by, updated_by, created_at, updated_at) VALUES (%d, %d, {$referencePlaceholder}, %s, %s, {$expectedPlaceholder}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
+        $args = [$contractId, $sequenceNo];
+        if ($reference !== null) {
+            $args[] = $reference;
+        }
+        $args[] = $originalAmount;
+        $args[] = $dueDate;
+        if ($expectedPaymentDate !== null) {
+            $args[] = $expectedPaymentDate;
+        }
+        $args[] = $actorId;
+        $args[] = $actorId;
+
+        $sql = $wpdb->prepare($statement, ...$args);
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to create scheduled payment.');
         }
@@ -82,13 +87,15 @@ final class PaymentRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
-        $expectedSql = $expectedPaymentDate === null ? 'NULL' : "'" . addslashes($expectedPaymentDate) . "'";
-        $sql = $wpdb->prepare(
-            "UPDATE {$table} SET due_date = %s, expected_payment_date = {$expectedSql}, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d",
-            $dueDate,
-            $actorId,
-            $paymentId
-        );
+        $expectedPlaceholder = $expectedPaymentDate === null ? 'NULL' : '%s';
+        $statement = "UPDATE {$table} SET due_date = %s, expected_payment_date = {$expectedPlaceholder}, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d";
+        $args = [$dueDate];
+        if ($expectedPaymentDate !== null) {
+            $args[] = $expectedPaymentDate;
+        }
+        $args[] = $actorId;
+        $args[] = $paymentId;
+        $sql = $wpdb->prepare($statement, ...$args);
         $this->executeMutation($wpdb, $sql, 'Unable to update payment dates.');
     }
 
