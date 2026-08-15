@@ -103,7 +103,7 @@ final class PaymentsPage
                         <p class="safecontracts-field-row"><label><?php echo esc_html__('Due date', 'safecontracts'); ?><input type="date" name="due_date" required value="<?php echo esc_attr((string) ($selected['due_date'] ?? '')); ?>"></label><label><?php echo esc_html__('Expected payment date', 'safecontracts'); ?><input type="date" name="expected_payment_date" value="<?php echo esc_attr((string) ($selected['expected_payment_date'] ?? '')); ?>"></label></p>
                         <?php submit_button($selected ? __('Save payment dates', 'safecontracts') : __('Schedule payment', 'safecontracts')); ?>
                     </form>
-                    <?php else : ?><p class="notice notice-info inline"><?php echo esc_html__('Settled payments and payments on archived contracts are terminal and shown read-only.', 'safecontracts'); ?></p><?php endif; ?>
+                    <?php else : ?><p class="notice notice-info inline"><?php echo esc_html__('Settled payments are terminal and shown read-only. Payments on archived contracts are also terminal and shown read-only.', 'safecontracts'); ?></p><?php endif; ?>
                 </section>
                 <?php endif; ?>
             </div>
