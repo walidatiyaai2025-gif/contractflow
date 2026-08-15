@@ -25,6 +25,7 @@ REQUIRED_PATHS = (
     "scripts/verified_artifacts.py",
     "scripts/package_plugin.py",
     "scripts/bootstrap_android.sh",
+    "scripts/verify_production_health.py",
     "mobile/android-release/README.md",
     "mobile/android-release/app-build.gradle.kts",
     "mobile/pubspec.yaml",
@@ -158,16 +159,32 @@ def validate_ci_contract() -> int:
         "python3 scripts/release_readiness.py --check",
         "python3 scripts/p10_validation_027_031.py --check",
         "release-candidates:",
+        "SC_PRODUCTION_API_BASE_URL: https://cms.50sols.com/wp-json/safecontracts/v1/",
+        "python3 scripts/verify_production_health.py",
         "python3 scripts/package_plugin.py build",
         "python3 scripts/package_plugin.py check",
         "bash scripts/bootstrap_android.sh",
         "flutter build apk --release",
+        '--dart-define=SC_API_BASE_URL="$SC_PRODUCTION_API_BASE_URL"',
         "apksigner",
         "safecontracts-release-candidates",
     )
     missing = [command for command in required_commands if command not in workflow]
     if missing:
         fail("quality-gates workflow missing commands: " + ", ".join(missing))
+    if "release-candidate.invalid" in workflow:
+        fail("quality-gates must not build the active APK candidate against the obsolete .invalid endpoint")
+
+    health_script = (ROOT / "scripts/verify_production_health.py").read_text(encoding="utf-8")
+    for marker in (
+        "/wp-json/safecontracts/v1/",
+        '"service": "SafeContracts"',
+        '"status": "ok"',
+        '"api_version": "v1"',
+        "redirected to a different origin",
+    ):
+        if marker not in health_script:
+            fail(f"production health verifier missing marker: {marker}")
 
     retain = (ROOT / ".github/workflows/retain-verified-plugin.yml").read_text(encoding="utf-8")
     retain_markers = (
@@ -183,7 +200,7 @@ def validate_ci_contract() -> int:
     missing_retain = [marker for marker in retain_markers if marker not in retain]
     if missing_retain:
         fail("verified plugin retention workflow missing markers: " + ", ".join(missing_retain))
-    return len(required_commands) + len(retain_markers)
+    return len(required_commands) + 5 + len(retain_markers) + 1
 
 
 def validate_artifact_policy() -> int:
