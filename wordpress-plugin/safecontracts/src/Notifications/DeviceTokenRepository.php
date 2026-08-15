@@ -54,6 +54,24 @@ final class DeviceTokenRepository
         }
     }
 
+    public function deactivateOwnedById(int $userId, int $deviceId): void
+    {
+        global $wpdb;
+        if ($userId <= 0 || $deviceId <= 0) {
+            throw new InvalidArgumentException('Device deactivation requires valid user and device IDs.');
+        }
+        $table = $wpdb->prefix . 'safecontracts_device_tokens';
+        $result = $wpdb->query($wpdb->prepare(
+            "UPDATE {$table} SET is_active = 0, updated_at = %s WHERE user_id = %d AND id = %d AND is_active = 1",
+            gmdate('Y-m-d H:i:s'),
+            $userId,
+            $deviceId
+        ));
+        if ($result === false) {
+            throw new \RuntimeException('SafeContracts owned device deactivation failed.');
+        }
+    }
+
     /** @param list<int> $userIds @return list<array{id:int,user_id:int,token:string,platform:string}> */
     public function activeForUsers(array $userIds): array
     {
