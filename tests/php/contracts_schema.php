@@ -23,9 +23,9 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_contract_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
 
-sc_contract_assert(Migrator::LATEST_VERSION === '1.6.0', 'contract and payment schema migrations are current');
-sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.6.0', 'current schema version is stored');
-sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 9, 'contract, financial, history and payment schemas migrate without replay');
+sc_contract_assert(Migrator::LATEST_VERSION === '1.7.0', 'contract/payment/collection schema migrations are current');
+sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.7.0', 'current schema version is stored');
+sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'contract, financial, history, payment and collection schemas migrate without replay');
 
 $schema = $GLOBALS['sc_test_dbdelta'][3];
 sc_contract_assert(str_contains($schema, 'wp_safecontracts_contracts'), 'dedicated contracts table uses the WordPress prefix');
@@ -59,6 +59,11 @@ sc_contract_assert(str_contains($paymentSchema, 'expected_payment_date date NULL
 sc_contract_assert(str_contains($paymentSchema, 'original_amount decimal(20,4) NOT NULL DEFAULT 0.0000'), 'scheduled payment original amount uses fixed-point precision');
 sc_contract_assert(str_contains($paymentSchema, 'remaining_amount decimal(20,4) NOT NULL DEFAULT 0.0000'), 'scheduled payment remaining amount uses fixed-point precision');
 sc_contract_assert(str_contains($paymentSchema, 'UNIQUE KEY contract_sequence (contract_id, sequence_no)'), 'payment sequence is unique within a contract');
+
+$collectionSchema = $GLOBALS['sc_test_dbdelta'][9];
+sc_contract_assert(str_contains($collectionSchema, 'wp_safecontracts_payment_collections'), 'collection ledger extends payment model non-destructively');
+sc_contract_assert(str_contains($collectionSchema, 'payment_method_id bigint(20) unsigned NOT NULL'), 'collection ledger requires payment method');
+sc_contract_assert(str_contains($collectionSchema, 'proof_media_id bigint(20) unsigned NULL'), 'collection proof remains optional');
 
 $dbDeltaCount = count($GLOBALS['sc_test_dbdelta']);
 do_action('plugins_loaded');
