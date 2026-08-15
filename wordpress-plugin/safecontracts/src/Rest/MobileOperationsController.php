@@ -8,6 +8,7 @@ use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Collections\CollectionService;
 use SafeContracts\Contracts\ContractService;
+use SafeContracts\FollowUps\FollowUpService;
 use SafeContracts\Payments\PaymentService;
 use SafeContracts\Roles\Capabilities;
 use Throwable;
@@ -36,6 +37,12 @@ final class MobileOperationsController
             'methods' => WP_REST_Server::CREATABLE,
             'callback' => [self::class, 'recordCollection'],
             'permission_callback' => [self::class, 'canRecordCollection'],
+        ]);
+
+        register_rest_route(Router::NAMESPACE, '/payments/(?P<id>\d+)/followups/action', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [self::class, 'recordFollowUp'],
+            'permission_callback' => [self::class, 'canManageFollowUps'],
         ]);
     }
 
@@ -120,6 +127,35 @@ final class MobileOperationsController
         }
     }
 
+    public static function recordFollowUp(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        try {
+            $paymentId = ApiRequest::routeId($request);
+            $params = self::safeBody($request, ['id', 'action', 'note', 'date']);
+            $action = strtolower(trim((string) ($params['action'] ?? '')));
+            $note = $params['note'] ?? null;
+            $date = $params['date'] ?? null;
+            $service = new FollowUpService();
+
+            $id = match ($action) {
+                'note' => $service->addNote($paymentId, $note),
+                'promise' => $service->promiseToPay($paymentId, $date, $note),
+                'issue' => $service->markIssue($paymentId, $note),
+                'defer' => $service->defer($paymentId, $date, $note),
+                'escalate' => $service->escalate($paymentId, $note),
+                default => throw new InvalidArgumentException('Unsupported follow-up action.'),
+            };
+
+            return ApiResponse::ok(['followup_id' => $id, 'payment_id' => $paymentId], ['created' => true], 201);
+        } catch (InvalidArgumentException $error) {
+            return RequestGuard::invalid($error, 'safecontracts_followup_invalid');
+        } catch (DomainException $error) {
+            return RequestGuard::domain($error, 'safecontracts_followup_forbidden');
+        } catch (Throwable $error) {
+            return RequestGuard::failure($error, 'safecontracts_followup_failed');
+        }
+    }
+
     public static function canEditContract(): bool|WP_Error
     {
         return Permission::capability(Capabilities::EDIT_CONTRACTS, 'safecontracts_contract_edit_forbidden');
@@ -133,6 +169,11 @@ final class MobileOperationsController
     public static function canRecordCollection(): bool|WP_Error
     {
         return Permission::capability(Capabilities::MANAGE_COLLECTIONS, 'safecontracts_collection_forbidden');
+    }
+
+    public static function canManageFollowUps(): bool|WP_Error
+    {
+        return Permission::capability(Capabilities::MANAGE_FOLLOWUPS, 'safecontracts_followup_forbidden');
     }
 
     /** @param list<string> $allowed @return array<string,mixed> */
