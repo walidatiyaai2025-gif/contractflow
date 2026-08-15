@@ -19,8 +19,10 @@ $GLOBALS['sc_test_dbdelta'] = [];
 $GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_read_queries'] = [];
 $GLOBALS['sc_test_results'] = [];
+$GLOBALS['sc_test_result_queue'] = [];
 $GLOBALS['sc_test_admin_pages'] = [];
 $GLOBALS['sc_test_current_caps'] = [];
+$GLOBALS['sc_test_user_caps'] = [];
 $GLOBALS['sc_test_fired_actions'] = [];
 
 final class SC_Test_Role
@@ -42,6 +44,7 @@ final class SC_Test_Role
 final class SC_Test_Wpdb
 {
     public string $prefix = 'wp_';
+    public int $insert_id = 0;
 
     public function get_charset_collate(): string
     {
@@ -61,6 +64,9 @@ final class SC_Test_Wpdb
     public function query(string $sql): int|false
     {
         $GLOBALS['sc_test_queries'][] = $sql;
+        if (str_starts_with(ltrim($sql), 'INSERT INTO') && $this->insert_id === 0) {
+            $this->insert_id = 1001;
+        }
         return 1;
     }
 
@@ -68,6 +74,10 @@ final class SC_Test_Wpdb
     {
         unset($output);
         $GLOBALS['sc_test_read_queries'][] = $sql;
+        if ($GLOBALS['sc_test_result_queue'] !== []) {
+            $rows = array_shift($GLOBALS['sc_test_result_queue']);
+            return is_array($rows) ? $rows : [];
+        }
         return $GLOBALS['sc_test_results'];
     }
 }
@@ -116,6 +126,7 @@ function update_option(string $key, mixed $value, bool $autoload = true): bool {
 function get_role(string $slug): ?SC_Test_Role { return $GLOBALS['sc_test_roles'][$slug] ?? null; }
 function add_role(string $slug, string $name, array $caps): SC_Test_Role { unset($name); $role = new SC_Test_Role($caps); $GLOBALS['sc_test_roles'][$slug] = $role; return $role; }
 function current_user_can(string $capability): bool { return (bool) ($GLOBALS['sc_test_current_caps'][$capability] ?? false); }
+function user_can(int $userId, string $capability): bool { return (bool) ($GLOBALS['sc_test_user_caps'][$userId][$capability] ?? false); }
 function get_current_user_id(): int { return 42; }
 function register_rest_route(string $namespace, string $route, array $args): void { $GLOBALS['sc_test_routes'][$namespace . $route] = $args; }
 function add_options_page(string $pageTitle, string $menuTitle, string $capability, string $menuSlug, callable $callback): string
