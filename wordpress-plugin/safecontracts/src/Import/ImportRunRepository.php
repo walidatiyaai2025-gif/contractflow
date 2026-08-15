@@ -107,23 +107,64 @@ final class ImportRunRepository
         return array_map(fn (array $row): array => $this->normalizeRun($row), is_array($rows) ? $rows : []);
     }
 
+    public function clearErrors(int $runId): void
+    {
+        global $wpdb;
+        if ($runId <= 0) {
+            throw new RuntimeException('Import run ID must be positive when clearing row errors.');
+        }
+        $table = $wpdb->prefix . 'safecontracts_import_errors';
+        if ($wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE import_run_id = %d", $runId)) === false) {
+            throw new RuntimeException('Unable to clear SafeContracts import row errors.');
+        }
+    }
+
     public function addError(int $runId, int $rowNumber, ?string $field, string $code, string $message): void
     {
         global $wpdb;
         $table = $wpdb->prefix . 'safecontracts_import_errors';
-        $fieldSql = $field === null || $field === '' ? 'NULL' : "'" . addslashes(substr($field, 0, 100)) . "'";
+        $fieldName = $field === null ? null : substr(trim(strip_tags($field)), 0, 100);
+        if ($fieldName === '') {
+            $fieldName = null;
+        }
         $code = substr(preg_replace('/[^a-z0-9_.-]/', '_', strtolower($code)) ?? 'invalid', 0, 80);
         $message = substr(trim(strip_tags($message)), 0, 1000);
-        $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, {$fieldSql}, %s, %s, UTC_TIMESTAMP())",
-            $runId,
-            max(0, $rowNumber),
-            $code,
-            $message
-        );
+
+        if ($fieldName === null) {
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, NULL, %s, %s, UTC_TIMESTAMP())",
+                $runId,
+                max(0, $rowNumber),
+                $code,
+                $message
+            );
+        } else {
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, %s, %s, %s, UTC_TIMESTAMP())",
+                $runId,
+                max(0, $rowNumber),
+                $fieldName,
+                $code,
+                $message
+            );
+        }
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to record SafeContracts import error.');
         }
+    }
+
+    public function errorCount(int $runId): int
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'safecontracts_import_errors';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT COUNT(*) AS error_count FROM {$table} WHERE import_run_id = %d",
+            $runId
+        ), ARRAY_A);
+        if (! is_array($rows) || ! isset($rows[0]) || ! is_array($rows[0])) {
+            return 0;
+        }
+        return max(0, (int) ($rows[0]['error_count'] ?? 0));
     }
 
     /** @return list<array<string,mixed>> */
