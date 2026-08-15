@@ -22,6 +22,40 @@ The verifier fails closed if required audit hooks, migration continuity, accessi
 - **SC-P10-015 UAT scenarios** — `ops/uat-scenarios.json` defines role-specific contract, scope, collection, follow-up, export, read-only, mobile and upgrade/restore acceptance flows with expected outcomes and evidence.
 - **SC-P10-016 Production release readiness** — CI runs the final verifier only after all primary Quality Gates pass.
 
+## Mandatory retained release artifacts
+
+Passing Quality Gates does not automatically place a binary in the repository. After the exact candidate has also satisfied the applicable environment/device acceptance checks, the release operator must retain the latest verified artifacts according to `AGENTS.md` and `docs/PRODUCTION_ENVIRONMENT_BUILD.md`:
+
+- `Last verified Plugin/SafeContracts-latest.zip`
+- `Last verified Plugin/SafeContracts-latest.zip.sha256`
+- `Last verified Plugin/VERIFIED.json`
+- `Last verified apk/SafeContracts-latest.apk`
+- `Last verified apk/SafeContracts-latest.apk.sha256`
+- `Last verified apk/VERIFIED.json`
+
+Only one current plugin ZIP and one current APK are kept in those folders. Historical packages belong in GitHub Releases.
+
+Use:
+
+```bash
+python3 scripts/verified_artifacts.py check
+```
+
+and, after both binaries are genuinely verified:
+
+```bash
+python3 scripts/verified_artifacts.py publish \
+  --plugin /path/to/SafeContracts.zip \
+  --apk /path/to/app-release.apk \
+  --source-sha <40-char-commit-sha> \
+  --quality-run-id <github-actions-run-id> \
+  --quality-gates-passed
+```
+
+The helper refuses APK publication while `mobile/android/` is absent, which prevents a debug/fabricated file from being recorded as production verified.
+
 ## Human/environment acceptance still required
 
-Repository automation cannot prove a real production database restore, live Firebase delivery, real-device APK behavior, or business-owner acceptance by itself. Before go-live, attach the environment-specific evidence described in the backup runbook and UAT manifest to the deployment/change record. The automated gate ensures the implementation contract and regression evidence are present and internally consistent; it does not fabricate external operational evidence.
+Repository automation cannot prove a real production database restore, live Firebase delivery, real-device APK behavior, Android release signing, or business-owner acceptance by itself. Before go-live, attach the environment-specific evidence described in the backup runbook, production environment build checklist and UAT manifest to the deployment/change record. The automated gate ensures the implementation contract and regression evidence are present and internally consistent; it does not fabricate external operational evidence.
+
+At the time the retained-artifact policy was introduced, the repository's Flutter tree did not yet include `mobile/android/`. A real production APK therefore remains blocked until the Android scaffold, production application identity and secret-safe release signing are added and reviewed.
