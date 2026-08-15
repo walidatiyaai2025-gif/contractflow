@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../config/mobile_config.dart';
@@ -11,6 +13,11 @@ import '../dashboard/dashboard_models.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
+import '../notifications/deep_link.dart';
+import '../notifications/notifications.dart';
+import '../notifications/notifications_screen.dart';
+import '../profile/profile.dart';
+import '../profile/profile_screen.dart';
 import '../session/session_controller.dart';
 import 'navigation_policy.dart';
 
@@ -22,6 +29,8 @@ final class SafeContractsShell extends StatefulWidget {
     required this.dashboardController,
     required this.customersController,
     required this.contractsController,
+    required this.notificationsController,
+    required this.profileController,
     required this.excelExportController,
     required this.usingConfigDefaults,
     required this.onClearSession,
@@ -34,6 +43,8 @@ final class SafeContractsShell extends StatefulWidget {
   final DashboardController dashboardController;
   final CustomersController customersController;
   final ContractsController contractsController;
+  final NotificationsController notificationsController;
+  final ProfileController profileController;
   final MobileExcelExportController excelExportController;
   final bool usingConfigDefaults;
   final VoidCallback onClearSession;
@@ -114,12 +125,17 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
               const <CustomerOption>[],
           onOpenContract: _openContract,
         ),
+      MobileDestination.notifications => NotificationsScreen(
+          controller: widget.notificationsController,
+          onOpenDeepLink: _openDeepLink,
+        ),
       MobileDestination.export => MobileExcelExportScreen(
           controller: widget.excelExportController,
         ),
-      MobileDestination.profile => _ProfileView(
+      MobileDestination.profile => ProfileScreen(
           session: widget.session,
           config: widget.config,
+          controller: widget.profileController,
           onClearSession: widget.onClearSession,
         ),
       _ => _PlannedDestination(destination: _selected),
@@ -146,6 +162,28 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
         builder: (context) => _ContractEditHandoff(contractId: contractId),
       ),
     );
+  }
+
+  void _openDeepLink(SafeContractsDeepLink link) {
+    final destination = switch (link.destination) {
+      SafeContractsDeepLinkDestination.payments => MobileDestination.payments,
+      SafeContractsDeepLinkDestination.contracts => MobileDestination.contracts,
+      SafeContractsDeepLinkDestination.customers => MobileDestination.customers,
+      SafeContractsDeepLinkDestination.followUps => MobileDestination.followUps,
+    };
+    if (!widget.policy.destinations.contains(destination)) {
+      return;
+    }
+    setState(() => _selected = destination);
+    switch (link.destination) {
+      case SafeContractsDeepLinkDestination.contracts:
+        _openContract(link.resourceId);
+      case SafeContractsDeepLinkDestination.customers:
+        unawaited(widget.customersController.openCustomer(link.resourceId));
+      case SafeContractsDeepLinkDestination.payments:
+      case SafeContractsDeepLinkDestination.followUps:
+        break;
+    }
   }
 }
 
@@ -185,41 +223,6 @@ final class _ContractEditHandoff extends StatelessWidget {
   }
 }
 
-final class _ProfileView extends StatelessWidget {
-  const _ProfileView({
-    required this.session,
-    required this.config,
-    required this.onClearSession,
-  });
-
-  final SafeContractsSession session;
-  final SafeContractsMobileConfig config;
-  final VoidCallback onClearSession;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Text('Session', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 12),
-        Text('User ID: ${session.userId}'),
-        Text('Data scope: ${session.scope.name}'),
-        Text('Page size: ${config.defaultPageSize}'),
-        if (config.supportText.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(config.supportText),
-        ],
-        const SizedBox(height: 24),
-        FilledButton.tonal(
-          onPressed: onClearSession,
-          child: const Text('Clear local session state'),
-        ),
-      ],
-    );
-  }
-}
-
 final class _PlannedDestination extends StatelessWidget {
   const _PlannedDestination({required this.destination});
 
@@ -248,6 +251,7 @@ String _label(MobileDestination destination) {
     MobileDestination.payments => 'Payments',
     MobileDestination.collections => 'Collections',
     MobileDestination.followUps => 'Follow-up',
+    MobileDestination.notifications => 'Notifications',
     MobileDestination.export => 'Excel export',
     MobileDestination.profile => 'Profile',
   };
@@ -261,6 +265,7 @@ IconData _icon(MobileDestination destination) {
     MobileDestination.payments => Icons.event_note_outlined,
     MobileDestination.collections => Icons.payments_outlined,
     MobileDestination.followUps => Icons.follow_the_signs_outlined,
+    MobileDestination.notifications => Icons.notifications_outlined,
     MobileDestination.export => Icons.file_download_outlined,
     MobileDestination.profile => Icons.person_outline,
   };
