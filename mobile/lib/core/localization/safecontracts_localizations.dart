@@ -23,7 +23,8 @@ final class SafeContractsLocalizations {
 
   bool get isArabic => locale.languageCode.toLowerCase() == 'ar';
 
-  String t(String english) => isArabic ? (_arabic[english] ?? english) : english;
+  String t(String english) =>
+      isArabic ? (_arabic[english] ?? english) : english;
 
   String status(String value) {
     final normalized = value.trim().toLowerCase();
@@ -60,9 +61,8 @@ final class SafeContractsLocalizations {
     return isArabic ? '$value $token' : '$token $value';
   }
 
-  String pageShown(int page, int count) => isArabic
-      ? 'الصفحة $page • معروض $count'
-      : 'Page $page • $count shown';
+  String pageShown(int page, int count) =>
+      isArabic ? 'الصفحة $page • معروض $count' : 'Page $page • $count shown';
 
   String pageNumber(int page) => isArabic ? 'الصفحة $page' : 'Page $page';
 
@@ -72,17 +72,14 @@ final class SafeContractsLocalizations {
 
   String contractNumber(int id) => isArabic ? 'عقد #$id' : 'Contract #$id';
 
-  String collectionRecorded(int id) => isArabic
-      ? 'تم تسجيل التحصيل #$id.'
-      : 'Collection #$id recorded.';
+  String collectionRecorded(int id) =>
+      isArabic ? 'تم تسجيل التحصيل #$id.' : 'Collection #$id recorded.';
 
-  String followUpRecorded(int id) => isArabic
-      ? 'تم تسجيل المتابعة #$id.'
-      : 'Follow-up #$id recorded.';
+  String followUpRecorded(int id) =>
+      isArabic ? 'تم تسجيل المتابعة #$id.' : 'Follow-up #$id recorded.';
 
-  String loadingCustomer(int id) => isArabic
-      ? 'جارٍ تحميل العميل #$id…'
-      : 'Loading customer #$id…';
+  String loadingCustomer(int id) =>
+      isArabic ? 'جارٍ تحميل العميل #$id…' : 'Loading customer #$id…';
 
   String rawMessage(String message) =>
       isArabic ? (_arabic[message] ?? message) : message;
@@ -125,7 +122,8 @@ const Map<String, String> _arabic = <String, String>{
   'Profile': 'الملف الشخصي',
   'Environment': 'البيئة',
   'Retry session': 'إعادة محاولة الجلسة',
-  'SafeContracts mobile is unavailable.': 'تطبيق SafeContracts غير متاح حالياً.',
+  'SafeContracts mobile is unavailable.':
+      'تطبيق SafeContracts غير متاح حالياً.',
   'Remote mobile configuration is unavailable. Safe defaults are active.':
       'تعذر تحميل إعدادات الموبايل من الخادم. يتم استخدام الإعدادات الآمنة الافتراضية.',
   'Sign in with your WordPress username and password':
@@ -167,7 +165,8 @@ const Map<String, String> _arabic = <String, String>{
   'Any status': 'أي حالة',
   'Due from': 'استحقاق من',
   'Due to': 'استحقاق إلى',
-  'No records match the current filters.': 'لا توجد سجلات تطابق الفلاتر الحالية.',
+  'No records match the current filters.':
+      'لا توجد سجلات تطابق الفلاتر الحالية.',
   'Draft': 'مسودة',
   'Active': 'نشط',
   'Completed': 'مكتمل',
@@ -208,7 +207,8 @@ const Map<String, String> _arabic = <String, String>{
   'Refresh contracts': 'تحديث العقود',
   'Unable to load contracts.': 'تعذر تحميل العقود.',
   'Contracts are not loaded yet.': 'لم يتم تحميل العقود بعد.',
-  'No contracts match the current filters.': 'لا توجد عقود تطابق الفلاتر الحالية.',
+  'No contracts match the current filters.':
+      'لا توجد عقود تطابق الفلاتر الحالية.',
   'Contract refresh failed.': 'فشل تحديث العقود.',
   'Start': 'البداية',
   'End': 'النهاية',
@@ -222,7 +222,8 @@ const Map<String, String> _arabic = <String, String>{
   'You do not have permission to view this contract.':
       'ليست لديك صلاحية لعرض هذا العقد.',
   'Unable to load contract': 'تعذر تحميل العقد',
-  'SafeContracts could not load this contract.': 'تعذر على SafeContracts تحميل هذا العقد.',
+  'SafeContracts could not load this contract.':
+      'تعذر على SafeContracts تحميل هذا العقد.',
   'Contract ID': 'رقم العقد',
   'Customer & assignment': 'العميل والتكليف',
   'Assigned accountant user ID': 'رقم مستخدم المحاسب المكلّف',
@@ -254,7 +255,8 @@ const Map<String, String> _arabic = <String, String>{
   'Forbidden': 'غير مسموح',
   'Conflict': 'تعارض',
   'Error': 'خطأ',
-  'No payments match the authorized filters.': 'لا توجد دفعات تطابق الفلاتر المسموح بها.',
+  'No payments match the authorized filters.':
+      'لا توجد دفعات تطابق الفلاتر المسموح بها.',
   'Payment access denied': 'غير مسموح بالوصول للدفعة',
   'Payment not found': 'الدفعة غير موجودة',
   'Unable to load payment': 'تعذر تحميل الدفعة',
@@ -287,8 +289,10 @@ const Map<String, String> _arabic = <String, String>{
   'Collection date must be valid YYYY-MM-DD.':
       'يجب أن يكون تاريخ التحصيل صحيحاً بصيغة YYYY-MM-DD.',
   'Choose an active payment method.': 'اختر طريقة دفع نشطة.',
-  'Reference cannot exceed 191 characters.': 'لا يمكن أن يتجاوز المرجع 191 حرفاً.',
-  'Proof media ID must be a positive integer.': 'يجب أن يكون رقم مرفق الإثبات عدداً صحيحاً موجباً.',
+  'Reference cannot exceed 191 characters.':
+      'لا يمكن أن يتجاوز المرجع 191 حرفاً.',
+  'Proof media ID must be a positive integer.':
+      'يجب أن يكون رقم مرفق الإثبات عدداً صحيحاً موجباً.',
   'No follow-up items match the authorized filters.':
       'لا توجد عناصر متابعة تطابق الفلاتر المسموح بها.',
   'Add follow-up': 'إضافة متابعة',
@@ -301,13 +305,15 @@ const Map<String, String> _arabic = <String, String>{
   'Promised date YYYY-MM-DD': 'تاريخ السداد الموعود YYYY-MM-DD',
   'Deferred until YYYY-MM-DD': 'مؤجل حتى YYYY-MM-DD',
   'Record': 'تسجيل',
-  'A note is required for this follow-up action.': 'الملاحظة مطلوبة لهذا الإجراء.',
+  'A note is required for this follow-up action.':
+      'الملاحظة مطلوبة لهذا الإجراء.',
   'A valid YYYY-MM-DD date is required.': 'مطلوب تاريخ صحيح بصيغة YYYY-MM-DD.',
   'Follow-up note cannot exceed 5000 characters.':
       'لا يمكن أن تتجاوز ملاحظة المتابعة 5000 حرف.',
   'Loading notifications…': 'جارٍ تحميل الإشعارات…',
   'Notifications are unavailable.': 'الإشعارات غير متاحة.',
-  'No notifications are available for this account.': 'لا توجد إشعارات متاحة لهذا الحساب.',
+  'No notifications are available for this account.':
+      'لا توجد إشعارات متاحة لهذا الحساب.',
   'The workbook is generated by SafeContracts on the server using your current authorized dashboard filters.':
       'يتم إنشاء ملف Excel على خادم SafeContracts باستخدام فلاتر لوحة التحكم الحالية المسموح بها.',
   'Current filters': 'الفلاتر الحالية',
@@ -351,7 +357,8 @@ const Map<String, String> _arabic = <String, String>{
   'Retry device registration': 'إعادة محاولة تسجيل الجهاز',
   'Loading device state…': 'جارٍ تحميل حالة الجهاز…',
   'Device state is unavailable.': 'حالة الجهاز غير متاحة.',
-  'No registered devices are currently visible.': 'لا توجد أجهزة مسجلة ظاهرة حالياً.',
+  'No registered devices are currently visible.':
+      'لا توجد أجهزة مسجلة ظاهرة حالياً.',
   'No last-seen timestamp': 'لا يوجد وقت لآخر ظهور',
   'Last seen': 'آخر ظهور',
   'Allowed': 'مسموح',
