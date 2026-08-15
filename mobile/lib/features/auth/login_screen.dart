@@ -102,8 +102,7 @@ final class _SafeContractsLoginScreenState
                                 enableSuggestions: false,
                                 decoration: InputDecoration(
                                   labelText: l10n.t('Username'),
-                                  prefixIcon:
-                                      const Icon(Icons.person_outline),
+                                  prefixIcon: const Icon(Icons.person_outline),
                                   border: const OutlineInputBorder(),
                                 ),
                                 validator: (value) =>
