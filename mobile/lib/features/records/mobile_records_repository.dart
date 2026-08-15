@@ -7,24 +7,6 @@ final class MobileRecordsRepository {
 
   final SafeContractsApiClient client;
 
-  Future<List<CustomerRecord>> customers({required int pageSize}) async {
-    final response = await client.get(
-      'customers',
-      query: <String, String>{
-        'page': '1',
-        'per_page': _pageSize(pageSize),
-        'sort': 'name',
-        'order': 'asc',
-      },
-    );
-    return _list(response, 'customers.data', CustomerRecord.fromData);
-  }
-
-  Future<CustomerRecord> customer(int id) async {
-    final response = await client.get('customers/$id');
-    return CustomerRecord.fromData(response.data);
-  }
-
   Future<List<ContractRecord>> contracts(
     DashboardFilters filters, {
     required int pageSize,
