@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace SafeContracts\Database;
 
 use SafeContracts\Database\Migrations\Migration0001Foundation;
+use SafeContracts\Database\Migrations\Migration0002MasterData;
 use RuntimeException;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.0.0';
+    public const LATEST_VERSION = '1.1.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
         '1.0.0' => Migration0001Foundation::class,
+        '1.1.0' => Migration0002MasterData::class,
     ];
 
     public function maybeMigrate(): void
