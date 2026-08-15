@@ -36,6 +36,10 @@ MobileFailureKind classifyMobileFailure(Object error) {
 
 enum MobileStateKind { loading, empty, error, offline, forbidden }
 
+bool mobileStateAllowsRetry(MobileStateKind kind) {
+  return kind != MobileStateKind.loading && kind != MobileStateKind.forbidden;
+}
+
 final class SafeContractsStateView extends StatelessWidget {
   const SafeContractsStateView({
     required this.kind,
@@ -51,7 +55,14 @@ final class SafeContractsStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (kind == MobileStateKind.loading) {
-      return const Center(child: CircularProgressIndicator());
+      return Semantics(
+        container: true,
+        liveRegion: true,
+        label: message,
+        child: const Center(
+          child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+        ),
+      );
     }
 
     final icon = switch (kind) {
@@ -61,24 +72,32 @@ final class SafeContractsStateView extends StatelessWidget {
       MobileStateKind.error => Icons.error_outline,
       MobileStateKind.loading => Icons.hourglass_empty,
     };
+    final retry = mobileStateAllowsRetry(kind) ? onRetry : null;
+    final isUrgent = kind == MobileStateKind.error ||
+        kind == MobileStateKind.offline ||
+        kind == MobileStateKind.forbidden;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 44),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              FilledButton.tonal(
-                onPressed: onRetry,
-                child: const Text('Retry'),
-              ),
+    return Semantics(
+      container: true,
+      liveRegion: isUrgent,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 44, excludeFromSemantics: true),
+              const SizedBox(height: 12),
+              Text(message, textAlign: TextAlign.center),
+              if (retry != null) ...[
+                const SizedBox(height: 16),
+                FilledButton.tonal(
+                  onPressed: retry,
+                  child: const Text('Retry'),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
