@@ -7,14 +7,26 @@ final class DashboardRepository {
   final SafeContractsApiClient client;
 
   Future<DashboardOverview> loadOverview(DashboardFilters filters) async {
+    filters.validate();
     final response = await client.get(
       'dashboard',
       query: filters.toQuery(),
     );
-    return DashboardOverview.fromData(response.data);
+    final overview = DashboardOverview.fromData(response.data);
+    final customerId = filters.customerId;
+    if (customerId != null &&
+        overview.contracts.any((option) => option.customerId != customerId)) {
+      throw const FormatException(
+        'Dashboard contract options do not match the selected customer.',
+      );
+    }
+    return overview;
   }
 
   Future<List<ContractOption>> loadContractOptions(int? customerId) async {
+    if (customerId != null && customerId <= 0) {
+      throw ArgumentError.value(customerId, 'customerId', 'Must be positive.');
+    }
     final response = await client.get(
       'filters/contracts',
       query: <String, String>{
@@ -22,15 +34,28 @@ final class DashboardRepository {
       },
     );
     final items = apiObjectList(response.data, 'contract_options.data');
-    return List<ContractOption>.unmodifiable(
-      items.map(ContractOption.fromData),
-    );
+    final options = items.map(ContractOption.fromData).toList(growable: false);
+    final seen = <int>{};
+    for (final option in options) {
+      if (!seen.add(option.id)) {
+        throw const FormatException(
+          'Dependent contract options contain a duplicate ID.',
+        );
+      }
+      if (customerId != null && option.customerId != customerId) {
+        throw const FormatException(
+          'Dependent contract option does not match the selected customer.',
+        );
+      }
+    }
+    return List<ContractOption>.unmodifiable(options);
   }
 
   Future<DashboardLists> loadLists(
     DashboardFilters filters, {
     required int pageSize,
   }) async {
+    filters.validate();
     final boundedPageSize = pageSize.clamp(10, 100).toInt();
     final contractResponse = await client.get(
       'contracts',
