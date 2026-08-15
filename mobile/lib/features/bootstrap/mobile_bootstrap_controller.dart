@@ -4,6 +4,7 @@ import '../../core/api/api_client.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_repository.dart';
+import '../export/mobile_excel_export.dart';
 import '../navigation/navigation_policy.dart';
 import '../session/session_controller.dart';
 
@@ -18,6 +19,7 @@ final class MobileBootstrapController extends ChangeNotifier {
   SessionController? sessionController;
   MobileConfigController? configController;
   DashboardController? dashboardController;
+  MobileExcelExportController? excelExportController;
   MobileNavigationPolicy? navigationPolicy;
   String? message;
   bool usingConfigDefaults = false;
@@ -49,12 +51,18 @@ final class MobileBootstrapController extends ChangeNotifier {
     usingConfigDefaults = nextConfigController.state == MobileConfigState.error;
 
     final config = nextConfigController.config;
-    navigationPolicy = MobileNavigationPolicy.resolve(session, config);
+    final policy = MobileNavigationPolicy.resolve(session, config);
+    navigationPolicy = policy;
     final dashboard = DashboardController(
       repository: DashboardRepository(client),
       config: config,
     );
     dashboardController = dashboard;
+    excelExportController = MobileExcelExportController(
+      repository: MobileExcelExportRepository(client),
+      filtersProvider: () => dashboard.filters,
+      canExport: policy.destinations.contains(MobileDestination.export),
+    );
     await dashboard.load();
 
     state = MobileBootstrapState.ready;
@@ -64,7 +72,9 @@ final class MobileBootstrapController extends ChangeNotifier {
   void signOutLocalState() {
     sessionController?.reset();
     dashboardController?.dispose();
+    excelExportController?.dispose();
     dashboardController = null;
+    excelExportController = null;
     navigationPolicy = null;
     state = MobileBootstrapState.blocked;
     message = 'Local SafeContracts session state was cleared.';
@@ -76,6 +86,7 @@ final class MobileBootstrapController extends ChangeNotifier {
     sessionController?.dispose();
     configController?.dispose();
     dashboardController?.dispose();
+    excelExportController?.dispose();
     super.dispose();
   }
 }
