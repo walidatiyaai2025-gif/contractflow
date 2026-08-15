@@ -10,6 +10,7 @@ final class AdminShell
 {
     public const SLUG = 'safecontracts';
     public const STYLE_HANDLE = 'safecontracts-admin';
+    public const CORE_STYLE_HANDLE = 'safecontracts-admin-core';
 
     public static function register(): void
     {
@@ -36,6 +37,12 @@ final class AdminShell
             [],
             SAFECONTRACTS_VERSION
         );
+        wp_enqueue_style(
+            self::CORE_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-core.css',
+            [self::STYLE_HANDLE],
+            SAFECONTRACTS_VERSION
+        );
     }
 
     public static function isSafeContractsPage(): bool
@@ -59,16 +66,8 @@ final class AdminShell
                     <p><?php echo esc_html__('Secure contract, receivable, collection, follow-up and notification operations from one workspace.', 'safecontracts'); ?></p>
                 </div>
             </header>
-
-            <main class="safecontracts-admin-shell__content">
-                <section class="safecontracts-admin-card" aria-labelledby="safecontracts-workspace-title">
-                    <h2 id="safecontracts-workspace-title"><?php echo esc_html__('Workspace ready', 'safecontracts'); ?></h2>
-                    <p><?php echo esc_html__('The SafeContracts administration shell is active. Operational modules will be added here phase by phase without duplicating backend business logic.', 'safecontracts'); ?></p>
-                </section>
-                <section class="safecontracts-admin-card safecontracts-admin-card--security" aria-labelledby="safecontracts-security-title">
-                    <h2 id="safecontracts-security-title"><?php echo esc_html__('Server-side authorization', 'safecontracts'); ?></h2>
-                    <p><?php echo esc_html__('Navigation visibility is only a user-experience layer. SafeContracts capabilities and assignment scope remain authoritative for every protected action.', 'safecontracts'); ?></p>
-                </section>
+            <main class="safecontracts-admin-shell__content safecontracts-admin-shell__content--dashboard">
+                <?php DashboardPage::renderContent(); ?>
             </main>
         </div>
         <?php
