@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 3,
+  "settings": {
+    "appearanceTools": true,
+    "layout": {
+      "contentSize": "760px",
+      "wideSize": "1180px"
+    },
+    "color": {
+      "defaultPalette": false,
+      "palette": [
+        { "slug": "navy", "name": "SafeContracts Navy", "color": "#062d5b" },
+        { "slug": "blue", "name": "SafeContracts Blue", "color": "#0b5cc7" },
+        { "slug": "teal", "name": "SafeContracts Teal", "color": "#11bdb5" },
+        { "slug": "soft", "name": "SafeContracts Soft", "color": "#f6faff" },
+        { "slug": "white", "name": "White", "color": "#ffffff" }
+      ]
+    },
+    "typography": {
+      "fluid": true,
+      "fontFamilies": [
+        {
+          "slug": "system",
+          "name": "System UI",
+          "fontFamily": "Inter, Segoe UI, Tahoma, Arial, sans-serif"
+        }
+      ]
+    },
+    "spacing": {
+      "units": ["px", "rem", "%", "vw", "vh"]
+    }
+  },
+  "styles": {
+    "color": {
+      "background": "#ffffff",
+      "text": "#10233f"
+    },
+    "typography": {
+      "fontFamily": "var(--wp--preset--font-family--system)",
+      "lineHeight": "1.7"
+    }
+  }
+}
