@@ -6,11 +6,15 @@ namespace SafeContracts\Notifications;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use SafeContracts\Contracts\ContractMoney;
+use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\RoleRegistrar;
 
 final class NotificationRule
 {
     public const TRIGGER_BEFORE_DUE = 'before_due';
+    public const TRIGGER_DUE_DAY = 'due_day';
+    public const TRIGGER_OVERDUE = 'overdue';
 
     /** @return list<string> */
     public static function allowedRecipientRoles(): array
@@ -21,6 +25,12 @@ final class NotificationRule
             RoleRegistrar::ACCOUNTANT,
             RoleRegistrar::VIEWER,
         ];
+    }
+
+    /** @return list<string> */
+    public static function allowedTriggers(): array
+    {
+        return [self::TRIGGER_BEFORE_DUE, self::TRIGGER_DUE_DAY, self::TRIGGER_OVERDUE];
     }
 
     public static function normalizeCode(mixed $value): string
@@ -44,22 +54,31 @@ final class NotificationRule
     public static function normalizeTrigger(mixed $value): string
     {
         $trigger = strtolower(trim((string) $value));
-        if ($trigger !== self::TRIGGER_BEFORE_DUE) {
-            throw new InvalidArgumentException('Unsupported notification trigger type for this delivery slice.');
+        if (! in_array($trigger, self::allowedTriggers(), true)) {
+            throw new InvalidArgumentException('Unsupported notification trigger type.');
         }
         return $trigger;
     }
 
     public static function normalizeDaysBefore(mixed $value): int
     {
-        if (filter_var($value, FILTER_VALIDATE_INT) === false) {
-            throw new InvalidArgumentException('Notification days-before value must be an integer.');
-        }
-        $days = (int) $value;
-        if ($days < 1 || $days > 365) {
-            throw new InvalidArgumentException('Before-due notification rules must use 1 to 365 days.');
-        }
+        $days = self::normalizeBoundedInt($value, 1, 365, 'Notification days-before value');
         return $days;
+    }
+
+    public static function normalizeDaysAfter(mixed $value): int
+    {
+        return self::normalizeBoundedInt($value, 1, 365, 'Notification days-after value');
+    }
+
+    public static function normalizeRepeatInterval(mixed $value): int
+    {
+        return self::normalizeBoundedInt($value, 0, 365, 'Notification repeat interval');
+    }
+
+    public static function normalizeMaxRepeats(mixed $value): int
+    {
+        return self::normalizeBoundedInt($value, 0, 50, 'Notification max repeats');
     }
 
     /** @return list<string> */
@@ -100,19 +119,42 @@ final class NotificationRule
     /** @return array<string, mixed> */
     public static function normalizeInput(array $input): array
     {
+        $trigger = self::normalizeTrigger($input['trigger_type'] ?? self::TRIGGER_BEFORE_DUE);
         $roles = self::normalizeRecipientRoles($input['recipient_roles'] ?? []);
+        $escalationRoles = self::normalizeRecipientRoles($input['escalation_roles'] ?? []);
         $assigned = self::normalizeBool($input['target_assigned_accountant'] ?? false);
         if ($roles === [] && ! $assigned) {
             throw new InvalidArgumentException('Notification rule must target at least one role or the assigned Accountant.');
         }
 
+        $daysBefore = 0;
+        $daysAfter = 0;
+        if ($trigger === self::TRIGGER_BEFORE_DUE) {
+            $daysBefore = self::normalizeDaysBefore($input['days_before'] ?? 0);
+        } elseif ($trigger === self::TRIGGER_OVERDUE) {
+            $daysAfter = self::normalizeDaysAfter($input['days_after'] ?? 0);
+        }
+
+        $repeatInterval = self::normalizeRepeatInterval($input['repeat_interval_days'] ?? 0);
+        $maxRepeats = self::normalizeMaxRepeats($input['max_repeats'] ?? 0);
+        if (($repeatInterval === 0) !== ($maxRepeats === 0)) {
+            throw new InvalidArgumentException('Notification repeat interval and max repeats must either both be zero or both be configured.');
+        }
+
+        $templateCode = self::normalizeCode($input['template_code'] ?? self::defaultTemplateForTrigger($trigger));
+
         return [
             'code' => self::normalizeCode($input['code'] ?? ''),
             'name' => self::normalizeName($input['name'] ?? ''),
-            'trigger_type' => self::normalizeTrigger($input['trigger_type'] ?? self::TRIGGER_BEFORE_DUE),
-            'days_before' => self::normalizeDaysBefore($input['days_before'] ?? 0),
+            'trigger_type' => $trigger,
+            'days_before' => $daysBefore,
+            'days_after' => $daysAfter,
+            'repeat_interval_days' => $repeatInterval,
+            'max_repeats' => $maxRepeats,
             'recipient_roles' => $roles,
+            'escalation_roles' => $escalationRoles,
             'target_assigned_accountant' => $assigned,
+            'template_code' => $templateCode,
             'is_active' => self::normalizeBool($input['is_active'] ?? true),
         ];
     }
@@ -120,39 +162,142 @@ final class NotificationRule
     /** @param array<string, mixed> $rule */
     public static function matchesContractualDueDate(array $rule, mixed $dueDate, DateTimeImmutable $today): bool
     {
-        if (self::normalizeTrigger($rule['trigger_type'] ?? '') !== self::TRIGGER_BEFORE_DUE) {
+        $legacy = [
+            'trigger_type' => self::TRIGGER_BEFORE_DUE,
+            'days_before' => $rule['days_before'] ?? 0,
+            'days_after' => 0,
+            'repeat_interval_days' => 0,
+            'max_repeats' => 0,
+        ];
+        return self::targetDate($legacy, $dueDate, 0)->format('Y-m-d') === $today->format('Y-m-d');
+    }
+
+    /** @param array<string, mixed> $rule @param array<string, mixed> $payment */
+    public static function matchesPayment(array $rule, array $payment, DateTimeImmutable $today, int $attemptNo = 0): bool
+    {
+        if (! self::normalizeBool($rule['is_active'] ?? true)) {
             return false;
         }
-        $days = self::normalizeDaysBefore($rule['days_before'] ?? 0);
-        $date = trim((string) $dueDate);
-        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
-        if (! $parsed || $parsed->format('Y-m-d') !== $date) {
-            throw new InvalidArgumentException('Notification contractual due date must be a valid YYYY-MM-DD date.');
+        if ($attemptNo < 0) {
+            throw new InvalidArgumentException('Notification attempt number cannot be negative.');
         }
-        return $today->modify('+' . $days . ' days')->format('Y-m-d') === $date;
+
+        $status = PaymentStatus::normalize((string) ($payment['status'] ?? ''));
+        $remaining = ContractMoney::normalizeNonNegative($payment['remaining_amount'] ?? '');
+        if ($status === PaymentStatus::PAID || $remaining === '0.0000') {
+            return false;
+        }
+
+        $repeatInterval = self::normalizeRepeatInterval($rule['repeat_interval_days'] ?? 0);
+        $maxRepeats = self::normalizeMaxRepeats($rule['max_repeats'] ?? 0);
+        if ($attemptNo > 0) {
+            if ($repeatInterval === 0 || $maxRepeats === 0 || $attemptNo > $maxRepeats) {
+                return false;
+            }
+        }
+
+        $target = self::targetDate($rule, $payment['due_date'] ?? '', $attemptNo);
+        return $target->format('Y-m-d') === $today->format('Y-m-d');
+    }
+
+    /** @param array<string, mixed> $rule */
+    public static function targetDate(array $rule, mixed $dueDate, int $attemptNo = 0): DateTimeImmutable
+    {
+        $due = self::normalizeDate($dueDate);
+        $trigger = self::normalizeTrigger($rule['trigger_type'] ?? '');
+
+        $base = match ($trigger) {
+            self::TRIGGER_BEFORE_DUE => $due->modify('-' . self::normalizeDaysBefore($rule['days_before'] ?? 0) . ' days'),
+            self::TRIGGER_DUE_DAY => $due,
+            self::TRIGGER_OVERDUE => $due->modify('+' . self::normalizeDaysAfter($rule['days_after'] ?? 0) . ' days'),
+        };
+
+        if ($attemptNo <= 0) {
+            return $base;
+        }
+        $repeatInterval = self::normalizeRepeatInterval($rule['repeat_interval_days'] ?? 0);
+        $maxRepeats = self::normalizeMaxRepeats($rule['max_repeats'] ?? 0);
+        if ($repeatInterval === 0 || $maxRepeats === 0 || $attemptNo > $maxRepeats) {
+            throw new InvalidArgumentException('Notification repeat attempt is outside the configured cadence.');
+        }
+        return $base->modify('+' . ($attemptNo * $repeatInterval) . ' days');
+    }
+
+    public static function daysOverdue(mixed $dueDate, DateTimeImmutable $today): int
+    {
+        $due = self::normalizeDate($dueDate);
+        if ($today <= $due) {
+            return 0;
+        }
+        return (int) $due->diff($today)->format('%a');
     }
 
     /** @return array<string, mixed> */
     public static function fromRow(array $row): array
     {
-        $roles = json_decode((string) ($row['recipient_roles_json'] ?? '[]'), true);
-        if (! is_array($roles)) {
-            $roles = [];
-        }
+        $roles = self::decodeRoles($row['recipient_roles_json'] ?? '[]');
+        $escalationRoles = self::decodeRoles($row['escalation_roles_json'] ?? '[]');
+        $trigger = (string) ($row['trigger_type'] ?? self::TRIGGER_BEFORE_DUE);
 
         return [
             'id' => (int) ($row['id'] ?? 0),
             'code' => (string) ($row['code'] ?? ''),
             'name' => (string) ($row['name'] ?? ''),
-            'trigger_type' => (string) ($row['trigger_type'] ?? ''),
+            'trigger_type' => $trigger,
             'days_before' => (int) ($row['days_before'] ?? 0),
-            'recipient_roles' => array_values(array_map('strval', $roles)),
+            'days_after' => (int) ($row['days_after'] ?? 0),
+            'repeat_interval_days' => (int) ($row['repeat_interval_days'] ?? 0),
+            'max_repeats' => (int) ($row['max_repeats'] ?? 0),
+            'recipient_roles' => $roles,
+            'escalation_roles' => $escalationRoles,
             'target_assigned_accountant' => (bool) ($row['target_assigned_accountant'] ?? false),
+            'template_code' => (string) ($row['template_code'] ?? self::defaultTemplateForTrigger($trigger)),
             'is_active' => (bool) ($row['is_active'] ?? false),
             'created_by' => isset($row['created_by']) ? (int) $row['created_by'] : null,
             'updated_by' => isset($row['updated_by']) ? (int) $row['updated_by'] : null,
             'created_at' => (string) ($row['created_at'] ?? ''),
             'updated_at' => (string) ($row['updated_at'] ?? ''),
         ];
+    }
+
+    private static function defaultTemplateForTrigger(string $trigger): string
+    {
+        return match ($trigger) {
+            self::TRIGGER_DUE_DAY => 'payment_due_today',
+            self::TRIGGER_OVERDUE => 'payment_overdue',
+            default => 'payment_due_soon',
+        };
+    }
+
+    private static function normalizeBoundedInt(mixed $value, int $min, int $max, string $field): int
+    {
+        if (filter_var($value, FILTER_VALIDATE_INT) === false) {
+            throw new InvalidArgumentException("{$field} must be an integer.");
+        }
+        $number = (int) $value;
+        if ($number < $min || $number > $max) {
+            throw new InvalidArgumentException("{$field} must be between {$min} and {$max}.");
+        }
+        return $number;
+    }
+
+    private static function normalizeDate(mixed $value): DateTimeImmutable
+    {
+        $date = trim((string) $value);
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+        if (! $parsed || $parsed->format('Y-m-d') !== $date) {
+            throw new InvalidArgumentException('Notification contractual due date must be a valid YYYY-MM-DD date.');
+        }
+        return $parsed;
+    }
+
+    /** @return list<string> */
+    private static function decodeRoles(mixed $value): array
+    {
+        $decoded = json_decode((string) $value, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+        return array_values(array_map('strval', $decoded));
     }
 }
