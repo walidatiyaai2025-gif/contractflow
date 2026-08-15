@@ -181,7 +181,7 @@ def validate_accessibility_contract() -> int:
         (mobile_layout, "assert(maxWidth > 0)", "bounded adaptive layout"),
         (mobile_states, "Semantics(", "mobile semantic state wrapper"),
         (mobile_states, "liveRegion:", "mobile live state feedback"),
-        (mobile_states, "excludeFromSemantics: true", "decorative icon semantics"),
+        (mobile_states, "ExcludeSemantics(", "decorative icon semantics"),
         (mobile_states, "mobileStateAllowsRetry", "fail-closed retry policy"),
     )
     for source, marker, description in markers:
