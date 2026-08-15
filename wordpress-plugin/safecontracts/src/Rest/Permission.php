@@ -11,7 +11,15 @@ final class Permission
 {
     public static function access(): bool|WP_Error
     {
-        if (get_current_user_id() > 0 && AccessScope::canAccess()) {
+        if (get_current_user_id() <= 0) {
+            return ApiResponse::error(
+                'safecontracts_unauthenticated',
+                __('Authentication is required to access SafeContracts.', 'safecontracts'),
+                401
+            );
+        }
+
+        if (AccessScope::canAccess()) {
             return true;
         }
 

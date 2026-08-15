@@ -5,6 +5,7 @@ plugins {
     // Flutter stable on AGP 9 uses Android built-in Kotlin. Do not re-apply
     // kotlin-android here; doing so selects deprecated DSL APIs.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -19,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId = "com.safecontracts.safecontracts_mobile"
-        minSdk = flutter.minSdkVersion
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

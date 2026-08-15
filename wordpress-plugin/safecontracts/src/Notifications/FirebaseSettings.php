@@ -13,6 +13,9 @@ final class FirebaseSettings
 {
     public const PUBLIC_OPTION = 'safecontracts_firebase_public_config';
     public const CREDENTIAL_REFERENCE_OPTION = 'safecontracts_firebase_credential_reference';
+    public const DEFAULT_PROJECT_ID = 'safecontract-13846';
+    public const DEFAULT_MESSAGING_SENDER_ID = '744938686052';
+    public const DEFAULT_APP_ID = '1:744938686052:android:1710fdbe24fe02cbc00171';
 
     /** @return array{project_id:string,messaging_sender_id:string,app_id:string} */
     public function publicConfig(): array
@@ -20,9 +23,9 @@ final class FirebaseSettings
         $stored = get_option(self::PUBLIC_OPTION, []);
         $stored = is_array($stored) ? $stored : [];
         return [
-            'project_id' => (string) ($stored['project_id'] ?? ''),
-            'messaging_sender_id' => (string) ($stored['messaging_sender_id'] ?? ''),
-            'app_id' => (string) ($stored['app_id'] ?? ''),
+            'project_id' => (string) ($stored['project_id'] ?? self::DEFAULT_PROJECT_ID),
+            'messaging_sender_id' => (string) ($stored['messaging_sender_id'] ?? self::DEFAULT_MESSAGING_SENDER_ID),
+            'app_id' => (string) ($stored['app_id'] ?? self::DEFAULT_APP_ID),
         ];
     }
 
