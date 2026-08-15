@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Notifications;
 
+use DateTimeImmutable;
 use InvalidArgumentException;
 use SafeContracts\Roles\RoleRegistrar;
 
@@ -114,6 +115,21 @@ final class NotificationRule
             'target_assigned_accountant' => $assigned,
             'is_active' => self::normalizeBool($input['is_active'] ?? true),
         ];
+    }
+
+    /** @param array<string, mixed> $rule */
+    public static function matchesContractualDueDate(array $rule, mixed $dueDate, DateTimeImmutable $today): bool
+    {
+        if (self::normalizeTrigger($rule['trigger_type'] ?? '') !== self::TRIGGER_BEFORE_DUE) {
+            return false;
+        }
+        $days = self::normalizeDaysBefore($rule['days_before'] ?? 0);
+        $date = trim((string) $dueDate);
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+        if (! $parsed || $parsed->format('Y-m-d') !== $date) {
+            throw new InvalidArgumentException('Notification contractual due date must be a valid YYYY-MM-DD date.');
+        }
+        return $today->modify('+' . $days . ' days')->format('Y-m-d') === $date;
     }
 
     /** @return array<string, mixed> */
