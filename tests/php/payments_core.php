@@ -66,8 +66,8 @@ function sc_payment_row(array $overrides = []): array
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_payment_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
-sc_payment_assert(Migrator::LATEST_VERSION === '1.6.0', 'SC-P3-001 payment schema migration is current');
-sc_payment_assert(count($GLOBALS['sc_test_dbdelta']) === 9, 'SC-P3-001 payment migration adds one scheduled-payment table');
+sc_payment_assert(Migrator::LATEST_VERSION === '1.7.0', 'collection ledger schema migration is current after payment core');
+sc_payment_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'collection migration extends the existing scheduled-payment schema');
 
 $schema = $GLOBALS['sc_test_dbdelta'][8];
 sc_payment_assert(str_contains($schema, 'wp_safecontracts_scheduled_payments'), 'SC-P3-001 scheduled-payment table uses WordPress prefix');
@@ -86,7 +86,7 @@ sc_payment_assert(PaymentStatus::normalize(' DUE_SOON ') === 'due_soon', 'SC-P3-
 sc_payment_expect(InvalidArgumentException::class, fn () => PaymentStatus::normalize('cancelled'), 'SC-P3-002 unsupported lifecycle state is rejected');
 sc_payment_expect(DomainException::class, fn () => PaymentStatus::assertTransition('paid', 'overdue'), 'SC-P3-002 paid state is terminal without explicit reversal');
 PaymentStatus::assertTransition('overdue', 'upcoming');
-sc_payment_assert(true, 'SC-P3-002 temporal lifecycle can move after expected-date recalculation');
+sc_payment_assert(true, 'SC-P3-002 temporal lifecycle can move after due-date recalculation');
 
 $service = new PaymentService();
 $GLOBALS['sc_test_current_caps'] = [
@@ -189,7 +189,7 @@ sc_payment_expect(InvalidArgumentException::class, fn () => $service->updateDate
 sc_payment_assert(count($GLOBALS['sc_test_queries']) === $beforeInvalidDate, 'SC-P3-003 invalid date cannot mutate data');
 
 $GLOBALS['sc_test_result_queue'] = [[sc_payment_row(['expected_payment_date' => '2026-09-18'])]];
-sc_payment_assert($service->effectiveDate(7001) === '2026-09-18', 'SC-P3-003 expected date overrides due date for effective-date reads');
+sc_payment_assert($service->effectiveDate(7001) === '2026-09-18', 'SC-P3-003 expected date overrides due date for operational effective-date reads');
 $GLOBALS['sc_test_result_queue'] = [[sc_payment_row(['expected_payment_date' => null])]];
 sc_payment_assert($service->effectiveDate(7001) === '2026-09-15', 'SC-P3-003 due date is effective date when no expected date exists');
 
@@ -199,6 +199,6 @@ sc_payment_expect(DomainException::class, fn () => $service->effectiveDate(7001)
 
 $dbDeltaCount = count($GLOBALS['sc_test_dbdelta']);
 do_action('plugins_loaded');
-sc_payment_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'SC-P3-001 payment migration is idempotent after current version is stored');
+sc_payment_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'payment/collection migrations are idempotent after current version is stored');
 
 echo "SafeContracts payment core tests passed ({$paymentTests} assertions).\n";
