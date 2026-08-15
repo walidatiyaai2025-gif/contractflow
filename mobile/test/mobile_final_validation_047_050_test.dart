@@ -33,7 +33,8 @@ void main() {
       expect(snapshot.devices.last.platform, 'ios');
     });
 
-    test('rejects invalid scope, duplicate IDs and oversized device payloads', () {
+    test('rejects invalid scope, duplicate IDs and oversized device payloads',
+        () {
       expect(
         () => DevicesSnapshot.fromEnvelope(
           ApiEnvelope(
@@ -89,7 +90,8 @@ void main() {
   });
 
   group('SC-P9-048 RTL/responsive mobile UX validation', () {
-    test('recognizes Arabic locale variants and exact responsive boundaries', () {
+    test('recognizes Arabic locale variants and exact responsive boundaries',
+        () {
       expect(safeContractsIsRtlLanguage('ar'), isTrue);
       expect(safeContractsIsRtlLanguage('ar-KW'), isTrue);
       expect(safeContractsIsRtlLanguage('AR_eg'), isTrue);
@@ -119,9 +121,9 @@ void main() {
 
     test('adaptive body rejects invalid non-positive maximum width', () {
       expect(
-        () => const SafeContractsAdaptiveBody(
+        () => SafeContractsAdaptiveBody(
           maxWidth: 0,
-          child: SizedBox.shrink(),
+          child: const SizedBox.shrink(),
         ),
         throwsAssertionError,
       );
@@ -175,7 +177,8 @@ void main() {
       expect(mobileStateAllowsRetry(MobileStateKind.offline), isTrue);
     });
 
-    testWidgets('forbidden state suppresses retry while offline state permits it',
+    testWidgets(
+        'forbidden state suppresses retry while offline state permits it',
         (tester) async {
       var retries = 0;
       await tester.pumpWidget(
