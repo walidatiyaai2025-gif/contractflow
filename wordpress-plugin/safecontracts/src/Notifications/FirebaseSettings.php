@@ -46,7 +46,7 @@ final class FirebaseSettings
     public function saveCredentialReference(mixed $value): string
     {
         $this->requireManage();
-        $reference = strtoupper(trim(Input::string($value, 'Firebase credential reference'));
+        $reference = strtoupper(trim(Input::string($value, 'Firebase credential reference')));
         if (! preg_match('/^[A-Z][A-Z0-9_]{2,127}$/', $reference)) {
             throw new InvalidArgumentException('Firebase credential reference must be an environment/secret identifier, not secret content.');
         }
