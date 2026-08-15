@@ -44,6 +44,26 @@ final class DeliveryLogRepository
         ));
     }
 
+    /** @return list<array<string,mixed>> */
+    public function recent(int $limit = 100): array
+    {
+        global $wpdb;
+        $limit = max(1, min(500, $limit));
+        $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, rule_id, payment_id, user_id, device_token_id, template_code,
+                        scheduled_for, attempt_no, status, response_code, error_code, created_at
+                 FROM {$table}
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT %d",
+                $limit
+            ),
+            ARRAY_A
+        );
+        return is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
+    }
+
     private function normalizeErrorCode(?string $value): ?string
     {
         if ($value === null || trim($value) === '') {
