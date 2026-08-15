@@ -10,7 +10,7 @@ final class ContractDetailsScreen extends StatefulWidget {
   const ContractDetailsScreen({
     required this.controller,
     required this.contractId,
-    required this.currency,
+    this.currency = const MobileCurrencyConfig.defaults(),
     required this.onEditContract,
     super.key,
   });
@@ -197,7 +197,9 @@ final class _ReadyContractDetails extends StatelessWidget {
             title: l10n.t('Contract'),
             children: [
               _DetailValue(
-                  label: l10n.t('Contract ID'), value: '${contract.id}'),
+                label: l10n.t('Contract ID'),
+                value: '${contract.id}',
+              ),
               _DetailValue(
                 label: l10n.t('Status'),
                 value: l10n.status(contract.status),
