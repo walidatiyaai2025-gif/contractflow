@@ -23,6 +23,10 @@ REQUIRED_PATHS = (
     "Last verified Plugin/README.md",
     "Last verified apk/README.md",
     "scripts/verified_artifacts.py",
+    "scripts/package_plugin.py",
+    "scripts/bootstrap_android.sh",
+    "mobile/android-release/README.md",
+    "mobile/android-release/app-build.gradle.kts",
     "mobile/pubspec.yaml",
     "mobile/analysis_options.yaml",
     "mobile/lib/main.dart",
@@ -104,7 +108,19 @@ def validate_mobile_boundary() -> int:
     for marker in ("SC_ENV", "SC_API_BASE_URL", "Production SafeContracts API must use HTTPS"):
         if marker not in environment:
             fail(f"mobile environment foundation missing marker: {marker}")
-    return 4
+
+    android_template = (ROOT / "mobile/android-release/app-build.gradle.kts").read_text(encoding="utf-8")
+    for marker in (
+        "com.safecontracts.safecontracts_mobile",
+        "SC_ANDROID_KEYSTORE_PATH",
+        "SC_ANDROID_KEYSTORE_PASSWORD",
+        "SC_ANDROID_KEY_ALIAS",
+        "SC_ANDROID_KEY_PASSWORD",
+        "Never fall back to debug signing",
+    ):
+        if marker not in android_template:
+            fail(f"Android release template missing marker: {marker}")
+    return 10
 
 
 def validate_example_config() -> int:
@@ -137,6 +153,13 @@ def validate_ci_contract() -> int:
         "python3 scripts/backup_manifest.py --check",
         "python3 scripts/release_readiness.py --check",
         "python3 scripts/p10_validation_027_031.py --check",
+        "release-candidates:",
+        "python3 scripts/package_plugin.py build",
+        "python3 scripts/package_plugin.py check",
+        "bash scripts/bootstrap_android.sh",
+        "flutter build apk --release",
+        "apksigner",
+        "safecontracts-release-candidates",
     )
     missing = [command for command in required_commands if command not in workflow]
     if missing:
@@ -153,6 +176,24 @@ def validate_artifact_policy() -> int:
     return 1
 
 
+def validate_plugin_packager() -> int:
+    output = ROOT / "dist" / "foundation-plugin-check.zip"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        sys.executable,
+        str(ROOT / "scripts/package_plugin.py"),
+        "build",
+        "--output",
+        str(output),
+    ]
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        fail("deterministic plugin packaging failed" + (f": {detail}" if detail else ""))
+    output.unlink(missing_ok=True)
+    return 1
+
+
 def main() -> int:
     checks = 0
     checks += validate_required_paths()
@@ -162,6 +203,7 @@ def main() -> int:
     checks += validate_example_config()
     checks += validate_ci_contract()
     checks += validate_artifact_policy()
+    checks += validate_plugin_packager()
     print(f"SafeContracts foundation validation passed ({checks} checks).")
     return 0
 
