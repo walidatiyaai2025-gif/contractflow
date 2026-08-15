@@ -333,8 +333,9 @@ String? _inputOptionalText(String? value, int maxLength, String field) {
 String? _inputNullableDate(String? value, String field) {
   final text = value?.trim() ?? '';
   if (text.isEmpty) return null;
-  if (!_validDate(text))
+  if (!_validDate(text)) {
     throw ArgumentError('$field must use valid YYYY-MM-DD.');
+  }
   return text;
 }
 
