@@ -11,6 +11,8 @@ if (! defined('ARRAY_A')) {
 
 $GLOBALS['sc_test_actions'] = [];
 $GLOBALS['sc_test_action_accepted_args'] = [];
+$GLOBALS['sc_test_filters'] = [];
+$GLOBALS['sc_test_filter_accepted_args'] = [];
 $GLOBALS['sc_test_activation_hooks'] = [];
 $GLOBALS['sc_test_deactivation_hooks'] = [];
 $GLOBALS['sc_test_options'] = [];
@@ -22,6 +24,8 @@ $GLOBALS['sc_test_read_queries'] = [];
 $GLOBALS['sc_test_results'] = [];
 $GLOBALS['sc_test_result_queue'] = [];
 $GLOBALS['sc_test_admin_pages'] = [];
+$GLOBALS['sc_test_removed_admin_menus'] = [];
+$GLOBALS['sc_test_enqueued_styles'] = [];
 $GLOBALS['sc_test_current_caps'] = [];
 $GLOBALS['sc_test_user_caps'] = [];
 $GLOBALS['sc_test_users_by_role'] = [];
@@ -129,6 +133,24 @@ function do_action(string $hook, mixed ...$args): void
         $cb(...array_slice($args, 0, $acceptedArgs));
     }
 }
+function add_filter(string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1): void
+{
+    unset($priority);
+    $GLOBALS['sc_test_filters'][$hook][] = $callback;
+    $GLOBALS['sc_test_filter_accepted_args'][$hook][] = max(1, $acceptedArgs);
+}
+function apply_filters(string $hook, mixed $value, mixed ...$args): mixed
+{
+    foreach ($GLOBALS['sc_test_filters'][$hook] ?? [] as $index => $callback) {
+        $acceptedArgs = $GLOBALS['sc_test_filter_accepted_args'][$hook][$index] ?? 1;
+        $callArgs = array_slice([$value, ...$args], 0, $acceptedArgs);
+        $value = $callback(...$callArgs);
+    }
+    if ($hook === 'safecontracts_firebase_access_token' && array_key_exists('sc_p5v3_access_token', $GLOBALS)) {
+        return $GLOBALS['sc_p5v3_access_token'];
+    }
+    return $value;
+}
 function get_option(string $key, mixed $default = false): mixed { return $GLOBALS['sc_test_options'][$key] ?? $default; }
 function update_option(string $key, mixed $value, bool $autoload = true): bool { unset($autoload); $GLOBALS['sc_test_options'][$key] = $value; return true; }
 function get_role(string $slug): ?SC_Test_Role { return $GLOBALS['sc_test_roles'][$slug] ?? null; }
@@ -149,9 +171,32 @@ function add_options_page(string $pageTitle, string $menuTitle, string $capabili
         'menu_title' => $menuTitle,
         'capability' => $capability,
         'callback' => $callback,
+        'parent' => 'options-general.php',
     ];
     return 'settings_page_' . $menuSlug;
 }
+function add_menu_page(string $pageTitle, string $menuTitle, string $capability, string $menuSlug, callable $callback, string $iconUrl = '', int|float|null $position = null): string
+{
+    $GLOBALS['sc_test_admin_pages'][$menuSlug] = [
+        'page_title' => $pageTitle,
+        'menu_title' => $menuTitle,
+        'capability' => $capability,
+        'callback' => $callback,
+        'icon' => $iconUrl,
+        'position' => $position,
+    ];
+    return 'toplevel_page_' . $menuSlug;
+}
+function remove_menu_page(string $menuSlug): mixed
+{
+    $GLOBALS['sc_test_removed_admin_menus'][] = $menuSlug;
+    return null;
+}
+function wp_enqueue_style(string $handle, string $src = '', array $deps = [], string|bool|null $ver = false, string $media = 'all'): void
+{
+    $GLOBALS['sc_test_enqueued_styles'][$handle] = ['src' => $src, 'deps' => $deps, 'ver' => $ver, 'media' => $media];
+}
+function home_url(string $path = ''): string { return 'https://example.test' . ($path === '' ? '' : '/' . ltrim($path, '/')); }
 function __return_true(): bool { return true; }
 function __(string $text, string $domain = 'default'): string { unset($domain); return $text; }
 function esc_html__(string $text, string $domain = 'default'): string { unset($domain); return $text; }
