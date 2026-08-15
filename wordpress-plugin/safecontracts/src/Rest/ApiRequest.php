@@ -59,13 +59,21 @@ final class ApiRequest
             }
         }
 
-        $page = array_key_exists('page', $params) ? self::boundedInt($params['page'], 'page', 1, 5) : 1;
-        $perPage = array_key_exists('per_page', $params) ? self::boundedInt($params['per_page'], 'per_page', 1, 100) : 50;
-
+        $pagination = self::pagination($request);
         return [
             'filters' => DashboardFilters::normalize($params),
-            'page' => $page,
-            'per_page' => $perPage,
+            'page' => $pagination['page'],
+            'per_page' => $pagination['per_page'],
+        ];
+    }
+
+    /** @return array{page:int,per_page:int} */
+    public static function pagination(WP_REST_Request $request): array
+    {
+        $params = self::params($request);
+        return [
+            'page' => array_key_exists('page', $params) ? self::boundedInt($params['page'], 'page', 1, 5) : 1,
+            'per_page' => array_key_exists('per_page', $params) ? self::boundedInt($params['per_page'], 'per_page', 1, 100) : 50,
         ];
     }
 
