@@ -13,7 +13,7 @@ final class GeneralSettings
 {
     public const OPTION = 'safecontracts_general_settings';
 
-    /** @return array{organization_name:string,currency_code:string,admin_page_size:int} */
+    /** @return array{organization_name:string,currency_code:string,currency_symbol:string,admin_page_size:int} */
     public function read(): array
     {
         $stored = get_option(self::OPTION, []);
@@ -23,17 +23,19 @@ final class GeneralSettings
         return [
             'organization_name' => $this->readText($stored['organization_name'] ?? $defaults['organization_name'], $defaults['organization_name'], 191),
             'currency_code' => $this->readCurrency($stored['currency_code'] ?? $defaults['currency_code']),
+            'currency_symbol' => $this->readOptionalText($stored['currency_symbol'] ?? $defaults['currency_symbol'], 16),
             'admin_page_size' => $this->readPageSize($stored['admin_page_size'] ?? $defaults['admin_page_size']),
         ];
     }
 
-    /** @return array{organization_name:string,currency_code:string,admin_page_size:int} */
+    /** @return array{organization_name:string,currency_code:string,currency_symbol:string,admin_page_size:int} */
     public function save(array $input): array
     {
         $this->requireManage();
         $settings = [
             'organization_name' => $this->normalizeText($input['organization_name'] ?? '', 'Organization name', 191),
             'currency_code' => $this->normalizeCurrency($input['currency_code'] ?? ''),
+            'currency_symbol' => $this->normalizeOptionalText($input['currency_symbol'] ?? '', 'Currency symbol', 16),
             'admin_page_size' => $this->normalizePageSize($input['admin_page_size'] ?? 50),
         ];
 
@@ -42,12 +44,13 @@ final class GeneralSettings
         return $settings;
     }
 
-    /** @return array{organization_name:string,currency_code:string,admin_page_size:int} */
+    /** @return array{organization_name:string,currency_code:string,currency_symbol:string,admin_page_size:int} */
     public static function defaults(): array
     {
         return [
             'organization_name' => 'SafeContracts',
             'currency_code' => '',
+            'currency_symbol' => '',
             'admin_page_size' => 50,
         ];
     }
@@ -56,6 +59,15 @@ final class GeneralSettings
     {
         $text = trim(strip_tags(Input::string($value, $field)));
         if ($text === '' || strlen($text) > $maxLength || preg_match('/[\r\n\x00]/', $text)) {
+            throw new InvalidArgumentException("{$field} is invalid.");
+        }
+        return $text;
+    }
+
+    private function normalizeOptionalText(mixed $value, string $field, int $maxLength): string
+    {
+        $text = trim(strip_tags(Input::string($value, $field)));
+        if (strlen($text) > $maxLength || preg_match('/[\r\n\x00]/', $text)) {
             throw new InvalidArgumentException("{$field} is invalid.");
         }
         return $text;
@@ -86,6 +98,15 @@ final class GeneralSettings
         }
         $text = trim(strip_tags((string) $value));
         return $text !== '' && strlen($text) <= $maxLength ? $text : $fallback;
+    }
+
+    private function readOptionalText(mixed $value, int $maxLength): string
+    {
+        if (! is_scalar($value) && $value !== null) {
+            return '';
+        }
+        $text = trim(strip_tags((string) $value));
+        return strlen($text) <= $maxLength && ! preg_match('/[\r\n\x00]/', $text) ? $text : '';
     }
 
     private function readCurrency(mixed $value): string
