@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts;
 
+use SafeContracts\Admin\PaymentMethodsPage;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Rest\Router;
 
@@ -34,6 +35,8 @@ final class Plugin
         (new Migrator())->maybeMigrate();
 
         add_action('rest_api_init', [Router::class, 'register']);
+        add_action('admin_menu', [PaymentMethodsPage::class, 'register']);
+        add_action('admin_post_' . PaymentMethodsPage::SAVE_ACTION, [PaymentMethodsPage::class, 'handleSave']);
         do_action('safecontracts_loaded');
     }
 }
