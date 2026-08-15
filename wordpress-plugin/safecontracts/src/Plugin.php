@@ -25,6 +25,7 @@ use SafeContracts\Audit\AuditRecorder;
 use SafeContracts\Auth\MobileBearerAuthentication;
 use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
+use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Rest\Router;
 
 final class Plugin
@@ -50,6 +51,7 @@ final class Plugin
         $this->booted = true;
 
         MobileBearerAuthentication::register();
+        FirebaseAccessTokenProvider::register();
         (new Migrator())->maybeMigrate();
         ContractHistoryRecorder::register();
         AuditRecorder::register();
@@ -87,6 +89,10 @@ final class Plugin
         add_action('admin_post_' . PaymentMethodsPage::SAVE_ACTION, [PaymentMethodsPage::class, 'handleSave']);
         add_action('admin_post_' . NotificationSettingsPage::SAVE_ACTION, [NotificationSettingsPage::class, 'handleSave']);
         add_action('admin_post_' . FirebaseSettingsPage::SAVE_ACTION, [FirebaseSettingsPage::class, 'handleSave']);
+        add_action('admin_post_' . FirebaseSettingsPage::UPLOAD_ACTION, [FirebaseSettingsPage::class, 'handleUpload']);
+        add_action('admin_post_' . FirebaseSettingsPage::DELETE_ACTION, [FirebaseSettingsPage::class, 'handleDelete']);
+        add_action('admin_post_' . FirebaseSettingsPage::TEST_ACTION, [FirebaseSettingsPage::class, 'handleTest']);
+        add_action('admin_post_' . FirebaseSettingsPage::TEST_PUSH_ACTION, [FirebaseSettingsPage::class, 'handleTestPush']);
         add_action('admin_post_' . MobileConfigurationPage::SAVE_ACTION, [MobileConfigurationPage::class, 'handleSave']);
         do_action('safecontracts_loaded');
     }
