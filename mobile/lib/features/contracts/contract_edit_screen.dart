@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/localization/safecontracts_localizations.dart';
 import 'contracts.dart';
 
 enum ContractEditState {
@@ -171,18 +172,23 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final contract = widget.contractsController.selectedContract;
     final ready = contract != null && contract.id == widget.contractId;
     final saving = _editController.state == ContractEditState.saving;
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit contract')),
+      appBar: AppBar(title: Text(l10n.t('Edit contract'))),
       body: !ready
           ? Center(
               child: widget.contractsController.detailState ==
                       ContractDetailLoadState.loading
                   ? const CircularProgressIndicator()
-                  : Text(widget.contractsController.detailErrorMessage ??
-                      'Contract details are unavailable.'),
+                  : Text(
+                      l10n.rawMessage(
+                        widget.contractsController.detailErrorMessage ??
+                            'Contract details are unavailable.',
+                      ),
+                    ),
             )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -193,9 +199,9 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                     controller: _number,
                     enabled: !saving,
                     maxLength: 100,
-                    decoration: const InputDecoration(
-                      labelText: 'Contract number',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.t('Contract number'),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   CheckboxListTile(
@@ -205,30 +211,30 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                         ? null
                         : (value) =>
                             setState(() => _updateDates = value ?? false),
-                    title: const Text('Update start/end dates'),
+                    title: Text(l10n.t('Update start/end dates')),
                   ),
                   if (_updateDates) ...[
                     TextField(
                       controller: _start,
                       enabled: !saving,
-                      decoration: const InputDecoration(
-                        labelText: 'Start date YYYY-MM-DD',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.t('Start date YYYY-MM-DD'),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _end,
                       enabled: !saving,
-                      decoration: const InputDecoration(
-                        labelText: 'End date YYYY-MM-DD',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.t('End date YYYY-MM-DD'),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ],
                   if (_editController.message != null) ...[
                     const SizedBox(height: 16),
-                    Text(_editController.message!),
+                    Text(l10n.rawMessage(_editController.message!)),
                   ],
                   const SizedBox(height: 24),
                   FilledButton.icon(
@@ -239,11 +245,13 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.save_outlined),
-                    label: const Text('Save supported fields'),
+                    label: Text(l10n.t('Save supported fields')),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.',
+                  Text(
+                    l10n.t(
+                      'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.',
+                    ),
                   ),
                 ],
               ),
