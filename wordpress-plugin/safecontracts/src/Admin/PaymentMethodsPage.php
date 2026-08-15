@@ -15,9 +15,10 @@ final class PaymentMethodsPage
 
     public static function register(): void
     {
-        add_options_page(
-            __('SafeContracts Payment Methods', 'safecontracts'),
-            __('SafeContracts Payment Methods', 'safecontracts'),
+        add_submenu_page(
+            AdminShell::SLUG,
+            __('Payment Methods', 'safecontracts'),
+            __('Payment Methods', 'safecontracts'),
             Capabilities::MANAGE_REFERENCE_DATA,
             self::SLUG,
             [self::class, 'render']
@@ -33,8 +34,11 @@ final class PaymentMethodsPage
         check_admin_referer(self::SAVE_ACTION);
 
         try {
+            $originalCode = sanitize_key((string) ($_POST['original_code'] ?? ''));
+            $requestedCode = sanitize_key((string) ($_POST['code'] ?? ''));
+            $code = $originalCode !== '' ? $originalCode : $requestedCode;
             (new PaymentMethodRepository())->save([
-                'code' => sanitize_key((string) ($_POST['code'] ?? '')),
+                'code' => $code,
                 'name' => sanitize_text_field((string) ($_POST['name'] ?? '')),
                 'display_order' => (int) ($_POST['display_order'] ?? 0),
                 'is_active' => isset($_POST['is_active']),
@@ -47,7 +51,7 @@ final class PaymentMethodsPage
 
         wp_safe_redirect(add_query_arg(
             ['page' => self::SLUG, 'safecontracts_status' => $status],
-            admin_url('options-general.php')
+            admin_url('admin.php')
         ));
         exit;
     }
@@ -59,42 +63,38 @@ final class PaymentMethodsPage
         }
 
         $methods = (new PaymentMethodRepository())->all(false);
+        $selected = null;
+        $selectedCode = sanitize_key((string) ($_GET['method'] ?? ''));
+        foreach ($methods as $method) {
+            if ($selectedCode !== '' && $method['code'] === $selectedCode) {
+                $selected = $method;
+                break;
+            }
+        }
         ?>
-        <div class="wrap safecontracts-settings">
-            <h1><?php echo esc_html__('SafeContracts — Payment Methods', 'safecontracts'); ?></h1>
-            <p><?php echo esc_html__('Manage the payment methods used by collections and mobile reference data.', 'safecontracts'); ?></p>
-
-            <table class="widefat striped">
-                <thead>
-                    <tr>
-                        <th><?php echo esc_html__('Code', 'safecontracts'); ?></th>
-                        <th><?php echo esc_html__('Name', 'safecontracts'); ?></th>
-                        <th><?php echo esc_html__('Order', 'safecontracts'); ?></th>
-                        <th><?php echo esc_html__('Active', 'safecontracts'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($methods as $method) : ?>
-                        <tr>
-                            <td><?php echo esc_html($method['code']); ?></td>
-                            <td><?php echo esc_html($method['name']); ?></td>
-                            <td><?php echo esc_html((string) $method['display_order']); ?></td>
-                            <td><?php echo $method['is_active'] ? esc_html__('Yes', 'safecontracts') : esc_html__('No', 'safecontracts'); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-
-            <h2><?php echo esc_html__('Add or update method', 'safecontracts'); ?></h2>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>">
-                <?php wp_nonce_field(self::SAVE_ACTION); ?>
-                <p><label><?php echo esc_html__('Code', 'safecontracts'); ?> <input name="code" required maxlength="50"></label></p>
-                <p><label><?php echo esc_html__('Name', 'safecontracts'); ?> <input name="name" required maxlength="120"></label></p>
-                <p><label><?php echo esc_html__('Order', 'safecontracts'); ?> <input type="number" min="0" name="display_order" value="0"></label></p>
-                <p><label><input type="checkbox" name="is_active" value="1" checked> <?php echo esc_html__('Active', 'safecontracts'); ?></label></p>
-                <?php submit_button(__('Save Payment Method', 'safecontracts')); ?>
-            </form>
+        <div class="wrap safecontracts-settings" dir="auto">
+            <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Reference data', 'safecontracts'); ?></p><h1><?php echo esc_html__('Payment Methods', 'safecontracts'); ?></h1></div></div>
+            <div class="safecontracts-split-layout">
+                <section class="safecontracts-admin-card safecontracts-table-card">
+                    <table class="widefat striped">
+                        <thead><tr><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Name', 'safecontracts'); ?></th><th><?php echo esc_html__('Order', 'safecontracts'); ?></th><th><?php echo esc_html__('Active', 'safecontracts'); ?></th></tr></thead>
+                        <tbody><?php foreach ($methods as $method) : ?><tr><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'method' => $method['code']], admin_url('admin.php'))); ?>"><code><?php echo esc_html($method['code']); ?></code></a></td><td><?php echo esc_html($method['name']); ?></td><td><?php echo esc_html((string) $method['display_order']); ?></td><td><?php echo $method['is_active'] ? esc_html__('Yes', 'safecontracts') : esc_html__('No', 'safecontracts'); ?></td></tr><?php endforeach; ?></tbody>
+                    </table>
+                </section>
+                <section class="safecontracts-admin-card safecontracts-settings-card">
+                    <h2><?php echo $selected ? esc_html__('Edit payment method', 'safecontracts') : esc_html__('Add payment method', 'safecontracts'); ?></h2>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>"><?php wp_nonce_field(self::SAVE_ACTION); ?>
+                        <input type="hidden" name="original_code" value="<?php echo esc_attr((string) ($selected['code'] ?? '')); ?>">
+                        <?php if ($selected) : ?><p><strong><?php echo esc_html__('Stable code', 'safecontracts'); ?>:</strong> <code><?php echo esc_html($selected['code']); ?></code></p><?php else : ?><p><label><?php echo esc_html__('Code', 'safecontracts'); ?><input class="widefat" name="code" required maxlength="50"></label></p><?php endif; ?>
+                        <p><label><?php echo esc_html__('Name', 'safecontracts'); ?><input class="widefat" name="name" required maxlength="120" value="<?php echo esc_attr((string) ($selected['name'] ?? '')); ?>"></label></p>
+                        <p><label><?php echo esc_html__('Order', 'safecontracts'); ?><input type="number" min="0" name="display_order" value="<?php echo esc_attr((string) ($selected['display_order'] ?? 0)); ?>"></label></p>
+                        <p><label><input type="checkbox" name="is_active" value="1" <?php checked($selected === null || ! empty($selected['is_active'])); ?>> <?php echo esc_html__('Active', 'safecontracts'); ?></label></p>
+                        <?php submit_button($selected ? __('Save Payment Method', 'safecontracts') : __('Add Payment Method', 'safecontracts')); ?>
+                    </form>
+                    <p class="description"><?php echo esc_html__('Collection entry accepts only active SafeContracts payment methods. Method codes are stable once created; names, order and active state remain admin-managed.', 'safecontracts'); ?></p>
+                </section>
+            </div>
         </div>
         <?php
     }
