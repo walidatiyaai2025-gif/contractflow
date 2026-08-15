@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use SafeContracts\Notifications\FirebaseSettings;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Support\Input;
 use Throwable;
 
 final class FirebaseSettingsPage
@@ -15,12 +16,12 @@ final class FirebaseSettingsPage
 
     public static function register(): void
     {
-        add_submenu_page(AdminShell::SLUG, __('Firebase Settings', 'safecontracts'), __('Firebase Settings', 'safecontracts'), Capabilities::MANAGE_NOTIFICATIONS, self::SLUG, [self::class, 'render']);
+        add_submenu_page(AdminShell::SLUG, __('Firebase Settings', 'safecontracts'), __('Firebase Settings', 'safecontracts'), Capabilities::MANAGE_SYSTEM, self::SLUG, [self::class, 'render']);
     }
 
     public static function handleSave(): void
     {
-        if (! current_user_can(Capabilities::MANAGE_NOTIFICATIONS)) {
+        if (! current_user_can(Capabilities::MANAGE_SYSTEM)) {
             wp_die(__('You do not have permission to manage Firebase settings.', 'safecontracts'));
         }
         check_admin_referer(self::SAVE_ACTION);
@@ -28,11 +29,11 @@ final class FirebaseSettingsPage
         try {
             $settings = new FirebaseSettings();
             $settings->savePublic([
-                'project_id' => $_POST['project_id'] ?? '',
-                'messaging_sender_id' => $_POST['messaging_sender_id'] ?? '',
-                'app_id' => $_POST['app_id'] ?? '',
+                'project_id' => Input::string($_POST['project_id'] ?? '', 'Firebase project ID'),
+                'messaging_sender_id' => Input::string($_POST['messaging_sender_id'] ?? '', 'Firebase messaging sender ID'),
+                'app_id' => Input::string($_POST['app_id'] ?? '', 'Firebase app ID'),
             ]);
-            $reference = trim((string) ($_POST['credential_reference'] ?? ''));
+            $reference = trim(Input::string($_POST['credential_reference'] ?? '', 'Firebase credential reference'));
             if ($reference !== '') {
                 $settings->saveCredentialReference($reference);
             }
@@ -46,7 +47,7 @@ final class FirebaseSettingsPage
 
     public static function render(): void
     {
-        if (! current_user_can(Capabilities::MANAGE_NOTIFICATIONS)) {
+        if (! current_user_can(Capabilities::MANAGE_SYSTEM)) {
             wp_die(__('You do not have permission to manage Firebase settings.', 'safecontracts'));
         }
         $settings = new FirebaseSettings();

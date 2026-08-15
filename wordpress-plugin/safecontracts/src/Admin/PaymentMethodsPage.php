@@ -7,6 +7,7 @@ namespace SafeContracts\Admin;
 use InvalidArgumentException;
 use SafeContracts\ReferenceData\PaymentMethodRepository;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Support\Input;
 
 final class PaymentMethodsPage
 {
@@ -34,13 +35,13 @@ final class PaymentMethodsPage
         check_admin_referer(self::SAVE_ACTION);
 
         try {
-            $originalCode = sanitize_key((string) ($_POST['original_code'] ?? ''));
-            $requestedCode = sanitize_key((string) ($_POST['code'] ?? ''));
+            $originalCode = sanitize_key(Input::string($_POST['original_code'] ?? '', 'Original payment method code'));
+            $requestedCode = sanitize_key(Input::string($_POST['code'] ?? '', 'Payment method code'));
             $code = $originalCode !== '' ? $originalCode : $requestedCode;
             (new PaymentMethodRepository())->save([
                 'code' => $code,
-                'name' => sanitize_text_field((string) ($_POST['name'] ?? '')),
-                'display_order' => (int) ($_POST['display_order'] ?? 0),
+                'name' => sanitize_text_field(Input::string($_POST['name'] ?? '', 'Payment method name')),
+                'display_order' => $_POST['display_order'] ?? 0,
                 'is_active' => isset($_POST['is_active']),
             ]);
             $status = 'saved';
@@ -64,7 +65,12 @@ final class PaymentMethodsPage
 
         $methods = (new PaymentMethodRepository())->all(false);
         $selected = null;
-        $selectedCode = sanitize_key((string) ($_GET['method'] ?? ''));
+        try {
+            $selectedCode = sanitize_key(Input::string($_GET['method'] ?? '', 'Payment method code'));
+        } catch (InvalidArgumentException $error) {
+            unset($error);
+            $selectedCode = '';
+        }
         foreach ($methods as $method) {
             if ($selectedCode !== '' && $method['code'] === $selectedCode) {
                 $selected = $method;
@@ -88,7 +94,7 @@ final class PaymentMethodsPage
                         <input type="hidden" name="original_code" value="<?php echo esc_attr((string) ($selected['code'] ?? '')); ?>">
                         <?php if ($selected) : ?><p><strong><?php echo esc_html__('Stable code', 'safecontracts'); ?>:</strong> <code><?php echo esc_html($selected['code']); ?></code></p><?php else : ?><p><label><?php echo esc_html__('Code', 'safecontracts'); ?><input class="widefat" name="code" required maxlength="50"></label></p><?php endif; ?>
                         <p><label><?php echo esc_html__('Name', 'safecontracts'); ?><input class="widefat" name="name" required maxlength="120" value="<?php echo esc_attr((string) ($selected['name'] ?? '')); ?>"></label></p>
-                        <p><label><?php echo esc_html__('Order', 'safecontracts'); ?><input type="number" min="0" name="display_order" value="<?php echo esc_attr((string) ($selected['display_order'] ?? 0)); ?>"></label></p>
+                        <p><label><?php echo esc_html__('Order', 'safecontracts'); ?><input type="number" min="0" max="100000" name="display_order" value="<?php echo esc_attr((string) ($selected['display_order'] ?? 0)); ?>"></label></p>
                         <p><label><input type="checkbox" name="is_active" value="1" <?php checked($selected === null || ! empty($selected['is_active'])); ?>> <?php echo esc_html__('Active', 'safecontracts'); ?></label></p>
                         <?php submit_button($selected ? __('Save Payment Method', 'safecontracts') : __('Add Payment Method', 'safecontracts')); ?>
                     </form>

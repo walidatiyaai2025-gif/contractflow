@@ -79,11 +79,11 @@ sc_p6settings_expect(InvalidArgumentException::class, fn () => $mobile->save(['d
 $mobileOptionJson = json_encode($GLOBALS['sc_test_options'][MobileConfiguration::OPTION] ?? []);
 sc_p6settings_assert(is_string($mobileOptionJson) && ! str_contains(strtolower($mobileOptionJson), 'token') && ! str_contains(strtolower($mobileOptionJson), 'password'), 'SC-P6-018 mobile config contains no token/password fields');
 
-// SC-P6-017 — Firebase UI/domain accepts public metadata plus secret reference only.
+// SC-P6-017 — Firebase UI/domain accepts public metadata plus secret reference only and requires system administration.
 $firebase = new FirebaseSettings();
-$GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true];
-sc_p6settings_expect(DomainException::class, fn () => $firebase->savePublic(['project_id' => 'p', 'messaging_sender_id' => '123', 'app_id' => 'a']), 'SC-P6-017 Firebase writes require notification-management capability');
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::MANAGE_NOTIFICATIONS => true];
+sc_p6settings_expect(DomainException::class, fn () => $firebase->savePublic(['project_id' => 'p', 'messaging_sender_id' => '123', 'app_id' => 'a']), 'SC-P6-017 Firebase writes require manage-system capability, not notification management alone');
+$GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::MANAGE_SYSTEM => true];
 $public = $firebase->savePublic(['project_id' => 'safecontracts-prod', 'messaging_sender_id' => '123456789', 'app_id' => '1:123456789:web:abc']);
 $reference = $firebase->saveCredentialReference('safecontracts_firebase_service_account');
 sc_p6settings_assert($public['project_id'] === 'safecontracts-prod', 'SC-P6-017 Firebase public project metadata saves through domain boundary');
@@ -99,6 +99,7 @@ $firebaseOptions = json_encode([
 sc_p6settings_assert(is_string($firebaseOptions) && ! str_contains($firebaseOptions, 'private_key') && ! str_contains($firebaseOptions, 'SECRET'), 'SC-P6-017 stored Firebase options contain no raw secret material');
 
 // SC-P6-016 — settings UI uses existing notification rule/template domain boundaries.
+$GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::MANAGE_NOTIFICATIONS => true];
 $GLOBALS['sc_test_result_queue'] = [[[
     'id' => '3', 'code' => 'due_default', 'title_template' => 'Due {{contract_number}}', 'body_template' => 'Due {{due_date}}',
     'is_active' => '1', 'created_by' => '1', 'updated_by' => '1', 'created_at' => '2026-08-01 00:00:00', 'updated_at' => '2026-08-01 00:00:00',
@@ -131,7 +132,7 @@ $expectedPages = [
     GeneralSettingsPage::SLUG => Capabilities::MANAGE_SYSTEM,
     PaymentMethodsPage::SLUG => Capabilities::MANAGE_REFERENCE_DATA,
     NotificationSettingsPage::SLUG => Capabilities::MANAGE_NOTIFICATIONS,
-    FirebaseSettingsPage::SLUG => Capabilities::MANAGE_NOTIFICATIONS,
+    FirebaseSettingsPage::SLUG => Capabilities::MANAGE_SYSTEM,
     MobileConfigurationPage::SLUG => Capabilities::MANAGE_SYSTEM,
 ];
 foreach ($expectedPages as $slug => $capability) {
