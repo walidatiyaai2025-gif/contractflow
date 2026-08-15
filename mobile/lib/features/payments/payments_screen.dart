@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
 import '../dashboard/dashboard_models.dart';
+import 'collection_entry_dialog.dart';
 import 'payments.dart';
 
 typedef PaymentAction = Future<void> Function(SafeContractsPayment payment);
@@ -13,6 +14,8 @@ final class PaymentsScreen extends StatefulWidget {
     required this.repository,
     required this.pageSize,
     required this.filters,
+    this.canManagePayments = false,
+    this.canEnterCollection = false,
     this.onEditExpectedDate,
     this.onRecordCollection,
     super.key,
@@ -21,6 +24,8 @@ final class PaymentsScreen extends StatefulWidget {
   final PaymentsRepository repository;
   final int pageSize;
   final DashboardFilters filters;
+  final bool canManagePayments;
+  final bool canEnterCollection;
   final PaymentAction? onEditExpectedDate;
   final PaymentAction? onRecordCollection;
 
@@ -81,12 +86,87 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
         builder: (_) => PaymentDetailScreen(
           repository: widget.repository,
           paymentId: payment.id,
-          onEditExpectedDate: widget.onEditExpectedDate,
-          onRecordCollection: widget.onRecordCollection,
+          onEditExpectedDate: widget.onEditExpectedDate ??
+              (widget.canManagePayments ? _editExpectedDate : null),
+          onRecordCollection: widget.onRecordCollection ??
+              (widget.canEnterCollection ? _recordCollection : null),
         ),
       ),
     );
     if (mounted) unawaited(_load(_pageNumber));
+  }
+
+  Future<void> _editExpectedDate(SafeContractsPayment payment) async {
+    final input = TextEditingController(text: payment.expectedPaymentDate ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Expected payment date'),
+        content: TextField(
+          controller: input,
+          decoration: const InputDecoration(
+            labelText: 'YYYY-MM-DD (blank clears)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = input.text.trim();
+              if (!_validNullableDate(value)) return;
+              Navigator.pop(dialogContext, value);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    input.dispose();
+    if (result == null) return;
+
+    try {
+      await widget.repository.updateExpectedPaymentDate(
+        payment.id,
+        result.isEmpty ? null : result,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Expected payment date updated.')),
+      );
+    } on SafeContractsApiException catch (error) {
+      if (!mounted) return;
+      _showApiError(error);
+    }
+  }
+
+  Future<void> _recordCollection(SafeContractsPayment payment) async {
+    final receipt = await showDialog<CollectionReceipt>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => CollectionEntryDialog(
+        repository: widget.repository,
+        payment: payment,
+      ),
+    );
+    if (receipt == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Collection #${receipt.id} recorded.')),
+    );
+  }
+
+  void _showApiError(SafeContractsApiException error) {
+    final prefix = switch (error.statusCode) {
+      422 => 'Validation',
+      403 => 'Forbidden',
+      409 => 'Conflict',
+      _ => 'Error',
+    };
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$prefix: ${error.message}')),
+    );
   }
 
   @override
@@ -359,4 +439,16 @@ final class _ErrorState extends StatelessWidget {
           ),
         ),
       );
+}
+
+bool _validNullableDate(String value) {
+  final normalized = value.trim();
+  if (normalized.isEmpty) return true;
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(normalized);
+  if (match == null) return false;
+  final parsed = DateTime.tryParse(normalized);
+  return parsed != null &&
+      parsed.year == int.parse(match.group(1)!) &&
+      parsed.month == int.parse(match.group(2)!) &&
+      parsed.day == int.parse(match.group(3)!);
 }
