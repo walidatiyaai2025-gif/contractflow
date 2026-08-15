@@ -83,7 +83,7 @@ $saved = $service->save([
 sc_notif_assert($saved['code'] === 'custom-10', 'SC-P5-001 valid notification rule save returns normalized model');
 $saveSql = implode("\n", array_slice($GLOBALS['sc_test_queries'], $beforeSave));
 sc_notif_assert(str_contains($saveSql, 'INSERT INTO wp_safecontracts_notification_rules'), 'SC-P5-001 rule save uses dedicated table');
-sc_notif_assert(str_contains($saveSql, "'safecontracts_manager'"), 'SC-P5-003 role policy is persisted as server-owned configuration');
+sc_notif_assert(str_contains($saveSql, 'recipient_roles_json') && str_contains($saveSql, 'safecontracts_manager'), 'SC-P5-003 role policy is persisted as server-owned configuration');
 sc_notif_assert(isset($GLOBALS['sc_test_fired_actions']['safecontracts_notification_rule_saved']), 'SC-P5-001 rule mutation emits domain event');
 
 $GLOBALS['sc_test_result_queue'] = [[[
