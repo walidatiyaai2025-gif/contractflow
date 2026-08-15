@@ -112,7 +112,8 @@ final class _ContractsScreenState extends State<ContractsScreen> {
                     builder: (_) => ContractDetailScreen(
                       repository: widget.repository,
                       contractId: contract.id,
-                      canEdit: widget.session.can(ContractsScreen.editCapability),
+                      canEdit:
+                          widget.session.can(ContractsScreen.editCapability),
                     ),
                   ),
                 );
@@ -190,7 +191,8 @@ final class _ContractDetailScreenState extends State<ContractDetailScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contract updated by SafeContracts server.')),
+        const SnackBar(
+            content: Text('Contract updated by SafeContracts server.')),
       );
       await _load();
     } on Object catch (error) {
@@ -234,7 +236,8 @@ final class _ContractDetailScreenState extends State<ContractDetailScreen> {
                         _DetailRow('Base value', contract.baseValue),
                         _DetailRow('Start date', contract.startDate ?? '—'),
                         _DetailRow('End date', contract.endDate ?? '—'),
-                        _DetailRow('Archived', contract.isArchived ? 'Yes' : 'No'),
+                        _DetailRow(
+                            'Archived', contract.isArchived ? 'Yes' : 'No'),
                       ],
                     ),
     );
@@ -301,13 +304,15 @@ final class _ContractEditDialogState extends State<_ContractEditDialog> {
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               value: _updateDates,
-              onChanged: (value) => setState(() => _updateDates = value ?? false),
+              onChanged: (value) =>
+                  setState(() => _updateDates = value ?? false),
               title: const Text('Update start/end dates'),
             ),
             if (_updateDates) ...[
               TextField(
                 controller: _start,
-                decoration: const InputDecoration(labelText: 'Start YYYY-MM-DD'),
+                decoration:
+                    const InputDecoration(labelText: 'Start YYYY-MM-DD'),
               ),
               TextField(
                 controller: _end,
@@ -318,7 +323,9 @@ final class _ContractEditDialogState extends State<_ContractEditDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
         FilledButton(
           onPressed: () {
             final number = _number.text.trim();
