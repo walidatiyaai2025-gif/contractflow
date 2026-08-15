@@ -74,7 +74,8 @@ final class _CustomersToolbar extends StatelessWidget {
         spacing: 12,
         runSpacing: 8,
         children: [
-          Text(l10n.t('Customers'), style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.t('Customers'),
+              style: Theme.of(context).textTheme.titleLarge),
           ChoiceChip(
             label: const Text('A–Z'),
             selected: controller.order == 'asc',
@@ -171,7 +172,9 @@ final class _CustomerList extends StatelessWidget {
             const SizedBox(height: 120),
             const Icon(Icons.business_outlined, size: 48),
             const SizedBox(height: 12),
-            Center(child: Text(l10n.t('No customers are available in your scope.'))),
+            Center(
+                child:
+                    Text(l10n.t('No customers are available in your scope.'))),
           ],
         ),
       );
@@ -210,7 +213,8 @@ final class _CustomerList extends StatelessWidget {
                     ].join(' • '),
                   ),
                   trailing: Chip(
-                    label: Text(l10n.status(customer.isActive ? 'active' : 'inactive')),
+                    label: Text(
+                        l10n.status(customer.isActive ? 'active' : 'inactive')),
                   ),
                   onTap: () => unawaited(controller.openCustomer(customer.id)),
                 );
@@ -319,7 +323,8 @@ final class _CustomerDetailPane extends StatelessWidget {
                 ),
               ),
               Chip(
-                label: Text(l10n.status(customer.isActive ? 'active' : 'inactive')),
+                label: Text(
+                    l10n.status(customer.isActive ? 'active' : 'inactive')),
               ),
             ],
           ),
