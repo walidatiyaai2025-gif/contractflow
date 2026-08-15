@@ -138,7 +138,7 @@ sc_p6export_assert(str_contains($adminShellSource, 'SafeContracts') && ! str_con
 unset($_GET['page']);
 
 // SC-P6-022 — login branding changes presentation only, not authentication/session behavior.
-sc_p6export_assert(LoginBranding::headerUrl('https://wordpress.org/') === 'https://example.test', 'SC-P6-022 login logo URL resolves to site home');
+sc_p6export_assert(LoginBranding::headerUrl('https://wordpress.org/') === 'https://example.test/', 'SC-P6-022 login logo URL resolves to site home');
 sc_p6export_assert(str_contains(LoginBranding::headerText('WordPress'), 'SafeContracts'), 'SC-P6-022 login header text uses SafeContracts identity');
 sc_p6export_assert(isset($GLOBALS['sc_test_actions']['login_enqueue_scripts']) && isset($GLOBALS['sc_test_filters']['login_headerurl']) && isset($GLOBALS['sc_test_filters']['login_headertext']), 'SC-P6-022 branding hooks are registered');
 $loginSource = file_get_contents((string) (new ReflectionClass(LoginBranding::class))->getFileName()) ?: '';
