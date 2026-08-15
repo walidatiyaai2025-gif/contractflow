@@ -28,7 +28,7 @@ final class CollectionService
      *   collection_date:mixed,
      *   payment_method_id:mixed,
      *   reference?:mixed,
-     *   note?:mixed,
+     *   details?:mixed,
      *   proof_media_id?:mixed
      * } $input
      */
@@ -37,10 +37,8 @@ final class CollectionService
         $this->requireCapability(Capabilities::MANAGE_COLLECTIONS, 'You do not have permission to record collections.');
 
         $paymentId = (int) ($input['payment_id'] ?? 0);
-        $payment = $this->requirePayment($paymentId);
-        $this->assertScope($payment['accountant_user_id']);
-        if ($payment['contract_is_archived']) {
-            throw new DomainException('Collections cannot be recorded against archived contracts.');
+        if ($paymentId <= 0) {
+            throw new InvalidArgumentException('Collection payment ID must be positive.');
         }
 
         $amount = ContractMoney::normalizeNonNegative($input['amount'] ?? '');
@@ -53,22 +51,29 @@ final class CollectionService
         if ($paymentMethodId <= 0) {
             throw new InvalidArgumentException('Payment method is required for every collection transaction.');
         }
+
+        $reference = $this->normalizeOptionalText($input['reference'] ?? null, 191, 'Collection reference');
+        $details = $this->normalizeOptionalText($input['details'] ?? null, 5000, 'Collection details');
+        $proofMediaId = $this->normalizeProofMediaId($input['proof_media_id'] ?? null);
+
+        $payment = $this->requirePayment($paymentId);
+        $this->assertScope($payment['accountant_user_id']);
+        if ($payment['contract_is_archived']) {
+            throw new DomainException('Collections cannot be recorded against archived contracts.');
+        }
+
         if (! $this->repository->paymentMethodIsActive($paymentMethodId)) {
             throw new InvalidArgumentException('Collection payment method must be an active SafeContracts payment method.');
         }
 
-        $reference = $this->normalizeOptionalText($input['reference'] ?? null, 191, 'Collection reference');
-        $note = $this->normalizeOptionalText($input['note'] ?? null, 5000, 'Collection note');
-        $proofMediaId = $this->normalizeProofMediaId($input['proof_media_id'] ?? null);
         $actorId = get_current_user_id();
-
         $collectionId = $this->repository->create(
             $paymentId,
             $amount,
             $collectionDate,
             $paymentMethodId,
             $reference,
-            $note,
+            $details,
             $proofMediaId,
             $actorId
         );
