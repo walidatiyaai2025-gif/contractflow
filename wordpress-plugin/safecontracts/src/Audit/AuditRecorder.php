@@ -37,7 +37,7 @@ final class AuditRecorder
         foreach (self::EVENTS as $hook) {
             add_action($hook, static function (mixed ...$args) use ($hook): void {
                 self::record($hook, $args);
-            });
+            }, 10, 12);
         }
     }
 
