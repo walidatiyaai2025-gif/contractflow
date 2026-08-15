@@ -73,7 +73,20 @@ void main() {
   });
 
   test('SC-P9-013 date command sends both dates as one transaction', () async {
-    final transport = FakeApiTransport(_successHandler);
+    final transport = FakeApiTransport(
+      (uri) {
+        if (uri.path.endsWith('/contracts/70/edit')) {
+          return _ok(<String, Object?>{
+            'contract_id': 70,
+            'operation': 'dates',
+          });
+        }
+        if (uri.path.endsWith('/contracts/70')) {
+          return _detail('SC-70');
+        }
+        return _error(404, 'not_found', 'Not found');
+      },
+    );
     final controller = _controller(transport, canEdit: true);
 
     final ok = await controller.editDates(70, '2026-02-01', '2026-11-30');
