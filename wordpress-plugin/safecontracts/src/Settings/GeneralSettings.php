@@ -7,6 +7,7 @@ namespace SafeContracts\Settings;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Support\Input;
 
 final class GeneralSettings
 {
@@ -53,7 +54,7 @@ final class GeneralSettings
 
     private function normalizeText(mixed $value, string $field, int $maxLength): string
     {
-        $text = trim(strip_tags((string) $value));
+        $text = trim(strip_tags(Input::string($value, $field)));
         if ($text === '' || strlen($text) > $maxLength || preg_match('/[\r\n\x00]/', $text)) {
             throw new InvalidArgumentException("{$field} is invalid.");
         }
@@ -62,7 +63,7 @@ final class GeneralSettings
 
     private function normalizeCurrency(mixed $value): string
     {
-        $currency = strtoupper(trim((string) $value));
+        $currency = strtoupper(trim(Input::string($value, 'Currency code')));
         if ($currency !== '' && ! preg_match('/^[A-Z]{3}$/', $currency)) {
             throw new InvalidArgumentException('Currency code must be a three-letter ISO-style code or blank until configured.');
         }
@@ -80,20 +81,26 @@ final class GeneralSettings
 
     private function readText(mixed $value, string $fallback, int $maxLength): string
     {
+        if (! is_scalar($value) && $value !== null) {
+            return $fallback;
+        }
         $text = trim(strip_tags((string) $value));
         return $text !== '' && strlen($text) <= $maxLength ? $text : $fallback;
     }
 
     private function readCurrency(mixed $value): string
     {
+        if (! is_scalar($value) && $value !== null) {
+            return '';
+        }
         $currency = strtoupper(trim((string) $value));
         return preg_match('/^[A-Z]{3}$/', $currency) ? $currency : '';
     }
 
     private function readPageSize(mixed $value): int
     {
-        $size = (int) $value;
-        return $size >= 10 && $size <= 200 ? $size : self::defaults()['admin_page_size'];
+        $size = filter_var($value, FILTER_VALIDATE_INT);
+        return $size !== false && $size >= 10 && $size <= 200 ? (int) $size : self::defaults()['admin_page_size'];
     }
 
     private function requireManage(): void
