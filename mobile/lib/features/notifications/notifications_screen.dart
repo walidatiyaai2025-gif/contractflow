@@ -42,7 +42,8 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
           );
         }
         if (controller.state == NotificationsLoadState.error) {
-          final message = controller.errorMessage ?? 'Notifications are unavailable.';
+          final message =
+              controller.errorMessage ?? 'Notifications are unavailable.';
           final offline = message.toLowerCase().contains('unreachable') ||
               message.toLowerCase().contains('timed out');
           return SafeContractsStateView(
@@ -87,12 +88,7 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                   trailing: read
                       ? const Text('Read')
                       : const Badge(label: Text('New')),
-                  onTap: () {
-                    final link = controller.openNotification(notification);
-                    if (link != null) {
-                      widget.onOpenDeepLink?.call(link);
-                    }
-                  },
+                  onTap: () => unawaited(_openNotification(notification)),
                 );
               },
             ),
@@ -100,6 +96,16 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
         );
       },
     );
+  }
+
+  Future<void> _openNotification(
+    SafeContractsNotification notification,
+  ) async {
+    final link = await widget.controller.openNotification(notification);
+    if (!mounted || link == null) {
+      return;
+    }
+    widget.onOpenDeepLink?.call(link);
   }
 }
 
