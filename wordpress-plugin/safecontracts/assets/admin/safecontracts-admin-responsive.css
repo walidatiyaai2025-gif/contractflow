@@ -1,0 +1,135 @@
+.safecontracts-admin-shell,
+.safecontracts-settings {
+  max-width: 1440px;
+}
+
+.safecontracts-filter-bar,
+.safecontracts-export-form,
+.safecontracts-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+.safecontracts-filter-bar > label,
+.safecontracts-field-row > label {
+  min-width: 180px;
+  flex: 1 1 200px;
+}
+
+.safecontracts-export-form {
+  margin-top: 14px;
+  align-items: center;
+}
+
+.safecontracts-table-card,
+.safecontracts-admin-card {
+  min-width: 0;
+}
+
+.safecontracts-table-card table,
+.safecontracts-settings .widefat {
+  width: 100%;
+}
+
+.safecontracts-table-card td,
+.safecontracts-table-card th,
+.safecontracts-settings .widefat td,
+.safecontracts-settings .widefat th {
+  overflow-wrap: anywhere;
+}
+
+[dir="rtl"] .safecontracts-section-heading,
+[dir="rtl"] .safecontracts-filter-bar,
+[dir="rtl"] .safecontracts-export-form,
+.rtl .safecontracts-section-heading,
+.rtl .safecontracts-filter-bar,
+.rtl .safecontracts-export-form {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .safecontracts-admin-shell__hero,
+.rtl .safecontracts-admin-shell__hero {
+  text-align: right;
+}
+
+@media (max-width: 960px) {
+  .safecontracts-kpi-grid,
+  .safecontracts-role-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 782px) {
+  .safecontracts-admin-shell,
+  .safecontracts-settings {
+    margin-right: 10px;
+    margin-left: 0;
+  }
+
+  .safecontracts-admin-shell__hero,
+  .safecontracts-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .safecontracts-kpi-grid,
+  .safecontracts-role-grid,
+  .safecontracts-capability-list {
+    grid-template-columns: 1fr;
+  }
+
+  .safecontracts-filter-bar,
+  .safecontracts-export-form,
+  .safecontracts-field-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .safecontracts-filter-bar > label,
+  .safecontracts-field-row > label {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .safecontracts-filter-bar input,
+  .safecontracts-filter-bar select,
+  .safecontracts-settings input,
+  .safecontracts-settings select,
+  .safecontracts-settings textarea,
+  .safecontracts-export-form .button {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .safecontracts-table-card,
+  .safecontracts-settings-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .safecontracts-table-card table,
+  .safecontracts-settings .widefat {
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 480px) {
+  .safecontracts-admin-card,
+  .safecontracts-settings-card,
+  .safecontracts-table-card {
+    padding: 14px;
+  }
+
+  .safecontracts-admin-shell__hero {
+    gap: 12px;
+  }
+
+  .safecontracts-admin-shell__mark {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+}
