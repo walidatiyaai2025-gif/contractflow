@@ -76,6 +76,7 @@ final class CollectionService
             $originalAmount = ContractMoney::normalizeNonNegative($payment['original_amount']);
             $storedPaid = ContractMoney::normalizeNonNegative($payment['paid_amount']);
             $storedRemaining = ContractMoney::normalizeNonNegative($payment['remaining_amount']);
+            $storedStatus = PaymentStatus::normalize($payment['status']);
             $ledgerCollected = ContractMoney::normalizeNonNegative($this->repository->collectedTotal($paymentId));
 
             $this->assertStoredIntegrity(
@@ -83,7 +84,7 @@ final class CollectionService
                 $storedPaid,
                 $storedRemaining,
                 $ledgerCollected,
-                $payment['status']
+                $storedStatus
             );
 
             $newPaid = ContractMoney::add($ledgerCollected, $amount);
@@ -133,7 +134,10 @@ final class CollectionService
             $newPaid,
             $newRemaining,
             $newStatus,
-            $actorId
+            $actorId,
+            $storedPaid,
+            $storedRemaining,
+            $storedStatus
         );
 
         return $collectionId;
