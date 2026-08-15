@@ -5,7 +5,14 @@ import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
 import 'contracts.dart';
 
-enum ContractEditState { idle, saving, validationError, forbidden, conflict, error }
+enum ContractEditState {
+  idle,
+  saving,
+  validationError,
+  forbidden,
+  conflict,
+  error
+}
 
 final class ContractEditController extends ChangeNotifier {
   ContractEditController({required this.client, required this.canEdit});
