@@ -11,6 +11,7 @@ use Throwable;
 final class PushDeliveryService
 {
     public const MAX_TRANSPORT_RETRIES = 3;
+    private const ALLOWED_DATA_KEYS = ['payment_id', 'rule_code', 'attempt_no'];
 
     public function __construct(
         private PushTransport $transport,
@@ -114,15 +115,29 @@ final class PushDeliveryService
         }
         $normalized = ['title' => $title, 'body' => $body];
         if (isset($payload['data'])) {
-            if (! is_array($payload['data'])) {
-                throw new InvalidArgumentException('Notification push data must be an array.');
+            if (! is_array($payload['data']) || count($payload['data']) > count(self::ALLOWED_DATA_KEYS)) {
+                throw new InvalidArgumentException('Notification push data is invalid or exceeds the metadata limit.');
             }
             $data = [];
             foreach ($payload['data'] as $key => $value) {
-                if (! is_scalar($value) && $value !== null) {
-                    throw new InvalidArgumentException('Notification push data values must be scalar.');
+                $key = (string) $key;
+                if (! in_array($key, self::ALLOWED_DATA_KEYS, true)) {
+                    throw new InvalidArgumentException('Notification push data contains an unsupported metadata field.');
                 }
-                $data[(string) $key] = $value;
+                if ($key === 'payment_id') {
+                    if (! is_int($value) || $value <= 0) {
+                        throw new InvalidArgumentException('Notification payment metadata must be a positive integer.');
+                    }
+                } elseif ($key === 'attempt_no') {
+                    if (! is_int($value) || $value < 0 || $value > 100) {
+                        throw new InvalidArgumentException('Notification attempt metadata is invalid.');
+                    }
+                } else {
+                    if (! is_string($value) || $value === '' || strlen($value) > 100 || ! preg_match('/^[a-z0-9_.-]+$/', $value)) {
+                        throw new InvalidArgumentException('Notification rule metadata is invalid.');
+                    }
+                }
+                $data[$key] = $value;
             }
             $normalized['data'] = $data;
         }
