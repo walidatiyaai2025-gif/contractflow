@@ -24,6 +24,8 @@ final class Router
             'permission_callback' => '__return_true',
         ]);
 
+        AuthController::register();
+
         foreach (['/me', '/session'] as $route) {
             register_rest_route(self::NAMESPACE, $route, [
                 'methods' => WP_REST_Server::READABLE,

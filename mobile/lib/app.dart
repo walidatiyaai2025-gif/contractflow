@@ -4,21 +4,28 @@ import 'package:flutter/material.dart';
 
 import 'core/api/api_client.dart';
 import 'core/api/io_api_transport.dart';
+import 'core/auth/mobile_token_store.dart';
 import 'core/config/app_environment.dart';
+import 'features/auth/login_screen.dart';
+import 'features/auth/mobile_auth.dart';
 import 'features/bootstrap/mobile_bootstrap_controller.dart';
 import 'features/navigation/app_shell.dart';
+import 'features/notifications/push_registration.dart';
+import 'features/session/session_controller.dart';
 import 'features/ui/mobile_layout.dart';
 
 class SafeContractsApp extends StatefulWidget {
   const SafeContractsApp({
     required this.environment,
     this.client,
+    this.tokenStore,
     this.languageCode = 'en',
     super.key,
   });
 
   final AppEnvironment environment;
   final SafeContractsApiClient? client;
+  final MobileTokenStore? tokenStore;
   final String languageCode;
 
   @override
@@ -26,23 +33,84 @@ class SafeContractsApp extends StatefulWidget {
 }
 
 final class _SafeContractsAppState extends State<SafeContractsApp> {
+  late final MobileTokenStore _tokenStore;
   late final SafeContractsApiClient _client;
+  late final MobileAuthRepository _authRepository;
+  late final MobileLoginController _loginController;
   late final MobileBootstrapController _bootstrap;
+  MobilePushRegistration? _pushRegistration;
+  bool _pushStarted = false;
 
   @override
   void initState() {
     super.initState();
+    _tokenStore = widget.tokenStore ??
+        (widget.client == null
+            ? SecureMobileTokenStore()
+            : MemoryMobileTokenStore());
     _client = widget.client ??
         SafeContractsApiClient(
           environment: widget.environment,
           transport: IoApiTransport(),
+          headersProvider: () async {
+            final token = await _tokenStore.read();
+            return token == null
+                ? <String, String>{}
+                : <String, String>{'Authorization': 'Bearer $token'};
+          },
         );
+    _authRepository = MobileAuthRepository(
+      client: _client,
+      tokenStore: _tokenStore,
+    );
+    _loginController = MobileLoginController(repository: _authRepository);
     _bootstrap = MobileBootstrapController(_client);
     unawaited(_bootstrap.bootstrap());
   }
 
+  Future<void> _afterAuthenticated() async {
+    _loginController.resetError();
+    await _bootstrap.bootstrap();
+  }
+
+  Future<void> _startPushIfNeeded() async {
+    final config = _bootstrap.configController?.config;
+    if (_pushStarted || config == null || !config.features.pushNotifications) {
+      return;
+    }
+    _pushStarted = true;
+    final registration = MobilePushRegistration(client: _client);
+    _pushRegistration = registration;
+    try {
+      await registration.start();
+    } on Object {
+      // Push registration is non-blocking; the authenticated app remains usable.
+      _pushStarted = false;
+    }
+  }
+
+  Future<void> _logout() async {
+    try {
+      await _pushRegistration?.revokeAndStop();
+    } on Object {
+      // Continue to revoke the SafeContracts mobile session.
+    }
+    _pushRegistration = null;
+    _pushStarted = false;
+    try {
+      await _authRepository.logout();
+    } on Object {
+      await _tokenStore.clear();
+    }
+    _bootstrap.signOutLocalState();
+  }
+
   @override
   void dispose() {
+    if (_pushRegistration != null) {
+      unawaited(_pushRegistration!.dispose());
+    }
+    _loginController.dispose();
     _bootstrap.dispose();
     super.dispose();
   }
@@ -63,6 +131,10 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
       home: _BootstrapView(
         environment: widget.environment,
         controller: _bootstrap,
+        loginController: _loginController,
+        onAuthenticated: _afterAuthenticated,
+        onReady: _startPushIfNeeded,
+        onLogout: _logout,
       ),
     );
   }
@@ -72,10 +144,18 @@ final class _BootstrapView extends StatelessWidget {
   const _BootstrapView({
     required this.environment,
     required this.controller,
+    required this.loginController,
+    required this.onAuthenticated,
+    required this.onReady,
+    required this.onLogout,
   });
 
   final AppEnvironment environment;
   final MobileBootstrapController controller;
+  final MobileLoginController loginController;
+  final Future<void> Function() onAuthenticated;
+  final Future<void> Function() onReady;
+  final Future<void> Function() onLogout;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +181,7 @@ final class _BootstrapView extends StatelessWidget {
               notifications != null &&
               profile != null &&
               excelExport != null) {
+            unawaited(onReady());
             return SafeContractsShell(
               session: session,
               config: config,
@@ -112,9 +193,16 @@ final class _BootstrapView extends StatelessWidget {
               profileController: profile,
               excelExportController: excelExport,
               usingConfigDefaults: controller.usingConfigDefaults,
-              onClearSession: controller.signOutLocalState,
+              onClearSession: () => unawaited(onLogout()),
             );
           }
+        }
+
+        if (controller.sessionController?.state == SessionState.unauthenticated) {
+          return SafeContractsLoginScreen(
+            controller: loginController,
+            onAuthenticated: onAuthenticated,
+          );
         }
 
         return Scaffold(

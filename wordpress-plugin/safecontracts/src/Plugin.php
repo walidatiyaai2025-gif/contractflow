@@ -22,6 +22,7 @@ use SafeContracts\Admin\PaymentsPage;
 use SafeContracts\Admin\ReportsPage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Audit\AuditRecorder;
+use SafeContracts\Auth\MobileBearerAuthentication;
 use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Rest\Router;
@@ -48,6 +49,7 @@ final class Plugin
 
         $this->booted = true;
 
+        MobileBearerAuthentication::register();
         (new Migrator())->maybeMigrate();
         ContractHistoryRecorder::register();
         AuditRecorder::register();
