@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../export/mobile_excel_export.dart';
+import '../export/mobile_excel_export_screen.dart';
 import '../operations/followup_screen.dart';
 import '../operations/operations_repository.dart';
 import '../operations/operations_screens.dart';
@@ -15,6 +17,7 @@ final class SafeContractsShell extends StatefulWidget {
     required this.config,
     required this.policy,
     required this.dashboardController,
+    required this.excelExportController,
     required this.usingConfigDefaults,
     required this.onClearSession,
     super.key,
@@ -24,6 +27,7 @@ final class SafeContractsShell extends StatefulWidget {
   final SafeContractsMobileConfig config;
   final MobileNavigationPolicy policy;
   final DashboardController dashboardController;
+  final MobileExcelExportController excelExportController;
   final bool usingConfigDefaults;
   final VoidCallback onClearSession;
 
@@ -128,9 +132,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           pageSize: pageSize,
           canManage: widget.policy.canManageFollowUps,
         ),
-      MobileDestination.export => ExcelExportScreen(
-          repository: repository,
-          filters: filters,
+      MobileDestination.export => MobileExcelExportScreen(
+          controller: widget.excelExportController,
         ),
       MobileDestination.profile => _ProfileView(
           session: widget.session,
