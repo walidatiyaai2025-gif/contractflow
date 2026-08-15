@@ -39,21 +39,13 @@ final class PaymentMethodsController
     public static function active(WP_REST_Request $request): WP_REST_Response
     {
         unset($request);
-
-        return new WP_REST_Response([
-            'data' => (new PaymentMethodRepository())->all(true),
-            'meta' => [],
-        ], 200);
+        return ApiResponse::ok((new PaymentMethodRepository())->all(true));
     }
 
     public static function all(WP_REST_Request $request): WP_REST_Response
     {
         unset($request);
-
-        return new WP_REST_Response([
-            'data' => (new PaymentMethodRepository())->all(false),
-            'meta' => [],
-        ], 200);
+        return ApiResponse::ok((new PaymentMethodRepository())->all(false));
     }
 
     public static function save(WP_REST_Request $request): WP_REST_Response|WP_Error
@@ -68,29 +60,18 @@ final class PaymentMethodsController
                 'is_active' => ! empty($input['is_active']),
             ]);
         } catch (InvalidArgumentException $error) {
-            return new WP_Error(
+            return ApiResponse::error(
                 'safecontracts_invalid_payment_method',
                 $error->getMessage(),
-                ['status' => 422]
+                422
             );
         }
 
-        return new WP_REST_Response([
-            'data' => $saved,
-            'meta' => [],
-        ], 200);
+        return ApiResponse::ok($saved);
     }
 
     public static function canManage(): bool|WP_Error
     {
-        if (current_user_can(Capabilities::MANAGE_REFERENCE_DATA)) {
-            return true;
-        }
-
-        return new WP_Error(
-            'safecontracts_reference_data_forbidden',
-            __('You do not have permission to manage SafeContracts reference data.', 'safecontracts'),
-            ['status' => 403]
-        );
+        return Permission::capability(Capabilities::MANAGE_REFERENCE_DATA, 'safecontracts_reference_data_forbidden');
     }
 }
