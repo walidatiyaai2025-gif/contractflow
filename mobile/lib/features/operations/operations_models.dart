@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import '../../core/api/api_client.dart';
 
 final class CustomerRecord {
@@ -203,18 +201,73 @@ final class PaymentMethodRecord {
   }
 }
 
-final class ExcelExportPayload {
-  const ExcelExportPayload({
-    required this.filename,
-    required this.contentType,
-    required this.bytes,
-    required this.rowCounts,
+final class FollowUpQueueRecord {
+  const FollowUpQueueRecord({
+    required this.paymentId,
+    required this.contractId,
+    required this.dueDate,
+    required this.remainingAmount,
+    required this.paymentStatus,
+    required this.followUpState,
+    this.reference,
+    this.expectedPaymentDate,
   });
 
-  final String filename;
-  final String contentType;
-  final Uint8List bytes;
-  final Map<String, int> rowCounts;
+  final int paymentId;
+  final int contractId;
+  final String? reference;
+  final String dueDate;
+  final String? expectedPaymentDate;
+  final String remainingAmount;
+  final String paymentStatus;
+  final String followUpState;
+
+  factory FollowUpQueueRecord.fromData(Object? value) {
+    final data = apiObjectMap(value, 'followup_queue');
+    return FollowUpQueueRecord(
+      paymentId: readInt(data['payment_id'], 'followup_queue.payment_id'),
+      contractId: readInt(data['contract_id'], 'followup_queue.contract_id'),
+      reference: readNullableString(data['reference']),
+      dueDate: readString(data['due_date'], 'followup_queue.due_date'),
+      expectedPaymentDate: readNullableString(data['expected_payment_date']),
+      remainingAmount: readMoney(data['remaining_amount']),
+      paymentStatus: readString(data['status'], 'followup_queue.status'),
+      followUpState: readString(data['followup_state'], 'followup_queue.followup_state'),
+    );
+  }
+}
+
+final class FollowUpHistoryRecord {
+  const FollowUpHistoryRecord({
+    required this.id,
+    required this.paymentId,
+    required this.state,
+    required this.createdAt,
+    this.note,
+    this.promisedDate,
+    this.deferredUntil,
+  });
+
+  final int id;
+  final int paymentId;
+  final String state;
+  final String? note;
+  final String? promisedDate;
+  final String? deferredUntil;
+  final String createdAt;
+
+  factory FollowUpHistoryRecord.fromData(Object? value) {
+    final data = apiObjectMap(value, 'followup_history');
+    return FollowUpHistoryRecord(
+      id: readInt(data['id'], 'followup_history.id'),
+      paymentId: readInt(data['payment_id'], 'followup_history.payment_id'),
+      state: readString(data['state'], 'followup_history.state'),
+      note: readNullableString(data['note']),
+      promisedDate: readNullableString(data['promised_date']),
+      deferredUntil: readNullableString(data['deferred_until']),
+      createdAt: readString(data['created_at'], 'followup_history.created_at'),
+    );
+  }
 }
 
 int readInt(Object? value, String field) {
