@@ -51,6 +51,7 @@ sc_p6export_expect(InvalidArgumentException::class, fn () => $workbook->build([]
 $GLOBALS['sc_test_current_caps'] = [
     Capabilities::ACCESS => true,
     Capabilities::VIEW_REPORTS => true,
+    Capabilities::EXPORT_REPORTS => true,
     Capabilities::VIEW_ALL => true,
 ];
 $GLOBALS['sc_test_result_queue'] = [
@@ -109,8 +110,8 @@ $exportSource = file_get_contents((string) (new ReflectionClass(ReportExportServ
 sc_p6export_assert(str_contains($exportSource, 'AdminReadRepository') && str_contains($exportSource, 'FollowUpService'), 'SC-P6-019 export reuses scoped server-side read/follow-up boundaries');
 sc_p6export_assert(! str_contains($exportSource, '$wpdb'), 'SC-P6-019 export service contains no direct SQL');
 sc_p6export_assert(isset($GLOBALS['sc_test_actions']['admin_post_' . ReportsPage::EXPORT_ACTION]), 'SC-P6-019 XLSX handler is registered in plugin lifecycle');
-$GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true];
-sc_p6export_expect(DomainException::class, fn () => (new ReportExportService())->generate([]), 'SC-P6-019 export requires report capability');
+$GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_REPORTS => true];
+sc_p6export_expect(DomainException::class, fn () => (new ReportExportService())->generate([]), 'SC-P6-019 report viewing alone cannot grant export');
 
 // SC-P6-020 — responsive/RTL admin layer is scoped to SafeContracts assets and covers narrow screens.
 $responsivePath = dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/assets/admin/safecontracts-admin-responsive.css';
