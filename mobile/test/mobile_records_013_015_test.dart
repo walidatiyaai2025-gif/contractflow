@@ -50,7 +50,8 @@ void main() {
     controller.dispose();
   });
 
-  test('SC-P9-013 surfaces forbidden and conflict responses distinctly', () async {
+  test('SC-P9-013 surfaces forbidden and conflict responses distinctly',
+      () async {
     final forbiddenTransport = FakeApiTransport(
       (uri) => _error(
         403,
@@ -96,7 +97,8 @@ void main() {
     conflict.dispose();
   });
 
-  test('SC-P9-014 payment list preserves filters and deterministic paging', () async {
+  test('SC-P9-014 payment list preserves filters and deterministic paging',
+      () async {
     final transport = FakeApiTransport(
       (uri) => _ok(
         <Object?>[_payment()],
@@ -136,7 +138,9 @@ void main() {
     expect(query['order'], 'asc');
   });
 
-  test('SC-P9-015 detail keeps financial and status fields server-authoritative', () async {
+  test(
+      'SC-P9-015 detail keeps financial and status fields server-authoritative',
+      () async {
     final transport = FakeApiTransport((uri) => _ok(_payment()));
     final repository = PaymentsRepository(_client(environment, transport));
 
