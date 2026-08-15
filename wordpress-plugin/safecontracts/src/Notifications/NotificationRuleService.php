@@ -48,6 +48,18 @@ final class NotificationRuleService
         return $this->repository->activeBeforeDue($daysBefore);
     }
 
+    /** @return list<array<string, mixed>> */
+    public function activeDueDay(): array
+    {
+        return $this->repository->activeForTrigger(NotificationRule::TRIGGER_DUE_DAY);
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function activeOverdue(): array
+    {
+        return $this->repository->activeForTrigger(NotificationRule::TRIGGER_OVERDUE);
+    }
+
     private function requireCapability(): void
     {
         if (! current_user_can(Capabilities::MANAGE_NOTIFICATIONS)) {
