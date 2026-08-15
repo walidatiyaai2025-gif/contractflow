@@ -110,6 +110,9 @@ final class PaymentService
         );
     }
 
+    /**
+     * Operational follow-up date only. This never changes contractual Due/Due Soon/Overdue classification.
+     */
     public function effectiveDate(int $paymentId): string
     {
         $payment = $this->requirePayment($paymentId);
@@ -132,8 +135,9 @@ final class PaymentService
             return $current;
         }
 
-        $effectiveDate = $payment['expected_payment_date'] ?? $payment['due_date'];
-        return PaymentStatus::temporalForDueDate($effectiveDate, $today, $dueSoonDays);
+        // Contractual due_date is authoritative for temporal receivable state.
+        // expected_payment_date is an operational promise/follow-up date only.
+        return PaymentStatus::temporalForDueDate($payment['due_date'], $today, $dueSoonDays);
     }
 
     public function isDueSoon(int $paymentId, ?DateTimeImmutable $today = null, int $dueSoonDays = 10): bool
