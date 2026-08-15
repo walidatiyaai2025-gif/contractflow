@@ -7,6 +7,7 @@ namespace SafeContracts\Admin;
 use SafeContracts\Collections\CollectionService;
 use SafeContracts\ReferenceData\PaymentMethodRepository;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Support\Input;
 use Throwable;
 
 final class CollectionsPage
@@ -26,16 +27,23 @@ final class CollectionsPage
         }
         check_admin_referer(self::SAVE_ACTION);
         $status = 'saved';
-        $paymentId = max(0, (int) ($_POST['payment_id'] ?? 0));
+        $paymentId = 0;
         try {
+            $paymentId = Input::int($_POST['payment_id'] ?? '', 'Payment ID', 1);
+            $paymentMethodId = Input::int($_POST['payment_method_id'] ?? '', 'Payment method ID', 1);
+            $proofRaw = $_POST['proof_media_id'] ?? '';
+            $proofMediaId = ($proofRaw === '' || $proofRaw === null)
+                ? null
+                : Input::int($proofRaw, 'Proof media ID', 1);
+
             (new CollectionService())->record([
                 'payment_id' => $paymentId,
-                'amount' => sanitize_text_field((string) ($_POST['amount'] ?? '')),
-                'collection_date' => (string) ($_POST['collection_date'] ?? ''),
-                'payment_method_id' => (int) ($_POST['payment_method_id'] ?? 0),
-                'reference' => sanitize_text_field((string) ($_POST['reference'] ?? '')),
-                'details' => sanitize_text_field((string) ($_POST['details'] ?? '')),
-                'proof_media_id' => (int) ($_POST['proof_media_id'] ?? 0) ?: null,
+                'amount' => sanitize_text_field(Input::string($_POST['amount'] ?? '', 'Collection amount')),
+                'collection_date' => Input::string($_POST['collection_date'] ?? '', 'Collection date'),
+                'payment_method_id' => $paymentMethodId,
+                'reference' => sanitize_text_field(Input::string($_POST['reference'] ?? '', 'Collection reference')),
+                'details' => sanitize_text_field(Input::string($_POST['details'] ?? '', 'Collection details')),
+                'proof_media_id' => $proofMediaId,
             ]);
         } catch (Throwable $error) {
             unset($error);
@@ -55,7 +63,14 @@ final class CollectionsPage
         $collections = $read->collections($filters);
         $payments = $read->payments($filters);
         $methods = (new PaymentMethodRepository())->all(true);
-        $selectedPaymentId = max(0, (int) ($_GET['payment_id'] ?? 0));
+        try {
+            $selectedPaymentId = isset($_GET['payment_id']) && $_GET['payment_id'] !== ''
+                ? Input::int($_GET['payment_id'], 'Payment ID', 1)
+                : 0;
+        } catch (Throwable $error) {
+            unset($error);
+            $selectedPaymentId = 0;
+        }
         $today = function_exists('wp_date') ? wp_date('Y-m-d') : gmdate('Y-m-d');
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
