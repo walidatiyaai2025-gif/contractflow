@@ -12,8 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 $copy      = safecontracts_copy();
 $lang      = safecontracts_current_lang();
 $direction = safecontracts_direction();
-$demo_url  = safecontracts_theme_url( 'safecontracts_demo_url', '#contact' );
-$login_url = safecontracts_theme_url( 'safecontracts_login_url', wp_login_url() );
+$demo_url  = safecontracts_button_link( 'header_demo' );
+$login_url = safecontracts_button_link( 'header_login' );
 ?>
 <!doctype html>
 <html lang="<?php echo esc_attr( $lang ); ?>" dir="<?php echo esc_attr( $direction ); ?>">
