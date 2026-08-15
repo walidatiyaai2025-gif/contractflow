@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:safecontracts_mobile/core/api/api_client.dart';
 import 'package:safecontracts_mobile/features/contracts/contracts.dart';
 
 import 'support/safecontracts_test_harness.dart';
@@ -30,19 +31,19 @@ void main() {
     test('rejects duplicate IDs and invalid scope metadata', () {
       expect(
         () => ContractPage.fromEnvelope(
-          SafeContractsTestHarness.ok(
-            <Object?>[_contractData(), _contractData()],
+          ApiEnvelope(
+            data: <Object?>[_contractData(), _contractData()],
             meta: _pageMeta(),
-          ).toEnvelope(),
+          ),
         ),
         throwsFormatException,
       );
       expect(
         () => ContractPage.fromEnvelope(
-          SafeContractsTestHarness.ok(
-            <Object?>[_contractData()],
+          ApiEnvelope(
+            data: <Object?>[_contractData()],
             meta: <String, Object?>{..._pageMeta(), 'scope': 'admin'},
-          ).toEnvelope(),
+          ),
         ),
         throwsFormatException,
       );
