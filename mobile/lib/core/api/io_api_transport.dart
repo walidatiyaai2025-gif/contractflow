@@ -30,7 +30,8 @@ final class IoApiTransport implements SafeContractsTransport {
       final bytes = <int>[];
       await for (final chunk in response.timeout(timeout)) {
         if (bytes.length + chunk.length > maxResponseBytes) {
-          throw const FormatException('SafeContracts API response is too large.');
+          throw const FormatException(
+              'SafeContracts API response is too large.');
         }
         bytes.addAll(chunk);
       }
