@@ -187,6 +187,18 @@ function add_menu_page(string $pageTitle, string $menuTitle, string $capability,
     ];
     return 'toplevel_page_' . $menuSlug;
 }
+function add_submenu_page(string $parentSlug, string $pageTitle, string $menuTitle, string $capability, string $menuSlug, callable $callback, int|float|null $position = null): string
+{
+    $GLOBALS['sc_test_admin_pages'][$menuSlug] = [
+        'page_title' => $pageTitle,
+        'menu_title' => $menuTitle,
+        'capability' => $capability,
+        'callback' => $callback,
+        'parent' => $parentSlug,
+        'position' => $position,
+    ];
+    return $parentSlug . '_page_' . $menuSlug;
+}
 function remove_menu_page(string $menuSlug): mixed
 {
     $GLOBALS['sc_test_removed_admin_menus'][] = $menuSlug;
