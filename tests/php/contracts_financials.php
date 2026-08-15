@@ -61,8 +61,8 @@ function sc_fin_contract(array $overrides = []): array
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_fin_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
-sc_fin_assert(Migrator::LATEST_VERSION === '1.7.0', 'collection migration is current after contract/payment schemas');
-sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'contract financial/history/payment schemas remain present with collection schema');
+sc_fin_assert(version_compare(Migrator::LATEST_VERSION, '1.7.0', '>='), 'collection migration remains available after later schema versions');
+sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) >= 10, 'contract financial/history/payment schemas remain present with collection and later schemas');
 
 $itemSchema = $GLOBALS['sc_test_dbdelta'][4];
 $adjustmentSchema = $GLOBALS['sc_test_dbdelta'][5];
