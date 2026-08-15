@@ -46,8 +46,8 @@ SafeContracts\Plugin::instance()->boot();
 $migrations = implode("\n", $GLOBALS['sc_test_dbdelta']);
 sc_p7_assert(str_contains($migrations, 'safecontracts_import_runs') && str_contains($migrations, 'safecontracts_import_errors'), 'SC-P7-001/008 import run and error tables are migration-managed');
 $storageSource = file_get_contents((string) (new ReflectionClass(PrivateImportStorage::class))->getFileName()) ?: '';
-sc_p7_assert(str_contains($storageSource, 'safecontracts-private/imports') && str_contains($storageSource, 'Require all denied'), 'SC-P7-001 workbook staging defaults to a private denied directory');
-sc_p7_assert(! str_contains($storageSource, 'plugin_dir_url') && ! str_contains($storageSource, 'wp_upload_dir'), 'SC-P7-001 private staging has no public URL dependency');
+sc_p7_assert(str_contains($storageSource, 'SAFECONTRACTS_PRIVATE_DIR') && str_contains($storageSource, 'sys_get_temp_dir()') && str_contains($storageSource, 'Require all denied'), 'SC-P7-001 workbook staging defaults outside web content with defense-in-depth denial');
+sc_p7_assert(! str_contains($storageSource, 'WP_CONTENT_DIR') && ! str_contains($storageSource, 'wp_upload_dir') && ! str_contains($storageSource, 'plugin_dir_url'), 'SC-P7-001 private staging has no WordPress public-content URL dependency');
 
 $tmp = tempnam(sys_get_temp_dir(), 'sc-import-');
 if (! is_string($tmp)) { throw new RuntimeException('Unable to create test workbook.'); }
@@ -115,6 +115,11 @@ $valid = $rowValidator->validate([
 sc_p7_assert($valid['valid'] === true && $valid['data']['contract_base_value'] === '1000.2500' && $valid['data']['payment_amount'] === '100.5000', 'SC-P7-005 valid rows normalize dates/amounts before execution');
 $invalid = $rowValidator->validate(['customer_name' => '', 'contract_number' => '', 'payment_amount' => '12', 'payment_due_date' => 'bad']);
 sc_p7_assert($invalid['valid'] === false && count($invalid['errors']) >= 4, 'SC-P7-005 malformed rows return field-level errors instead of mutating data');
+$complexInvalid = $rowValidator->validate([
+    'customer_name' => 'Acme', 'customer_email' => ['bad@example.test'], 'contract_number' => 'SC-ARRAY',
+    'contract_start_date' => ['2026-08-01'], 'payment_sequence' => '1', 'payment_due_date' => ['2026-09-01'], 'payment_amount' => ['100'],
+]);
+sc_p7_assert($complexInvalid['valid'] === false && count($complexInvalid['errors']) >= 4, 'SC-P7-005 array/object-like row values fail closed before scalar normalization');
 
 // SC-P7-006 — duplicate behavior is explicit and fail-closed.
 sc_p7_assert(DuplicateStrategy::normalize('FAIL') === 'fail' && DuplicateStrategy::normalize('skip') === 'skip' && DuplicateStrategy::normalize('update') === 'update', 'SC-P7-006 supports explicit fail/skip/update duplicate policies');
