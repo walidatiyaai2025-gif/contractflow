@@ -19,7 +19,11 @@ final class FirebasePushTransport implements PushTransport
             return ['success' => false, 'status_code' => 0, 'error_code' => 'firebase_not_configured'];
         }
 
-        $credentialReference = (string) get_option(FirebaseSettings::CREDENTIAL_REFERENCE_OPTION, '');
+        $credentialReference = strtoupper(trim((string) get_option(FirebaseSettings::CREDENTIAL_REFERENCE_OPTION, '')));
+        if (! preg_match('/^[A-Z][A-Z0-9_]{2,127}$/', $credentialReference)) {
+            return ['success' => false, 'status_code' => 0, 'error_code' => 'firebase_auth_unavailable'];
+        }
+
         $accessToken = apply_filters(
             'safecontracts_firebase_access_token',
             '',
