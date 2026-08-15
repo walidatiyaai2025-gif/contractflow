@@ -7,7 +7,7 @@
 | Phase | Plan item | Planned | To Do | In Progress | Done | Completion |
 |---|---|---:|---:|---:|---:|---:|
 | P0 | [Foundation](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP0) | 16 | 0 | 0 | 16 | 100.0% |
-| P1 | [Master Data](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP1) | 13 | 9 | 0 | 4 | 30.8% |
+| P1 | [Master Data](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP1) | 13 | 4 | 5 | 4 | 30.8% |
 | P2 | [Contracts](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP2) | 23 | 23 | 0 | 0 | 0.0% |
 | P3 | [Payments & Collections](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP3) | 24 | 24 | 0 | 0 | 0.0% |
 | P4 | [Follow-up & Audit](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP4) | 15 | 15 | 0 | 0 | 0.0% |
@@ -17,9 +17,9 @@
 | P8 | [REST API](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP8) | 28 | 28 | 0 | 0 | 0.0% |
 | P9 | [Mobile](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP9) | 50 | 50 | 0 | 0 | 0.0% |
 | P10 | [Hardening & UAT](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP10) | 32 | 32 | 0 | 0 | 0.0% |
-| **TOTAL** |  | **284** | **264** | **0** | **20** | **7.0%** |
+| **TOTAL** |  | **284** | **259** | **5** | **20** | **7.0%** |
 
-_Last automatic sync: 2026-08-15 08:54 UTC. GitHub Issues found: 80/284._
+_Last automatic sync: 2026-08-15 08:59 UTC. GitHub Issues found: 80/284._
 
 <!-- SAFECONTRACTS_STATUS_END -->
 
