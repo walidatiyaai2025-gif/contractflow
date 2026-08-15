@@ -80,21 +80,34 @@ CI can verify the implementation contract but cannot replace live Firebase/devic
 
 ## 6. Android production build prerequisites
 
-A production APK cannot be created from the current repository until the Flutter Android platform scaffold exists under `mobile/android/`.
+The Android platform boilerplate is generated reproducibly with the exact Flutter stable toolchain used by CI:
 
-Before producing `SafeContracts-latest.apk`:
+```bash
+bash scripts/bootstrap_android.sh
+```
 
-1. Add and review the Android Flutter platform scaffold.
-2. Set the production application ID/package name and versioning policy.
-3. Configure Android SDK/Gradle/JDK versions compatible with the chosen Flutter stable toolchain.
-4. Configure release signing. The keystore and passwords must live in CI/secret storage, never in Git.
-5. Configure the production HTTPS API URL using `--dart-define`/`--dart-define-from-file` from a secret-safe CI source.
-6. Configure any required public Firebase Android client configuration without embedding server private keys.
-7. Run `dart format`, `flutter analyze` and `flutter test`.
-8. Build a **release** APK, not a debug APK.
-9. Install the exact APK on at least one representative real Android device and execute the mobile UAT flows.
-10. Verify authentication, permissions, dashboard/filtering, contracts/payments, collection/follow-up, notifications/deep links, RTL and offline/error handling against the target production/staging API.
-11. Only after those checks may the APK be published to `Last verified apk/SafeContracts-latest.apk`.
+The committed release contract lives in `mobile/android-release/`. It fixes the application ID to `com.safecontracts.safecontracts_mobile`, prevents release builds from falling back to debug signing, and requires all signing inputs together or none.
+
+The `release-candidates` CI job generates the scaffold and builds a real **release-mode APK candidate** using a short-lived CI-only signing key plus a reserved `.invalid` HTTPS API URL. That artifact proves the Android/Gradle/signing build path but is not production and must never be retained as `SafeContracts-latest.apk`.
+
+Before producing the real `SafeContracts-latest.apk`:
+
+1. Provide the real production HTTPS `SC_API_BASE_URL`.
+2. Provide production Android release signing material outside Git through:
+   - `SC_ANDROID_KEYSTORE_PATH`
+   - `SC_ANDROID_KEYSTORE_PASSWORD`
+   - `SC_ANDROID_KEY_ALIAS`
+   - `SC_ANDROID_KEY_PASSWORD`
+3. Configure any required public Firebase Android client configuration without embedding server private keys.
+4. Run repository, backend, Flutter and release-readiness Quality Gates on the exact functional source candidate.
+5. Bootstrap the Android platform with the same Flutter toolchain used for the build.
+6. Build a **release** APK, never a debug APK.
+7. Verify the APK signature using Android build-tools (`apksigner verify`).
+8. Install the exact signed APK on at least one representative real Android device.
+9. Execute the mobile UAT flows against the target production/staging API.
+10. Verify authentication, permissions, dashboard/filtering, contracts/payments, collection/follow-up, notifications/deep links, RTL and offline/error handling.
+11. Record real-device and UAT evidence references.
+12. Only then publish the APK with `scripts/verified_artifacts.py publish-apk`.
 
 For Play Store distribution prefer an AAB in addition to the retained APK, but the repository's mandatory latest local artifact remains the APK requested by the project owner.
 
@@ -102,17 +115,33 @@ For Play Store distribution prefer an AAB in addition to the retained APK, but t
 
 The production plugin package must be created from `wordpress-plugin/safecontracts/` only.
 
-The ZIP must:
+Build and validate it with:
+
+```bash
+python3 scripts/package_plugin.py build --output dist/SafeContracts-plugin-candidate.zip
+python3 scripts/package_plugin.py check dist/SafeContracts-plugin-candidate.zip
+```
+
+The deterministic ZIP must:
 
 - have `safecontracts/` as the installable plugin root,
 - exclude Git metadata, repository docs, tests, local caches, logs and all secrets,
-- contain the same source commit that passed Quality Gates,
+- contain the same functional source candidate that passed Quality Gates,
+- contain the WordPress entry point, readme, `Plugin.php` and autoloader,
 - be install/upgrade tested on staging,
 - pass backend regressions and migration verification before retention.
 
-After verification publish/replace:
+After verification publish/replace only the plugin with:
 
-`Last verified Plugin/SafeContracts-latest.zip`
+```bash
+python3 scripts/verified_artifacts.py publish-plugin \
+  --plugin dist/SafeContracts-plugin-candidate.zip \
+  --source-sha <source-sha> \
+  --quality-run-id <run-id> \
+  --quality-gates-passed
+```
+
+The plugin is intentionally publishable independently of the mobile APK.
 
 ## 8. Backup and restore gate
 
@@ -165,17 +194,19 @@ Logs must not expose authorization headers, passwords, tokens, Firebase private 
 
 Recommended release order:
 
-1. Freeze the exact candidate commit.
-2. Pass all four GitHub Quality Gates on that candidate.
+1. Freeze the exact functional source candidate.
+2. Pass all four GitHub Quality Gates and the post-gate `release-candidates` job.
 3. Take and record the pre-release backup/snapshot.
 4. Rehearse/verify restore if required by the change class.
-5. Deploy/upgrade the plugin on staging and run migration/UAT smoke tests.
-6. Deploy the exact verified plugin ZIP to production.
-7. Verify schema, REST health, permissions, audit trail, scheduled work and core business smoke tests.
-8. Build/sign/test the exact mobile release against the production HTTPS endpoint.
-9. Publish verified artifacts using `scripts/verified_artifacts.py publish`.
-10. Retain only the newest verified ZIP/APK in their mandatory repository folders; historical binaries go to GitHub Releases.
-11. Monitor production closely and roll back using the recorded snapshot/package if acceptance fails.
+5. Build the deterministic plugin ZIP and deploy/upgrade it on staging.
+6. Run migration/UAT smoke tests and publish the verified plugin with `publish-plugin`.
+7. Deploy the exact verified plugin ZIP to production.
+8. Verify schema, REST health, permissions, audit trail, scheduled work and core business smoke tests.
+9. Build/sign/test the exact mobile release against the real production HTTPS endpoint.
+10. Verify the APK signature and execute real-device/UAT acceptance.
+11. Publish the verified APK with `publish-apk` only after the external evidence exists.
+12. Retain only the newest verified ZIP/APK in their mandatory repository folders; historical binaries go to GitHub Releases.
+13. Monitor production closely and roll back using the recorded snapshot/package if acceptance fails.
 
 ## 12. Required release evidence
 
@@ -188,12 +219,24 @@ A production release/change record should contain:
 - database snapshot/backup identifier,
 - schema version after deployment,
 - staging/production smoke-test result,
+- APK signature verification result,
 - real-device APK test result,
 - Firebase notification/deep-link evidence when enabled,
 - UAT sign-off,
 - release operator and UTC deployment time,
 - rollback package/snapshot reference.
 
-## 13. Current repository blockers before first real production APK
+## 13. Current blockers before first real production APK
 
-At the time this document was added, `mobile/` contains Flutter Dart sources/tests but no committed `mobile/android/` platform scaffold. Therefore there is no legitimate production APK build path yet. The smallest required next mobile-production action is to add/review the Android scaffold and configure secret-safe release signing. Until that is complete, `Last verified apk/` must not contain a fabricated/debug APK labelled as production verified.
+The repository now contains a reproducible Android build contract and CI exercises a release APK/signing candidate on every successful Quality Gates run. Therefore Android scaffold generation itself is no longer the primary blocker.
+
+The remaining human/environment-specific requirements before the first **production-verified** APK are:
+
+- the real production HTTPS SafeContracts API URL,
+- production Android signing keystore + passwords stored outside Git,
+- any required Firebase Android client configuration,
+- signature verification of the exact production APK,
+- real-device acceptance evidence,
+- business UAT sign-off.
+
+Until those are available, `Last verified apk/` must remain without a production APK. The CI release candidate is evidence of build-path health only and must not be promoted.
