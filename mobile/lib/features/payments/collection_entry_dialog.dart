@@ -178,7 +178,8 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
                 DropdownButtonFormField<int>(
                   initialValue: _methodId,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Payment method'),
+                  decoration:
+                      const InputDecoration(labelText: 'Payment method'),
                   items: _methods
                       .map(
                         (method) => DropdownMenuItem<int>(
@@ -248,7 +249,8 @@ bool _validPositiveMoney(String value) {
   final normalized = value.trim();
   if (normalized.isEmpty || normalized.length > 32) return false;
   if (!RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(normalized)) return false;
-  final digits = normalized.replaceAll('.', '').replaceFirst(RegExp(r'^0+'), '');
+  final digits =
+      normalized.replaceAll('.', '').replaceFirst(RegExp(r'^0+'), '');
   return digits.isNotEmpty;
 }
 
