@@ -70,6 +70,7 @@ Admin payment-method reads/writes still require `MANAGE_REFERENCE_DATA`; Excel e
 
 - Follow-up queue/history continue to reuse the domain follow-up scope boundary.
 - Missing payment history now returns canonical 404 rather than being translated into generic validation 422.
+- The endpoint preserves the existing single payment lookup by translating the domain service's missing-payment error rather than pre-reading the payment a second time.
 - Authorized history preserves operational note/state/date fields and explicit response scope metadata.
 - History reads remain bounded to the existing 500-row server window.
 
@@ -89,7 +90,7 @@ Dashboard KPI, customer-option and dependent-contract reads remain bounded/scope
 
 ## Shared hardening
 
-`ApiRequest::filters()` is now the canonical strict REST filter parser. `ApiRequest::listQuery()` and `RequestGuard::dashboardFilters()` both use it, while the forgiving `DashboardFilters` normalizer remains available for non-REST admin UX where normalization is intentional.
+`ApiRequest::filters()` is now the canonical strict REST filter parser. `ApiRequest::listQuery()` and `RequestGuard::strictDashboardFilters()` use it for public REST boundaries. The existing `RequestGuard::dashboardFilters()` keeps its backward-compatible normalized behavior for internal/admin callers and prior P8 contracts, while `DashboardController` explicitly uses the strict helper.
 
 `RequestGuard::params()` now delegates to `ApiRequest::params()` so tests, JSON/internal calls and production `WP_REST_Request::get_params()` follow one parameter extraction contract.
 
