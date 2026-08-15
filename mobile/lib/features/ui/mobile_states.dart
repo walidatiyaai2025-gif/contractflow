@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_transport.dart';
+import '../../core/localization/safecontracts_localizations.dart';
 
 enum MobileFailureKind {
   unauthorized,
@@ -14,12 +15,8 @@ enum MobileFailureKind {
 
 MobileFailureKind classifyMobileFailure(Object error) {
   if (error is SafeContractsApiException) {
-    if (error.statusCode == 401) {
-      return MobileFailureKind.unauthorized;
-    }
-    if (error.statusCode == 403) {
-      return MobileFailureKind.forbidden;
-    }
+    if (error.statusCode == 401) return MobileFailureKind.unauthorized;
+    if (error.statusCode == 403) return MobileFailureKind.forbidden;
     if (error.statusCode == 400 || error.statusCode == 422) {
       return MobileFailureKind.validation;
     }
@@ -54,13 +51,16 @@ final class SafeContractsStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     if (kind == MobileStateKind.loading) {
       return Semantics(
         container: true,
         liveRegion: true,
         label: message,
-        child: const Center(
-          child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+        child: Center(
+          child: CircularProgressIndicator(
+            semanticsLabel: l10n.t('Loading'),
+          ),
         ),
       );
     }
@@ -93,7 +93,7 @@ final class SafeContractsStateView extends StatelessWidget {
                 const SizedBox(height: 16),
                 FilledButton.tonal(
                   onPressed: retry,
-                  child: const Text('Retry'),
+                  child: Text(l10n.t('Retry')),
                 ),
               ],
             ],
