@@ -63,3 +63,5 @@ jobs:
         run: python3 scripts/backup_manifest.py --check
       - name: Verify production release readiness
         run: python3 scripts/release_readiness.py --check
+      - name: Validate P10 audit accessibility backup migration and UAT
+        run: python3 scripts/p10_validation_027_031.py --check
