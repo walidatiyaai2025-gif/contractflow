@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Rest;
 
+use SafeContracts\Settings\GeneralSettings;
 use SafeContracts\Settings\MobileConfiguration;
 use Throwable;
 use WP_Error;
@@ -27,9 +28,14 @@ final class MobileConfigController
         unset($request);
         try {
             $config = (new MobileConfiguration())->read();
+            $general = (new GeneralSettings())->read();
             return RequestGuard::response([
                 'support_text' => $config['support_text'],
                 'default_page_size' => $config['default_page_size'],
+                'currency' => [
+                    'code' => $general['currency_code'],
+                    'symbol' => $general['currency_symbol'],
+                ],
                 'features' => [
                     'excel_export' => $config['excel_export_enabled'],
                     'push_notifications' => $config['push_notifications_enabled'],
