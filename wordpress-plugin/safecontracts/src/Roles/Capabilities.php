@@ -8,6 +8,7 @@ final class Capabilities
 {
     public const ACCESS = 'safecontracts_access';
     public const MANAGE_SYSTEM = 'safecontracts_manage_system';
+    public const MANAGE_REFERENCE_DATA = 'safecontracts_manage_reference_data';
     public const MANAGE_USERS = 'safecontracts_manage_users';
     public const VIEW_ALL = 'safecontracts_view_all';
     public const VIEW_ASSIGNED = 'safecontracts_view_assigned';
@@ -29,6 +30,7 @@ final class Capabilities
         return [
             self::ACCESS,
             self::MANAGE_SYSTEM,
+            self::MANAGE_REFERENCE_DATA,
             self::MANAGE_USERS,
             self::VIEW_ALL,
             self::VIEW_ASSIGNED,
