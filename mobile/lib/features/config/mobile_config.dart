@@ -31,18 +31,19 @@ final class SafeContractsMobileConfig {
         defaultPageSize = 25,
         features = const MobileFeatureFlags.defaults();
 
+  static const maxSupportTextLength = 500;
+
   final String supportText;
   final int defaultPageSize;
   final MobileFeatureFlags features;
 
   factory SafeContractsMobileConfig.fromData(Object? value) {
     final data = apiObjectMap(value, 'mobile_config.data');
-    final features = apiObjectMap(data['features'], 'mobile_config.features');
+    final features = _optionalObjectMap(data['features']);
     final configuredPageSize = _pageSize(data['default_page_size']);
-    final supportValue = data['support_text'];
 
     return SafeContractsMobileConfig(
-      supportText: supportValue is String ? supportValue.trim() : '',
+      supportText: _supportText(data['support_text']),
       defaultPageSize: configuredPageSize.clamp(10, 100).toInt(),
       features: MobileFeatureFlags(
         excelExport: features['excel_export'] == true,
@@ -80,6 +81,28 @@ final class MobileConfigController extends ChangeNotifier {
     }
     notifyListeners();
   }
+}
+
+Map<String, Object?> _optionalObjectMap(Object? value) {
+  if (value == null) {
+    return const <String, Object?>{};
+  }
+  try {
+    return apiObjectMap(value, 'mobile_config.features');
+  } on FormatException {
+    return const <String, Object?>{};
+  }
+}
+
+String _supportText(Object? value) {
+  if (value is! String) {
+    return '';
+  }
+  final normalized = value.trim();
+  if (normalized.length > SafeContractsMobileConfig.maxSupportTextLength) {
+    return '';
+  }
+  return normalized;
 }
 
 int _pageSize(Object? value) {
