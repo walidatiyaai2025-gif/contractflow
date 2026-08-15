@@ -36,11 +36,12 @@ final class PaymentMethodsPage
             (new PaymentMethodRepository())->save([
                 'code' => sanitize_key((string) ($_POST['code'] ?? '')),
                 'name' => sanitize_text_field((string) ($_POST['name'] ?? '')),
-                'sort_order' => (int) ($_POST['sort_order'] ?? 0),
+                'display_order' => (int) ($_POST['display_order'] ?? 0),
                 'is_active' => isset($_POST['is_active']),
             ]);
             $status = 'saved';
         } catch (InvalidArgumentException $error) {
+            unset($error);
             $status = 'invalid';
         }
 
@@ -77,7 +78,7 @@ final class PaymentMethodsPage
                         <tr>
                             <td><?php echo esc_html($method['code']); ?></td>
                             <td><?php echo esc_html($method['name']); ?></td>
-                            <td><?php echo esc_html((string) $method['sort_order']); ?></td>
+                            <td><?php echo esc_html((string) $method['display_order']); ?></td>
                             <td><?php echo $method['is_active'] ? esc_html__('Yes', 'safecontracts') : esc_html__('No', 'safecontracts'); ?></td>
                         </tr>
                     <?php endforeach; ?>
@@ -90,7 +91,7 @@ final class PaymentMethodsPage
                 <?php wp_nonce_field(self::SAVE_ACTION); ?>
                 <p><label><?php echo esc_html__('Code', 'safecontracts'); ?> <input name="code" required maxlength="50"></label></p>
                 <p><label><?php echo esc_html__('Name', 'safecontracts'); ?> <input name="name" required maxlength="120"></label></p>
-                <p><label><?php echo esc_html__('Order', 'safecontracts'); ?> <input type="number" min="0" name="sort_order" value="0"></label></p>
+                <p><label><?php echo esc_html__('Order', 'safecontracts'); ?> <input type="number" min="0" name="display_order" value="0"></label></p>
                 <p><label><input type="checkbox" name="is_active" value="1" checked> <?php echo esc_html__('Active', 'safecontracts'); ?></label></p>
                 <?php submit_button(__('Save Payment Method', 'safecontracts')); ?>
             </form>
