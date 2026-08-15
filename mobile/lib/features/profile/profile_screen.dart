@@ -96,7 +96,8 @@ final class _ProfileScreenState extends State<ProfileScreen> {
       return const Card(
         child: ListTile(
           leading: Icon(Icons.notifications_off_outlined),
-          title: Text('Push notifications are disabled by mobile configuration.'),
+          title:
+              Text('Push notifications are disabled by mobile configuration.'),
           subtitle: Text(
             'Enable Push notifications in SafeContracts → Mobile Configuration.',
           ),
@@ -133,9 +134,12 @@ final class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text('Notification permission: ${_permissionLabel(status.permission)}'),
-                Text('FCM token acquired: ${status.tokenAcquired ? 'Yes' : 'No'}'),
-                Text('Backend registration: ${_backendLabel(status.backendState)}'),
+                Text(
+                    'Notification permission: ${_permissionLabel(status.permission)}'),
+                Text(
+                    'FCM token acquired: ${status.tokenAcquired ? 'Yes' : 'No'}'),
+                Text(
+                    'Backend registration: ${_backendLabel(status.backendState)}'),
                 if (status.errorCode != null)
                   Text('Diagnostic code: ${status.errorCode}'),
                 if (status.permission == MobilePushPermissionState.denied) ...[
