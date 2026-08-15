@@ -95,4 +95,4 @@ The underlying read boundary is capped at 500 rows. The dependent contract endpo
 
 ## Regression evidence
 
-REST suites under `tests/php/rest_api_*.php` validate the P8 read/version/security contract. `tests/php/rest_mobile_mutations_010_019.php` validates the narrow P9 mutation routes, capability gates, fail-closed field allow-lists and domain-service delegation. All are executed by `scripts/test-php.sh` and repository Quality Gates.
+REST suites under `tests/php/rest_api_*.php` validate the P8 read/version/security contract. `tests/php/rest_mobile_mutations_011_019.php` validates the narrow P9 mutation routes, capability gates, fail-closed field allow-lists and domain-service delegation. All are executed by `scripts/test-php.sh` and repository Quality Gates.
