@@ -67,3 +67,78 @@ jobs:
         run: python3 scripts/p10_validation_027_031.py --check
       - name: Validate final roadmap release closeout
         run: python3 scripts/final_release_validation.py --check
+
+  release-candidates:
+    name: release-candidates
+    needs: [release-readiness]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Build deterministic plugin ZIP
+        run: |
+          python3 scripts/package_plugin.py build --output dist/SafeContracts-plugin-candidate.zip
+          python3 scripts/package_plugin.py check dist/SafeContracts-plugin-candidate.zip
+      - name: Bootstrap Android release platform
+        run: bash scripts/bootstrap_android.sh
+      - name: Create CI-only candidate signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/safecontracts-ci-candidate.p12" \
+            -storetype PKCS12 \
+            -storepass candidate-only \
+            -keypass candidate-only \
+            -alias ci-candidate \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 2 \
+            -dname "CN=SafeContracts CI Candidate, OU=CI, O=SafeContracts, L=CI, ST=CI, C=US"
+          {
+            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/safecontracts-ci-candidate.p12"
+            echo "SC_ANDROID_KEYSTORE_PASSWORD=candidate-only"
+            echo "SC_ANDROID_KEY_ALIAS=ci-candidate"
+            echo "SC_ANDROID_KEY_PASSWORD=candidate-only"
+          } >> "$GITHUB_ENV"
+      - name: Build Android release candidate
+        working-directory: mobile
+        run: |
+          flutter pub get
+          flutter build apk --release \
+            --dart-define=SC_ENV=production \
+            --dart-define=SC_API_BASE_URL=https://release-candidate.invalid/wp-json/safecontracts/v1/
+      - name: Verify candidate APK and collect artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
+          cp "$APK" dist/SafeContracts-apk-release-candidate.apk
+          sha256sum \
+            dist/SafeContracts-plugin-candidate.zip \
+            dist/SafeContracts-apk-release-candidate.apk \
+            > dist/SHA256SUMS.txt
+          cat > dist/CANDIDATE-NOTICE.txt <<'EOF'
+          These files are release-engineering candidates from the exact CI source.
+          The APK uses a short-lived CI-only signing key and a reserved .invalid HTTPS API URL.
+          It MUST NOT be copied to Last verified apk/ or deployed as production.
+          Production APK publication requires real signing secrets, production HTTPS API URL,
+          real-device evidence and business UAT evidence.
+          EOF
+      - name: Upload release candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: safecontracts-release-candidates
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
