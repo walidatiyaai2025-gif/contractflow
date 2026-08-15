@@ -109,6 +109,8 @@ void main() {
     await tester.pump();
     expect(editContractId, 70);
 
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
     controller.dispose();
   });
 
@@ -136,6 +138,8 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
     controller.dispose();
   });
 
@@ -158,6 +162,8 @@ void main() {
     expect(find.text('Contract not found.'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
 
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
     controller.dispose();
   });
 }
