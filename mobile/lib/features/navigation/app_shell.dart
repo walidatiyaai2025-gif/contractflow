@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../config/mobile_config.dart';
+import '../contracts/contracts.dart';
+import '../contracts/contracts_screen.dart';
 import '../customers/customers.dart';
 import '../customers/customers_screen.dart';
 import '../dashboard/dashboard_controller.dart';
+import '../dashboard/dashboard_models.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
@@ -17,6 +20,7 @@ final class SafeContractsShell extends StatefulWidget {
     required this.policy,
     required this.dashboardController,
     required this.customersController,
+    required this.contractsController,
     required this.excelExportController,
     required this.usingConfigDefaults,
     required this.onClearSession,
@@ -28,6 +32,7 @@ final class SafeContractsShell extends StatefulWidget {
   final MobileNavigationPolicy policy;
   final DashboardController dashboardController;
   final CustomersController customersController;
+  final ContractsController contractsController;
   final MobileExcelExportController excelExportController;
   final bool usingConfigDefaults;
   final VoidCallback onClearSession;
@@ -102,6 +107,12 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
       MobileDestination.customers => CustomersScreen(
           controller: widget.customersController,
         ),
+      MobileDestination.contracts => ContractsScreen(
+          controller: widget.contractsController,
+          customers: widget.dashboardController.overview?.customers ??
+              const <CustomerOption>[],
+          onOpenContract: _openContract,
+        ),
       MobileDestination.export => MobileExcelExportScreen(
           controller: widget.excelExportController,
         ),
@@ -112,6 +123,50 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
         ),
       _ => _PlannedDestination(destination: _selected),
     };
+  }
+
+  void _openContract(int contractId) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => _ContractDetailsHandoff(contractId: contractId),
+      ),
+    );
+  }
+}
+
+final class _ContractDetailsHandoff extends StatelessWidget {
+  const _ContractDetailsHandoff({required this.contractId});
+
+  final int contractId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Contract details')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.description_outlined, size: 52),
+              const SizedBox(height: 16),
+              Text(
+                'Contract #$contractId',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'The list has handed off the server contract identifier. '
+                'The dedicated authorized detail read and presentation belong '
+                'to SC-P9-012.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
 import '../config/mobile_config.dart';
+import '../contracts/contracts.dart';
 import '../customers/customers.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_repository.dart';
@@ -21,6 +22,7 @@ final class MobileBootstrapController extends ChangeNotifier {
   MobileConfigController? configController;
   DashboardController? dashboardController;
   CustomersController? customersController;
+  ContractsController? contractsController;
   MobileExcelExportController? excelExportController;
   MobileNavigationPolicy? navigationPolicy;
   String? message;
@@ -65,6 +67,11 @@ final class MobileBootstrapController extends ChangeNotifier {
       pageSize: config.defaultPageSize,
       canAccess: policy.destinations.contains(MobileDestination.customers),
     );
+    contractsController = ContractsController(
+      repository: ContractsRepository(client),
+      pageSize: config.defaultPageSize,
+      canAccess: policy.destinations.contains(MobileDestination.contracts),
+    );
     excelExportController = MobileExcelExportController(
       repository: MobileExcelExportRepository(client),
       filtersProvider: () => dashboard.filters,
@@ -80,9 +87,11 @@ final class MobileBootstrapController extends ChangeNotifier {
     sessionController?.reset();
     dashboardController?.dispose();
     customersController?.dispose();
+    contractsController?.dispose();
     excelExportController?.dispose();
     dashboardController = null;
     customersController = null;
+    contractsController = null;
     excelExportController = null;
     navigationPolicy = null;
     state = MobileBootstrapState.blocked;
@@ -96,6 +105,7 @@ final class MobileBootstrapController extends ChangeNotifier {
     configController?.dispose();
     dashboardController?.dispose();
     customersController?.dispose();
+    contractsController?.dispose();
     excelExportController?.dispose();
     super.dispose();
   }
