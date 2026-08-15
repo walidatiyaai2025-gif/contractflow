@@ -35,6 +35,7 @@ REQUIRED_PATHS = (
     "mobile/test/app_environment_test.dart",
     "mobile/config/local.example.json",
     ".github/workflows/quality-gates.yml",
+    ".github/workflows/retain-verified-plugin.yml",
     "scripts/p10_validation_027_031.py",
     "docs/P10_FINAL_VALIDATION_027_031.md",
 )
@@ -117,10 +118,13 @@ def validate_mobile_boundary() -> int:
         "SC_ANDROID_KEY_ALIAS",
         "SC_ANDROID_KEY_PASSWORD",
         "Never fall back to debug signing",
+        "compilerOptions",
     ):
         if marker not in android_template:
             fail(f"Android release template missing marker: {marker}")
-    return 10
+    if 'id("kotlin-android")' in android_template:
+        fail("Android release template must use Flutter/AGP built-in Kotlin, not kotlin-android")
+    return 12
 
 
 def validate_example_config() -> int:
@@ -164,7 +168,22 @@ def validate_ci_contract() -> int:
     missing = [command for command in required_commands if command not in workflow]
     if missing:
         fail("quality-gates workflow missing commands: " + ", ".join(missing))
-    return len(required_commands)
+
+    retain = (ROOT / ".github/workflows/retain-verified-plugin.yml").read_text(encoding="utf-8")
+    retain_markers = (
+        'workflows: ["Quality Gates"]',
+        "branches: [main]",
+        "contents: write",
+        "github.event.workflow_run.conclusion == 'success'",
+        "python3 scripts/package_plugin.py build",
+        "python3 scripts/verified_artifacts.py publish-plugin",
+        "python3 scripts/verified_artifacts.py check --require-plugin",
+        "git push origin HEAD:main",
+    )
+    missing_retain = [marker for marker in retain_markers if marker not in retain]
+    if missing_retain:
+        fail("verified plugin retention workflow missing markers: " + ", ".join(missing_retain))
+    return len(required_commands) + len(retain_markers)
 
 
 def validate_artifact_policy() -> int:
