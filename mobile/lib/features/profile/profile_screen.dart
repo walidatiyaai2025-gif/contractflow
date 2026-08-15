@@ -100,7 +100,8 @@ final class _ProfileScreenState extends State<ProfileScreen> {
         onRetry: () => unawaited(controller.load()),
       );
     }
-    final devices = controller.snapshot?.devices ?? const <SafeContractsDevice>[];
+    final devices =
+        controller.snapshot?.devices ?? const <SafeContractsDevice>[];
     if (devices.isEmpty) {
       return const Text('No registered devices are currently visible.');
     }
