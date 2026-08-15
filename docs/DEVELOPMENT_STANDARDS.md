@@ -3,7 +3,7 @@
 ## Repository layout
 
 - `wordpress-plugin/safecontracts/` — authoritative WordPress backend/plugin code.
-- `mobile/` — mobile client when P0 mobile foundation starts.
+- `mobile/` — Flutter mobile API client.
 - `tests/` — automated regression tests and lightweight contract tests.
 - `docs/` — product, architecture, API and operating documentation.
 - `scripts/` — repeatable local/CI validation helpers.
@@ -38,9 +38,31 @@
 - Responses use a top-level `data` value and optional `meta` object.
 - Do not expose secrets, Firebase private credentials, raw database details or internal stack traces.
 
+## Mobile baseline
+
+- Flutter/Dart is the mobile implementation baseline.
+- Mobile is an API client; authoritative business rules, financial calculations and authorization remain in WordPress.
+- Mobile configuration uses compile-time `--dart-define`/`--dart-define-from-file` values for public environment metadata only.
+- API tokens, passwords, Firebase private credentials and other secrets must not be compiled into or committed with the mobile app.
+- Production API URLs must use HTTPS.
+
+## Environment and secrets
+
+- Environment names are `local`, `staging` and `production`.
+- Real `.env` files and `mobile/config/*.json` runtime files are ignored; only documented examples are committed.
+- Server secrets belong in host secret storage or `wp-config.php`/environment injection outside the repository.
+- Logs, CI output and client-visible configuration must not print secret material.
+
+## Quality gates
+
+- `python3 scripts/validate-foundation.py` validates repository structure, standards and secret-safe examples.
+- `./scripts/test-php.sh` syntax-checks and validates backend foundation/lifecycle behavior.
+- Flutter CI runs formatting, analysis and unit/widget tests.
+- Pull requests and `main` pushes must pass the applicable quality gates.
+
 ## GitHub workflow
 
 - One bounded issue ID per production task (`SC-Px-NNN`).
-- Branches and PRs reference all task IDs delivered by the change.
-- Run relevant tests before merge.
+- Branches and PRs/commits reference all task IDs delivered by the change.
+- Run relevant tests before merge/closure.
 - Close task Issues only after merged implementation/validation evidence exists.

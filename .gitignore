@@ -10,3 +10,14 @@ node_modules/
 coverage/
 *.log
 wordpress-plugin/safecontracts/.phpunit.result.cache
+
+# Flutter / Dart generated state.
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+mobile/.dart_tool/
+mobile/build/
+
+# Mobile runtime configuration is local-only. Commit examples, never real values.
+mobile/config/*.json
+!mobile/config/*.example.json

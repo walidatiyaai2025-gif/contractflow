@@ -14,6 +14,7 @@ $GLOBALS['sc_test_roles'] = [];
 $GLOBALS['sc_test_routes'] = [];
 $GLOBALS['sc_test_dbdelta'] = [];
 $GLOBALS['sc_test_current_caps'] = [];
+$GLOBALS['sc_test_fired_actions'] = [];
 
 final class SC_Test_Role
 {
@@ -64,7 +65,13 @@ function plugin_basename(string $file): string { return basename(dirname($file))
 function register_activation_hook(string $file, callable $callback): void { $GLOBALS['sc_test_activation_hooks'][$file] = $callback; }
 function register_deactivation_hook(string $file, callable $callback): void { $GLOBALS['sc_test_deactivation_hooks'][$file] = $callback; }
 function add_action(string $hook, callable $callback): void { $GLOBALS['sc_test_actions'][$hook][] = $callback; }
-function do_action(string $hook, mixed ...$args): void { foreach ($GLOBALS['sc_test_actions'][$hook] ?? [] as $cb) { $cb(...$args); } }
+function do_action(string $hook, mixed ...$args): void
+{
+    $GLOBALS['sc_test_fired_actions'][$hook][] = $args;
+    foreach ($GLOBALS['sc_test_actions'][$hook] ?? [] as $cb) {
+        $cb(...$args);
+    }
+}
 function get_option(string $key, mixed $default = false): mixed { return $GLOBALS['sc_test_options'][$key] ?? $default; }
 function update_option(string $key, mixed $value, bool $autoload = true): bool { unset($autoload); $GLOBALS['sc_test_options'][$key] = $value; return true; }
 function get_role(string $slug): ?SC_Test_Role { return $GLOBALS['sc_test_roles'][$slug] ?? null; }

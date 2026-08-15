@@ -33,6 +33,9 @@ $activate();
 sc_assert(get_option(Migrator::VERSION_OPTION) === Migrator::LATEST_VERSION, 'migration version stored after successful migration');
 sc_assert(count($GLOBALS['sc_test_dbdelta']) === 1, 'foundation custom table migration executed once');
 sc_assert(str_contains($GLOBALS['sc_test_dbdelta'][0], 'wp_safecontracts_meta'), 'migration uses WordPress prefix');
+sc_assert(get_option('safecontracts_installed_at', false) !== false, 'activation stores installation timestamp');
+sc_assert(get_option('safecontracts_plugin_version') === SAFECONTRACTS_VERSION, 'activation stores plugin version');
+sc_assert(isset($GLOBALS['sc_test_fired_actions']['safecontracts_activated']), 'activation lifecycle action fired');
 
 foreach ([RoleRegistrar::SYSTEM_ADMIN, RoleRegistrar::MANAGER, RoleRegistrar::ACCOUNTANT, RoleRegistrar::VIEWER] as $role) {
     sc_assert(isset($GLOBALS['sc_test_roles'][$role]), "role {$role} registered");
@@ -72,5 +75,17 @@ sc_assert(Router::canAccess() instanceof WP_Error, 'unauthorized REST access ret
 $health = Router::health(new WP_REST_Request());
 sc_assert($health->status === 200, 'health response status is 200');
 sc_assert($health->data['data']['service'] === 'SafeContracts', 'health response identifies service');
+
+// Deactivation must be non-destructive so reactivation is safe.
+$optionsBeforeDeactivate = $GLOBALS['sc_test_options'];
+$rolesBeforeDeactivate = array_keys($GLOBALS['sc_test_roles']);
+$migrationCountBeforeDeactivate = count($GLOBALS['sc_test_dbdelta']);
+$deactivate = $GLOBALS['sc_test_deactivation_hooks'][SAFECONTRACTS_FILE];
+$deactivate();
+
+sc_assert(isset($GLOBALS['sc_test_fired_actions']['safecontracts_deactivated']), 'deactivation lifecycle action fired');
+sc_assert($GLOBALS['sc_test_options'] === $optionsBeforeDeactivate, 'deactivation preserves options and installation state');
+sc_assert(array_keys($GLOBALS['sc_test_roles']) === $rolesBeforeDeactivate, 'deactivation preserves roles/capabilities');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === $migrationCountBeforeDeactivate, 'deactivation does not mutate schema/data');
 
 echo "SafeContracts PHP foundation tests passed ({$tests} assertions).\n";
