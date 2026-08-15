@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../operations/operations_repository.dart';
+import '../operations/operations_screens.dart';
 import '../session/session_controller.dart';
 import 'navigation_policy.dart';
 
@@ -87,16 +89,50 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
   }
 
   Widget _body() {
+    final repository = MobileOperationsRepository(
+      widget.dashboardController.repository.client,
+    );
+    final filters = widget.dashboardController.filters;
+    final pageSize = widget.config.defaultPageSize;
+
     return switch (_selected) {
       MobileDestination.dashboard => DashboardScreen(
           controller: widget.dashboardController,
+        ),
+      MobileDestination.customers => CustomersScreen(
+          repository: repository,
+          pageSize: pageSize,
+        ),
+      MobileDestination.contracts => ContractsScreen(
+          repository: repository,
+          filters: filters,
+          session: widget.session,
+          pageSize: pageSize,
+        ),
+      MobileDestination.payments => PaymentsScreen(
+          repository: repository,
+          filters: filters,
+          session: widget.session,
+          pageSize: pageSize,
+        ),
+      MobileDestination.collections => CollectionsScreen(
+          repository: repository,
+          filters: filters,
+          pageSize: pageSize,
+          canRecord: widget.policy.canEnterCollection,
+        ),
+      MobileDestination.export => ExcelExportScreen(
+          repository: repository,
+          filters: filters,
         ),
       MobileDestination.profile => _ProfileView(
           session: widget.session,
           config: widget.config,
           onClearSession: widget.onClearSession,
         ),
-      _ => _PlannedDestination(destination: _selected),
+      MobileDestination.followUps => const _PlannedDestination(
+          destination: MobileDestination.followUps,
+        ),
     };
   }
 }
