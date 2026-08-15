@@ -27,6 +27,11 @@ final class ExcelExportController
 
     public static function download(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
+        $permission = self::canExport();
+        if ($permission instanceof WP_Error) {
+            return $permission;
+        }
+
         try {
             $export = (new ReportExportService())->generate(RequestGuard::params($request));
             return RequestGuard::response([
