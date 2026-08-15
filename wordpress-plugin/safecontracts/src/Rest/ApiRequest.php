@@ -30,8 +30,8 @@ final class ApiRequest
         return self::positiveInt($value, $key);
     }
 
-    /** @return array{filters:array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string},page:int,per_page:int} */
-    public static function listQuery(WP_REST_Request $request): array
+    /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} */
+    public static function filters(WP_REST_Request $request): array
     {
         $params = self::params($request);
         foreach (['customer_id', 'contract_id', 'accountant_user_id'] as $key) {
@@ -59,9 +59,19 @@ final class ApiRequest
             }
         }
 
+        $filters = DashboardFilters::normalize($params);
+        if ($filters['due_from'] !== null && $filters['due_to'] !== null && $filters['due_to'] < $filters['due_from']) {
+            throw new InvalidArgumentException('due_to must not be earlier than due_from.');
+        }
+        return $filters;
+    }
+
+    /** @return array{filters:array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string},page:int,per_page:int} */
+    public static function listQuery(WP_REST_Request $request): array
+    {
         $pagination = self::pagination($request);
         return [
-            'filters' => DashboardFilters::normalize($params),
+            'filters' => self::filters($request),
             'page' => $pagination['page'],
             'per_page' => $pagination['per_page'],
         ];
