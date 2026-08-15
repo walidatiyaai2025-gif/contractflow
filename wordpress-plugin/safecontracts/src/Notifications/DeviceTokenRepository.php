@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SafeContracts\Notifications;
 
+use InvalidArgumentException;
+
 final class DeviceTokenRepository
 {
     public function register(int $userId, string $token, string $platform): void
@@ -74,6 +76,50 @@ final class DeviceTokenRepository
                 'user_id' => (int) ($row['user_id'] ?? 0),
                 'token' => (string) ($row['token'] ?? ''),
                 'platform' => (string) ($row['platform'] ?? ''),
+            ];
+        }
+        return $normalized;
+    }
+
+    /**
+     * Safe current-user projection for mobile profile/device state.
+     * Raw token/hash material is intentionally excluded.
+     *
+     * @return list<array{id:int,platform:string,is_active:bool,last_seen_at:string,created_at:string,updated_at:string}>
+     */
+    public function safeForUser(int $userId): array
+    {
+        global $wpdb;
+        if ($userId <= 0) {
+            throw new InvalidArgumentException('Device lookup requires a valid user.');
+        }
+        $table = $wpdb->prefix . 'safecontracts_device_tokens';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, platform, is_active, last_seen_at, created_at, updated_at
+                 FROM {$table}
+                 WHERE user_id = %d
+                 ORDER BY is_active DESC, updated_at DESC, id DESC
+                 LIMIT 100",
+                $userId
+            ),
+            ARRAY_A
+        );
+
+        $normalized = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            $platform = strtolower(trim((string) ($row['platform'] ?? '')));
+            if ($id <= 0 || ! in_array($platform, ['android', 'ios', 'web'], true)) {
+                continue;
+            }
+            $normalized[] = [
+                'id' => $id,
+                'platform' => $platform,
+                'is_active' => (bool) ((int) ($row['is_active'] ?? 0)),
+                'last_seen_at' => (string) ($row['last_seen_at'] ?? ''),
+                'created_at' => (string) ($row['created_at'] ?? ''),
+                'updated_at' => (string) ($row['updated_at'] ?? ''),
             ];
         }
         return $normalized;
