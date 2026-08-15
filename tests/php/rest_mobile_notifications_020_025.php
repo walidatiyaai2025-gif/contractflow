@@ -38,6 +38,7 @@ function sc_p9n_assert(bool $ok, string $message): void
 }
 
 $GLOBALS['sc_test_current_caps'][Capabilities::ACCESS] = true;
+$GLOBALS['sc_test_current_caps'][Capabilities::VIEW_ASSIGNED] = true;
 Router::register();
 sc_p9n_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/notifications']), 'SC-P9-020 notifications route is registered');
 sc_p9n_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/notifications/(?P<id>\d+)/read']), 'SC-P9-020 notification read-state route is registered');
@@ -56,7 +57,7 @@ $notificationRow = [
 ];
 
 $GLOBALS['sc_test_read_queries'] = [];
-$GLOBALS['sc_test_result_queue'] = [[ $notificationRow ]];
+$GLOBALS['sc_test_result_queue'] = [[$notificationRow]];
 $inbox = NotificationsController::index(new WP_REST_Request(['page' => '1', 'per_page' => '2']));
 sc_p9n_assert($inbox instanceof WP_REST_Response && $inbox->status === 200, 'SC-P9-020 inbox returns canonical success response');
 $item = $inbox->data['data'][0] ?? [];
@@ -76,7 +77,7 @@ sc_p9n_assert($readIds === [91], 'SC-P9-020 read state is persisted per user out
 $ownershipQuery = $GLOBALS['sc_test_read_queries'][count($GLOBALS['sc_test_read_queries']) - 1] ?? '';
 sc_p9n_assert(str_contains($ownershipQuery, 'id = 91') && str_contains($ownershipQuery, 'user_id = 42'), 'SC-P9-045 mark-read ownership query is pinned to notification and current user');
 
-$GLOBALS['sc_test_result_queue'] = [[ $notificationRow ]];
+$GLOBALS['sc_test_result_queue'] = [[$notificationRow]];
 $readInbox = NotificationsController::index(new WP_REST_Request(['page' => '1', 'per_page' => '2']));
 sc_p9n_assert(($readInbox->data['data'][0]['is_read'] ?? false) === true, 'SC-P9-020 persisted read state survives inbox reload');
 
