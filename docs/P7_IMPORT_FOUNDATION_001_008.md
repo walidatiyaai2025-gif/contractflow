@@ -5,7 +5,8 @@ This slice implements the first SafeContracts Excel import pipeline while keepin
 ## SC-P7-001 — Excel upload
 - Dedicated `RUN_IMPORTS` capability and nonce-protected admin action.
 - `.xlsx` only, 20 MiB maximum, strict scalar upload metadata, ZIP signature and SHA-256 fingerprint.
-- Workbooks are staged under private server storage (`WP_CONTENT_DIR/safecontracts-private/imports` by default), not a public uploads URL.
+- Workbooks are staged outside WordPress public content by default under the system temporary directory; production can set `SAFECONTRACTS_PRIVATE_DIR` to an explicitly provisioned private path.
+- Staged files are SHA-addressed, directory/file permissions are restricted, and Apache/index denial files are added as defense in depth.
 - Import-run metadata is persisted separately from workbook bytes.
 
 ## SC-P7-002 — Workbook field discovery
@@ -13,6 +14,7 @@ This slice implements the first SafeContracts Excel import pipeline while keepin
 - Package entry count and expanded size are capped.
 - VBA/macros, external links, workbook connections, XML entity declarations and formula cells are rejected.
 - Sheet names, header row, workbook columns and original/normalized labels are discovered without executing workbook content.
+- Both explicit XLSX cell references and positional cells are supported without weakening formula/content restrictions.
 
 ## SC-P7-003 — Column mapping
 - Mapping is validated server-side from SafeContracts target fields to discovered workbook columns.
@@ -28,6 +30,7 @@ This slice implements the first SafeContracts Excel import pipeline while keepin
 ## SC-P7-005 — Row validation
 - All rows are normalized and validated before any execution begins.
 - Customer/contract identities, email, positive integer IDs/sequences, calendar dates/date ranges and fixed-point amounts are validated.
+- Non-scalar array/object-like values fail closed before string/date/amount normalization.
 - Payment rows require sequence, contractual due date and positive amount.
 - Validation errors are field-level and tied to the original workbook row.
 
@@ -57,7 +60,7 @@ Migration `1.11.0` adds:
 
 ## Regression evidence
 
-`tests/php/import_foundation_001_008.php` covers schema, upload validation/private storage, workbook security/discovery, mapping, preview, row validation, duplicate policy, transactional/domain execution boundaries, error reporting and admin integration. The suite is executed by `scripts/test-php.sh` in Quality Gates.
+`tests/php/import_foundation_001_008.php` covers schema, upload validation/private storage, workbook security/discovery, mapping, preview, row validation (including complex malformed values), duplicate policy, transactional/domain execution boundaries, error reporting and admin integration. The suite is executed by `scripts/test-php.sh` in Quality Gates.
 
 ## Runtime dependency
 
