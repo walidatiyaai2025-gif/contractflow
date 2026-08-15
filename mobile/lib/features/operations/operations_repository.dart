@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import '../../core/api/api_client.dart';
 import '../dashboard/dashboard_models.dart';
 import 'operations_models.dart';
@@ -151,35 +148,53 @@ final class MobileOperationsRepository {
     return readInt(data['collection_id'], 'collection_create.collection_id');
   }
 
-  Future<ExcelExportPayload> exportExcel(DashboardFilters filters) async {
+  Future<List<FollowUpQueueRecord>> followUpQueue(
+    DashboardFilters filters, {
+    int pageSize = 50,
+  }) async {
     final response = await client.get(
-      'reports/excel',
-      query: filters.toQuery(),
+      'followups',
+      query: <String, String>{
+        ...filters.toQuery(),
+        'page': '1',
+        'per_page': pageSize.clamp(1, 100).toString(),
+        'sort': 'due_date',
+        'order': 'asc',
+      },
     );
-    final data = apiObjectMap(response.data, 'excel_export.data');
-    final encoding = readString(data['encoding'], 'excel_export.encoding');
-    if (encoding != 'base64') {
-      throw const FormatException('SafeContracts Excel export encoding is unsupported.');
-    }
-    final content = readString(
-      data['content_base64'],
-      'excel_export.content_base64',
+    return _list(response, 'followups', FollowUpQueueRecord.fromData);
+  }
+
+  Future<List<FollowUpHistoryRecord>> followUpHistory(
+    int paymentId, {
+    int pageSize = 50,
+  }) async {
+    final response = await client.get(
+      'payments/$paymentId/followups',
+      query: <String, String>{
+        'page': '1',
+        'per_page': pageSize.clamp(1, 100).toString(),
+      },
     );
-    final bytes = Uint8List.fromList(base64Decode(content));
-    if (bytes.isEmpty) {
-      throw const FormatException('SafeContracts Excel export is empty.');
-    }
-    final rowCountsData = apiObjectMap(data['row_counts'], 'excel_export.row_counts');
-    final rowCounts = <String, int>{};
-    for (final entry in rowCountsData.entries) {
-      rowCounts[entry.key] = readInt(entry.value, 'excel_export.row_counts.${entry.key}');
-    }
-    return ExcelExportPayload(
-      filename: readString(data['filename'], 'excel_export.filename'),
-      contentType: readString(data['content_type'], 'excel_export.content_type'),
-      bytes: bytes,
-      rowCounts: Map<String, int>.unmodifiable(rowCounts),
+    return _list(response, 'followup_history', FollowUpHistoryRecord.fromData);
+  }
+
+  Future<int> recordFollowUp({
+    required int paymentId,
+    required String action,
+    String? note,
+    String? date,
+  }) async {
+    final response = await client.post(
+      'payments/$paymentId/followups/action',
+      body: <String, Object?>{
+        'action': action.trim().toLowerCase(),
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        if (date != null && date.trim().isNotEmpty) 'date': date.trim(),
+      },
     );
+    final data = apiObjectMap(response.data, 'followup_create.data');
+    return readInt(data['followup_id'], 'followup_create.followup_id');
   }
 }
 
