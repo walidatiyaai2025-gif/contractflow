@@ -61,8 +61,8 @@ function sc_fin_contract(array $overrides = []): array
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_fin_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
-sc_fin_assert(Migrator::LATEST_VERSION === '1.4.0', 'financial migration is current');
-sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'three contract finance/reference tables are added');
+sc_fin_assert(Migrator::LATEST_VERSION === '1.5.0', 'financial migration remains current within schema 1.5.0');
+sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'finance tables remain present alongside contract history schema');
 
 $itemSchema = $GLOBALS['sc_test_dbdelta'][4];
 $adjustmentSchema = $GLOBALS['sc_test_dbdelta'][5];
@@ -164,7 +164,6 @@ $beforeBadMedia = count($GLOBALS['sc_test_queries']);
 sc_fin_expect(InvalidArgumentException::class, fn () => $service->attachMedia(501, 999, 'Not media'), 'non-Media attachment reference is rejected');
 sc_fin_assert(count($GLOBALS['sc_test_queries']) === $beforeBadMedia, 'invalid attachment does not mutate data');
 
-// Notes remain part of bounded contract edit and are validated here with the attachment task.
 $GLOBALS['sc_test_result_queue'] = [[sc_fin_contract()]];
 $service->edit(501, ['notes' => 'Updated operational note']);
 sc_fin_assert(str_contains((string) end($GLOBALS['sc_test_queries']), "'Updated operational note'"), 'contract notes remain editable under contract edit capability');
