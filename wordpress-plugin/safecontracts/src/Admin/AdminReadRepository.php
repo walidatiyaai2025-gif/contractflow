@@ -94,6 +94,75 @@ final class AdminReadRepository
         return $this->rows($wpdb->get_results($sql, ARRAY_A));
     }
 
+    /** @return list<array<string,mixed>> */
+    public function collections(array $filters = []): array
+    {
+        global $wpdb;
+        $normalized = DashboardFilters::normalize($filters);
+        $collections = $wpdb->prefix . 'safecontracts_payment_collections';
+        $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $customers = $wpdb->prefix . 'safecontracts_customers';
+        $methods = $wpdb->prefix . 'safecontracts_payment_methods';
+        $where = $this->where($normalized, 'c', 'p');
+        $sql = "SELECT cl.id, cl.payment_id, cl.amount, cl.collection_date, cl.payment_method_id,
+                       cl.reference, cl.details, cl.proof_media_id, cl.created_by, cl.created_at,
+                       p.reference AS payment_reference, p.sequence_no, p.due_date, p.status AS payment_status,
+                       p.remaining_amount, c.id AS contract_id, c.contract_number, c.accountant_user_id,
+                       cu.id AS customer_id, cu.name AS customer_name, pm.name AS payment_method_name
+                FROM {$collections} cl
+                INNER JOIN {$payments} p ON p.id = cl.payment_id
+                INNER JOIN {$contracts} c ON c.id = p.contract_id
+                INNER JOIN {$customers} cu ON cu.id = c.customer_id
+                INNER JOIN {$methods} pm ON pm.id = cl.payment_method_id
+                WHERE " . implode(' AND ', $where) . '
+                ORDER BY cl.collection_date DESC, cl.id DESC LIMIT 500';
+        return $this->rows($wpdb->get_results($sql, ARRAY_A));
+    }
+
+    /**
+     * @return array{
+     *   contract_count:mixed,scheduled_total:mixed,remaining_total:mixed,overdue_exposure:mixed,collected_total:mixed,
+     *   collection_transactions:mixed,collection_ledger_total:mixed,followup_events:mixed,followed_up_payments:mixed
+     * }
+     */
+    public function reportSummary(array $filters = []): array
+    {
+        global $wpdb;
+        $normalized = DashboardFilters::normalize($filters);
+        $summary = $this->kpis($normalized);
+        $collections = $wpdb->prefix . 'safecontracts_payment_collections';
+        $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $followups = $wpdb->prefix . 'safecontracts_payment_followups';
+        $where = $this->where($normalized, 'c', 'p');
+        $whereSql = implode(' AND ', $where);
+
+        $collectionSql = "SELECT COUNT(cl.id) AS collection_transactions,
+                                 COALESCE(SUM(cl.amount), 0) AS collection_ledger_total
+                          FROM {$collections} cl
+                          INNER JOIN {$payments} p ON p.id = cl.payment_id
+                          INNER JOIN {$contracts} c ON c.id = p.contract_id
+                          WHERE {$whereSql}";
+        $collectionTotals = $this->firstRow($wpdb->get_results($collectionSql, ARRAY_A), [
+            'collection_transactions' => '0',
+            'collection_ledger_total' => '0.0000',
+        ]);
+
+        $followupSql = "SELECT COUNT(f.id) AS followup_events,
+                               COUNT(DISTINCT f.payment_id) AS followed_up_payments
+                        FROM {$followups} f
+                        INNER JOIN {$payments} p ON p.id = f.payment_id
+                        INNER JOIN {$contracts} c ON c.id = p.contract_id
+                        WHERE {$whereSql}";
+        $followupTotals = $this->firstRow($wpdb->get_results($followupSql, ARRAY_A), [
+            'followup_events' => '0',
+            'followed_up_payments' => '0',
+        ]);
+
+        return array_merge($summary, $collectionTotals, $followupTotals);
+    }
+
     /** @return list<array{id:int,name:string}> */
     public function customerOptions(): array
     {
