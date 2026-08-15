@@ -50,7 +50,7 @@ Validation confirmed two intentional authorization patterns and hardened the sen
 - Contractual due date and expected payment date remain separate fields.
 - Original/paid/remaining values preserve canonical fixed-point amounts.
 - Status and due-date filters remain server-side and accountant scoped.
-- REST date ranges now fail closed when `due_to` is earlier than `due_from`; the API no longer silently swaps reversed ranges.
+- REST date ranges fail closed when `due_to` is earlier than `due_from`; validation occurs on the raw validated dates before the reusable admin normalizer can reorder them.
 
 ## SC-P8-026 — Collection endpoints — Validate
 
@@ -62,16 +62,14 @@ Validation confirmed two intentional authorization patterns and hardened the sen
 ## SC-P8-027 — Follow-up endpoints — Validate
 
 - Follow-up queue/history continue to reuse the domain follow-up scope boundary.
-- Missing payment history now returns canonical 404 rather than being translated into generic validation 422.
+- Missing payment history returns canonical 404 rather than being translated into generic validation 422.
 - The endpoint preserves the existing single payment lookup by translating the domain service's missing-payment error rather than pre-reading the payment a second time.
 - Authorized history preserves operational note/state/date fields and explicit response scope metadata.
 - History reads remain bounded to the existing 500-row server window.
 
 ## SC-P8-028 — Dashboard endpoints — Validate
 
-Validation found that dashboard parsing used the forgiving admin filter normalizer directly. Invalid status/date/ID values could therefore be silently cleared or reordered rather than rejected.
-
-Dashboard REST input now passes through the same strict API boundary used by list endpoints:
+Dashboard REST input passes through the same strict API boundary used by list endpoints while the older normalized helper remains backward compatible for non-endpoint callers:
 
 - unsupported parameters are rejected;
 - non-scalar IDs/status values are rejected;
@@ -83,21 +81,12 @@ Dashboard KPI, customer-option and dependent-contract reads remain bounded/scope
 
 ## Shared hardening
 
-`ApiRequest::filters()` is now the canonical strict REST filter parser. `ApiRequest::listQuery()` and `RequestGuard::strictDashboardFilters()` use it for public REST boundaries. The existing `RequestGuard::dashboardFilters()` keeps its backward-compatible normalized behavior for internal/admin callers and prior P8 contracts, while `DashboardController` explicitly uses the strict helper.
+`ApiRequest::filters()` is the canonical strict REST filter parser. `ApiRequest::listQuery()` and `RequestGuard::strictDashboardFilters()` use it for public REST boundaries. The existing `RequestGuard::dashboardFilters()` keeps its backward-compatible normalized behavior for internal/admin callers and prior P8 contracts, while `DashboardController` explicitly uses the strict helper.
 
-`RequestGuard::params()` now delegates to `ApiRequest::params()` so tests, JSON/internal calls and production `WP_REST_Request::get_params()` follow one parameter extraction contract.
+`RequestGuard::params()` delegates to `ApiRequest::params()` so tests, JSON/internal calls and production `WP_REST_Request::get_params()` follow one parameter extraction contract.
 
 ## Regression evidence
 
-`tests/php/rest_api_validation_019_028.php` exercises all ten task IDs with behavioral checks covering:
+`tests/php/rest_api_validation_019_028.php` exercises all ten task IDs with behavioral checks covering session/data direct-callback authorization, route permission contracts for established read models, pre-read capability denial, SQL scope, safe field projection, 403/404/422 errors, strict date ranges, follow-up semantics and dashboard scope.
 
-- session/data direct-callback authorization and route permission contracts for established read models;
-- no protected reads/writes after capability denial;
-- SQL accountant/customer/contract scope;
-- safe field projection;
-- 403/404/422 versioned errors;
-- reversed date-range rejection;
-- follow-up not-found semantics;
-- dashboard KPI/options payload and scope.
-
-The suite is wired into `scripts/test-php.sh` after all prior P8 implementation/validation suites and therefore executes as part of repository Quality Gates.
+Quality Gates #146 passed the final merge candidate. The PHP pipeline passed every prior P8 suite (`001..018`) and the final `SC-P8-019..028` suite passed 50 assertions; repository standards and Flutter format/analyze/tests also passed.
