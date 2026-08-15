@@ -15,11 +15,11 @@
 | P6 | [Admin UI & Reports](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP6) | 40 | 0 | 0 | 40 | 100.0% |
 | P7 | [Import](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP7) | 17 | 6 | 1 | 10 | 58.8% |
 | P8 | [REST API](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP8) | 28 | 11 | 2 | 15 | 53.6% |
-| P9 | [Mobile](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP9) | 50 | 44 | 6 | 0 | 0.0% |
+| P9 | [Mobile](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP9) | 50 | 42 | 8 | 0 | 0.0% |
 | P10 | [Hardening & UAT](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP10) | 32 | 32 | 0 | 0 | 0.0% |
-| **TOTAL** |  | **284** | **93** | **9** | **182** | **64.1%** |
+| **TOTAL** |  | **284** | **91** | **11** | **182** | **64.1%** |
 
-_Last automatic sync: 2026-08-15 16:06 UTC. GitHub Issues found: 191/284._
+_Last automatic sync: 2026-08-15 16:07 UTC. GitHub Issues found: 193/284._
 
 <!-- SAFECONTRACTS_STATUS_END -->
 
