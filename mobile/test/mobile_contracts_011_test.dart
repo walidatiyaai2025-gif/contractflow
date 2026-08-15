@@ -42,8 +42,7 @@ void main() {
     controller.dispose();
   });
 
-  test('SC-P9-011 customer status sort and page remain server-bound',
-      () async {
+  test('SC-P9-011 customer status sort and page remain server-bound', () async {
     final transport = FakeApiTransport(_contractHandler);
     final controller = ContractsController(
       repository: ContractsRepository(_client(transport)),
