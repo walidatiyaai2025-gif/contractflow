@@ -118,6 +118,34 @@ final class PaymentService
         return $payment['expected_payment_date'] ?? $payment['due_date'];
     }
 
+    public function temporalStatus(
+        int $paymentId,
+        ?DateTimeImmutable $today = null,
+        int $dueSoonDays = 10
+    ): string {
+        $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts payments.');
+        $payment = $this->requirePayment($paymentId);
+        $this->assertScope($payment['accountant_user_id']);
+
+        $current = PaymentStatus::normalize($payment['status']);
+        if ($current === PaymentStatus::PAID || $current === PaymentStatus::PARTIALLY_PAID) {
+            return $current;
+        }
+
+        $effectiveDate = $payment['expected_payment_date'] ?? $payment['due_date'];
+        return PaymentStatus::temporalForDueDate($effectiveDate, $today, $dueSoonDays);
+    }
+
+    public function isDueSoon(int $paymentId, ?DateTimeImmutable $today = null, int $dueSoonDays = 10): bool
+    {
+        return $this->temporalStatus($paymentId, $today, $dueSoonDays) === PaymentStatus::DUE_SOON;
+    }
+
+    public function isOverdue(int $paymentId, ?DateTimeImmutable $today = null): bool
+    {
+        return $this->temporalStatus($paymentId, $today) === PaymentStatus::OVERDUE;
+    }
+
     /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, accountant_user_id:?int, contract_is_archived:bool} */
     private function editablePayment(int $paymentId): array
     {
