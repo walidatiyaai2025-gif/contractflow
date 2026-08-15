@@ -20,13 +20,18 @@ final class AuthController
         register_rest_route(Router::NAMESPACE, '/auth/login', [
             'methods' => WP_REST_Server::CREATABLE,
             'callback' => [self::class, 'login'],
-            'permission_callback' => '__return_true',
+            'permission_callback' => [self::class, 'allowLogin'],
         ]);
         register_rest_route(Router::NAMESPACE, '/auth/logout', [
             'methods' => WP_REST_Server::CREATABLE,
             'callback' => [self::class, 'logout'],
             'permission_callback' => [Router::class, 'canAccess'],
         ]);
+    }
+
+    public static function allowLogin(): bool
+    {
+        return true;
     }
 
     public static function login(WP_REST_Request $request): WP_REST_Response|WP_Error

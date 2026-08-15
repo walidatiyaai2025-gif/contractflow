@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/app.dart';
 import 'package:safecontracts_mobile/core/api/api_client.dart';

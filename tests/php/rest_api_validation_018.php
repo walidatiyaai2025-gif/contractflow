@@ -6,6 +6,7 @@ require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
 use SafeContracts\Rest\ApiResponse;
+use SafeContracts\Rest\AuthController;
 use SafeContracts\Rest\Router;
 
 $tests = 0;
@@ -40,10 +41,6 @@ sc_p8v18_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/auth/logi
 sc_p8v18_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/auth/logout']), 'SC-P8-018 mobile logout route is registered under v1 namespace');
 sc_p8v18_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/me']) && isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/session']), 'SC-P8-018 session routes are registered under v1 namespace');
 
-$publicRoutes = [
-    Router::NAMESPACE . '/health',
-    Router::NAMESPACE . '/auth/login',
-];
 $routeCount = 0;
 $endpointCount = 0;
 foreach ($GLOBALS['sc_test_routes'] as $route => $definition) {
@@ -57,8 +54,10 @@ foreach ($GLOBALS['sc_test_routes'] as $route => $definition) {
         sc_p8v18_assert(isset($endpoint['methods'], $endpoint['callback'], $endpoint['permission_callback']), "SC-P8-018 route {$route} has method/callback/permission contract");
         $methods = $endpoint['methods'];
         sc_p8v18_assert(in_array($methods, [WP_REST_Server::READABLE, WP_REST_Server::CREATABLE, 'PATCH'], true), "SC-P8-018 route {$route} uses supported v1 HTTP method contract");
-        if (in_array($route, $publicRoutes, true)) {
-            sc_p8v18_assert($endpoint['permission_callback'] === '__return_true', "SC-P8-018 intentionally public route {$route} stays explicitly public");
+        if ($route === Router::NAMESPACE . '/health') {
+            sc_p8v18_assert($endpoint['permission_callback'] === '__return_true', 'SC-P8-018 health stays explicitly public');
+        } elseif ($route === Router::NAMESPACE . '/auth/login') {
+            sc_p8v18_assert($endpoint['permission_callback'] === [AuthController::class, 'allowLogin'], 'SC-P8-018 mobile login uses its explicit public permission callback');
         } else {
             sc_p8v18_assert($endpoint['permission_callback'] !== '__return_true', "SC-P8-018 protected route {$route} is not accidentally public");
         }
