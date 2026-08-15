@@ -10,7 +10,10 @@ void main() {
       );
 
       expect(environment.name, AppEnvironmentName.local);
-      expect(environment.apiBaseUri.toString(), 'http://127.0.0.1:8080/wp-json/safecontracts/v1/');
+      expect(
+        environment.apiBaseUri.toString(),
+        'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
+      );
       expect(
         environment.endpoint('health').toString(),
         'http://127.0.0.1:8080/wp-json/safecontracts/v1/health',

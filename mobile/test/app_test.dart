@@ -14,7 +14,9 @@ void main() {
     expect(find.text('SafeContracts'), findsOneWidget);
     expect(find.text('Environment: local'), findsOneWidget);
     expect(
-      find.text('Mobile foundation ready. Business data remains server-authoritative.'),
+      find.text(
+        'Mobile foundation ready. Business data remains server-authoritative.',
+      ),
       findsOneWidget,
     );
   });

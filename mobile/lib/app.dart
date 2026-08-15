@@ -38,7 +38,10 @@ class _FoundationScreen extends StatelessWidget {
               children: [
                 const Icon(Icons.fact_check_outlined, size: 56),
                 const SizedBox(height: 16),
-                Text('SafeContracts', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'SafeContracts',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 8),
                 const Text(
                   'Mobile foundation ready. Business data remains server-authoritative.',
