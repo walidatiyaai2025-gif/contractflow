@@ -33,8 +33,8 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
 
 sc_assert(get_option(Migrator::VERSION_OPTION) === Migrator::LATEST_VERSION, 'migration version stored after successful migration');
-sc_assert(Migrator::LATEST_VERSION === '1.5.0', 'contract history migration version registered');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'foundation, master data, contracts, financials and history schemas migrated once');
+sc_assert(Migrator::LATEST_VERSION === '1.6.0', 'payment schedule migration version registered');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 9, 'foundation, master data, contracts, financials, history and payment schemas migrated once');
 sc_assert(str_contains($GLOBALS['sc_test_dbdelta'][0], 'wp_safecontracts_meta'), 'foundation migration uses WordPress prefix');
 
 $customerSchema = $GLOBALS['sc_test_dbdelta'][1];
@@ -72,6 +72,13 @@ sc_assert(str_contains($historySchema, 'wp_safecontracts_contract_history'), 'co
 sc_assert(str_contains($historySchema, 'snapshot_json longtext NULL'), 'contract history stores immutable state snapshots');
 sc_assert(str_contains($historySchema, 'KEY contract_created (contract_id, created_at, id)'), 'contract history timeline reads are indexed');
 
+$paymentSchema = $GLOBALS['sc_test_dbdelta'][8];
+sc_assert(str_contains($paymentSchema, 'wp_safecontracts_scheduled_payments'), 'scheduled-payment table created');
+sc_assert(str_contains($paymentSchema, 'original_amount decimal(20,4) NOT NULL'), 'scheduled payment amount uses fixed-point precision');
+sc_assert(str_contains($paymentSchema, 'due_date date NOT NULL'), 'scheduled payment stores required contractual due date');
+sc_assert(str_contains($paymentSchema, 'expected_payment_date date NULL'), 'scheduled payment stores separate expected date');
+sc_assert(str_contains($paymentSchema, 'UNIQUE KEY contract_sequence (contract_id, sequence_no)'), 'payment sequence is unique within contract');
+
 sc_assert(count($GLOBALS['sc_test_queries']) === 3, 'three default payment methods are seeded');
 $seedSql = implode("\n", $GLOBALS['sc_test_queries']);
 sc_assert(str_contains($seedSql, "'cash', 'Cash'"), 'Cash payment method seeded');
@@ -107,7 +114,7 @@ sc_assert(isset($admin[Capabilities::MANAGE_REFERENCE_DATA]), 'native WordPress 
 
 $seedCountBeforeBoot = count($GLOBALS['sc_test_queries']);
 do_action('plugins_loaded');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'migrations are not replayed after stored version is current');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 9, 'migrations are not replayed after stored version is current');
 sc_assert(count($GLOBALS['sc_test_queries']) === $seedCountBeforeBoot, 'default payment methods are not reseeded after current migration');
 sc_assert(isset($GLOBALS['sc_test_actions']['rest_api_init']), 'REST registration hook attached');
 sc_assert(isset($GLOBALS['sc_test_actions']['admin_menu']), 'reference-data admin menu hook attached');
