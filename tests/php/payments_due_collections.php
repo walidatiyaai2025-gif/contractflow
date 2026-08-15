@@ -29,8 +29,8 @@ function sc_dc_mutations_since(int $offset): array { return array_slice($GLOBALS
 
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
-sc_dc_assert(Migrator::LATEST_VERSION === '1.7.0', 'SC-P3-006 collection migration is current');
-sc_dc_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'SC-P3-006 collection schema is added');
+sc_dc_assert(version_compare(Migrator::LATEST_VERSION, '1.7.0', '>='), 'SC-P3-006 collection migration remains available after later schema versions');
+sc_dc_assert(count($GLOBALS['sc_test_dbdelta']) >= 10, 'SC-P3-006 collection schema remains present after later migrations');
 $schema = $GLOBALS['sc_test_dbdelta'][9];
 sc_dc_assert(str_contains($schema, 'wp_safecontracts_payment_collections'), 'SC-P3-006 collection ledger uses dedicated table');
 sc_dc_assert(str_contains($schema, 'amount decimal(20,4) NOT NULL'), 'SC-P3-006 collection amount uses fixed precision');

@@ -60,7 +60,7 @@ final class ContractService
     public function updateDates(int $contractId, mixed $startDate, mixed $endDate): void
     {
         $this->requireCapability(Capabilities::EDIT_CONTRACTS, 'You do not have permission to edit contract dates.');
-        $this->editableContract($contractId);
+        $contract = $this->editableContract($contractId);
         $start = $this->normalizeDate($startDate, 'start date');
         $end = $this->normalizeDate($endDate, 'end date');
         if ($start !== null && $end !== null && $end < $start) {
@@ -68,17 +68,17 @@ final class ContractService
         }
         $actorId = get_current_user_id();
         $this->repository->updateDates($contractId, $start, $end, $actorId);
-        do_action('safecontracts_contract_dates_changed', $contractId, $start, $end, $actorId);
+        do_action('safecontracts_contract_dates_changed', $contractId, $start, $end, $actorId, $contract['start_date'], $contract['end_date']);
     }
 
     public function updateBaseValue(int $contractId, mixed $amount): void
     {
         $this->requireCapability(Capabilities::EDIT_CONTRACTS, 'You do not have permission to edit contract value.');
-        $this->editableContract($contractId);
+        $contract = $this->editableContract($contractId);
         $amount = ContractMoney::normalizeNonNegative($amount);
         $actorId = get_current_user_id();
         $this->repository->updateBaseValue($contractId, $amount, $actorId);
-        do_action('safecontracts_contract_base_value_changed', $contractId, $amount, $actorId);
+        do_action('safecontracts_contract_base_value_changed', $contractId, $amount, $actorId, $contract['base_value']);
     }
 
     public function addFinancialItem(int $contractId, mixed $description, mixed $amount, mixed $displayOrder = 0): int
@@ -169,7 +169,7 @@ final class ContractService
         }
         $actorId = get_current_user_id();
         $this->repository->assignCustomer($contractId, $customerId, $actorId);
-        do_action('safecontracts_contract_customer_assigned', $contractId, $customerId, $actorId);
+        do_action('safecontracts_contract_customer_assigned', $contractId, $customerId, $actorId, $contract['customer_id']);
     }
 
     public function assignAccountant(int $contractId, ?int $accountantUserId): void
@@ -185,7 +185,7 @@ final class ContractService
         }
         $actorId = get_current_user_id();
         $this->repository->assignAccountant($contractId, $accountantUserId, $actorId);
-        do_action('safecontracts_contract_accountant_assigned', $contractId, $accountantUserId, $actorId);
+        do_action('safecontracts_contract_accountant_assigned', $contractId, $accountantUserId, $actorId, $contract['accountant_user_id']);
     }
 
     public function changeStatus(int $contractId, string $targetStatus): void

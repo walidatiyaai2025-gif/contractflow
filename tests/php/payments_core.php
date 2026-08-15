@@ -66,8 +66,8 @@ function sc_payment_row(array $overrides = []): array
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_payment_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
-sc_payment_assert(Migrator::LATEST_VERSION === '1.7.0', 'collection ledger schema migration is current after payment core');
-sc_payment_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'collection migration extends the existing scheduled-payment schema');
+sc_payment_assert(version_compare(Migrator::LATEST_VERSION, '1.7.0', '>='), 'collection ledger schema migration remains available after later migrations');
+sc_payment_assert(count($GLOBALS['sc_test_dbdelta']) >= 10, 'collection migration extends the existing scheduled-payment schema before later schemas');
 
 $schema = $GLOBALS['sc_test_dbdelta'][8];
 sc_payment_assert(str_contains($schema, 'wp_safecontracts_scheduled_payments'), 'SC-P3-001 scheduled-payment table uses WordPress prefix');

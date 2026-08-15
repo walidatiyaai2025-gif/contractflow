@@ -33,8 +33,9 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
 
 sc_assert(get_option(Migrator::VERSION_OPTION) === Migrator::LATEST_VERSION, 'migration version stored after successful migration');
-sc_assert(Migrator::LATEST_VERSION === '1.7.0', 'collection ledger migration version registered');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'foundation through collection schemas migrated once');
+sc_assert(version_compare(Migrator::LATEST_VERSION, '1.7.0', '>='), 'collection ledger migration remains registered after later schema versions');
+$migrationCountAfterActivation = count($GLOBALS['sc_test_dbdelta']);
+sc_assert($migrationCountAfterActivation >= 10, 'foundation through collection schemas migrated once before later migrations');
 sc_assert(str_contains($GLOBALS['sc_test_dbdelta'][0], 'wp_safecontracts_meta'), 'foundation migration uses WordPress prefix');
 
 $customerSchema = $GLOBALS['sc_test_dbdelta'][1];
@@ -116,7 +117,7 @@ sc_assert(isset($admin[Capabilities::MANAGE_REFERENCE_DATA]), 'native WordPress 
 
 $seedCountBeforeBoot = count($GLOBALS['sc_test_queries']);
 do_action('plugins_loaded');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'migrations are not replayed after stored version is current');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === $migrationCountAfterActivation, 'migrations are not replayed after stored version is current');
 sc_assert(count($GLOBALS['sc_test_queries']) === $seedCountBeforeBoot, 'default payment methods are not reseeded after current migration');
 sc_assert(isset($GLOBALS['sc_test_actions']['rest_api_init']), 'REST registration hook attached');
 sc_assert(isset($GLOBALS['sc_test_actions']['admin_menu']), 'reference-data admin menu hook attached');

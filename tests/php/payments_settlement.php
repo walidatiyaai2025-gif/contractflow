@@ -63,7 +63,7 @@ function sc_settle_mutations_since(int $offset): array
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_settle_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
-sc_settle_assert(Migrator::LATEST_VERSION === '1.7.0', 'SC-P3-013 validates current payment/collection schema version');
+sc_settle_assert(version_compare(Migrator::LATEST_VERSION, '1.7.0', '>='), 'SC-P3-013 payment/collection schema remains available after later migrations');
 
 $paymentSchema = $GLOBALS['sc_test_dbdelta'][8];
 sc_settle_assert(str_contains($paymentSchema, 'wp_safecontracts_scheduled_payments'), 'SC-P3-013 payment schedule uses dedicated prefixed table');
@@ -91,7 +91,6 @@ $GLOBALS['sc_test_current_caps'] = [
     Capabilities::MANAGE_COLLECTIONS => true,
 ];
 
-// SC-P3-009 — partial collection.
 $GLOBALS['sc_test_result_queue'] = [
     [sc_settle_payment()],
     [['id' => '2']],
@@ -116,7 +115,6 @@ sc_settle_assert(str_contains($partialSql, "remaining_amount = '374.5000'"), 'SC
 sc_settle_assert(str_contains($partialSql, "status = 'partially_paid'"), 'SC-P3-009 partial collection moves payment to partially paid');
 sc_settle_assert(isset($GLOBALS['sc_test_fired_actions']['safecontracts_payment_settled']), 'SC-P3-009 settlement emits payment settlement event');
 
-// SC-P3-010 — exact remaining amount closes the payment.
 $GLOBALS['sc_test_result_queue'] = [
     [sc_settle_payment([
         'paid_amount' => '125.5000',
@@ -141,7 +139,6 @@ sc_settle_assert(str_contains($fullSql, "remaining_amount = '0.0000'"), 'SC-P3-0
 sc_settle_assert(str_contains($fullSql, "status = 'paid'"), 'SC-P3-010 full settlement moves payment to paid');
 sc_settle_assert(str_ends_with(trim($fullSql), 'COMMIT'), 'SC-P3-010 full settlement commits atomically');
 
-// SC-P3-011 — over-collection is rejected and rolled back.
 $GLOBALS['sc_test_result_queue'] = [
     [sc_settle_payment([
         'paid_amount' => '125.5000',
@@ -165,7 +162,6 @@ sc_settle_expect(
 $overMutations = sc_settle_mutations_since($beforeOver);
 sc_settle_assert($overMutations === ['START TRANSACTION', 'ROLLBACK'], 'SC-P3-011 over-collection writes neither ledger nor payment balances');
 
-// SC-P3-011 — pre-existing balance/ledger mismatch blocks further mutation.
 $GLOBALS['sc_test_result_queue'] = [
     [sc_settle_payment([
         'paid_amount' => '100.0000',
@@ -188,7 +184,6 @@ sc_settle_expect(
 );
 sc_settle_assert(sc_settle_mutations_since($beforeMismatch) === ['START TRANSACTION', 'ROLLBACK'], 'SC-P3-011 integrity mismatch rolls back cleanly');
 
-// SC-P3-012 — balanced partial reconciliation.
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_ALL => true];
 $GLOBALS['sc_test_result_queue'] = [
     [sc_settle_payment([
@@ -205,7 +200,6 @@ sc_settle_assert($reconciliation['expected_remaining_amount'] === '374.5000', 'S
 sc_settle_assert($reconciliation['expected_financial_status'] === PaymentStatus::PARTIALLY_PAID, 'SC-P3-012 reconciliation computes expected partial status');
 sc_settle_assert($reconciliation['is_balanced'] === true, 'SC-P3-012 matching ledger and stored balances reconcile cleanly');
 
-// SC-P3-012 — mismatch is transparent, never silently hidden.
 $GLOBALS['sc_test_result_queue'] = [
     [sc_settle_payment([
         'paid_amount' => '100.0000',

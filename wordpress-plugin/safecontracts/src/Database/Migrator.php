@@ -12,12 +12,13 @@ use SafeContracts\Database\Migrations\Migration0005ContractFinancials;
 use SafeContracts\Database\Migrations\Migration0006ContractHistory;
 use SafeContracts\Database\Migrations\Migration0007Payments;
 use SafeContracts\Database\Migrations\Migration0008Collections;
+use SafeContracts\Database\Migrations\Migration0009FollowupAudit;
 use RuntimeException;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.7.0';
+    public const LATEST_VERSION = '1.8.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -29,6 +30,7 @@ final class Migrator
         '1.5.0' => Migration0006ContractHistory::class,
         '1.6.0' => Migration0007Payments::class,
         '1.7.0' => Migration0008Collections::class,
+        '1.8.0' => Migration0009FollowupAudit::class,
     ];
 
     public function maybeMigrate(): void
@@ -59,7 +61,6 @@ final class Migrator
             $migration = new $migrationClass();
             $migration->up($wpdb);
 
-            // Version is advanced only after the migration succeeds.
             update_option(self::VERSION_OPTION, $version, false);
             update_option('safecontracts_db_migrated_at', gmdate('c'), false);
             $current = $version;
