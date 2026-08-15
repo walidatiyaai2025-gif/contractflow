@@ -1,0 +1,74 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SafeContracts\Rest;
+
+use DomainException;
+use InvalidArgumentException;
+use SafeContracts\Admin\DashboardFilters;
+use Throwable;
+use WP_Error;
+use WP_REST_Request;
+use WP_REST_Response;
+
+final class RequestGuard
+{
+    /** @return array<string,mixed> */
+    public static function params(WP_REST_Request $request): array
+    {
+        if (! method_exists($request, 'get_params')) {
+            return [];
+        }
+
+        $params = $request->get_params();
+        return is_array($params) ? $params : [];
+    }
+
+    /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} */
+    public static function dashboardFilters(WP_REST_Request $request): array
+    {
+        return DashboardFilters::normalize(self::params($request));
+    }
+
+    public static function response(mixed $data, array $meta = [], int $status = 200): WP_REST_Response
+    {
+        return new WP_REST_Response([
+            'data' => $data,
+            'meta' => $meta,
+        ], $status);
+    }
+
+    public static function forbidden(string $code, string $message): WP_Error
+    {
+        return new WP_Error($code, $message, ['status' => 403]);
+    }
+
+    public static function invalid(Throwable $error, string $code = 'safecontracts_invalid_request'): WP_Error
+    {
+        $message = $error instanceof InvalidArgumentException
+            ? $error->getMessage()
+            : __('The SafeContracts request is invalid.', 'safecontracts');
+
+        return new WP_Error($code, $message, ['status' => 422]);
+    }
+
+    public static function domain(Throwable $error, string $code = 'safecontracts_request_forbidden'): WP_Error
+    {
+        $message = $error instanceof DomainException
+            ? $error->getMessage()
+            : __('The SafeContracts request is not allowed.', 'safecontracts');
+
+        return new WP_Error($code, $message, ['status' => 403]);
+    }
+
+    public static function failure(Throwable $error, string $code = 'safecontracts_request_failed'): WP_Error
+    {
+        unset($error);
+        return new WP_Error(
+            $code,
+            __('The SafeContracts request could not be completed.', 'safecontracts'),
+            ['status' => 500]
+        );
+    }
+}
