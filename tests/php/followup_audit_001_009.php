@@ -24,8 +24,8 @@ function sc_p4_payment(array $overrides = []): array { return array_merge([
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_p4_assert(is_callable($activate), 'P4 activation hook is available');
 $activate();
-sc_p4_assert(Migrator::LATEST_VERSION === '1.8.0', 'P4 follow-up/audit migration is current');
-sc_p4_assert(count($GLOBALS['sc_test_dbdelta']) === 12, 'P4 adds exactly two persistence tables');
+sc_p4_assert(version_compare(Migrator::LATEST_VERSION, '1.8.0', '>='), 'P4 follow-up/audit migration remains registered after later schema versions');
+sc_p4_assert(count($GLOBALS['sc_test_dbdelta']) >= 12, 'P4 follow-up/audit persistence tables remain present after later migrations');
 $followupSchema = $GLOBALS['sc_test_dbdelta'][10];
 $auditSchema = $GLOBALS['sc_test_dbdelta'][11];
 sc_p4_assert(str_contains($followupSchema, 'wp_safecontracts_payment_followups'), 'SC-P4-002 follow-ups use dedicated prefixed table');

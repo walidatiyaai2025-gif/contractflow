@@ -23,6 +23,7 @@ $GLOBALS['sc_test_result_queue'] = [];
 $GLOBALS['sc_test_admin_pages'] = [];
 $GLOBALS['sc_test_current_caps'] = [];
 $GLOBALS['sc_test_user_caps'] = [];
+$GLOBALS['sc_test_users_by_role'] = [];
 $GLOBALS['sc_test_fired_actions'] = [];
 
 final class SC_Test_Role
@@ -128,6 +129,11 @@ function add_role(string $slug, string $name, array $caps): SC_Test_Role { unset
 function current_user_can(string $capability): bool { return (bool) ($GLOBALS['sc_test_current_caps'][$capability] ?? false); }
 function user_can(int $userId, string $capability): bool { return (bool) ($GLOBALS['sc_test_user_caps'][$userId][$capability] ?? false); }
 function get_current_user_id(): int { return 42; }
+function get_users(array $args = []): array
+{
+    $role = isset($args['role']) ? (string) $args['role'] : '';
+    return array_values($GLOBALS['sc_test_users_by_role'][$role] ?? []);
+}
 function register_rest_route(string $namespace, string $route, array $args): void { $GLOBALS['sc_test_routes'][$namespace . $route] = $args; }
 function add_options_page(string $pageTitle, string $menuTitle, string $capability, string $menuSlug, callable $callback): string
 {
