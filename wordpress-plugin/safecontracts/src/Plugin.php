@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts;
 
 use SafeContracts\Admin\PaymentMethodsPage;
+use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Rest\Router;
 
@@ -33,6 +34,7 @@ final class Plugin
         // Keep schema upgrades safe for normal plugin updates without re-applying
         // role defaults that administrators may intentionally customize later.
         (new Migrator())->maybeMigrate();
+        ContractHistoryRecorder::register();
 
         add_action('rest_api_init', [Router::class, 'register']);
         add_action('admin_menu', [PaymentMethodsPage::class, 'register']);
