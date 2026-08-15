@@ -8,12 +8,13 @@ use SafeContracts\Database\Migrations\Migration0001Foundation;
 use SafeContracts\Database\Migrations\Migration0002MasterData;
 use SafeContracts\Database\Migrations\Migration0003ReferenceDataCapability;
 use SafeContracts\Database\Migrations\Migration0004Contracts;
+use SafeContracts\Database\Migrations\Migration0005ContractFinancials;
 use RuntimeException;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.3.0';
+    public const LATEST_VERSION = '1.4.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -21,6 +22,7 @@ final class Migrator
         '1.1.0' => Migration0002MasterData::class,
         '1.2.0' => Migration0003ReferenceDataCapability::class,
         '1.3.0' => Migration0004Contracts::class,
+        '1.4.0' => Migration0005ContractFinancials::class,
     ];
 
     public function maybeMigrate(): void

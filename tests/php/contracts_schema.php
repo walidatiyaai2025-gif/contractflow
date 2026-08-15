@@ -23,9 +23,9 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_contract_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
 
-sc_contract_assert(Migrator::LATEST_VERSION === '1.3.0', 'contract data-model migration is the current schema version');
-sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.3.0', 'contract data-model migration version is stored');
-sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 4, 'contract schema adds one table without replaying existing tables');
+sc_contract_assert(Migrator::LATEST_VERSION === '1.4.0', 'contract schema migrations are current');
+sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.4.0', 'current contract schema version is stored');
+sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'contract and financial schemas migrate without replay');
 
 $schema = $GLOBALS['sc_test_dbdelta'][3];
 sc_contract_assert(str_contains($schema, 'wp_safecontracts_contracts'), 'dedicated contracts table uses the WordPress prefix');
@@ -44,13 +44,11 @@ sc_contract_assert(str_contains($schema, 'updated_by bigint(20) unsigned NULL'),
 sc_contract_assert(str_contains($schema, 'KEY customer_status (customer_id, status, is_archived)'), 'customer/status portfolio queries are indexed');
 sc_contract_assert(str_contains($schema, 'KEY accountant_status (accountant_user_id, status, is_archived)'), 'Accountant scope/status queries are indexed');
 sc_contract_assert(str_contains($schema, 'KEY contract_dates (start_date, end_date)'), 'contract date-range queries are indexed');
-
-// Single-currency V1 is system-level configuration; contract rows store precise values without per-row competing currency state.
 sc_contract_assert(! str_contains($schema, 'currency_code'), 'contract rows do not introduce a competing per-contract currency');
 
 $dbDeltaCount = count($GLOBALS['sc_test_dbdelta']);
 do_action('plugins_loaded');
-sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'current contract migration is idempotent on runtime bootstrap');
+sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'current contract migrations are idempotent on runtime bootstrap');
 
 $optionsBeforeDeactivate = $GLOBALS['sc_test_options'];
 $deactivate = $GLOBALS['sc_test_deactivation_hooks'][SAFECONTRACTS_FILE] ?? null;

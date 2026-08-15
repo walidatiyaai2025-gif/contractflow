@@ -7,7 +7,6 @@ require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontract
 
 use SafeContracts\Admin\PaymentMethodsPage;
 use SafeContracts\Database\Migrator;
-use SafeContracts\ReferenceData\PaymentMethodRepository;
 use SafeContracts\Rest\PaymentMethodsController;
 use SafeContracts\Rest\Router;
 use SafeContracts\Roles\AccessScope;
@@ -34,8 +33,8 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
 
 sc_assert(get_option(Migrator::VERSION_OPTION) === Migrator::LATEST_VERSION, 'migration version stored after successful migration');
-sc_assert(Migrator::LATEST_VERSION === '1.3.0', 'contract data-model migration version registered');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 4, 'foundation, P1 master data and contract table migrated once');
+sc_assert(Migrator::LATEST_VERSION === '1.4.0', 'contract financial migration version registered');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'foundation, master data and contract schemas migrated once');
 sc_assert(str_contains($GLOBALS['sc_test_dbdelta'][0], 'wp_safecontracts_meta'), 'foundation migration uses WordPress prefix');
 
 $customerSchema = $GLOBALS['sc_test_dbdelta'][1];
@@ -101,10 +100,9 @@ $admin = $GLOBALS['sc_test_roles']['administrator']->capabilities;
 sc_assert(isset($admin[Capabilities::MANAGE_SYSTEM]), 'native WordPress administrator receives SafeContracts system capabilities');
 sc_assert(isset($admin[Capabilities::MANAGE_REFERENCE_DATA]), 'native WordPress administrator receives reference-data capability');
 
-// Boot after activation; repeated migrations and seeds must be idempotent.
 $seedCountBeforeBoot = count($GLOBALS['sc_test_queries']);
 do_action('plugins_loaded');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 4, 'migrations are not replayed after stored version is current');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'migrations are not replayed after stored version is current');
 sc_assert(count($GLOBALS['sc_test_queries']) === $seedCountBeforeBoot, 'default payment methods are not reseeded after current migration');
 sc_assert(isset($GLOBALS['sc_test_actions']['rest_api_init']), 'REST registration hook attached');
 sc_assert(isset($GLOBALS['sc_test_actions']['admin_menu']), 'reference-data admin menu hook attached');
@@ -112,20 +110,14 @@ sc_assert(isset($GLOBALS['sc_test_actions']['admin_post_' . PaymentMethodsPage::
 
 do_action('admin_menu');
 sc_assert(isset($GLOBALS['sc_test_admin_pages'][PaymentMethodsPage::SLUG]), 'payment-method settings page registered');
-sc_assert(
-    $GLOBALS['sc_test_admin_pages'][PaymentMethodsPage::SLUG]['capability'] === Capabilities::MANAGE_REFERENCE_DATA,
-    'payment-method settings page requires reference-data capability'
-);
+sc_assert($GLOBALS['sc_test_admin_pages'][PaymentMethodsPage::SLUG]['capability'] === Capabilities::MANAGE_REFERENCE_DATA, 'payment-method settings page requires reference-data capability');
 
 do_action('rest_api_init');
 sc_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/health']), 'health endpoint registered');
 sc_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/me']), 'protected me endpoint registered');
 sc_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/payment-methods']), 'active payment-method endpoint registered');
 sc_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/admin/payment-methods']), 'admin payment-method endpoint registered');
-sc_assert(
-    $GLOBALS['sc_test_routes'][Router::NAMESPACE . '/payment-methods']['permission_callback'] === [Router::class, 'canAccess'],
-    'active payment methods use normal SafeContracts access authorization'
-);
+sc_assert($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/payment-methods']['permission_callback'] === [Router::class, 'canAccess'], 'active payment methods use normal SafeContracts access authorization');
 $adminRoutes = $GLOBALS['sc_test_routes'][Router::NAMESPACE . '/admin/payment-methods'];
 sc_assert(count($adminRoutes) === 2, 'admin payment methods expose read and write operations');
 sc_assert($adminRoutes[0]['permission_callback'] === [PaymentMethodsController::class, 'canManage'], 'admin reference-data read is capability protected');
@@ -200,7 +192,6 @@ $health = Router::health(new WP_REST_Request());
 sc_assert($health->status === 200, 'health response status is 200');
 sc_assert($health->data['data']['service'] === 'SafeContracts', 'health response identifies service');
 
-// Deactivation must be non-destructive so reactivation is safe.
 $optionsBeforeDeactivate = $GLOBALS['sc_test_options'];
 $rolesBeforeDeactivate = array_keys($GLOBALS['sc_test_roles']);
 $migrationCountBeforeDeactivate = count($GLOBALS['sc_test_dbdelta']);
