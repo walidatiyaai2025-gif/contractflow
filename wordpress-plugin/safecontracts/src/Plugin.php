@@ -80,6 +80,7 @@ final class Plugin
         add_action('admin_post_' . ReportsPage::EXPORT_ACTION, [ReportsPage::class, 'handleExport']);
         add_action('admin_post_' . ImportsPage::UPLOAD_ACTION, [ImportsPage::class, 'handleUpload']);
         add_action('admin_post_' . ImportsPage::MAP_ACTION, [ImportsPage::class, 'handleMapping']);
+        add_action('admin_post_' . ImportsPage::EXECUTE_ACTION, [ImportsPage::class, 'handleExecute']);
         add_action('admin_post_' . GeneralSettingsPage::SAVE_ACTION, [GeneralSettingsPage::class, 'handleSave']);
         add_action('admin_post_' . PaymentMethodsPage::SAVE_ACTION, [PaymentMethodsPage::class, 'handleSave']);
         add_action('admin_post_' . NotificationSettingsPage::SAVE_ACTION, [NotificationSettingsPage::class, 'handleSave']);
