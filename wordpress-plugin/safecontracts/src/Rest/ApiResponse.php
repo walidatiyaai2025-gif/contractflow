@@ -13,15 +13,18 @@ final class ApiResponse
     {
         return new WP_REST_Response([
             'data' => $data,
-            'meta' => array_merge([
-                'api_version' => 'v1',
-            ], $meta),
+            'meta' => array_merge($meta, [
+                'api_version' => Router::API_VERSION,
+            ]),
         ], $status);
     }
 
     public static function error(string $code, string $message, int $status, array $details = []): WP_Error
     {
-        $data = ['status' => $status];
+        $data = [
+            'status' => $status,
+            'api_version' => Router::API_VERSION,
+        ];
         if ($details !== []) {
             $data['details'] = $details;
         }

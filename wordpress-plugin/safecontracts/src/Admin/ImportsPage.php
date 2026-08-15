@@ -9,6 +9,7 @@ use SafeContracts\Import\DuplicateStrategy;
 use SafeContracts\Import\ImportExecutionService;
 use SafeContracts\Import\ImportPreviewService;
 use SafeContracts\Import\ImportRunRepository;
+use SafeContracts\Import\ImportSummaryService;
 use SafeContracts\Import\ImportUploadService;
 use SafeContracts\Import\PrivateImportStorage;
 use SafeContracts\Roles\Capabilities;
@@ -66,9 +67,18 @@ final class ImportsPage
             if ($run === null) {
                 throw new \InvalidArgumentException('Import run was not found.');
             }
+            if (! self::isEditableRun($run)) {
+                throw new \DomainException('Completed, running and failed import runs are read-only.');
+            }
             $sheet = ColumnMapping::sheet($run['discovery'], $sheetName);
             $mapping = (new ColumnMapping())->validate($mappingInput, $sheet);
             $runs->saveMapping($runId, $sheetName, $mapping);
+            do_action('safecontracts_import_mapping_saved', [
+                'run_id' => $runId,
+                'status' => 'mapped',
+                'selected_sheet' => $sheetName,
+                'mapped_fields' => count($mapping),
+            ], get_current_user_id());
         } catch (Throwable $error) {
             unset($error);
             $status = 'invalid_mapping';
@@ -103,6 +113,14 @@ final class ImportsPage
         $runId = self::positiveInt($_GET['run_id'] ?? null);
         $run = $runId > 0 ? $runs->find($runId) : null;
         $errors = $runId > 0 ? $runs->errors($runId, 500) : [];
+        $summary = null;
+        if ($runId > 0) {
+            try {
+                $summary = (new ImportSummaryService())->get($runId);
+            } catch (Throwable $error) {
+                unset($error);
+            }
+        }
         $preview = [];
         $previewError = '';
         if ($run !== null && $run['mapping'] !== [] && (string) ($run['selected_sheet'] ?? '') !== '') {
@@ -114,6 +132,7 @@ final class ImportsPage
                 $previewError = $error->getMessage();
             }
         }
+        $editable = $run !== null && self::isEditableRun($run);
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Controlled data onboarding', 'safecontracts'); ?></p><h1><?php echo esc_html__('Excel Import', 'safecontracts'); ?></h1></div></div>
@@ -127,15 +146,30 @@ final class ImportsPage
             <?php foreach ($recent as $item) : ?><tr><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'run_id' => (int) $item['id']], admin_url('admin.php'))); ?>">#<?php echo esc_html((string) $item['id']); ?></a></td><td><?php echo esc_html((string) $item['original_filename']); ?></td><td><?php echo esc_html((string) $item['status']); ?></td><td><?php echo esc_html((string) $item['imported_rows'] . ' / ' . (string) $item['skipped_rows'] . ' / ' . (string) $item['error_rows']); ?></td><td><?php echo esc_html((string) $item['created_at']); ?></td></tr><?php endforeach; ?>
             </tbody></table></section>
 
+            <?php if ($summary !== null) : $counts = $summary['counts']; $workbook = $summary['workbook']; ?>
+                <section class="safecontracts-admin-card safecontracts-table-card"><h2><?php echo esc_html(sprintf(__('Run #%d — summary & audit evidence', 'safecontracts'), (int) $summary['run_id'])); ?></h2>
+                    <table class="widefat striped"><tbody>
+                    <tr><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><td><?php echo esc_html((string) $summary['status']); ?></td><th><?php echo esc_html__('Actor', 'safecontracts'); ?></th><td><?php echo esc_html((string) $summary['actor_id']); ?></td></tr>
+                    <tr><th><?php echo esc_html__('Worksheet', 'safecontracts'); ?></th><td><?php echo esc_html((string) $summary['selected_sheet']); ?></td><th><?php echo esc_html__('Duplicate strategy', 'safecontracts'); ?></th><td><?php echo esc_html((string) $summary['duplicate_strategy']); ?></td></tr>
+                    <tr><th><?php echo esc_html__('Workbook', 'safecontracts'); ?></th><td><?php echo esc_html((string) $workbook['original_filename']); ?></td><th><?php echo esc_html__('Sheets / mapped fields', 'safecontracts'); ?></th><td><?php echo esc_html((string) $workbook['sheet_count'] . ' / ' . (string) $workbook['mapped_fields']); ?></td></tr>
+                    <tr><th><?php echo esc_html__('Rows total / valid', 'safecontracts'); ?></th><td><?php echo esc_html((string) $counts['total_rows'] . ' / ' . (string) $counts['valid_rows']); ?></td><th><?php echo esc_html__('Imported / skipped / error rows', 'safecontracts'); ?></th><td><?php echo esc_html((string) $counts['imported_rows'] . ' / ' . (string) $counts['skipped_rows'] . ' / ' . (string) $counts['error_rows']); ?></td></tr>
+                    <tr><th><?php echo esc_html__('Error entries', 'safecontracts'); ?></th><td><?php echo esc_html((string) $counts['error_entries']); ?></td><th><?php echo esc_html__('Created / updated', 'safecontracts'); ?></th><td><?php echo esc_html((string) $summary['created_at'] . ' / ' . (string) $summary['updated_at']); ?></td></tr>
+                    </tbody></table>
+                    <p class="description"><?php echo esc_html__('Summary intentionally excludes private storage keys, workbook hashes and raw workbook content. Lifecycle stages are recorded in the SafeContracts audit trail.', 'safecontracts'); ?></p>
+                </section>
+            <?php endif; ?>
+
             <?php if ($run !== null) : ?>
-                <section class="safecontracts-admin-card safecontracts-settings-card"><h2><?php echo esc_html(sprintf(__('Run #%d — column mapping', 'safecontracts'), (int) $run['id'])); ?></h2><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::MAP_ACTION); ?>"><input type="hidden" name="run_id" value="<?php echo esc_attr((string) $run['id']); ?>"><?php wp_nonce_field(self::MAP_ACTION); ?>
+                <section class="safecontracts-admin-card safecontracts-settings-card"><h2><?php echo esc_html(sprintf(__('Run #%d — column mapping', 'safecontracts'), (int) $run['id'])); ?></h2>
+                <?php if ($editable) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::MAP_ACTION); ?>"><input type="hidden" name="run_id" value="<?php echo esc_attr((string) $run['id']); ?>"><?php wp_nonce_field(self::MAP_ACTION); ?>
                 <p><label><?php echo esc_html__('Worksheet', 'safecontracts'); ?><select class="widefat" name="selected_sheet" required><?php foreach ($run['discovery']['sheets'] ?? [] as $sheet) : ?><option value="<?php echo esc_attr((string) $sheet['name']); ?>" <?php selected((string) ($run['selected_sheet'] ?? ''), (string) $sheet['name']); ?>><?php echo esc_html((string) $sheet['name']); ?></option><?php endforeach; ?></select></label></p>
-                <div class="safecontracts-role-grid"><?php $selectedSheet = self::selectedSheet($run); $headers = is_array($selectedSheet['headers'] ?? null) ? $selectedSheet['headers'] : []; foreach (ColumnMapping::fields() as $field => $definition) : ?><label><?php echo esc_html($definition['label'] . ($definition['required'] ? ' *' : '')); ?><select class="widefat" name="mapping[<?php echo esc_attr($field); ?>]"><option value=""><?php echo esc_html__('Ignore / not mapped', 'safecontracts'); ?></option><?php foreach ($headers as $header) : ?><option value="<?php echo esc_attr((string) $header['column']); ?>" <?php selected((string) ($run['mapping'][$field] ?? ''), (string) $header['column']); ?>><?php echo esc_html((string) $header['column'] . ' — ' . (string) $header['original']); ?></option><?php endforeach; ?></select></label><?php endforeach; ?></div><?php submit_button(__('Save mapping', 'safecontracts')); ?></form></section>
+                <div class="safecontracts-role-grid"><?php $selectedSheet = self::selectedSheet($run); $headers = is_array($selectedSheet['headers'] ?? null) ? $selectedSheet['headers'] : []; foreach (ColumnMapping::fields() as $field => $definition) : ?><label><?php echo esc_html($definition['label'] . ($definition['required'] ? ' *' : '')); ?><select class="widefat" name="mapping[<?php echo esc_attr($field); ?>]"><option value=""><?php echo esc_html__('Ignore / not mapped', 'safecontracts'); ?></option><?php foreach ($headers as $header) : ?><option value="<?php echo esc_attr((string) $header['column']); ?>" <?php selected((string) ($run['mapping'][$field] ?? ''), (string) $header['column']); ?>><?php echo esc_html((string) $header['column'] . ' — ' . (string) $header['original']); ?></option><?php endforeach; ?></select></label><?php endforeach; ?></div><?php submit_button(__('Save mapping', 'safecontracts')); ?></form>
+                <?php else : ?><p class="description"><?php echo esc_html__('This import run is terminal and its mapping is read-only. Create a new run to import the workbook again.', 'safecontracts'); ?></p><?php endif; ?></section>
 
                 <?php if ($run['mapping'] !== []) : ?>
                 <section class="safecontracts-admin-card safecontracts-table-card"><h2><?php echo esc_html__('Import preview', 'safecontracts'); ?></h2><?php if ($previewError !== '') : ?><p><?php echo esc_html($previewError); ?></p><?php elseif ($preview === []) : ?><p><?php echo esc_html__('No data rows found after the header.', 'safecontracts'); ?></p><?php else : ?><table class="widefat striped"><thead><tr><th><?php echo esc_html__('Row', 'safecontracts'); ?></th><?php foreach (array_keys($run['mapping']) as $field) : ?><th><?php echo esc_html($field); ?></th><?php endforeach; ?></tr></thead><tbody><?php foreach ($preview as $row) : ?><tr><td><?php echo esc_html((string) $row['row_number']); ?></td><?php foreach (array_keys($run['mapping']) as $field) : ?><td><?php echo esc_html((string) ($row['data'][$field] ?? '')); ?></td><?php endforeach; ?></tr><?php endforeach; ?></tbody></table><?php endif; ?><p class="description"><?php echo esc_html__('Preview is read-only. All rows are validated before any business mutation.', 'safecontracts'); ?></p></section>
 
-                <section class="safecontracts-admin-card safecontracts-settings-card"><h2><?php echo esc_html__('Validate & execute', 'safecontracts'); ?></h2><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::EXECUTE_ACTION); ?>"><input type="hidden" name="run_id" value="<?php echo esc_attr((string) $run['id']); ?>"><?php wp_nonce_field(self::EXECUTE_ACTION); ?><p><label><?php echo esc_html__('Duplicate strategy', 'safecontracts'); ?><select name="duplicate_strategy"><option value="fail"><?php echo esc_html__('Fail duplicate row', 'safecontracts'); ?></option><option value="skip"><?php echo esc_html__('Skip duplicate row', 'safecontracts'); ?></option><option value="update"><?php echo esc_html__('Update safe fields only', 'safecontracts'); ?></option></select></label></p><p class="description"><?php echo esc_html__('Execution re-reads the private workbook and mapping server-side. Validation errors prevent all business writes. Successful rows run inside database transactions.', 'safecontracts'); ?></p><?php submit_button(__('Validate & execute import', 'safecontracts')); ?></form></section>
+                <?php if ($editable) : ?><section class="safecontracts-admin-card safecontracts-settings-card"><h2><?php echo esc_html__('Validate & execute', 'safecontracts'); ?></h2><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::EXECUTE_ACTION); ?>"><input type="hidden" name="run_id" value="<?php echo esc_attr((string) $run['id']); ?>"><?php wp_nonce_field(self::EXECUTE_ACTION); ?><p><label><?php echo esc_html__('Duplicate strategy', 'safecontracts'); ?><select name="duplicate_strategy"><option value="fail"><?php echo esc_html__('Fail duplicate row', 'safecontracts'); ?></option><option value="skip"><?php echo esc_html__('Skip duplicate row', 'safecontracts'); ?></option><option value="update"><?php echo esc_html__('Update safe fields only', 'safecontracts'); ?></option></select></label></p><p class="description"><?php echo esc_html__('Execution re-reads the private workbook and mapping server-side. Validation errors prevent all business writes. Successful rows run inside database transactions.', 'safecontracts'); ?></p><?php submit_button(__('Validate & execute import', 'safecontracts')); ?></form></section><?php endif; ?>
                 <?php endif; ?>
 
                 <?php if ($errors !== []) : ?><section class="safecontracts-admin-card safecontracts-table-card"><h2><?php echo esc_html__('Row errors', 'safecontracts'); ?></h2><table class="widefat striped"><thead><tr><th><?php echo esc_html__('Row', 'safecontracts'); ?></th><th><?php echo esc_html__('Field', 'safecontracts'); ?></th><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Message', 'safecontracts'); ?></th></tr></thead><tbody><?php foreach ($errors as $error) : ?><tr><td><?php echo esc_html((string) $error['row_number']); ?></td><td><?php echo esc_html((string) ($error['field_name'] ?? '')); ?></td><td><code><?php echo esc_html((string) $error['error_code']); ?></code></td><td><?php echo esc_html((string) $error['message']); ?></td></tr><?php endforeach; ?></tbody></table></section><?php endif; ?>
@@ -177,5 +211,10 @@ final class ImportsPage
         $name = (string) ($run['selected_sheet'] ?? ($run['discovery']['sheets'][0]['name'] ?? ''));
         if ($name === '') { return null; }
         try { return ColumnMapping::sheet($run['discovery'], $name); } catch (Throwable $error) { unset($error); return null; }
+    }
+
+    private static function isEditableRun(array $run): bool
+    {
+        return in_array((string) ($run['status'] ?? ''), ['discovered', 'mapped', 'validated'], true);
     }
 }

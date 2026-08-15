@@ -31,13 +31,19 @@ final class ImportUploadService
 
         $validated = $this->validator->validate($file);
         $storageKey = $this->storage->store($validated['tmp_name'], $validated['sha256']);
+        $actorId = get_current_user_id();
         $runId = $this->runs->create(
             $validated['name'],
             $storageKey,
             $validated['sha256'],
             $validated['size'],
-            get_current_user_id()
+            $actorId
         );
+        do_action('safecontracts_import_uploaded', [
+            'run_id' => $runId,
+            'status' => 'uploaded',
+            'file_size' => $validated['size'],
+        ], $actorId);
 
         try {
             $discovery = $this->reader->discover($this->storage->pathForKey($storageKey));
@@ -47,13 +53,11 @@ final class ImportUploadService
             throw $error;
         }
 
-        do_action('safecontracts_import_uploaded', [
+        do_action('safecontracts_import_discovered', [
             'run_id' => $runId,
-            'filename' => $validated['name'],
-            'file_sha256' => $validated['sha256'],
-            'file_size' => $validated['size'],
+            'status' => 'discovered',
             'sheet_count' => count($discovery['sheets'] ?? []),
-        ], get_current_user_id());
+        ], $actorId);
 
         return ['run_id' => $runId, 'discovery' => $discovery];
     }
