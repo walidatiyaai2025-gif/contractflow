@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../config/mobile_config.dart';
+import '../customers/customers.dart';
+import '../customers/customers_screen.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
 import '../records/contracts_screen.dart';
-import '../records/customers_screen.dart';
 import '../records/followups_screen.dart';
 import '../records/mobile_records_repository.dart';
 import '../records/payments_screen.dart';
@@ -19,6 +20,7 @@ final class SafeContractsShell extends StatefulWidget {
     required this.config,
     required this.policy,
     required this.dashboardController,
+    required this.customersController,
     required this.excelExportController,
     required this.usingConfigDefaults,
     required this.onClearSession,
@@ -29,6 +31,7 @@ final class SafeContractsShell extends StatefulWidget {
   final SafeContractsMobileConfig config;
   final MobileNavigationPolicy policy;
   final DashboardController dashboardController;
+  final CustomersController customersController;
   final MobileExcelExportController excelExportController;
   final bool usingConfigDefaults;
   final VoidCallback onClearSession;
@@ -109,8 +112,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           controller: widget.dashboardController,
         ),
       MobileDestination.customers => CustomersScreen(
-          repository: _records,
-          pageSize: widget.config.defaultPageSize,
+          controller: widget.customersController,
         ),
       MobileDestination.contracts => ContractsScreen(
           repository: _records,
