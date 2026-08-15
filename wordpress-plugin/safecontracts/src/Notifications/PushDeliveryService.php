@@ -1,0 +1,141 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SafeContracts\Notifications;
+
+use DateTimeImmutable;
+use InvalidArgumentException;
+use Throwable;
+
+final class PushDeliveryService
+{
+    public const MAX_TRANSPORT_RETRIES = 3;
+
+    public function __construct(
+        private PushTransport $transport,
+        private ?DeviceTokenRepository $tokens = null,
+        private ?DeliveryLogRepository $deliveries = null
+    ) {
+        $this->tokens ??= new DeviceTokenRepository();
+        $this->deliveries ??= new DeliveryLogRepository();
+    }
+
+    /**
+     * @param array{
+     *   rule_id:int,payment_id:int,recipient_ids:list<int>,template_code:string,scheduled_for:string,
+     *   payload:array{title:string,body:string,data?:array<string,scalar|null>}
+     * } $plan
+     * @return array{attempted:int,sent:int,failed:int,retryable:bool}
+     */
+    public function deliver(array $plan, int $attemptNo = 0): array
+    {
+        if ($attemptNo < 0 || $attemptNo > self::MAX_TRANSPORT_RETRIES) {
+            throw new InvalidArgumentException('Notification transport attempt is outside the retry policy.');
+        }
+        $ruleId = (int) ($plan['rule_id'] ?? 0);
+        $paymentId = (int) ($plan['payment_id'] ?? 0);
+        if ($ruleId <= 0 || $paymentId <= 0) {
+            throw new InvalidArgumentException('Notification delivery requires positive rule and payment IDs.');
+        }
+        $scheduledFor = $this->normalizeDate($plan['scheduled_for'] ?? '');
+        $templateCode = NotificationRule::normalizeCode($plan['template_code'] ?? '');
+        $payload = $this->normalizePayload($plan['payload'] ?? []);
+        $recipientIds = is_array($plan['recipient_ids'] ?? null) ? $plan['recipient_ids'] : [];
+        $deviceRows = $this->tokens->activeForUsers(array_map('intval', $recipientIds));
+
+        $sent = 0;
+        $failed = 0;
+        foreach ($deviceRows as $device) {
+            $result = null;
+            try {
+                $result = $this->transport->send($device['token'], $payload);
+            } catch (Throwable) {
+                $result = ['success' => false, 'status_code' => 0, 'error_code' => 'transport_exception'];
+            }
+
+            $success = (bool) ($result['success'] ?? false);
+            $status = $success ? 'sent' : 'failed';
+            $success ? $sent++ : $failed++;
+            $this->deliveries->append(
+                $ruleId,
+                $paymentId,
+                $device['user_id'],
+                $device['id'],
+                $templateCode,
+                $scheduledFor,
+                $attemptNo,
+                $status,
+                isset($result['status_code']) ? (int) $result['status_code'] : null,
+                isset($result['error_code']) ? (string) $result['error_code'] : null
+            );
+            do_action(
+                'safecontracts_notification_delivery_attempted',
+                $ruleId,
+                $paymentId,
+                $device['user_id'],
+                $device['id'],
+                $status,
+                $attemptNo
+            );
+        }
+
+        return [
+            'attempted' => count($deviceRows),
+            'sent' => $sent,
+            'failed' => $failed,
+            'retryable' => $failed > 0 && $this->canRetry($attemptNo),
+        ];
+    }
+
+    public function canRetry(int $attemptNo): bool
+    {
+        return $attemptNo >= 0 && $attemptNo < self::MAX_TRANSPORT_RETRIES;
+    }
+
+    public function retryDelaySeconds(int $attemptNo): int
+    {
+        if (! $this->canRetry($attemptNo)) {
+            return 0;
+        }
+        return min(3600, 60 * (2 ** $attemptNo));
+    }
+
+    /** @return array{title:string,body:string,data?:array<string,scalar|null>} */
+    private function normalizePayload(mixed $payload): array
+    {
+        if (! is_array($payload)) {
+            throw new InvalidArgumentException('Notification push payload must be an array.');
+        }
+        $title = trim(strip_tags((string) ($payload['title'] ?? '')));
+        $body = trim(strip_tags((string) ($payload['body'] ?? '')));
+        if ($title === '' || strlen($title) > 191 || $body === '' || strlen($body) > 4000) {
+            throw new InvalidArgumentException('Notification push title/body are invalid.');
+        }
+        $normalized = ['title' => $title, 'body' => $body];
+        if (isset($payload['data'])) {
+            if (! is_array($payload['data'])) {
+                throw new InvalidArgumentException('Notification push data must be an array.');
+            }
+            $data = [];
+            foreach ($payload['data'] as $key => $value) {
+                if (! is_scalar($value) && $value !== null) {
+                    throw new InvalidArgumentException('Notification push data values must be scalar.');
+                }
+                $data[(string) $key] = $value;
+            }
+            $normalized['data'] = $data;
+        }
+        return $normalized;
+    }
+
+    private function normalizeDate(mixed $value): string
+    {
+        $date = trim((string) $value);
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+        if (! $parsed || $parsed->format('Y-m-d') !== $date) {
+            throw new InvalidArgumentException('Notification scheduled date must use YYYY-MM-DD.');
+        }
+        return $date;
+    }
+}
