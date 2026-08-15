@@ -47,8 +47,8 @@ final class DataController
     public static function customers(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
-            return self::page(array_map([self::class, 'customerView'], (new AdminReadRepository())->customers($query['filters'])), $query['page'], $query['per_page']);
+            $query = ApiRequest::listQuery($request, ['id','name','internal_code'], 'name', 'asc');
+            return self::page(array_map([self::class, 'customerView'], (new AdminReadRepository())->customers($query['filters'])), $query);
         });
     }
 
@@ -73,8 +73,8 @@ final class DataController
     public static function contracts(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
-            return self::page(array_map([self::class, 'contractView'], (new AdminReadRepository())->contracts($query['filters'])), $query['page'], $query['per_page']);
+            $query = ApiRequest::listQuery($request, ['id','contract_number','customer_name','status','start_date','end_date','base_value'], 'id', 'desc');
+            return self::page(array_map([self::class, 'contractView'], (new AdminReadRepository())->contracts($query['filters'])), $query);
         });
     }
 
@@ -89,8 +89,8 @@ final class DataController
     public static function payments(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
-            return self::page(array_map([self::class, 'paymentListView'], (new AdminReadRepository())->payments($query['filters'])), $query['page'], $query['per_page']);
+            $query = ApiRequest::listQuery($request, ['id','due_date','expected_payment_date','sequence_no','remaining_amount','status','customer_name','contract_number'], 'due_date', 'asc');
+            return self::page(array_map([self::class, 'paymentListView'], (new AdminReadRepository())->payments($query['filters'])), $query);
         });
     }
 
@@ -109,8 +109,8 @@ final class DataController
     public static function collections(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
-            return self::page(array_map([self::class, 'collectionListView'], (new AdminReadRepository())->collections($query['filters'])), $query['page'], $query['per_page']);
+            $query = ApiRequest::listQuery($request, ['id','collection_date','amount','customer_name','contract_number'], 'collection_date', 'desc');
+            return self::page(array_map([self::class, 'collectionListView'], (new AdminReadRepository())->collections($query['filters'])), $query);
         });
     }
 
@@ -129,9 +129,9 @@ final class DataController
     public static function followUps(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
+            $query = ApiRequest::listQuery($request, ['payment_id','due_date','remaining_amount','status','customer_id','contract_id'], 'due_date', 'asc');
             $rows = self::filterFollowUps((new FollowUpService())->queue(500), $query['filters']);
-            return self::page(array_map([self::class, 'followUpQueueView'], $rows), $query['page'], $query['per_page']);
+            return self::page(array_map([self::class, 'followUpQueueView'], $rows), $query);
         });
     }
 
@@ -140,8 +140,14 @@ final class DataController
         return self::guard(function () use ($request): WP_REST_Response {
             $paymentId = ApiRequest::routeId($request, 'payment_id');
             $pagination = ApiRequest::pagination($request);
+            $sort = ApiRequest::sort($request, ['id','created_at','state'], 'created_at', 'desc');
             $rows = (new FollowUpService())->history($paymentId, 500);
-            return self::page(array_map([self::class, 'followUpHistoryView'], $rows), $pagination['page'], $pagination['per_page']);
+            return self::page(array_map([self::class, 'followUpHistoryView'], $rows), [
+                'page' => $pagination['page'],
+                'per_page' => $pagination['per_page'],
+                'sort' => $sort['field'],
+                'direction' => $sort['direction'],
+            ]);
         });
     }
 
@@ -159,15 +165,64 @@ final class DataController
         }
     }
 
-    /** @param list<array<string,mixed>> $rows */
-    private static function page(array $rows, int $page, int $perPage): WP_REST_Response
+    /** @param list<array<string,mixed>> $rows @param array{page:int,per_page:int,sort:string,direction:string} $query */
+    private static function page(array $rows, array $query): WP_REST_Response
     {
+        $page = $query['page'];
+        $perPage = $query['per_page'];
+        $sort = $query['sort'];
+        $direction = $query['direction'];
+        $rows = self::sortRows($rows, $sort, $direction);
         $offset = ($page - 1) * $perPage;
         $items = array_slice($rows, $offset, $perPage);
         return ApiResponse::ok($items, [
-            'scope' => ApiScope::mode(), 'page' => $page, 'per_page' => $perPage, 'returned' => count($items),
-            'available_in_bounded_read' => count($rows), 'has_more' => ($offset + count($items)) < count($rows),
+            'scope' => ApiScope::mode(),
+            'page' => $page,
+            'per_page' => $perPage,
+            'sort' => $sort,
+            'direction' => $direction,
+            'returned' => count($items),
+            'available_in_bounded_read' => count($rows),
+            'has_more' => ($offset + count($items)) < count($rows),
         ]);
+    }
+
+    /** @param list<array<string,mixed>> $rows @return list<array<string,mixed>> */
+    private static function sortRows(array $rows, string $field, string $direction): array
+    {
+        usort($rows, static function (array $left, array $right) use ($field, $direction): int {
+            $leftValue = $left[$field] ?? null;
+            $rightValue = $right[$field] ?? null;
+            if ($leftValue === null && $rightValue !== null) { return 1; }
+            if ($rightValue === null && $leftValue !== null) { return -1; }
+
+            $comparison = self::compareValues($leftValue, $rightValue);
+            if ($comparison !== 0 && $direction === 'desc') {
+                $comparison *= -1;
+            }
+            if ($comparison !== 0) {
+                return $comparison;
+            }
+
+            foreach (['id','payment_id','contract_id','customer_id'] as $tieField) {
+                if ($tieField === $field) { continue; }
+                if (array_key_exists($tieField, $left) && array_key_exists($tieField, $right)) {
+                    $tie = self::compareValues($left[$tieField], $right[$tieField]);
+                    if ($tie !== 0) { return $tie; }
+                }
+            }
+            return 0;
+        });
+        return array_values($rows);
+    }
+
+    private static function compareValues(mixed $left, mixed $right): int
+    {
+        if ($left === $right) { return 0; }
+        if (is_numeric($left) && is_numeric($right)) {
+            return (float) $left <=> (float) $right;
+        }
+        return strnatcasecmp((string) $left, (string) $right);
     }
 
     /** @param list<array<string,mixed>> $rows @param array<string,mixed> $filters @return list<array<string,mixed>> */
