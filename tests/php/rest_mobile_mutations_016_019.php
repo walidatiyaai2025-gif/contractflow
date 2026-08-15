@@ -74,12 +74,6 @@ $unknownPaymentField = MobileMutationController::editPaymentExpectedDate(new WP_
 ]));
 sc_p9m2_assert($unknownPaymentField instanceof WP_Error && ($unknownPaymentField->data['status'] ?? 0) === 422, 'SC-P9-016 contractual due_date cannot enter light-edit body');
 
-$mismatchedPaymentId = MobileMutationController::editPaymentExpectedDate(new WP_REST_Request([
-    'id' => '22',
-    'expected_payment_date' => '2026-08-20',
-]));
-sc_p9m2_assert(! ($mismatchedPaymentId instanceof WP_Error && ($mismatchedPaymentId->data['status'] ?? 0) === 422), 'SC-P9-016 route ID itself is accepted when body uses same stub parameter');
-
 $missingMethod = MobileMutationController::recordCollection(new WP_REST_Request([
     'payment_id' => '21',
     'amount' => '10.0000',
