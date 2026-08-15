@@ -6,6 +6,7 @@ namespace SafeContracts\Rest;
 
 use DomainException;
 use InvalidArgumentException;
+use SafeContracts\Admin\DashboardFilters;
 use Throwable;
 use WP_Error;
 use WP_REST_Request;
@@ -19,8 +20,19 @@ final class RequestGuard
         return ApiRequest::params($request);
     }
 
-    /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} */
+    /**
+     * Backward-compatible normalized filter helper for internal/admin callers.
+     * REST dashboard callbacks must use strictDashboardFilters().
+     *
+     * @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string}
+     */
     public static function dashboardFilters(WP_REST_Request $request): array
+    {
+        return DashboardFilters::normalize(self::params($request));
+    }
+
+    /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} */
+    public static function strictDashboardFilters(WP_REST_Request $request): array
     {
         ApiAbuseGuard::safeParams($request, [
             'customer_id', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to',
