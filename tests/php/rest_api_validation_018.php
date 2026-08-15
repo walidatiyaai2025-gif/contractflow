@@ -39,17 +39,24 @@ sc_p8v18_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/health'])
 sc_p8v18_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/me']) && isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/session']), 'SC-P8-018 session routes are registered under v1 namespace');
 
 $routeCount = 0;
+$endpointCount = 0;
 foreach ($GLOBALS['sc_test_routes'] as $route => $definition) {
     $routeCount++;
     sc_p8v18_assert(str_starts_with($route, Router::NAMESPACE . '/'), "SC-P8-018 route {$route} cannot drift outside v1 namespace");
-    sc_p8v18_assert(isset($definition['methods'], $definition['callback'], $definition['permission_callback']), "SC-P8-018 route {$route} has method/callback/permission contract");
-    $methods = $definition['methods'];
-    sc_p8v18_assert(in_array($methods, [WP_REST_Server::READABLE, WP_REST_Server::CREATABLE], true), "SC-P8-018 route {$route} uses supported v1 HTTP method contract");
-    if ($route !== Router::NAMESPACE . '/health') {
-        sc_p8v18_assert($definition['permission_callback'] !== '__return_true', "SC-P8-018 protected route {$route} is not accidentally public");
+
+    $endpoints = isset($definition['methods']) ? [$definition] : array_values(array_filter($definition, 'is_array'));
+    sc_p8v18_assert($endpoints !== [], "SC-P8-018 route {$route} exposes at least one endpoint definition");
+    foreach ($endpoints as $endpoint) {
+        $endpointCount++;
+        sc_p8v18_assert(isset($endpoint['methods'], $endpoint['callback'], $endpoint['permission_callback']), "SC-P8-018 route {$route} has method/callback/permission contract");
+        $methods = $endpoint['methods'];
+        sc_p8v18_assert(in_array($methods, [WP_REST_Server::READABLE, WP_REST_Server::CREATABLE], true), "SC-P8-018 route {$route} uses supported v1 HTTP method contract");
+        if ($route !== Router::NAMESPACE . '/health') {
+            sc_p8v18_assert($endpoint['permission_callback'] !== '__return_true', "SC-P8-018 protected route {$route} is not accidentally public");
+        }
     }
 }
-sc_p8v18_assert($routeCount >= 10, 'SC-P8-018 validates the complete registered REST surface rather than a single endpoint');
+sc_p8v18_assert($routeCount >= 10 && $endpointCount >= $routeCount, 'SC-P8-018 validates the complete registered REST surface including multi-method routes');
 
 $health = Router::health(new WP_REST_Request());
 sc_p8v18_assert(($health->data['data']['service'] ?? '') === 'SafeContracts' && ($health->data['data']['api_version'] ?? '') === Router::API_VERSION, 'SC-P8-018 health payload reports canonical API version');
@@ -62,6 +69,9 @@ $restDir = dirname((string) (new ReflectionClass(Router::class))->getFileName())
 foreach (glob($restDir . '/*.php') ?: [] as $file) {
     $source = file_get_contents($file) ?: '';
     sc_p8v18_assert(! str_contains($source, 'safecontracts/v2'), 'SC-P8-018 REST source contains no accidental v2 namespace drift: ' . basename($file));
+    if (str_ends_with($file, 'Controller.php')) {
+        sc_p8v18_assert(! str_contains($source, 'new WP_REST_Response') && ! str_contains($source, 'new WP_Error'), 'SC-P8-018 controller uses canonical ApiResponse/RequestGuard envelopes: ' . basename($file));
+    }
 }
 
 printf("SafeContracts P8 API conventions/versioning SC-P8-018 passed (%d assertions).\n", $tests);
