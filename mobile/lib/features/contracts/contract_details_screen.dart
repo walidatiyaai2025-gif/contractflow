@@ -149,93 +149,96 @@ final class _ReadyContractDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              contract.contractNumber,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            Chip(label: Text(contract.status)),
-            if (contract.isArchived)
-              const Chip(
-                avatar: Icon(Icons.archive_outlined, size: 16),
-                label: Text('Archived'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                contract.contractNumber,
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        _DetailsSection(
-          title: 'Contract',
-          children: [
-            _DetailValue(label: 'Contract ID', value: '${contract.id}'),
-            _DetailValue(
-              label: 'Status',
-              value: contract.status,
-            ),
-            _DetailValue(
-              label: 'Start date',
-              value: contract.startDate ?? '—',
-            ),
-            _DetailValue(
-              label: 'End date',
-              value: contract.endDate ?? '—',
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _DetailsSection(
-          title: 'Customer & assignment',
-          children: [
-            _DetailValue(
-              label: 'Customer',
-              value:
-                  contract.customerName ?? 'Customer #${contract.customerId}',
-            ),
-            _DetailValue(
-              label: 'Customer ID',
-              value: '${contract.customerId}',
-            ),
-            _DetailValue(
-              label: 'Assigned accountant user ID',
-              value: contract.accountantUserId?.toString() ?? '—',
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _DetailsSection(
-          title: 'Financial values',
-          children: [
-            _DetailValue(
-              label: 'Base value',
-              value: contract.baseValue ?? '—',
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Status and financial values are displayed exactly as returned by '
-          'the SafeContracts server. The mobile app does not recalculate them.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 24),
-        if (canEdit && onEditContract != null)
-          FilledButton.tonalIcon(
-            onPressed: () => onEditContract!(contract.id),
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Edit contract'),
-          )
-        else
+              Chip(label: Text(contract.status)),
+              if (contract.isArchived)
+                const Chip(
+                  avatar: Icon(Icons.archive_outlined, size: 16),
+                  label: Text('Archived'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _DetailsSection(
+            title: 'Contract',
+            children: [
+              _DetailValue(label: 'Contract ID', value: '${contract.id}'),
+              _DetailValue(
+                label: 'Status',
+                value: contract.status,
+              ),
+              _DetailValue(
+                label: 'Start date',
+                value: contract.startDate ?? '—',
+              ),
+              _DetailValue(
+                label: 'End date',
+                value: contract.endDate ?? '—',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _DetailsSection(
+            title: 'Customer & assignment',
+            children: [
+              _DetailValue(
+                label: 'Customer',
+                value:
+                    contract.customerName ?? 'Customer #${contract.customerId}',
+              ),
+              _DetailValue(
+                label: 'Customer ID',
+                value: '${contract.customerId}',
+              ),
+              _DetailValue(
+                label: 'Assigned accountant user ID',
+                value: contract.accountantUserId?.toString() ?? '—',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _DetailsSection(
+            title: 'Financial values',
+            children: [
+              _DetailValue(
+                label: 'Base value',
+                value: contract.baseValue ?? '—',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
-            'This contract is read-only for the current session.',
+            'Status and financial values are displayed exactly as returned by '
+            'the SafeContracts server. The mobile app does not recalculate them.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
-      ],
+          const SizedBox(height: 24),
+          if (canEdit && onEditContract != null)
+            FilledButton.tonalIcon(
+              onPressed: () => onEditContract!(contract.id),
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Edit contract'),
+            )
+          else
+            Text(
+              'This contract is read-only for the current session.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
+      ),
     );
   }
 }
