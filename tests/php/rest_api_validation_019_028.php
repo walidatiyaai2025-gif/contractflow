@@ -8,9 +8,7 @@ require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontract
 use SafeContracts\Rest\DashboardController;
 use SafeContracts\Rest\DataController;
 use SafeContracts\Rest\ExcelExportController;
-use SafeContracts\Rest\MobileConfigController;
 use SafeContracts\Rest\PaymentMethodsController;
-use SafeContracts\Rest\ReferenceDataController;
 use SafeContracts\Rest\Router;
 use SafeContracts\Roles\Capabilities;
 
@@ -60,15 +58,16 @@ foreach (['password', 'cookie', 'access_token', 'private_key', 'session_secret']
     sc_p8v_final_assert(! str_contains($sessionJson, $secret), 'SC-P8-019 session omits secret material: ' . $secret);
 }
 
-// SC-P8-020 — Capability enforcement validation, including direct callback defense-in-depth.
+// SC-P8-020 — Capability enforcement validation, including direct callback defense-in-depth where mutations/exports are possible.
 $GLOBALS['sc_test_current_caps'] = [];
 $readsBefore = count($GLOBALS['sc_test_read_queries']);
 $activeDenied = PaymentMethodsController::active(new WP_REST_Request());
-sc_p8v_final_assert($activeDenied instanceof WP_Error && ($activeDenied->data['status'] ?? 0) === 403, 'SC-P8-020 protected reference callback denies missing base access');
-sc_p8v_final_assert(count($GLOBALS['sc_test_read_queries']) === $readsBefore, 'SC-P8-020 denied reference callback performs no data read');
-$mobileDenied = MobileConfigController::show(new WP_REST_Request());
-$referenceDenied = ReferenceDataController::show(new WP_REST_Request());
-sc_p8v_final_assert($mobileDenied instanceof WP_Error && $referenceDenied instanceof WP_Error, 'SC-P8-020 mobile/reference callbacks recheck base access internally');
+sc_p8v_final_assert($activeDenied instanceof WP_Error && ($activeDenied->data['status'] ?? 0) === 403, 'SC-P8-020 protected payment-method callback denies missing base access');
+sc_p8v_final_assert(count($GLOBALS['sc_test_read_queries']) === $readsBefore, 'SC-P8-020 denied payment-method callback performs no data read');
+$mobileRoute = $GLOBALS['sc_test_routes'][Router::NAMESPACE . '/mobile-config'] ?? [];
+$referenceRoute = $GLOBALS['sc_test_routes'][Router::NAMESPACE . '/reference-data'] ?? [];
+sc_p8v_final_assert(($mobileRoute['permission_callback'] ?? null) === [Router::class, 'canAccess'] && ($referenceRoute['permission_callback'] ?? null) === [Router::class, 'canAccess'], 'SC-P8-020 mobile/reference read routes retain canonical access permission boundary');
+sc_p8v_final_assert(Router::canAccess() instanceof WP_Error, 'SC-P8-020 canonical route access guard denies missing scope');
 
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_ASSIGNED => true];
 $readsBefore = count($GLOBALS['sc_test_read_queries']);
