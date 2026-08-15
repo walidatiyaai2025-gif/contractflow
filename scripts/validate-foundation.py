@@ -25,6 +25,8 @@ REQUIRED_PATHS = (
     "mobile/test/app_environment_test.dart",
     "mobile/config/local.example.json",
     ".github/workflows/quality-gates.yml",
+    "scripts/p10_validation_027_031.py",
+    "docs/P10_FINAL_VALIDATION_027_031.md",
 )
 
 REQUIRED_GITIGNORE_ENTRIES = (
@@ -128,6 +130,7 @@ def validate_ci_contract() -> int:
         "release-readiness:",
         "python3 scripts/backup_manifest.py --check",
         "python3 scripts/release_readiness.py --check",
+        "python3 scripts/p10_validation_027_031.py --check",
     )
     missing = [command for command in required_commands if command not in workflow]
     if missing:
