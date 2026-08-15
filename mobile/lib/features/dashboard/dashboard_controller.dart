@@ -45,7 +45,8 @@ final class DashboardController extends ChangeNotifier {
 
   Future<void> selectCustomer(int? customerId) async {
     if (customerId != null &&
-        !(overview?.customers.any((option) => option.id == customerId) ?? false)) {
+        !(overview?.customers.any((option) => option.id == customerId) ??
+            false)) {
       throw ArgumentError.value(customerId, 'customerId', 'Unknown customer.');
     }
     filters = filters.withCustomer(customerId);
