@@ -8,22 +8,33 @@ final class IoApiTransport implements SafeContractsTransport {
   IoApiTransport({
     this.timeout = const Duration(seconds: 15),
     this.maxResponseBytes = 2 * 1024 * 1024,
+    this.maxRequestBytes = 256 * 1024,
   });
 
   final Duration timeout;
   final int maxResponseBytes;
+  final int maxRequestBytes;
 
   @override
   Future<ApiTransportResponse> send({
     required Uri uri,
     required String method,
     Map<String, String> headers = const <String, String>{},
+    String? body,
   }) async {
+    final encodedBody = body == null ? null : utf8.encode(body);
+    if (encodedBody != null && encodedBody.length > maxRequestBytes) {
+      throw const FormatException('SafeContracts API request body is too large.');
+    }
+
     final client = HttpClient()..connectionTimeout = timeout;
     try {
       final request = await client.openUrl(method, uri).timeout(timeout);
       for (final entry in headers.entries) {
         request.headers.set(entry.key, entry.value);
+      }
+      if (encodedBody != null) {
+        request.add(encodedBody);
       }
 
       final response = await request.close().timeout(timeout);
@@ -31,7 +42,8 @@ final class IoApiTransport implements SafeContractsTransport {
       await for (final chunk in response.timeout(timeout)) {
         if (bytes.length + chunk.length > maxResponseBytes) {
           throw const FormatException(
-              'SafeContracts API response is too large.');
+            'SafeContracts API response is too large.',
+          );
         }
         bytes.addAll(chunk);
       }
