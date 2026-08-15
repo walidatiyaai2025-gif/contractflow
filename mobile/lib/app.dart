@@ -125,7 +125,13 @@ final class _BootstrapView extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.fact_check_outlined, size: 56),
+                    const Semantics(
+                      label: 'SafeContracts application',
+                      image: true,
+                      child: ExcludeSemantics(
+                        child: Icon(Icons.fact_check_outlined, size: 56),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'SafeContracts',
@@ -136,7 +142,9 @@ final class _BootstrapView extends StatelessWidget {
                     const SizedBox(height: 16),
                     if (controller.state == MobileBootstrapState.idle ||
                         controller.state == MobileBootstrapState.loading)
-                      const CircularProgressIndicator()
+                      const CircularProgressIndicator(
+                        semanticsLabel: 'Loading SafeContracts session',
+                      )
                     else ...[
                       Text(
                         controller.message ??
