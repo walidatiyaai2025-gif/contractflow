@@ -61,8 +61,8 @@ function sc_fin_contract(array $overrides = []): array
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_fin_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
-sc_fin_assert(Migrator::LATEST_VERSION === '1.6.0', 'payment migration is current after contract financial/history schemas');
-sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === 9, 'contract financial/history schemas remain present with payment schema');
+sc_fin_assert(Migrator::LATEST_VERSION === '1.7.0', 'collection migration is current after contract/payment schemas');
+sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'contract financial/history/payment schemas remain present with collection schema');
 
 $itemSchema = $GLOBALS['sc_test_dbdelta'][4];
 $adjustmentSchema = $GLOBALS['sc_test_dbdelta'][5];
@@ -78,11 +78,7 @@ sc_fin_assert(str_contains($attachmentSchema, 'media_id bigint(20) unsigned NOT 
 sc_fin_assert(str_contains($attachmentSchema, 'UNIQUE KEY contract_media (contract_id, media_id)'), 'duplicate contract/media links are prevented');
 
 $service = new ContractService();
-$GLOBALS['sc_test_current_caps'] = [
-    Capabilities::ACCESS => true,
-    Capabilities::VIEW_ALL => true,
-    Capabilities::EDIT_CONTRACTS => true,
-];
+$GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_ALL => true, Capabilities::EDIT_CONTRACTS => true];
 
 $GLOBALS['sc_test_result_queue'] = [[sc_fin_contract()]];
 $service->updateDates(501, '2026-02-01', '2027-01-31');
@@ -129,14 +125,10 @@ $beforeBadAdjustment = count($GLOBALS['sc_test_queries']);
 sc_fin_expect(InvalidArgumentException::class, fn () => $service->addAdjustment(501, 'fee', 'Unknown', '1'), 'unknown adjustment type is rejected');
 sc_fin_assert(count($GLOBALS['sc_test_queries']) === $beforeBadAdjustment, 'invalid adjustment does not mutate data');
 
-$GLOBALS['sc_test_result_queue'] = [
-    [sc_fin_contract()],
-    [['total' => '250.1250']],
-    [
-        ['adjustment_type' => 'addition', 'total' => '50.5000'],
-        ['adjustment_type' => 'discount', 'total' => '25.1250'],
-    ],
-];
+$GLOBALS['sc_test_result_queue'] = [[sc_fin_contract()], [['total' => '250.1250']], [
+    ['adjustment_type' => 'addition', 'total' => '50.5000'],
+    ['adjustment_type' => 'discount', 'total' => '25.1250'],
+]];
 $reconciliation = $service->reconcile(501);
 sc_fin_assert($reconciliation['base_value'] === '1000.0000', 'reconciliation exposes base value');
 sc_fin_assert($reconciliation['financial_items'] === '250.1250', 'reconciliation exposes financial-item total');
@@ -174,6 +166,6 @@ sc_fin_expect(DomainException::class, fn () => $service->reconcile(501), 'financ
 
 $dbDeltaCount = count($GLOBALS['sc_test_dbdelta']);
 do_action('plugins_loaded');
-sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'financial/history/payment migrations are idempotent after stored version is current');
+sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'financial/history/payment/collection migrations are idempotent after stored version is current');
 
 echo "SafeContracts contract financial tests passed ({$financialTests} assertions).\n";
