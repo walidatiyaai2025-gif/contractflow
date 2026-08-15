@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/mobile_config.dart';
+import '../contracts/contract_details_screen.dart';
 import '../contracts/contracts.dart';
 import '../contracts/contracts_screen.dart';
 import '../customers/customers.dart';
@@ -128,28 +129,42 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
   void _openContract(int contractId) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => _ContractDetailsHandoff(contractId: contractId),
+        builder: (context) => ContractDetailsScreen(
+          controller: widget.contractsController,
+          contractId: contractId,
+          onEditContract: widget.contractsController.canEditContract
+              ? _openContractEdit
+              : null,
+        ),
+      ),
+    );
+  }
+
+  void _openContractEdit(int contractId) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => _ContractEditHandoff(contractId: contractId),
       ),
     );
   }
 }
 
-final class _ContractDetailsHandoff extends StatelessWidget {
-  const _ContractDetailsHandoff({required this.contractId});
+final class _ContractEditHandoff extends StatelessWidget {
+  const _ContractEditHandoff({required this.contractId});
 
   final int contractId;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Contract details')),
+      appBar: AppBar(title: const Text('Edit contract')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.description_outlined, size: 52),
+              const Icon(Icons.edit_note_outlined, size: 52),
               const SizedBox(height: 16),
               Text(
                 'Contract #$contractId',
@@ -157,9 +172,9 @@ final class _ContractDetailsHandoff extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'The list has handed off the server contract identifier. '
-                'The dedicated authorized detail read and presentation belong '
-                'to SC-P9-012.',
+                'Your session is authorized to request contract edits. '
+                'The supported edit fields, validation, conflicts and audit '
+                'write flow are implemented in SC-P9-013.',
                 textAlign: TextAlign.center,
               ),
             ],

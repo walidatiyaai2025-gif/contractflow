@@ -19,6 +19,7 @@ void main() {
       repository: ContractsRepository(_client(transport)),
       pageSize: 25,
       canAccess: true,
+      canEditContract: false,
     );
 
     await controller.ensureLoaded();
@@ -48,6 +49,7 @@ void main() {
       repository: ContractsRepository(_client(transport)),
       pageSize: 25,
       canAccess: true,
+      canEditContract: false,
     );
 
     await controller.ensureLoaded();
@@ -74,6 +76,7 @@ void main() {
       ),
       pageSize: 25,
       canAccess: true,
+      canEditContract: false,
     );
 
     await controller.ensureLoaded();
@@ -99,6 +102,7 @@ void main() {
       repository: ContractsRepository(_client(transport)),
       pageSize: 25,
       canAccess: false,
+      canEditContract: false,
     );
 
     await controller.ensureLoaded();
@@ -116,6 +120,7 @@ void main() {
       repository: ContractsRepository(_client(transport)),
       pageSize: 25,
       canAccess: true,
+      canEditContract: false,
     );
     int? openedContractId;
 
