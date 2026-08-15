@@ -44,6 +44,23 @@ final class SafeContractsApiClient {
   Future<ApiEnvelope> get(
     String path, {
     Map<String, String> query = const <String, String>{},
+  }) {
+    return _request('GET', path, query: query);
+  }
+
+  Future<ApiEnvelope> post(
+    String path, {
+    Map<String, Object?> body = const <String, Object?>{},
+    Map<String, String> query = const <String, String>{},
+  }) {
+    return _request('POST', path, query: query, jsonBody: body);
+  }
+
+  Future<ApiEnvelope> _request(
+    String method,
+    String path, {
+    Map<String, String> query = const <String, String>{},
+    Map<String, Object?>? jsonBody,
   }) async {
     final baseUri = environment.endpoint(path);
     final uri = baseUri.replace(
@@ -54,11 +71,13 @@ final class SafeContractsApiClient {
     final sessionHeaders = await headersProvider();
     final response = await transport.send(
       uri: uri,
-      method: 'GET',
+      method: method,
       headers: <String, String>{
         'Accept': 'application/json',
+        if (jsonBody != null) 'Content-Type': 'application/json; charset=utf-8',
         ...sessionHeaders,
       },
+      body: jsonBody == null ? null : jsonEncode(jsonBody),
     );
 
     final root = _decodeObject(response.body);
@@ -76,8 +95,9 @@ final class SafeContractsApiClient {
       );
     }
     final metaValue = root['meta'];
-    final meta =
-        metaValue == null ? <String, Object?>{} : _objectMap(metaValue, 'meta');
+    final meta = metaValue == null
+        ? <String, Object?>{}
+        : _objectMap(metaValue, 'meta');
     return ApiEnvelope(data: root['data'], meta: meta);
   }
 
@@ -100,7 +120,8 @@ List<Object?> apiObjectList(Object? value, String field) {
 Map<String, Object?> _decodeObject(String body) {
   if (body.trim().isEmpty) {
     throw const FormatException(
-        'SafeContracts API returned an empty response.');
+      'SafeContracts API returned an empty response.',
+    );
   }
   final Object? decoded = jsonDecode(body) as Object?;
   return _objectMap(decoded, 'response');
