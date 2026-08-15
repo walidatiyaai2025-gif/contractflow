@@ -125,7 +125,15 @@ def validate_mobile_boundary() -> int:
             fail(f"Android release template missing marker: {marker}")
     if 'id("kotlin-android")' in android_template:
         fail("Android release template must use Flutter/AGP built-in Kotlin, not kotlin-android")
-    return 12
+
+    android_bootstrap = (ROOT / "scripts/bootstrap_android.sh").read_text(encoding="utf-8")
+    for marker in (
+        "android.permission.INTERNET",
+        "Android release manifest is missing INTERNET permission",
+    ):
+        if marker not in android_bootstrap:
+            fail(f"Android release bootstrap missing network marker: {marker}")
+    return 14
 
 
 def validate_example_config() -> int:
@@ -167,6 +175,9 @@ def validate_ci_contract() -> int:
         "flutter build apk --release",
         '--dart-define=SC_API_BASE_URL="$SC_PRODUCTION_API_BASE_URL"',
         "apksigner",
+        "AAPT=",
+        '"$AAPT" dump permissions "$APK"',
+        "android.permission.INTERNET",
         "safecontracts-release-candidates",
     )
     missing = [command for command in required_commands if command not in workflow]
