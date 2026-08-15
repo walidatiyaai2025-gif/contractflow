@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/localization/safecontracts_localizations.dart';
+import '../config/mobile_config.dart';
 import '../dashboard/dashboard_models.dart';
 import 'followups.dart';
 
@@ -11,6 +13,7 @@ final class FollowUpsScreen extends StatefulWidget {
     required this.repository,
     required this.pageSize,
     required this.filters,
+    required this.currency,
     required this.canManage,
     super.key,
   });
@@ -18,6 +21,7 @@ final class FollowUpsScreen extends StatefulWidget {
   final FollowUpsRepository repository;
   final int pageSize;
   final DashboardFilters filters;
+  final MobileCurrencyConfig currency;
   final bool canManage;
 
   @override
@@ -72,12 +76,13 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
   }
 
   Future<void> _open(FollowUpQueueItem item) async {
+    final l10n = context.scL10n;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => FollowUpHistoryScreen(
           repository: widget.repository,
           paymentId: item.paymentId,
-          title: item.reference ?? 'Payment #${item.paymentId}',
+          title: item.reference ?? l10n.paymentNumber(item.paymentId),
           pageSize: widget.pageSize,
           canManage: widget.canManage,
         ),
@@ -88,10 +93,11 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return _ErrorState(
-        message: _error!,
+        message: l10n.rawMessage(_error!),
         onRetry: () => _load(_pageNumber),
       );
     }
@@ -101,10 +107,10 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
         onRefresh: () => _load(1),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const <Widget>[
-            SizedBox(height: 180),
+          children: <Widget>[
+            const SizedBox(height: 180),
             Center(
-              child: Text('No follow-up items match the authorized filters.'),
+              child: Text(l10n.t('No follow-up items match the authorized filters.')),
             ),
           ],
         ),
@@ -125,9 +131,11 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
                 final item = page.items[index];
                 return Card(
                   child: ListTile(
-                    title: Text(item.reference ?? 'Payment #${item.paymentId}'),
+                    title: Text(item.reference ?? l10n.paymentNumber(item.paymentId)),
                     subtitle: Text(
-                      'Due ${item.dueDate} · ${item.paymentStatus}\nRemaining ${item.remainingAmount} · Follow-up ${item.followUpState ?? 'none'}',
+                      '${l10n.t('Due')} ${item.dueDate} · ${l10n.status(item.paymentStatus)}\n'
+                      '${l10n.t('Remaining')} ${l10n.money(item.remainingAmount, widget.currency)} · '
+                      '${l10n.t('Follow-up')} ${l10n.status(item.followUpState ?? 'none')}',
                     ),
                     isThreeLine: true,
                     trailing: const Icon(Icons.chevron_right),
@@ -143,7 +151,7 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
           child: Row(
             children: [
               IconButton(
-                tooltip: 'Previous page',
+                tooltip: l10n.t('Previous page'),
                 onPressed: page.page > 1
                     ? () => unawaited(_load(page.page - 1))
                     : null,
@@ -151,12 +159,12 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
               ),
               Expanded(
                 child: Text(
-                  'Page ${page.page}',
+                  l10n.pageNumber(page.page),
                   textAlign: TextAlign.center,
                 ),
               ),
               IconButton(
-                tooltip: 'Next page',
+                tooltip: l10n.t('Next page'),
                 onPressed: page.hasMore && page.page < 5
                     ? () => unawaited(_load(page.page + 1))
                     : null,
@@ -226,6 +234,7 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
   }
 
   Future<void> _record() async {
+    final l10n = context.scL10n;
     final value = await showDialog<_FollowUpInput>(
       context: context,
       builder: (_) => const _FollowUpDialog(),
@@ -241,19 +250,19 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Follow-up #${receipt.id} recorded.')),
+        SnackBar(content: Text(l10n.followUpRecorded(receipt.id))),
       );
       await _load();
     } on SafeContractsApiException catch (error) {
       if (!mounted) return;
       final prefix = switch (error.statusCode) {
-        422 => 'Validation',
-        403 => 'Forbidden',
-        409 => 'Conflict',
-        _ => 'Error',
+        422 => l10n.t('Validation'),
+        403 => l10n.t('Forbidden'),
+        409 => l10n.t('Conflict'),
+        _ => l10n.t('Error'),
       };
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$prefix: ${error.message}')),
+        SnackBar(content: Text('$prefix: ${l10n.rawMessage(error.message)}')),
       );
     } on Object catch (error) {
       if (!mounted) return;
@@ -265,13 +274,14 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Follow-up · ${widget.title}'),
+        title: Text('${l10n.t('Follow-up')} · ${widget.title}'),
         actions: [
           if (widget.canManage)
             IconButton(
-              tooltip: 'Add follow-up',
+              tooltip: l10n.t('Add follow-up'),
               onPressed: () => unawaited(_record()),
               icon: const Icon(Icons.add_comment_outlined),
             ),
@@ -280,9 +290,9 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _ErrorState(message: _error!, onRetry: _load)
+              ? _ErrorState(message: l10n.rawMessage(_error!), onRetry: _load)
               : _history.isEmpty
-                  ? const Center(child: Text('No follow-up history yet.'))
+                  ? Center(child: Text(l10n.t('No follow-up history yet.')))
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView.separated(
@@ -299,16 +309,14 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    item.state,
-                                    style:
-                                        Theme.of(context).textTheme.titleMedium,
+                                    l10n.status(item.state),
+                                    style: Theme.of(context).textTheme.titleMedium,
                                   ),
                                   Text(item.createdAt),
                                   if (item.promisedDate != null)
-                                    Text('Promised: ${item.promisedDate}'),
+                                    Text('${l10n.t('Promised:')} ${item.promisedDate}'),
                                   if (item.deferredUntil != null)
-                                    Text(
-                                        'Deferred until: ${item.deferredUntil}'),
+                                    Text('${l10n.t('Deferred until:')} ${item.deferredUntil}'),
                                   if (item.note != null) ...[
                                     const SizedBox(height: 8),
                                     Text(item.note!),
@@ -331,7 +339,6 @@ final class _FollowUpInput {
     this.promisedDate,
     this.deferredUntil,
   });
-
   final String operation;
   final String? note;
   final String? promisedDate;
@@ -340,20 +347,12 @@ final class _FollowUpInput {
 
 final class _FollowUpDialog extends StatefulWidget {
   const _FollowUpDialog();
-
   @override
   State<_FollowUpDialog> createState() => _FollowUpDialogState();
 }
 
 final class _FollowUpDialogState extends State<_FollowUpDialog> {
-  static const _operations = <String>[
-    'note',
-    'promise',
-    'issue',
-    'defer',
-    'escalate',
-  ];
-
+  static const _operations = <String>['note', 'promise', 'issue', 'defer', 'escalate'];
   String _operation = 'note';
   final _note = TextEditingController();
   final _date = TextEditingController();
@@ -398,8 +397,9 @@ final class _FollowUpDialogState extends State<_FollowUpDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     return AlertDialog(
-      title: const Text('Operational follow-up'),
+      title: Text(l10n.t('Operational follow-up')),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -407,12 +407,12 @@ final class _FollowUpDialogState extends State<_FollowUpDialog> {
             DropdownButtonFormField<String>(
               initialValue: _operation,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Action'),
+              decoration: InputDecoration(labelText: l10n.t('Action')),
               items: _operations
                   .map(
                     (operation) => DropdownMenuItem<String>(
                       value: operation,
-                      child: Text(operation),
+                      child: Text(l10n.status(operation)),
                     ),
                   )
                   .toList(growable: false),
@@ -429,9 +429,11 @@ final class _FollowUpDialogState extends State<_FollowUpDialog> {
               TextField(
                 controller: _date,
                 decoration: InputDecoration(
-                  labelText: _operation == 'promise'
-                      ? 'Promised date YYYY-MM-DD'
-                      : 'Deferred until YYYY-MM-DD',
+                  labelText: l10n.t(
+                    _operation == 'promise'
+                        ? 'Promised date YYYY-MM-DD'
+                        : 'Deferred until YYYY-MM-DD',
+                  ),
                 ),
               ),
             TextField(
@@ -440,19 +442,20 @@ final class _FollowUpDialogState extends State<_FollowUpDialog> {
               minLines: 2,
               maxLines: 5,
               decoration: InputDecoration(
-                labelText: _needsNote ? 'Note' : 'Note (optional)',
+                labelText: l10n.t(_needsNote ? 'Note' : 'Note (optional)'),
               ),
             ),
-            if (_error != null) Text(_error!, textAlign: TextAlign.center),
+            if (_error != null)
+              Text(l10n.rawMessage(_error!), textAlign: TextAlign.center),
           ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.t('Cancel')),
         ),
-        FilledButton(onPressed: _save, child: const Text('Record')),
+        FilledButton(onPressed: _save, child: Text(l10n.t('Record'))),
       ],
     );
   }
@@ -460,7 +463,6 @@ final class _FollowUpDialogState extends State<_FollowUpDialog> {
 
 final class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.message, required this.onRetry});
-
   final String message;
   final Future<void> Function() onRetry;
 
@@ -475,7 +477,7 @@ final class _ErrorState extends StatelessWidget {
               const SizedBox(height: 12),
               FilledButton.tonal(
                 onPressed: () => unawaited(onRetry()),
-                child: const Text('Retry'),
+                child: Text(context.scL10n.t('Retry')),
               ),
             ],
           ),
