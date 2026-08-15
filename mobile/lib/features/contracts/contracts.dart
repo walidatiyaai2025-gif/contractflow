@@ -81,7 +81,8 @@ final class ContractsFilters {
     if (status != null &&
         status!.isNotEmpty &&
         !_supportedContractFilterStatuses.contains(status)) {
-      throw ArgumentError.value(status, 'status', 'Unsupported contract status.');
+      throw ArgumentError.value(
+          status, 'status', 'Unsupported contract status.');
     }
   }
 
