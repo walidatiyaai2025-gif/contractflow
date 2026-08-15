@@ -16,7 +16,8 @@ final class DashboardScreen extends StatelessWidget {
       animation: controller,
       builder: (context, child) {
         final overview = controller.overview;
-        if (controller.state == DashboardLoadState.loading && overview == null) {
+        if (controller.state == DashboardLoadState.loading &&
+            overview == null) {
           return const Center(child: CircularProgressIndicator());
         }
         if (controller.state == DashboardLoadState.error && overview == null) {
@@ -43,7 +44,8 @@ final class DashboardScreen extends StatelessWidget {
               const SizedBox(height: 16),
               if (controller.state == DashboardLoadState.error)
                 _InlineError(
-                  message: controller.errorMessage ?? 'Dashboard refresh failed.',
+                  message:
+                      controller.errorMessage ?? 'Dashboard refresh failed.',
                 ),
               _DashboardListsView(lists: controller.lists),
             ],
@@ -75,7 +77,8 @@ final class _DashboardFilters extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Dashboard filters', style: Theme.of(context).textTheme.titleMedium),
+            Text('Dashboard filters',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             Wrap(
               spacing: 16,
@@ -149,15 +152,20 @@ final class _DashboardFilters extends StatelessWidget {
                             );
                           },
                     items: const <DropdownMenuItem<String>>[
-                      DropdownMenuItem<String>(value: '', child: Text('All statuses')),
-                      DropdownMenuItem<String>(value: 'active', child: Text('Active')),
-                      DropdownMenuItem<String>(value: 'due', child: Text('Due')),
-                      DropdownMenuItem<String>(value: 'overdue', child: Text('Overdue')),
+                      DropdownMenuItem<String>(
+                          value: '', child: Text('All statuses')),
+                      DropdownMenuItem<String>(
+                          value: 'active', child: Text('Active')),
+                      DropdownMenuItem<String>(
+                          value: 'due', child: Text('Due')),
+                      DropdownMenuItem<String>(
+                          value: 'overdue', child: Text('Overdue')),
                       DropdownMenuItem<String>(
                         value: 'partially_paid',
                         child: Text('Partially paid'),
                       ),
-                      DropdownMenuItem<String>(value: 'paid', child: Text('Paid')),
+                      DropdownMenuItem<String>(
+                          value: 'paid', child: Text('Paid')),
                     ],
                   ),
                 ),
