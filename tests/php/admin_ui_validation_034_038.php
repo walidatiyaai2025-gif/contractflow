@@ -67,7 +67,7 @@ sc_p6v6_assert(substr_count($notificationSource, 'Capabilities::MANAGE_NOTIFICAT
 sc_p6v6_assert(str_contains($notificationSource, 'check_admin_referer') && str_contains($notificationSource, 'NotificationRuleService'), 'SC-P6-036 rule writes retain nonce and domain-service boundary');
 sc_p6v6_assert(str_contains($notificationSource, 'NotificationRule::allowedTriggers()') && str_contains($notificationSource, "array_map('sanitize_key', \$_POST['recipient_roles'])") && str_contains($notificationSource, "array_map('sanitize_key', \$_POST['escalation_roles'])"), 'SC-P6-036 trigger and role inputs are constrained/normalized');
 sc_p6v6_assert(str_contains($notificationSource, 'NotificationTemplateRepository') && str_contains($notificationSource, 'all(true)') && str_contains($notificationSource, 'original_code'), 'SC-P6-036 rule edits use active templates and stable rule codes');
-sc_p6v6_assert(str_contains($notificationSource, 'Contractual due-date') && str_contains($notificationSource, 'Settled-payment suppression') && ! str_contains($notificationSource, '$wpdb'), 'SC-P6-036 backend due/settlement semantics remain explicit and presentation has no SQL');
+sc_p6v6_assert(str_contains($notificationSource, 'contractual due-date') && str_contains($notificationSource, 'Settled-payment suppression') && ! str_contains($notificationSource, '$wpdb'), 'SC-P6-036 backend due/settlement semantics remain explicit and presentation has no SQL');
 
 // SC-P6-037 — Firebase settings: public metadata + secret-reference only.
 $firebaseSource = file_get_contents((string) (new ReflectionClass(FirebaseSettingsPage::class))->getFileName()) ?: '';
