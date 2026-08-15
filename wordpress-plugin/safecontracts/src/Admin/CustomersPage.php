@@ -61,11 +61,8 @@ final class CustomersPage
         $editing = null;
         $editId = max(0, (int) ($_GET['customer_id'] ?? 0));
         if ($editId > 0 && current_user_can(Capabilities::MANAGE_REFERENCE_DATA)) {
-            try {
-                $editing = (new CustomerService())->find($editId);
-            } catch (Throwable $error) {
-                unset($error);
-            }
+            $editableRows = $read->customers(['customer_id' => $editId]);
+            $editing = $editableRows[0] ?? null;
         }
         ?>
         <div class="wrap safecontracts-settings" dir="auto">

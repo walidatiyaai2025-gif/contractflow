@@ -20,12 +20,17 @@ final class ContractsPage
 
     public static function handleSave(): void
     {
-        if (! current_user_can(Capabilities::CREATE_CONTRACTS) && ! current_user_can(Capabilities::EDIT_CONTRACTS)) {
-            wp_die(__('You do not have permission to manage contracts.', 'safecontracts'));
+        $contractId = max(0, (int) ($_POST['contract_id'] ?? 0));
+        if ($contractId === 0) {
+            if (! current_user_can(Capabilities::CREATE_CONTRACTS)) {
+                wp_die(__('You do not have permission to create contracts.', 'safecontracts'));
+            }
+        } elseif (! current_user_can(Capabilities::EDIT_CONTRACTS) && ! current_user_can(Capabilities::ASSIGN_CONTRACTS)) {
+            wp_die(__('You do not have permission to edit or assign contracts.', 'safecontracts'));
         }
+
         check_admin_referer(self::SAVE_ACTION);
         $service = new ContractService();
-        $contractId = max(0, (int) ($_POST['contract_id'] ?? 0));
         $status = 'saved';
         try {
             if ($contractId === 0) {
@@ -91,7 +96,7 @@ final class ContractsPage
                     <?php endforeach; ?>
                     </tbody></table>
                 </section>
-                <?php if (current_user_can(Capabilities::CREATE_CONTRACTS) || ($selected && current_user_can(Capabilities::EDIT_CONTRACTS))) : ?>
+                <?php if (current_user_can(Capabilities::CREATE_CONTRACTS) || ($selected && (current_user_can(Capabilities::EDIT_CONTRACTS) || current_user_can(Capabilities::ASSIGN_CONTRACTS)))) : ?>
                 <section class="safecontracts-admin-card">
                     <h2><?php echo $selected ? esc_html__('Contract details', 'safecontracts') : esc_html__('Create contract', 'safecontracts'); ?></h2>
                     <?php if ($selected && ! empty($selected['is_archived'])) : ?><p class="notice notice-warning inline"><?php echo esc_html__('Archived contracts are read-only.', 'safecontracts'); ?></p><?php endif; ?>

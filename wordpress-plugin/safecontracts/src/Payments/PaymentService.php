@@ -73,6 +73,15 @@ final class PaymentService
         return $paymentId;
     }
 
+    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, accountant_user_id:?int, contract_is_archived:bool} */
+    public function find(int $paymentId): array
+    {
+        $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts payments.');
+        $payment = $this->requirePayment($paymentId);
+        $this->assertScope($payment['accountant_user_id']);
+        return $payment;
+    }
+
     public function changeStatus(int $paymentId, mixed $targetStatus): void
     {
         $this->requireCapability(Capabilities::MANAGE_PAYMENTS, 'You do not have permission to manage payments.');

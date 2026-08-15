@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Admin;
 
+use SafeContracts\Contracts\ContractMoney;
 use SafeContracts\Payments\PaymentService;
 use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
@@ -61,23 +62,17 @@ final class PaymentsPage
         $selected = null;
         $selectedId = max(0, (int) ($_GET['payment_id'] ?? 0));
         if ($selectedId > 0) {
-            foreach ($payments as $payment) {
-                if ((int) $payment['id'] === $selectedId) {
-                    $selected = $payment;
-                    break;
-                }
-            }
-            if ($selected === null) {
-                $rows = $read->payments(['contract_id' => 0]);
-                foreach ($rows as $payment) {
-                    if ((int) $payment['id'] === $selectedId) {
-                        $selected = $payment;
-                        break;
-                    }
-                }
+            try {
+                $selected = (new PaymentService())->find($selectedId);
+            } catch (Throwable $error) {
+                unset($error);
             }
         }
-        $terminal = $selected !== null && ((string) $selected['status'] === PaymentStatus::PAID || (float) $selected['remaining_amount'] <= 0.0);
+        $terminal = $selected !== null && (
+            (string) $selected['status'] === PaymentStatus::PAID
+            || ContractMoney::compare((string) $selected['remaining_amount'], '0.0000') === 0
+            || ! empty($selected['contract_is_archived'])
+        );
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Receivables', 'safecontracts'); ?></p><h1><?php echo esc_html__('Payments', 'safecontracts'); ?></h1></div></div>
@@ -108,7 +103,7 @@ final class PaymentsPage
                         <p class="safecontracts-field-row"><label><?php echo esc_html__('Due date', 'safecontracts'); ?><input type="date" name="due_date" required value="<?php echo esc_attr((string) ($selected['due_date'] ?? '')); ?>"></label><label><?php echo esc_html__('Expected payment date', 'safecontracts'); ?><input type="date" name="expected_payment_date" value="<?php echo esc_attr((string) ($selected['expected_payment_date'] ?? '')); ?>"></label></p>
                         <?php submit_button($selected ? __('Save payment dates', 'safecontracts') : __('Schedule payment', 'safecontracts')); ?>
                     </form>
-                    <?php else : ?><p class="notice notice-info inline"><?php echo esc_html__('Settled payments are terminal and shown read-only.', 'safecontracts'); ?></p><?php endif; ?>
+                    <?php else : ?><p class="notice notice-info inline"><?php echo esc_html__('Settled payments are terminal and shown read-only. Payments on archived contracts are also terminal and shown read-only.', 'safecontracts'); ?></p><?php endif; ?>
                 </section>
                 <?php endif; ?>
             </div>
