@@ -13,6 +13,7 @@ $GLOBALS['sc_test_options'] = [];
 $GLOBALS['sc_test_roles'] = [];
 $GLOBALS['sc_test_routes'] = [];
 $GLOBALS['sc_test_dbdelta'] = [];
+$GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_current_caps'] = [];
 $GLOBALS['sc_test_fired_actions'] = [];
 
@@ -39,6 +40,22 @@ final class SC_Test_Wpdb
     public function get_charset_collate(): string
     {
         return 'DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci';
+    }
+
+    public function prepare(string $query, mixed ...$args): string
+    {
+        $prepared = array_map(
+            static fn (mixed $value): mixed => is_int($value) ? $value : "'" . addslashes((string) $value) . "'",
+            $args
+        );
+
+        return vsprintf($query, $prepared);
+    }
+
+    public function query(string $sql): int
+    {
+        $GLOBALS['sc_test_queries'][] = $sql;
+        return 1;
     }
 }
 
