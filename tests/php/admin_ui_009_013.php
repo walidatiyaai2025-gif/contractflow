@@ -85,7 +85,7 @@ sc_p6ops_assert($summary['contract_count'] === '2' && $summary['collection_trans
 sc_p6ops_assert(str_contains($reportQueries, 'c.accountant_user_id = 42') && str_contains($reportQueries, 'c.customer_id = 3'), 'SC-P6-012 assigned report scope is enforced across summary queries');
 sc_p6ops_assert(str_contains($reportQueries, 'p.due_date <') && str_contains($reportQueries, "p.status = 'overdue'"), 'SC-P6-012 reporting preserves contractual due-date and status filtering');
 $reportsSource = file_get_contents((string) (new ReflectionClass(ReportsPage::class))->getFileName()) ?: '';
-sc_p6ops_assert(str_contains($reportsSource, 'AdminReadRepository') && str_contains($reportsSource, 'Excel export action is intentionally reserved'), 'SC-P6-012 report screen uses read model and reserves later Excel implementation');
+sc_p6ops_assert(str_contains($reportsSource, 'AdminReadRepository') && str_contains($reportsSource, 'server-side'), 'SC-P6-012 report screen keeps the scoped read-model/server-side reporting boundary as later export features are added');
 sc_p6ops_assert(! str_contains($reportsSource, '$wpdb'), 'SC-P6-012 report page contains no presentation-layer SQL');
 
 // SC-P6-013 — users/roles screen is WordPress-native and read-only.

@@ -4,15 +4,33 @@ declare(strict_types=1);
 
 namespace SafeContracts\Admin;
 
+use SafeContracts\Reports\ReportExportService;
 use SafeContracts\Roles\Capabilities;
 
 final class ReportsPage
 {
     public const SLUG = 'safecontracts-reports';
+    public const EXPORT_ACTION = 'safecontracts_export_report_xlsx';
 
     public static function register(): void
     {
         add_submenu_page(AdminShell::SLUG, __('Reports', 'safecontracts'), __('Reports', 'safecontracts'), Capabilities::VIEW_REPORTS, self::SLUG, [self::class, 'render']);
+    }
+
+    public static function handleExport(): void
+    {
+        if (! current_user_can(Capabilities::VIEW_REPORTS)) {
+            wp_die(__('You do not have permission to export reports.', 'safecontracts'));
+        }
+        check_admin_referer(self::EXPORT_ACTION);
+
+        $export = (new ReportExportService())->generate($_POST);
+        header('Content-Type: ' . $export['content_type']);
+        header('Content-Disposition: attachment; filename="' . $export['filename'] . '"');
+        header('Content-Length: ' . strlen($export['content']));
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        echo $export['content'];
+        exit;
     }
 
     public static function render(): void
@@ -39,6 +57,13 @@ final class ReportsPage
                     <label><?php echo esc_html__('Due to', 'safecontracts'); ?><input type="date" name="due_to" value="<?php echo esc_attr((string) ($filters['due_to'] ?? '')); ?>"></label>
                     <button class="button button-primary" type="submit"><?php echo esc_html__('Run report', 'safecontracts'); ?></button>
                 </form>
+                <form class="safecontracts-export-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="<?php echo esc_attr(self::EXPORT_ACTION); ?>">
+                    <?php foreach ($filters as $key => $value) : ?><input type="hidden" name="<?php echo esc_attr((string) $key); ?>" value="<?php echo esc_attr((string) ($value ?? '')); ?>"><?php endforeach; ?>
+                    <?php wp_nonce_field(self::EXPORT_ACTION); ?>
+                    <button class="button" type="submit"><?php echo esc_html__('Export current filters to Excel', 'safecontracts'); ?></button>
+                    <span class="description"><?php echo esc_html__('XLSX is generated server-side from your authorized report scope.', 'safecontracts'); ?></span>
+                </form>
             </section>
             <div class="safecontracts-kpi-grid">
                 <?php self::metric(__('Contracts', 'safecontracts'), (string) $summary['contract_count']); ?>
@@ -52,7 +77,7 @@ final class ReportsPage
             </div>
             <section class="safecontracts-admin-card safecontracts-admin-card--security">
                 <h2><?php echo esc_html__('Scoped report boundary', 'safecontracts'); ?></h2>
-                <p><?php echo esc_html__('All totals are computed by the server-side SafeContracts read model using the same customer, contract, accountant, payment-status and contractual due-date filters as the dashboard. The Excel export action is intentionally reserved for the dedicated Excel generation task.', 'safecontracts'); ?></p>
+                <p><?php echo esc_html__('All totals and XLSX sheets are computed server-side using the same authorized customer, contract, accountant, payment-status and contractual due-date filters. Export completion is written through the SafeContracts audit hook.', 'safecontracts'); ?></p>
             </section>
         </div>
         <?php

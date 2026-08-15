@@ -13,6 +13,7 @@ final class AdminShell
     public const CORE_STYLE_HANDLE = 'safecontracts-admin-core';
     public const OPS_STYLE_HANDLE = 'safecontracts-admin-ops';
     public const SETTINGS_STYLE_HANDLE = 'safecontracts-admin-settings';
+    public const RESPONSIVE_STYLE_HANDLE = 'safecontracts-admin-responsive';
 
     public static function register(): void
     {
@@ -55,6 +56,12 @@ final class AdminShell
             self::SETTINGS_STYLE_HANDLE,
             SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-settings.css',
             [self::OPS_STYLE_HANDLE],
+            SAFECONTRACTS_VERSION
+        );
+        wp_enqueue_style(
+            self::RESPONSIVE_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-responsive.css',
+            [self::SETTINGS_STYLE_HANDLE],
             SAFECONTRACTS_VERSION
         );
     }
