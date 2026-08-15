@@ -13,12 +13,14 @@ These instructions apply to every contributor, coding agent, release operator an
 
 ## Mandatory quality gate
 
-No build, package, APK or plugin ZIP may be called **verified**, **release**, or **production-ready** unless the exact source candidate has passed all required SafeContracts Quality Gates:
+No build, package, APK or plugin ZIP may be called **verified**, **release**, or **production-ready** unless the exact functional source candidate has passed all required SafeContracts Quality Gates:
 
 1. repository standards,
 2. backend foundation/regression tests,
 3. Flutter format/analyze/tests,
 4. release-readiness verification.
+
+The post-gate `release-candidates` job must also prove deterministic plugin packaging and the Android release build/signing path before release-engineering work is closed.
 
 Live-environment evidence that CI cannot prove (production restore, Firebase delivery, real-device behavior and business UAT) must be recorded separately and must never be fabricated.
 
@@ -37,11 +39,13 @@ Rules:
    - `Last verified Plugin/SafeContracts-latest.zip`
    - `Last verified apk/SafeContracts-latest.apk`
 4. Each binary must have a matching `.sha256` file and a `VERIFIED.json` provenance record containing source commit, Quality Gates run ID, UTC publication time, byte size and SHA-256.
-5. Never place debug, unsigned, locally modified or unverified output in these folders.
-6. The APK may only be retained as production-verified when the Android platform scaffold exists, production API configuration is HTTPS, release signing is configured outside Git, and real-device/UAT requirements are satisfied.
-7. The plugin ZIP must be built from `wordpress-plugin/safecontracts/` without local secrets, caches, logs or unrelated repository content.
+5. Never place debug, unsigned, CI-candidate, locally modified or unverified output in these folders.
+6. The APK may only be retained as production-verified when the reproducible Android scaffold contract is present, the real production API configuration is HTTPS, production signing is verified outside Git, and real-device/UAT requirements are satisfied.
+7. The plugin ZIP must be built deterministically from `wordpress-plugin/safecontracts/` without local secrets, caches, logs or unrelated repository content by `scripts/package_plugin.py`.
 8. Run `python3 scripts/verified_artifacts.py check` before closing any release/publishing work.
-9. Use `python3 scripts/verified_artifacts.py publish ...` to replace retained artifacts and generate their checksums/provenance consistently.
+9. Publish the plugin independently with `python3 scripts/verified_artifacts.py publish-plugin ...` once its exact source candidate is green.
+10. Publish the APK independently with `python3 scripts/verified_artifacts.py publish-apk ...` only after production signing, HTTPS API, real-device evidence and UAT evidence are available.
+11. The CI-generated `SafeContracts-apk-release-candidate.apk` uses a short-lived candidate key and a reserved `.invalid` URL. It proves the build path only and must never be treated as production.
 
 ## Production environment
 
