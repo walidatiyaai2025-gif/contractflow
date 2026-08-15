@@ -1,0 +1,68 @@
+name: WordPress Theme Quality
+
+on:
+  push:
+    paths:
+      - "wordpress-theme/**"
+      - ".github/workflows/theme-quality.yml"
+  pull_request:
+    paths:
+      - "wordpress-theme/**"
+      - ".github/workflows/theme-quality.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  theme-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          find wordpress-theme/safecontracts-onepage -name '*.php' -print0 \
+            | xargs -0 -n1 php -l
+      - name: Validate theme JSON and JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool wordpress-theme/safecontracts-onepage/theme.json >/dev/null
+          node --check wordpress-theme/safecontracts-onepage/assets/js/theme.js
+      - name: Verify required public assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          THEME="wordpress-theme/safecontracts-onepage"
+          for asset in \
+            hero-devices.svg \
+            handshake.svg \
+            reminders.svg \
+            documents.svg \
+            analytics.svg \
+            security.svg; do
+            test -s "$THEME/assets/images/$asset"
+          done
+      - name: Verify bilingual one-page contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          THEME="wordpress-theme/safecontracts-onepage"
+          grep -Fq "'ar' => array(" "$THEME/inc/i18n.php"
+          grep -Fq "'en' => array(" "$THEME/inc/i18n.php"
+          grep -Fq 'id="home"' "$THEME/front-page.php"
+          grep -Fq 'id="benefits"' "$THEME/front-page.php"
+          grep -Fq 'id="use-cases"' "$THEME/front-page.php"
+          grep -Fq 'id="dashboards"' "$THEME/front-page.php"
+          grep -Fq 'id="faq"' "$THEME/front-page.php"
+          grep -Fq 'id="contact"' "$THEME/front-page.php"
+          grep -Fq 'prefers-reduced-motion' "$THEME/assets/css/theme.css"
+          grep -Fq 'dir-rtl' "$THEME/assets/css/theme.css"
