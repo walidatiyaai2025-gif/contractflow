@@ -30,7 +30,7 @@ final class CollectionRepository
         string $collectionDate,
         int $paymentMethodId,
         ?string $reference,
-        ?string $note,
+        ?string $details,
         ?int $proofMediaId,
         int $actorId
     ): int {
@@ -39,22 +39,23 @@ final class CollectionRepository
         $table = $wpdb->prefix . 'safecontracts_payment_collections';
 
         $referencePlaceholder = $reference === null ? 'NULL' : '%s';
-        $notePlaceholder = $note === null ? 'NULL' : '%s';
+        $detailsPlaceholder = $details === null ? 'NULL' : '%s';
         $proofPlaceholder = $proofMediaId === null ? 'NULL' : '%d';
         $statement = "INSERT INTO {$table}
-            (payment_id, amount, collection_date, payment_method_id, reference, note, proof_media_id, created_by, created_at)
-            VALUES (%d, %s, %s, %d, {$referencePlaceholder}, {$notePlaceholder}, {$proofPlaceholder}, %d, UTC_TIMESTAMP())";
+            (payment_id, amount, collection_date, payment_method_id, reference, details, proof_media_id, created_by, updated_by, created_at, updated_at)
+            VALUES (%d, %s, %s, %d, {$referencePlaceholder}, {$detailsPlaceholder}, {$proofPlaceholder}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
 
         $args = [$paymentId, $amount, $collectionDate, $paymentMethodId];
         if ($reference !== null) {
             $args[] = $reference;
         }
-        if ($note !== null) {
-            $args[] = $note;
+        if ($details !== null) {
+            $args[] = $details;
         }
         if ($proofMediaId !== null) {
             $args[] = $proofMediaId;
         }
+        $args[] = $actorId;
         $args[] = $actorId;
 
         $sql = $wpdb->prepare($statement, ...$args);
@@ -68,8 +69,9 @@ final class CollectionRepository
     /**
      * @return list<array{
      *   id:int, payment_id:int, amount:string, collection_date:string,
-     *   payment_method_id:int, reference:?string, note:?string,
-     *   proof_media_id:?int, created_by:?int, created_at:string, is_reversed:bool
+     *   payment_method_id:int, reference:?string, details:?string,
+     *   proof_media_id:?int, created_by:?int, updated_by:?int,
+     *   created_at:string, updated_at:string
      * }>
      */
     public function forPayment(int $paymentId): array
@@ -79,7 +81,8 @@ final class CollectionRepository
         $table = $wpdb->prefix . 'safecontracts_payment_collections';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, payment_id, amount, collection_date, payment_method_id, reference, note, proof_media_id, created_by, created_at, is_reversed
+                "SELECT id, payment_id, amount, collection_date, payment_method_id, reference, details,
+                        proof_media_id, created_by, updated_by, created_at, updated_at
                  FROM {$table}
                  WHERE payment_id = %d
                  ORDER BY collection_date ASC, id ASC",
@@ -100,11 +103,12 @@ final class CollectionRepository
                 'collection_date' => (string) ($row['collection_date'] ?? ''),
                 'payment_method_id' => (int) ($row['payment_method_id'] ?? 0),
                 'reference' => isset($row['reference']) && $row['reference'] !== null ? (string) $row['reference'] : null,
-                'note' => isset($row['note']) && $row['note'] !== null ? (string) $row['note'] : null,
+                'details' => isset($row['details']) && $row['details'] !== null ? (string) $row['details'] : null,
                 'proof_media_id' => isset($row['proof_media_id']) && $row['proof_media_id'] !== null ? (int) $row['proof_media_id'] : null,
                 'created_by' => isset($row['created_by']) && $row['created_by'] !== null ? (int) $row['created_by'] : null,
+                'updated_by' => isset($row['updated_by']) && $row['updated_by'] !== null ? (int) $row['updated_by'] : null,
                 'created_at' => (string) ($row['created_at'] ?? ''),
-                'is_reversed' => (bool) ($row['is_reversed'] ?? false),
+                'updated_at' => (string) ($row['updated_at'] ?? ''),
             ],
             $rows
         );
