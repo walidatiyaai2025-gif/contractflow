@@ -63,7 +63,8 @@ final class SafeContractsMobileConfig {
 
   factory SafeContractsMobileConfig.fromData(Object? value) {
     final data = apiObjectMap(value, 'mobile_config.data');
-    final features = _optionalObjectMap(data['features'], 'mobile_config.features');
+    final features =
+        _optionalObjectMap(data['features'], 'mobile_config.features');
     final configuredPageSize = _pageSize(data['default_page_size']);
 
     return SafeContractsMobileConfig(
