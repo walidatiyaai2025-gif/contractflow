@@ -10,6 +10,22 @@ use SafeContracts\Rest\NotificationsController;
 use SafeContracts\Rest\Router;
 use SafeContracts\Roles\Capabilities;
 
+$GLOBALS['sc_test_user_meta'] = [];
+if (! function_exists('get_user_meta')) {
+    function get_user_meta(int $userId, string $key, bool $single = false): mixed
+    {
+        unset($single);
+        return $GLOBALS['sc_test_user_meta'][$userId][$key] ?? '';
+    }
+}
+if (! function_exists('update_user_meta')) {
+    function update_user_meta(int $userId, string $key, mixed $value): bool
+    {
+        $GLOBALS['sc_test_user_meta'][$userId][$key] = $value;
+        return true;
+    }
+}
+
 $tests = 0;
 function sc_p9n_assert(bool $ok, string $message): void
 {
@@ -24,31 +40,49 @@ function sc_p9n_assert(bool $ok, string $message): void
 $GLOBALS['sc_test_current_caps'][Capabilities::ACCESS] = true;
 Router::register();
 sc_p9n_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/notifications']), 'SC-P9-020 notifications route is registered');
+sc_p9n_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/notifications/(?P<id>\d+)/read']), 'SC-P9-020 notification read-state route is registered');
 sc_p9n_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/devices']), 'SC-P9-022 devices route is registered');
 
+$notificationRow = [
+    'id' => '91',
+    'payment_id' => '21',
+    'user_id' => '42',
+    'template_code' => 'payment_due',
+    'scheduled_for' => '2026-08-15 12:00:00',
+    'created_at' => '2026-08-15 12:00:01',
+    'device_token_id' => '777',
+    'response_code' => '200',
+    'error_code' => 'MUST_NOT_LEAK',
+];
+
 $GLOBALS['sc_test_read_queries'] = [];
-$GLOBALS['sc_test_result_queue'] = [[
-    [
-        'id' => '91',
-        'payment_id' => '21',
-        'user_id' => '42',
-        'template_code' => 'payment_due',
-        'scheduled_for' => '2026-08-15 12:00:00',
-        'created_at' => '2026-08-15 12:00:01',
-        'device_token_id' => '777',
-        'response_code' => '200',
-        'error_code' => 'MUST_NOT_LEAK',
-    ],
-]];
+$GLOBALS['sc_test_result_queue'] = [[ $notificationRow ]];
 $inbox = NotificationsController::index(new WP_REST_Request(['page' => '1', 'per_page' => '2']));
 sc_p9n_assert($inbox instanceof WP_REST_Response && $inbox->status === 200, 'SC-P9-020 inbox returns canonical success response');
 $item = $inbox->data['data'][0] ?? [];
 sc_p9n_assert(($item['id'] ?? 0) === 91 && ($item['payment_id'] ?? 0) === 21, 'SC-P9-020 inbox preserves safe notification identifiers');
+sc_p9n_assert(($item['is_read'] ?? true) === false, 'SC-P9-020 unread state starts from server-persisted user state');
 sc_p9n_assert(($item['deep_link']['destination'] ?? '') === 'payments' && ($item['deep_link']['resource_id'] ?? 0) === 21, 'SC-P9-021 inbox emits allowlisted payment deep-link metadata');
 sc_p9n_assert(! isset($item['device_token_id'], $item['response_code'], $item['error_code'], $item['user_id']), 'SC-P9-020 inbox excludes transport/internal fields');
 sc_p9n_assert(($inbox->data['meta']['scope'] ?? '') === 'current_user' && ($inbox->data['meta']['page'] ?? 0) === 1, 'SC-P9-020 inbox metadata is current-user scoped and paged');
 $query = implode("\n", $GLOBALS['sc_test_read_queries']);
 sc_p9n_assert(str_contains($query, 'WHERE user_id = 42') && str_contains($query, "status = 'sent'"), 'SC-P9-020 repository query is pinned to current user and sent deliveries');
+
+$GLOBALS['sc_test_result_queue'] = [[['id' => '91']]];
+$markRead = NotificationsController::markRead(new WP_REST_Request(['id' => '91']));
+sc_p9n_assert($markRead instanceof WP_REST_Response && ($markRead->data['data']['is_read'] ?? false) === true, 'SC-P9-020 mark-read persists only after current-user ownership verification');
+$readIds = $GLOBALS['sc_test_user_meta'][42]['safecontracts_notification_read_ids'] ?? [];
+sc_p9n_assert($readIds === [91], 'SC-P9-020 read state is persisted per user outside Firebase');
+$ownershipQuery = $GLOBALS['sc_test_read_queries'][count($GLOBALS['sc_test_read_queries']) - 1] ?? '';
+sc_p9n_assert(str_contains($ownershipQuery, 'id = 91') && str_contains($ownershipQuery, 'user_id = 42'), 'SC-P9-045 mark-read ownership query is pinned to notification and current user');
+
+$GLOBALS['sc_test_result_queue'] = [[ $notificationRow ]];
+$readInbox = NotificationsController::index(new WP_REST_Request(['page' => '1', 'per_page' => '2']));
+sc_p9n_assert(($readInbox->data['data'][0]['is_read'] ?? false) === true, 'SC-P9-020 persisted read state survives inbox reload');
+
+$GLOBALS['sc_test_result_queue'] = [[]];
+$missingRead = NotificationsController::markRead(new WP_REST_Request(['id' => '999']));
+sc_p9n_assert($missingRead instanceof WP_Error && ($missingRead->data['status'] ?? 0) === 404, 'SC-P9-045 mark-read rejects a notification outside current-user inbox');
 
 $readsBefore = count($GLOBALS['sc_test_read_queries']);
 $badPage = NotificationsController::index(new WP_REST_Request(['page' => '6']));
