@@ -131,8 +131,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
           GlobalCupertinoLocalizations.delegate,
         ],
         theme: ThemeData(
-          colorScheme:
-              ColorScheme.fromSeed(seedColor: const Color(0xFF173B65)),
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF173B65)),
           useMaterial3: true,
         ),
         builder: (context, child) => SafeContractsDirectionScope(
