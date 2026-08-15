@@ -72,12 +72,21 @@ jobs:
           set -euo pipefail
           THEME="wordpress-theme/safecontracts-onepage"
           test -s "$THEME/inc/admin-settings.php"
+          test -s "$THEME/inc/button-links.php"
           grep -Fq "safecontracts_copy_catalog" "$THEME/inc/i18n.php"
           grep -Fq "SafeContracts Home" "$THEME/inc/admin-settings.php"
           grep -Fq "safecontracts_home_content" "$THEME/inc/admin-settings.php"
           grep -Fq "safecontracts_theme_button_colors" "$THEME/inc/admin-settings.php"
           grep -Fq "safecontracts_apply_saved_button_colors" "$THEME/inc/admin-settings.php"
+          grep -Fq "safecontracts_theme_button_links" "$THEME/inc/button-links.php"
+          grep -Fq "Links / الروابط" "$THEME/inc/button-links.php"
+          grep -Fq "safecontracts_button_link( 'header_demo' )" "$THEME/header.php"
+          grep -Fq "safecontracts_button_link( 'header_login' )" "$THEME/header.php"
+          grep -Fq "safecontracts_button_link( 'hero_primary' )" "$THEME/front-page.php"
+          grep -Fq "safecontracts_button_link( 'hero_secondary' )" "$THEME/front-page.php"
+          grep -Fq "safecontracts_button_link( 'final_cta' )" "$THEME/front-page.php"
           grep -Fq "inc/admin-settings.php" "$THEME/functions.php"
+          grep -Fq "inc/button-links.php" "$THEME/functions.php"
       - name: Build deterministic installable theme ZIP
         shell: bash
         run: |
@@ -96,6 +105,7 @@ jobs:
             "public_homepage=true" \
             "languages=ar,en" \
             "backend_editor=Appearance > SafeContracts Home" \
+            "editable_button_links=true" \
             > dist/THEME-CANDIDATE.txt
       - name: Upload installable theme candidate
         uses: actions/upload-artifact@v4
