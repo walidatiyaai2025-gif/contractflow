@@ -351,7 +351,8 @@ final class ContractsController extends ChangeNotifier {
     if (!canAccess || id <= 0) {
       selectedContractId = id > 0 ? id : null;
       selectedContract = null;
-      detailErrorMessage = 'Contract access is not authorized for this session.';
+      detailErrorMessage =
+          'Contract access is not authorized for this session.';
       detailState = ContractDetailLoadState.forbidden;
       notifyListeners();
       return;
