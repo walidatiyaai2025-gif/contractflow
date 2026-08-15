@@ -23,9 +23,9 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_contract_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
 
-sc_contract_assert(Migrator::LATEST_VERSION === '1.4.0', 'contract schema migrations are current');
-sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.4.0', 'current contract schema version is stored');
-sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'contract and financial schemas migrate without replay');
+sc_contract_assert(Migrator::LATEST_VERSION === '1.5.0', 'contract schema migrations are current');
+sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.5.0', 'current contract schema version is stored');
+sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'contract, financial and history schemas migrate without replay');
 
 $schema = $GLOBALS['sc_test_dbdelta'][3];
 sc_contract_assert(str_contains($schema, 'wp_safecontracts_contracts'), 'dedicated contracts table uses the WordPress prefix');
