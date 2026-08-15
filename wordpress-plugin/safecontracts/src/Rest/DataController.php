@@ -7,7 +7,7 @@ namespace SafeContracts\Rest;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Admin\AdminReadRepository;
-use SafeContracts\Collections\CollectionRepository;
+use SafeContracts\Collections\CollectionReadRepository;
 use SafeContracts\FollowUps\FollowUpService;
 use SafeContracts\Payments\PaymentRepository;
 use Throwable;
@@ -54,8 +54,7 @@ final class DataController
     {
         return self::guard(function () use ($request): WP_REST_Response {
             $query = ApiRequest::listQuery($request);
-            $rows = (new AdminReadRepository())->customers($query['filters']);
-            $rows = array_map([self::class, 'customerView'], $rows);
+            $rows = array_map([self::class, 'customerView'], (new AdminReadRepository())->customers($query['filters']));
             return self::page($rows, $query['page'], $query['per_page']);
         });
     }
@@ -63,12 +62,8 @@ final class DataController
     public static function customer(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response|WP_Error {
-            $id = ApiRequest::routeId($request);
-            $rows = (new AdminReadRepository())->customers(['customer_id' => $id]);
-            if ($rows === []) {
-                return ApiResponse::notFound('Customer');
-            }
-            return ApiResponse::ok(self::customerView($rows[0]));
+            $rows = (new AdminReadRepository())->customers(['customer_id' => ApiRequest::routeId($request)]);
+            return $rows === [] ? ApiResponse::notFound('Customer') : ApiResponse::ok(self::customerView($rows[0]));
         });
     }
 
@@ -76,8 +71,7 @@ final class DataController
     {
         return self::guard(function () use ($request): WP_REST_Response {
             $customerId = ApiRequest::optionalCustomerId($request);
-            $rows = (new AdminReadRepository())->contractOptions($customerId);
-            return ApiResponse::ok($rows, [
+            return ApiResponse::ok((new AdminReadRepository())->contractOptions($customerId), [
                 'scope' => ApiScope::mode(),
                 'customer_id' => $customerId,
                 'client_may_offer_all_option' => true,
@@ -89,8 +83,7 @@ final class DataController
     {
         return self::guard(function () use ($request): WP_REST_Response {
             $query = ApiRequest::listQuery($request);
-            $rows = (new AdminReadRepository())->contracts($query['filters']);
-            $rows = array_map([self::class, 'contractView'], $rows);
+            $rows = array_map([self::class, 'contractView'], (new AdminReadRepository())->contracts($query['filters']));
             return self::page($rows, $query['page'], $query['per_page']);
         });
     }
@@ -98,12 +91,8 @@ final class DataController
     public static function contract(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response|WP_Error {
-            $id = ApiRequest::routeId($request);
-            $rows = (new AdminReadRepository())->contracts(['contract_id' => $id]);
-            if ($rows === []) {
-                return ApiResponse::notFound('Contract');
-            }
-            return ApiResponse::ok(self::contractView($rows[0]));
+            $rows = (new AdminReadRepository())->contracts(['contract_id' => ApiRequest::routeId($request)]);
+            return $rows === [] ? ApiResponse::notFound('Contract') : ApiResponse::ok(self::contractView($rows[0]));
         });
     }
 
@@ -111,8 +100,7 @@ final class DataController
     {
         return self::guard(function () use ($request): WP_REST_Response {
             $query = ApiRequest::listQuery($request);
-            $rows = (new AdminReadRepository())->payments($query['filters']);
-            $rows = array_map([self::class, 'paymentListView'], $rows);
+            $rows = array_map([self::class, 'paymentListView'], (new AdminReadRepository())->payments($query['filters']));
             return self::page($rows, $query['page'], $query['per_page']);
         });
     }
@@ -120,8 +108,7 @@ final class DataController
     public static function payment(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response|WP_Error {
-            $id = ApiRequest::routeId($request);
-            $row = (new PaymentRepository())->find($id);
+            $row = (new PaymentRepository())->find(ApiRequest::routeId($request));
             if ($row === null) {
                 return ApiResponse::notFound('Payment');
             }
@@ -134,8 +121,7 @@ final class DataController
     {
         return self::guard(function () use ($request): WP_REST_Response {
             $query = ApiRequest::listQuery($request);
-            $rows = (new AdminReadRepository())->collections($query['filters']);
-            $rows = array_map([self::class, 'collectionListView'], $rows);
+            $rows = array_map([self::class, 'collectionListView'], (new AdminReadRepository())->collections($query['filters']));
             return self::page($rows, $query['page'], $query['per_page']);
         });
     }
@@ -143,16 +129,11 @@ final class DataController
     public static function collection(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response|WP_Error {
-            $id = ApiRequest::routeId($request);
-            $row = (new CollectionRepository())->find($id);
+            $row = (new CollectionReadRepository())->find(ApiRequest::routeId($request));
             if ($row === null) {
                 return ApiResponse::notFound('Collection');
             }
-            $payment = (new PaymentRepository())->find($row['payment_id']);
-            if ($payment === null) {
-                return ApiResponse::notFound('Payment');
-            }
-            ApiScope::assertAccountant($payment['accountant_user_id']);
+            ApiScope::assertAccountant($row['accountant_user_id']);
             return ApiResponse::ok(self::collectionView($row));
         });
     }
@@ -162,8 +143,7 @@ final class DataController
         return self::guard(function () use ($request): WP_REST_Response {
             $query = ApiRequest::listQuery($request);
             $limit = min(500, $query['page'] * $query['per_page']);
-            $rows = (new FollowUpService())->queue($limit);
-            $rows = array_map([self::class, 'followUpQueueView'], $rows);
+            $rows = array_map([self::class, 'followUpQueueView'], (new FollowUpService())->queue($limit));
             return self::page($rows, $query['page'], $query['per_page']);
         });
     }
@@ -174,8 +154,7 @@ final class DataController
             $paymentId = ApiRequest::routeId($request, 'payment_id');
             $query = ApiRequest::listQuery($request);
             $limit = min(500, $query['page'] * $query['per_page']);
-            $rows = (new FollowUpService())->history($paymentId, $limit);
-            $rows = array_map([self::class, 'followUpHistoryView'], $rows);
+            $rows = array_map([self::class, 'followUpHistoryView'], (new FollowUpService())->history($paymentId, $limit));
             return self::page($rows, $query['page'], $query['per_page']);
         });
     }
@@ -236,7 +215,7 @@ final class DataController
 
     private static function collectionView(array $row): array
     {
-        return self::pick($row, ['id', 'payment_id', 'amount', 'collection_date', 'payment_method_id', 'reference', 'proof_media_id', 'created_by', 'created_at', 'updated_at']);
+        return self::pick($row, ['id', 'payment_id', 'contract_id', 'amount', 'collection_date', 'payment_method_id', 'payment_method_name', 'reference', 'proof_media_id', 'created_by', 'created_at', 'updated_at']);
     }
 
     private static function followUpQueueView(array $row): array
