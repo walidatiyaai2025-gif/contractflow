@@ -48,9 +48,12 @@ final class Plugin
 
         $this->booted = true;
 
+        // Register audit before runtime upgrade checks so migrations applied during a
+        // normal plugin update are observable once the audit schema already exists.
+        // First-install activation still owns its bootstrap migration sequence.
+        AuditRecorder::register();
         (new Migrator())->maybeMigrate();
         ContractHistoryRecorder::register();
-        AuditRecorder::register();
         LoginBranding::register();
         NavigationCleanup::register();
 
