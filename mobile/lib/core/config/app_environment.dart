@@ -29,8 +29,8 @@ final class AppEnvironment {
       'staging' => AppEnvironmentName.staging,
       'production' => AppEnvironmentName.production,
       _ => throw FormatException(
-        'Unsupported SafeContracts environment: $name',
-      ),
+          'Unsupported SafeContracts environment: $name',
+        ),
     };
 
     final uri = Uri.tryParse(apiBaseUrl.trim());
@@ -45,9 +45,7 @@ final class AppEnvironment {
       throw FormatException('Production SafeContracts API must use HTTPS.');
     }
 
-    final normalizedPath = uri.path.endsWith('/')
-        ? uri.path
-        : '${uri.path}/';
+    final normalizedPath = uri.path.endsWith('/') ? uri.path : '${uri.path}/';
     return AppEnvironment._(
       name: environmentName,
       apiBaseUri: uri.replace(path: normalizedPath),
