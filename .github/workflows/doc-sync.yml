@@ -1,0 +1,50 @@
+name: SafeContracts Document Sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/SAFE_CONTRACTS_PLAN_AR.md'
+      - 'scripts/build_docx_ar.py'
+      - '.github/workflows/doc-sync.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: safecontracts-document-sync
+  cancel-in-progress: true
+
+jobs:
+  build-arabic-docx:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependency
+        run: python -m pip install --disable-pip-version-check python-docx
+
+      - name: Build Arabic Word document
+        run: python scripts/build_docx_ar.py
+
+      - name: Commit generated document
+        run: |
+          git config user.name "safecontracts-bot"
+          git config user.email "safecontracts-bot@users.noreply.github.com"
+          git add docs/SafeContracts_Full_Plan_AR_v1.2.docx
+          if git diff --cached --quiet; then
+            echo "Arabic DOCX already current"
+            exit 0
+          fi
+          git commit -m "docs: generate SafeContracts Arabic V1.2 Word plan"
+          git pull --rebase origin main
+          git push origin HEAD:main
