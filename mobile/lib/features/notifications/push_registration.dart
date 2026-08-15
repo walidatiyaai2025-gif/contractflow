@@ -28,7 +28,8 @@ final class MobilePushRegistrationSnapshot {
   final MobilePushBackendState backendState;
   final String? errorCode;
 
-  bool get backendRegistered => backendState == MobilePushBackendState.registered;
+  bool get backendRegistered =>
+      backendState == MobilePushBackendState.registered;
 }
 
 abstract interface class PushMessagingGateway {
