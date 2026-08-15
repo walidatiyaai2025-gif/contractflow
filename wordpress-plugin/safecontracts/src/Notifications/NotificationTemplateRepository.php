@@ -6,6 +6,23 @@ namespace SafeContracts\Notifications;
 
 final class NotificationTemplateRepository
 {
+    /** @return list<array<string, mixed>> */
+    public function all(bool $activeOnly = false): array
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'safecontracts_notification_templates';
+        $where = $activeOnly ? ' WHERE is_active = 1' : '';
+        $rows = $wpdb->get_results(
+            "SELECT id, code, title_template, body_template, is_active, created_by, updated_by, created_at, updated_at
+             FROM {$table}{$where} ORDER BY is_active DESC, code ASC",
+            ARRAY_A
+        );
+        return array_map(
+            static fn (array $row): array => NotificationTemplate::fromRow($row),
+            is_array($rows) ? $rows : []
+        );
+    }
+
     /** @return array<string, mixed>|null */
     public function findActiveByCode(string $code): ?array
     {
