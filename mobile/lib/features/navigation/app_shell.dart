@@ -39,7 +39,16 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_label(_selected)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('SafeContracts'),
+            Text(
+              _label(_selected),
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ],
+        ),
       ),
       drawer: NavigationDrawer(
         selectedIndex: widget.policy.destinations.indexOf(_selected),
