@@ -7,7 +7,6 @@ namespace SafeContracts\Rest;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Admin\AdminReadRepository;
-use SafeContracts\Roles\Capabilities;
 use Throwable;
 use WP_Error;
 use WP_REST_Request;
@@ -47,16 +46,6 @@ final class DashboardController
 
     public static function canView(): bool|WP_Error
     {
-        $access = Router::canAccess();
-        if ($access !== true) {
-            return $access;
-        }
-        if (current_user_can(Capabilities::VIEW_ALL) || current_user_can(Capabilities::VIEW_ASSIGNED)) {
-            return true;
-        }
-        return RequestGuard::forbidden(
-            'safecontracts_dashboard_scope_forbidden',
-            __('You do not have a SafeContracts dashboard data scope.', 'safecontracts')
-        );
+        return Router::canAccess();
     }
 }
