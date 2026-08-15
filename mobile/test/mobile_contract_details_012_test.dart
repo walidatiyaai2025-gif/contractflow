@@ -105,6 +105,8 @@ void main() {
     expect(find.text('Alpha Customer'), findsOneWidget);
     expect(find.text('Edit contract'), findsOneWidget);
 
+    await tester.scrollUntilVisible(find.text('Edit contract'), 200);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Edit contract'));
     await tester.pump();
     expect(editContractId, 70);
