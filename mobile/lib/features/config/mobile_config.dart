@@ -44,7 +44,7 @@ final class SafeContractsMobileConfig {
   const SafeContractsMobileConfig({
     required this.supportText,
     required this.defaultPageSize,
-    required this.currency,
+    this.currency = const MobileCurrencyConfig.defaults(),
     required this.features,
   });
 
