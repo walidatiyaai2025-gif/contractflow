@@ -99,7 +99,7 @@ final class XlsxWorkbook
 
     private function xml(string $value): string
     {
-        return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
+        return htmlspecialchars($value, ENT_COMPAT | ENT_XML1, 'UTF-8');
     }
 
     private function contentTypes(int $sheetCount): string
