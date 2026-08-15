@@ -22,9 +22,18 @@ final class ImportRowValidator
         }
         $data['customer_code'] = $this->text($input['customer_code'] ?? '', 100);
         $data['customer_contact_name'] = $this->text($input['customer_contact_name'] ?? '', 191);
-        $data['customer_email'] = trim((string) ($input['customer_email'] ?? ''));
-        if ($data['customer_email'] !== '' && (! filter_var($data['customer_email'], FILTER_VALIDATE_EMAIL) || strlen($data['customer_email']) > 191)) {
+
+        $emailValue = $input['customer_email'] ?? null;
+        if ($emailValue === null || $emailValue === '') {
+            $data['customer_email'] = '';
+        } elseif (! is_scalar($emailValue) || is_bool($emailValue)) {
+            $data['customer_email'] = '';
             $errors[] = $this->error('customer_email', 'invalid_email', 'Customer email is invalid.');
+        } else {
+            $data['customer_email'] = trim((string) $emailValue);
+            if (! filter_var($data['customer_email'], FILTER_VALIDATE_EMAIL) || strlen($data['customer_email']) > 191) {
+                $errors[] = $this->error('customer_email', 'invalid_email', 'Customer email is invalid.');
+            }
         }
         $data['customer_phone'] = $this->text($input['customer_phone'] ?? '', 64);
 
@@ -47,7 +56,11 @@ final class ImportRowValidator
         ];
         $hasPayment = false;
         foreach ($paymentRaw as $value) {
-            if (is_scalar($value) && trim((string) $value) !== '') {
+            if (is_scalar($value) && ! is_bool($value) && trim((string) $value) !== '') {
+                $hasPayment = true;
+                break;
+            }
+            if (is_array($value) || is_object($value) || is_resource($value) || is_bool($value)) {
                 $hasPayment = true;
                 break;
             }
@@ -101,7 +114,7 @@ final class ImportRowValidator
     /** @param list<array{field:?string,code:string,message:string}> $errors */
     private function dateOrNull(mixed $value, string $field, array &$errors): ?string
     {
-        if ($value === null || trim((string) $value) === '') {
+        if ($value === null) {
             return null;
         }
         if (! is_scalar($value) || is_bool($value)) {
@@ -109,6 +122,9 @@ final class ImportRowValidator
             return null;
         }
         $date = trim((string) $value);
+        if ($date === '') {
+            return null;
+        }
         $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
         if (! $parsed || $parsed->format('Y-m-d') !== $date) {
             $errors[] = $this->error($field, 'invalid_date', 'Date must use YYYY-MM-DD and be a valid calendar date.');
@@ -120,11 +136,19 @@ final class ImportRowValidator
     /** @param list<array{field:?string,code:string,message:string}> $errors */
     private function moneyOrNull(mixed $value, string $field, bool $positive, array &$errors): ?string
     {
-        if ($value === null || trim((string) $value) === '') {
+        if ($value === null) {
+            return null;
+        }
+        if (! is_scalar($value) || is_bool($value)) {
+            $errors[] = $this->error($field, 'invalid_amount', 'Amount must be a valid non-negative decimal value.');
+            return null;
+        }
+        $raw = trim((string) $value);
+        if ($raw === '') {
             return null;
         }
         try {
-            $money = ContractMoney::normalizeNonNegative($value);
+            $money = ContractMoney::normalizeNonNegative($raw);
             if ($positive && $money === '0.0000') {
                 $errors[] = $this->error($field, 'invalid_amount', 'Amount must be greater than zero.');
                 return null;
