@@ -5,8 +5,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
-use DomainException;
-use InvalidArgumentException;
 use SafeContracts\Contracts\ContractService;
 use SafeContracts\Contracts\ContractStatus;
 use SafeContracts\Roles\Capabilities;
