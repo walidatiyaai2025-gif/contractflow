@@ -12,6 +12,14 @@ SafeContractsBreakpoint safeContractsBreakpoint(double width) {
   return SafeContractsBreakpoint.wide;
 }
 
+TextDirection safeContractsTextDirection(String languageCode) {
+  final normalized = languageCode.trim().toLowerCase();
+  final isArabic = normalized == 'ar' ||
+      normalized.startsWith('ar-') ||
+      normalized.startsWith('ar_');
+  return isArabic ? TextDirection.rtl : TextDirection.ltr;
+}
+
 final class SafeContractsDirectionScope extends StatelessWidget {
   const SafeContractsDirectionScope({
     required this.languageCode,
@@ -24,10 +32,10 @@ final class SafeContractsDirectionScope extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalized = languageCode.trim().toLowerCase();
-    final direction =
-        normalized == 'ar' ? TextDirection.rtl : TextDirection.ltr;
-    return Directionality(textDirection: direction, child: child);
+    return Directionality(
+      textDirection: safeContractsTextDirection(languageCode),
+      child: child,
+    );
   }
 }
 
