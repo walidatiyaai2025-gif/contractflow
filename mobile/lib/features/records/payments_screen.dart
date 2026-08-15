@@ -294,7 +294,8 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         ),
                         _PaymentRow('Original amount', payment.originalAmount),
                         _PaymentRow('Paid amount', payment.paidAmount),
-                        _PaymentRow('Remaining amount', payment.remainingAmount),
+                        _PaymentRow(
+                            'Remaining amount', payment.remainingAmount),
                         _PaymentRow(
                           'Contract archived',
                           payment.contractIsArchived ? 'Yes' : 'No',
@@ -452,7 +453,8 @@ final class _CollectionEntryDialogState extends State<_CollectionEntryDialog> {
               else if (_methods.isNotEmpty)
                 DropdownButtonFormField<int>(
                   initialValue: _methodId,
-                  decoration: const InputDecoration(labelText: 'Payment method'),
+                  decoration:
+                      const InputDecoration(labelText: 'Payment method'),
                   items: _methods
                       .map(
                         (method) => DropdownMenuItem<int>(
