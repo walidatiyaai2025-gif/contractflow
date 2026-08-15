@@ -6,9 +6,9 @@ namespace SafeContracts\Admin;
 
 use SafeContracts\Notifications\DeviceTokenRepository;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
-use SafeContracts\Notifications\FirebasePushTransport;
 use SafeContracts\Notifications\FirebaseServiceAccountVault;
 use SafeContracts\Notifications\FirebaseSettings;
+use SafeContracts\Notifications\FirebaseTestNotificationService;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Support\Input;
 use Throwable;
@@ -122,21 +122,15 @@ final class FirebaseSettingsPage
         check_admin_referer(self::TEST_PUSH_ACTION);
         $status = 'test_push_failed';
         try {
-            $repository = new DeviceTokenRepository();
-            $currentUserId = get_current_user_id();
-            $devices = $repository->activeForUsers([$currentUserId]);
-            $device = $devices === [] ? null : $devices[count($devices) - 1];
-            $token = is_array($device) ? trim((string) ($device['token'] ?? '')) : '';
-            if ($token === '') {
-                $diagnostics = $repository->activeDiagnostics($currentUserId);
-                self::redirect($diagnostics['active_devices'] > 0 ? 'test_push_other_user_device' : 'test_push_no_device');
-            }
-            $result = (new FirebasePushTransport())->send($token, [
-                'title' => 'SafeContracts',
-                'body' => 'Firebase test notification delivered successfully.',
-                'data' => [],
-            ]);
-            $status = $result['success'] ? 'test_push_ok' : 'test_push_failed';
+            $result = (new FirebaseTestNotificationService())->sendForUser(get_current_user_id());
+            $status = match ($result['status']) {
+                'ok' => 'test_push_ok',
+                'partial' => 'test_push_partial',
+                'no_device' => 'test_push_no_device',
+                'other_user_device' => 'test_push_other_user_device',
+                'no_usable_token' => 'test_push_no_usable_token',
+                default => self::testPushFailureStatus($result['error_codes']),
+            };
         } catch (Throwable $error) {
             unset($error);
         }
@@ -230,7 +224,7 @@ final class FirebaseSettingsPage
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::TEST_PUSH_ACTION); ?>"><?php wp_nonce_field(self::TEST_PUSH_ACTION); ?><?php submit_button(__('Send Test Notification', 'safecontracts'), 'secondary', 'submit', false); ?></form>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('<?php echo esc_js(__('Delete the stored Firebase service account?', 'safecontracts')); ?>');"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><?php wp_nonce_field(self::DELETE_ACTION); ?><?php submit_button(__('Delete Credential', 'safecontracts'), 'delete', 'submit', false); ?></form>
                     </div>
-                    <p class="description"><?php echo esc_html__('Test Notification targets the latest active device registered for this exact WordPress user. Mobile Profile now shows registration and diagnostic state when registration is incomplete.', 'safecontracts'); ?></p>
+                    <p class="description"><?php echo esc_html__('Test Notification targets every active device registered for this exact WordPress user. If two devices are active, both receive the test. Mobile Profile shows registration and diagnostic state when registration is incomplete.', 'safecontracts'); ?></p>
                 <?php endif; ?>
             </section>
         </div>
@@ -250,6 +244,33 @@ final class FirebaseSettingsPage
         exit;
     }
 
+    /** @param list<string> $errorCodes */
+    private static function testPushFailureStatus(array $errorCodes): string
+    {
+        if (in_array('firebase_token_not_found', $errorCodes, true)) {
+            return 'test_push_token_not_found';
+        }
+        if (in_array('firebase_sender_id_mismatch', $errorCodes, true)) {
+            return 'test_push_sender_id_mismatch';
+        }
+        if (in_array('firebase_invalid_argument', $errorCodes, true)) {
+            return 'test_push_invalid_argument';
+        }
+        if (in_array('firebase_permission_denied', $errorCodes, true) || in_array('firebase_http_403', $errorCodes, true)) {
+            return 'test_push_permission_denied';
+        }
+        if (in_array('firebase_auth_failed', $errorCodes, true) || in_array('firebase_auth_unavailable', $errorCodes, true) || in_array('firebase_http_401', $errorCodes, true)) {
+            return 'test_push_auth_failed';
+        }
+        if (in_array('firebase_quota_exceeded', $errorCodes, true)) {
+            return 'test_push_quota_exceeded';
+        }
+        if (in_array('firebase_unavailable', $errorCodes, true)) {
+            return 'test_push_unavailable';
+        }
+        return 'test_push_failed';
+    }
+
     /** @return array{class:string,message:string}|null */
     private static function notice(string $status): ?array
     {
@@ -258,14 +279,23 @@ final class FirebaseSettingsPage
             'credential_saved' => ['class' => 'notice-success', 'message' => __('Firebase service account encrypted and saved successfully.', 'safecontracts')],
             'credential_deleted' => ['class' => 'notice-success', 'message' => __('Firebase service account deleted.', 'safecontracts')],
             'test_ok' => ['class' => 'notice-success', 'message' => __('Firebase OAuth and FCM HTTP v1 authorization test succeeded.', 'safecontracts')],
-            'test_push_ok' => ['class' => 'notice-success', 'message' => __('Test notification sent to your latest active SafeContracts device.', 'safecontracts')],
+            'test_push_ok' => ['class' => 'notice-success', 'message' => __('Test notification sent to all active SafeContracts devices registered to this WordPress user.', 'safecontracts')],
+            'test_push_partial' => ['class' => 'notice-warning', 'message' => __('Test notification reached some, but not all, active devices for this WordPress user. SafeContracts continued sending to the remaining devices and deactivated any device token Firebase reported as unregistered.', 'safecontracts')],
             'test_push_no_device' => ['class' => 'notice-warning', 'message' => __('No active SafeContracts mobile device is registered yet. Open Mobile Profile and use Retry device registration.', 'safecontracts')],
             'test_push_other_user_device' => ['class' => 'notice-warning', 'message' => __('Active SafeContracts devices exist, but none belong to this WordPress user. Compare the WordPress user ID on this page with User ID in the mobile Profile.', 'safecontracts')],
+            'test_push_no_usable_token' => ['class' => 'notice-warning', 'message' => __('Active device records belong to this WordPress user, but none currently contains a usable FCM token. Open Mobile Profile and use Retry device registration.', 'safecontracts')],
+            'test_push_token_not_found' => ['class' => 'notice-error', 'message' => __('Firebase reported the registered device token as unregistered or not found. SafeContracts deactivated the rejected device registration; retry device registration from Mobile Profile.', 'safecontracts')],
+            'test_push_sender_id_mismatch' => ['class' => 'notice-error', 'message' => __('Firebase rejected the device because its FCM token belongs to a different Firebase sender or project. Verify the mobile Firebase configuration matches this project.', 'safecontracts')],
+            'test_push_invalid_argument' => ['class' => 'notice-error', 'message' => __('Firebase rejected the test notification as invalid. Verify the Firebase project, app registration and device token configuration.', 'safecontracts')],
+            'test_push_permission_denied' => ['class' => 'notice-error', 'message' => __('Firebase denied permission to send the notification. Verify the service account belongs to this project and has Firebase Cloud Messaging send permission.', 'safecontracts')],
+            'test_push_auth_failed' => ['class' => 'notice-error', 'message' => __('Firebase authentication failed. Verify the stored service account and project configuration.', 'safecontracts')],
+            'test_push_quota_exceeded' => ['class' => 'notice-error', 'message' => __('Firebase rejected the test because the messaging quota is exhausted. Review the Firebase project quota before retrying.', 'safecontracts')],
+            'test_push_unavailable' => ['class' => 'notice-error', 'message' => __('Firebase Cloud Messaging is temporarily unavailable. Retry the test after the service recovers.', 'safecontracts')],
             'invalid' => ['class' => 'notice-error', 'message' => __('Firebase settings are invalid.', 'safecontracts')],
             'credential_invalid' => ['class' => 'notice-error', 'message' => __('The Firebase service-account JSON is invalid or does not match this Firebase project.', 'safecontracts')],
             'credential_delete_failed' => ['class' => 'notice-error', 'message' => __('Firebase service-account deletion failed.', 'safecontracts')],
             'test_failed' => ['class' => 'notice-error', 'message' => __('Firebase connection test failed. Verify the service account and its FCM permissions.', 'safecontracts')],
-            'test_push_failed' => ['class' => 'notice-error', 'message' => __('Firebase test notification failed. Verify Firebase permissions and the registered device.', 'safecontracts')],
+            'test_push_failed' => ['class' => 'notice-error', 'message' => __('Firebase test notification failed for every usable device registered to this WordPress user. Review the Firebase project, credential and device registration diagnostics.', 'safecontracts')],
             default => null,
         };
     }
