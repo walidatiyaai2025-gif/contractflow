@@ -300,13 +300,15 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
                                 children: [
                                   Text(
                                     item.state,
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
                                   ),
                                   Text(item.createdAt),
                                   if (item.promisedDate != null)
                                     Text('Promised: ${item.promisedDate}'),
                                   if (item.deferredUntil != null)
-                                    Text('Deferred until: ${item.deferredUntil}'),
+                                    Text(
+                                        'Deferred until: ${item.deferredUntil}'),
                                   if (item.note != null) ...[
                                     const SizedBox(height: 8),
                                     Text(item.note!),
@@ -359,9 +361,7 @@ final class _FollowUpDialogState extends State<_FollowUpDialog> {
 
   bool get _needsDate => _operation == 'promise' || _operation == 'defer';
   bool get _needsNote =>
-      _operation == 'note' ||
-      _operation == 'issue' ||
-      _operation == 'escalate';
+      _operation == 'note' || _operation == 'issue' || _operation == 'escalate';
 
   void _save() {
     final note = _nullable(_note.text);
