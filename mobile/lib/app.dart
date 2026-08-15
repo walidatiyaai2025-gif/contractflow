@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'core/api/api_client.dart';
 import 'core/api/io_api_transport.dart';
 import 'core/config/app_environment.dart';
+import 'core/ui/responsive.dart';
 import 'features/bootstrap/mobile_bootstrap_controller.dart';
 import 'features/navigation/app_shell.dart';
 
@@ -12,11 +13,13 @@ class SafeContractsApp extends StatefulWidget {
   const SafeContractsApp({
     required this.environment,
     this.client,
+    this.languageCode,
     super.key,
   });
 
   final AppEnvironment environment;
   final SafeContractsApiClient? client;
+  final String? languageCode;
 
   @override
   State<SafeContractsApp> createState() => _SafeContractsAppState();
@@ -46,12 +49,18 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
 
   @override
   Widget build(BuildContext context) {
+    final languageCode = widget.languageCode ??
+        WidgetsBinding.instance.platformDispatcher.locale.languageCode;
     return MaterialApp(
       title: 'SafeContracts',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF173B65)),
         useMaterial3: true,
+      ),
+      builder: (context, child) => Directionality(
+        textDirection: SafeTextDirection.forLanguageCode(languageCode),
+        child: child ?? const SizedBox.shrink(),
       ),
       home: _BootstrapView(
         environment: widget.environment,
@@ -82,12 +91,16 @@ final class _BootstrapView extends StatelessWidget {
           final dashboard = controller.dashboardController;
           final customers = controller.customersController;
           final excelExport = controller.excelExportController;
+          final notifications = controller.notificationsController;
+          final profileDevice = controller.profileDeviceController;
           if (session != null &&
               config != null &&
               policy != null &&
               dashboard != null &&
               customers != null &&
-              excelExport != null) {
+              excelExport != null &&
+              notifications != null &&
+              profileDevice != null) {
             return SafeContractsShell(
               session: session,
               config: config,
@@ -95,6 +108,8 @@ final class _BootstrapView extends StatelessWidget {
               dashboardController: dashboard,
               customersController: customers,
               excelExportController: excelExport,
+              notificationsController: notifications,
+              profileDeviceController: profileDevice,
               usingConfigDefaults: controller.usingConfigDefaults,
               onClearSession: controller.signOutLocalState,
             );
