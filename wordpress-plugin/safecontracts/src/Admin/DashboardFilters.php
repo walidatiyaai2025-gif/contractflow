@@ -13,10 +13,13 @@ final class DashboardFilters
     /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} */
     public static function normalize(array $input): array
     {
-        $customerId = max(0, (int) ($input['customer_id'] ?? 0));
-        $contractId = max(0, (int) ($input['contract_id'] ?? 0));
-        $accountantUserId = max(0, (int) ($input['accountant_user_id'] ?? 0));
-        $status = strtolower(trim((string) ($input['status'] ?? '')));
+        $customerId = self::id($input['customer_id'] ?? null);
+        $contractId = self::id($input['contract_id'] ?? null);
+        $accountantUserId = self::id($input['accountant_user_id'] ?? null);
+        $statusValue = $input['status'] ?? '';
+        $status = is_scalar($statusValue) && ! is_bool($statusValue)
+            ? strtolower(trim((string) $statusValue))
+            : '';
         $allowedStatuses = array_merge(
             ['', ContractStatus::DRAFT, ContractStatus::ACTIVE, ContractStatus::COMPLETED, ContractStatus::CANCELLED],
             [PaymentStatus::UPCOMING, PaymentStatus::DUE_SOON, PaymentStatus::DUE, PaymentStatus::OVERDUE, PaymentStatus::PARTIALLY_PAID, PaymentStatus::PAID]
@@ -41,9 +44,25 @@ final class DashboardFilters
         ];
     }
 
+    private static function id(mixed $value): int
+    {
+        if (! is_scalar($value) || is_bool($value)) {
+            return 0;
+        }
+        $raw = trim((string) $value);
+        if ($raw === '' || ! preg_match('/^\d+$/', $raw)) {
+            return 0;
+        }
+        $validated = filter_var($raw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+        return $validated === false ? 0 : (int) $validated;
+    }
+
     private static function date(mixed $value): ?string
     {
-        $value = trim((string) ($value ?? ''));
+        if (! is_scalar($value) || is_bool($value)) {
+            return null;
+        }
+        $value = trim((string) $value);
         if ($value === '') {
             return null;
         }
