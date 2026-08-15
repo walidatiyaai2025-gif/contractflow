@@ -77,7 +77,8 @@ final class DashboardFilters {
     if (status != null &&
         status!.isNotEmpty &&
         !dashboardSupportedStatuses.contains(status)) {
-      throw ArgumentError.value(status, 'status', 'Unsupported dashboard status.');
+      throw ArgumentError.value(
+          status, 'status', 'Unsupported dashboard status.');
     }
     _validateIsoDate(dueFrom, 'dueFrom');
     _validateIsoDate(dueTo, 'dueTo');
@@ -196,8 +197,10 @@ final class DashboardOverview {
 
   factory DashboardOverview.fromData(Object? value) {
     final data = apiObjectMap(value, 'dashboard.data');
-    final rawCustomers = apiObjectList(data['customers'], 'dashboard.customers');
-    final rawContracts = apiObjectList(data['contracts'], 'dashboard.contracts');
+    final rawCustomers =
+        apiObjectList(data['customers'], 'dashboard.customers');
+    final rawContracts =
+        apiObjectList(data['contracts'], 'dashboard.contracts');
     final customers = rawCustomers.map(CustomerOption.fromData).toList();
     final contracts = rawContracts.map(ContractOption.fromData).toList();
     _ensureUniqueIds(
@@ -315,8 +318,9 @@ final class DashboardRecord {
       type: DashboardRecordType.followUp,
       title: _optionalText(data['reference'], 'followup.reference') ??
           'Payment #$id',
-      status: _optionalText(data['followup_state'], 'followup.followup_state') ??
-          _optionalText(data['status'], 'followup.status'),
+      status:
+          _optionalText(data['followup_state'], 'followup.followup_state') ??
+              _optionalText(data['status'], 'followup.status'),
       date: _optionalDate(data['due_date'], 'followup.due_date'),
       remainingAmount: _optionalMoneyText(
         data['remaining_amount'],
