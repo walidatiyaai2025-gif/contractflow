@@ -53,17 +53,18 @@ final class ApiRequest
                 throw new InvalidArgumentException('status is not supported.');
             }
         }
+
+        $rawDates = ['due_from' => null, 'due_to' => null];
         foreach (['due_from', 'due_to'] as $key) {
             if (array_key_exists($key, $params) && $params[$key] !== '' && $params[$key] !== null) {
-                self::date($params[$key], $key);
+                $rawDates[$key] = self::date($params[$key], $key);
             }
         }
-
-        $filters = DashboardFilters::normalize($params);
-        if ($filters['due_from'] !== null && $filters['due_to'] !== null && $filters['due_to'] < $filters['due_from']) {
+        if ($rawDates['due_from'] !== null && $rawDates['due_to'] !== null && $rawDates['due_to'] < $rawDates['due_from']) {
             throw new InvalidArgumentException('due_to must not be earlier than due_from.');
         }
-        return $filters;
+
+        return DashboardFilters::normalize($params);
     }
 
     /** @return array{filters:array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string},page:int,per_page:int} */
