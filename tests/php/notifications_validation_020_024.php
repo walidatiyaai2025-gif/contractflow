@@ -181,8 +181,8 @@ $firebase = new FirebaseSettings();
 $GLOBALS['sc_test_current_caps'] = [];
 sc_p5v3_expect(DomainException::class, fn () => $firebase->savePublic([
     'project_id' => 'safecontracts', 'messaging_sender_id' => '123456789', 'app_id' => '1:123:web:abc',
-]), 'SC-P5-022 Firebase writes require notification-management capability');
-$GLOBALS['sc_test_current_caps'] = [Capabilities::MANAGE_NOTIFICATIONS => true];
+]), 'SC-P5-022 Firebase writes require system-management capability');
+$GLOBALS['sc_test_current_caps'] = [Capabilities::MANAGE_SYSTEM => true];
 $firebase->savePublic(['project_id' => 'safecontracts-prod', 'messaging_sender_id' => '123456789', 'app_id' => '1:123:web:abc']);
 sc_p5v3_expect(InvalidArgumentException::class, fn () => $firebase->saveCredentialReference('{"private_key":"secret"}'), 'SC-P5-022 raw credential JSON cannot be stored');
 $firebase->saveCredentialReference('SAFECONTRACTS_FIREBASE_SERVICE_ACCOUNT');
