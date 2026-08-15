@@ -26,6 +26,11 @@ final class DashboardController
 
     public static function show(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
+        $access = self::canView();
+        if ($access instanceof WP_Error) {
+            return $access;
+        }
+
         try {
             $filters = RequestGuard::dashboardFilters($request);
             $read = new AdminReadRepository();
