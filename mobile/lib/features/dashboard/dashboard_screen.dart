@@ -88,6 +88,7 @@ final class _DashboardFilters extends StatelessWidget {
                   label: 'Customer',
                   child: DropdownButton<int>(
                     value: customerValue,
+                    isExpanded: true,
                     onChanged: busy
                         ? null
                         : (value) {
@@ -115,6 +116,7 @@ final class _DashboardFilters extends StatelessWidget {
                   label: 'Contract',
                   child: DropdownButton<int>(
                     value: contractValue,
+                    isExpanded: true,
                     onChanged: busy
                         ? null
                         : (value) {
@@ -142,6 +144,7 @@ final class _DashboardFilters extends StatelessWidget {
                   label: 'Status',
                   child: DropdownButton<String>(
                     value: controller.filters.status ?? '',
+                    isExpanded: true,
                     onChanged: busy
                         ? null
                         : (value) {
