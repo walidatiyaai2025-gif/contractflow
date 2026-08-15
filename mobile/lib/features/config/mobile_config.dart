@@ -19,32 +19,57 @@ final class MobileFeatureFlags {
   final bool collectionEntry;
 }
 
+final class MobileCurrencyConfig {
+  const MobileCurrencyConfig({required this.code, required this.symbol});
+
+  const MobileCurrencyConfig.defaults()
+      : code = '',
+        symbol = '';
+
+  final String code;
+  final String symbol;
+
+  String get displayToken => symbol.isNotEmpty ? symbol : code;
+
+  factory MobileCurrencyConfig.fromData(Object? value) {
+    final data = _optionalObjectMap(value, 'mobile_config.currency');
+    return MobileCurrencyConfig(
+      code: _currencyCode(data['code']),
+      symbol: _currencySymbol(data['symbol']),
+    );
+  }
+}
+
 final class SafeContractsMobileConfig {
   const SafeContractsMobileConfig({
     required this.supportText,
     required this.defaultPageSize,
+    required this.currency,
     required this.features,
   });
 
   const SafeContractsMobileConfig.defaults()
       : supportText = '',
         defaultPageSize = 25,
+        currency = const MobileCurrencyConfig.defaults(),
         features = const MobileFeatureFlags.defaults();
 
   static const maxSupportTextLength = 500;
 
   final String supportText;
   final int defaultPageSize;
+  final MobileCurrencyConfig currency;
   final MobileFeatureFlags features;
 
   factory SafeContractsMobileConfig.fromData(Object? value) {
     final data = apiObjectMap(value, 'mobile_config.data');
-    final features = _optionalObjectMap(data['features']);
+    final features = _optionalObjectMap(data['features'], 'mobile_config.features');
     final configuredPageSize = _pageSize(data['default_page_size']);
 
     return SafeContractsMobileConfig(
       supportText: _supportText(data['support_text']),
       defaultPageSize: configuredPageSize.clamp(10, 100).toInt(),
+      currency: MobileCurrencyConfig.fromData(data['currency']),
       features: MobileFeatureFlags(
         excelExport: features['excel_export'] == true,
         pushNotifications: features['push_notifications'] == true,
@@ -83,12 +108,12 @@ final class MobileConfigController extends ChangeNotifier {
   }
 }
 
-Map<String, Object?> _optionalObjectMap(Object? value) {
+Map<String, Object?> _optionalObjectMap(Object? value, String field) {
   if (value == null) {
     return const <String, Object?>{};
   }
   try {
-    return apiObjectMap(value, 'mobile_config.features');
+    return apiObjectMap(value, field);
   } on FormatException {
     return const <String, Object?>{};
   }
@@ -100,6 +125,21 @@ String _supportText(Object? value) {
   }
   final normalized = value.trim();
   if (normalized.length > SafeContractsMobileConfig.maxSupportTextLength) {
+    return '';
+  }
+  return normalized;
+}
+
+String _currencyCode(Object? value) {
+  if (value is! String) return '';
+  final normalized = value.trim().toUpperCase();
+  return RegExp(r'^[A-Z]{3}$').hasMatch(normalized) ? normalized : '';
+}
+
+String _currencySymbol(Object? value) {
+  if (value is! String) return '';
+  final normalized = value.trim();
+  if (normalized.length > 16 || normalized.contains(RegExp(r'[\r\n\x00]'))) {
     return '';
   }
   return normalized;
