@@ -4,6 +4,15 @@ import '../../core/api/api_client.dart';
 
 enum ContractsLoadState { idle, loading, ready, error }
 
+enum ContractDetailLoadState {
+  idle,
+  loading,
+  ready,
+  notFound,
+  forbidden,
+  error,
+}
+
 final class ContractSortOption {
   const ContractSortOption({
     required this.label,
@@ -206,6 +215,14 @@ final class ContractsRepository {
     final envelope = await client.get('contracts', query: query);
     return ContractPage.fromEnvelope(envelope);
   }
+
+  Future<SafeContractsContract> loadContract(int id) async {
+    if (id <= 0) {
+      throw ArgumentError('Contract ID must be positive.');
+    }
+    final envelope = await client.get('contracts/$id');
+    return SafeContractsContract.fromData(envelope.data);
+  }
 }
 
 final class ContractsController extends ChangeNotifier {
@@ -213,6 +230,7 @@ final class ContractsController extends ChangeNotifier {
     required this.repository,
     required int pageSize,
     required this.canAccess,
+    required this.canEditContract,
   }) : pageSize = pageSize.clamp(1, 100).toInt();
 
   static const supportedContractStatuses = <String>{
@@ -225,12 +243,18 @@ final class ContractsController extends ChangeNotifier {
   final ContractsRepository repository;
   final int pageSize;
   final bool canAccess;
+  final bool canEditContract;
 
   ContractsLoadState state = ContractsLoadState.idle;
   ContractPage? currentPage;
   ContractsFilters filters = const ContractsFilters();
   ContractSortOption sort = ContractSortOption.newest;
   String? errorMessage;
+
+  ContractDetailLoadState detailState = ContractDetailLoadState.idle;
+  int? selectedContractId;
+  SafeContractsContract? selectedContract;
+  String? detailErrorMessage;
 
   Future<void> ensureLoaded() async {
     if (state == ContractsLoadState.idle) {
@@ -321,6 +345,64 @@ final class ContractsController extends ChangeNotifier {
     }
     sort = nextSort;
     await loadPage(1);
+  }
+
+  Future<void> openContract(int id) async {
+    if (!canAccess || id <= 0) {
+      selectedContractId = id > 0 ? id : null;
+      selectedContract = null;
+      detailErrorMessage = 'Contract access is not authorized for this session.';
+      detailState = ContractDetailLoadState.forbidden;
+      notifyListeners();
+      return;
+    }
+
+    selectedContractId = id;
+    selectedContract = null;
+    detailErrorMessage = null;
+    detailState = ContractDetailLoadState.loading;
+    notifyListeners();
+
+    try {
+      final contract = await repository.loadContract(id);
+      if (selectedContractId != id) {
+        return;
+      }
+      selectedContract = contract;
+      detailState = ContractDetailLoadState.ready;
+    } on SafeContractsApiException catch (error) {
+      if (selectedContractId != id) {
+        return;
+      }
+      selectedContract = null;
+      detailErrorMessage = error.message;
+      if (error.statusCode == 404) {
+        detailState = ContractDetailLoadState.notFound;
+      } else if (error.statusCode == 403) {
+        detailState = ContractDetailLoadState.forbidden;
+      } else {
+        detailState = ContractDetailLoadState.error;
+      }
+    } on Object catch (error) {
+      if (selectedContractId != id) {
+        return;
+      }
+      selectedContract = null;
+      detailErrorMessage = error.toString();
+      detailState = ContractDetailLoadState.error;
+    }
+    notifyListeners();
+  }
+
+  void clearContractDetail({int? expectedId}) {
+    if (expectedId != null && selectedContractId != expectedId) {
+      return;
+    }
+    selectedContractId = null;
+    selectedContract = null;
+    detailErrorMessage = null;
+    detailState = ContractDetailLoadState.idle;
+    notifyListeners();
   }
 }
 
