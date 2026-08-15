@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
 import '../config/mobile_config.dart';
+import '../customers/customers.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_repository.dart';
 import '../export/mobile_excel_export.dart';
@@ -19,6 +20,7 @@ final class MobileBootstrapController extends ChangeNotifier {
   SessionController? sessionController;
   MobileConfigController? configController;
   DashboardController? dashboardController;
+  CustomersController? customersController;
   MobileExcelExportController? excelExportController;
   MobileNavigationPolicy? navigationPolicy;
   String? message;
@@ -58,6 +60,11 @@ final class MobileBootstrapController extends ChangeNotifier {
       config: config,
     );
     dashboardController = dashboard;
+    customersController = CustomersController(
+      repository: CustomersRepository(client),
+      pageSize: config.defaultPageSize,
+      canAccess: policy.destinations.contains(MobileDestination.customers),
+    );
     excelExportController = MobileExcelExportController(
       repository: MobileExcelExportRepository(client),
       filtersProvider: () => dashboard.filters,
@@ -72,8 +79,10 @@ final class MobileBootstrapController extends ChangeNotifier {
   void signOutLocalState() {
     sessionController?.reset();
     dashboardController?.dispose();
+    customersController?.dispose();
     excelExportController?.dispose();
     dashboardController = null;
+    customersController = null;
     excelExportController = null;
     navigationPolicy = null;
     state = MobileBootstrapState.blocked;
@@ -86,6 +95,7 @@ final class MobileBootstrapController extends ChangeNotifier {
     sessionController?.dispose();
     configController?.dispose();
     dashboardController?.dispose();
+    customersController?.dispose();
     excelExportController?.dispose();
     super.dispose();
   }
