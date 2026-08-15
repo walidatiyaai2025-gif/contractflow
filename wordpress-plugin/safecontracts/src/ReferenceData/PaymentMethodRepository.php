@@ -9,7 +9,7 @@ use RuntimeException;
 
 final class PaymentMethodRepository
 {
-    /** @return list<array{id:int, code:string, name:string, sort_order:int, is_active:bool}> */
+    /** @return list<array{id:int, code:string, name:string, display_order:int, is_active:bool}> */
     public function all(bool $activeOnly = false): array
     {
         global $wpdb;
@@ -20,7 +20,7 @@ final class PaymentMethodRepository
 
         $table = $wpdb->prefix . 'safecontracts_payment_methods';
         $where = $activeOnly ? ' WHERE is_active = 1' : '';
-        $sql = "SELECT id, code, name, sort_order, is_active FROM {$table}{$where} ORDER BY sort_order ASC, name ASC";
+        $sql = "SELECT id, code, name, display_order, is_active FROM {$table}{$where} ORDER BY display_order ASC, name ASC";
         $rows = $wpdb->get_results($sql, ARRAY_A);
 
         if (! is_array($rows)) {
@@ -32,14 +32,14 @@ final class PaymentMethodRepository
                 'id' => (int) ($row['id'] ?? 0),
                 'code' => (string) ($row['code'] ?? ''),
                 'name' => (string) ($row['name'] ?? ''),
-                'sort_order' => (int) ($row['sort_order'] ?? 0),
+                'display_order' => (int) ($row['display_order'] ?? 0),
                 'is_active' => (bool) ($row['is_active'] ?? false),
             ],
             $rows
         );
     }
 
-    /** @param array{code:mixed, name:mixed, sort_order?:mixed, is_active?:mixed} $input */
+    /** @param array{code:mixed, name:mixed, display_order?:mixed, is_active?:mixed} $input */
     public function save(array $input): array
     {
         global $wpdb;
@@ -50,7 +50,7 @@ final class PaymentMethodRepository
 
         $code = strtolower(trim((string) ($input['code'] ?? '')));
         $name = trim((string) ($input['name'] ?? ''));
-        $sortOrder = max(0, (int) ($input['sort_order'] ?? 0));
+        $displayOrder = max(0, (int) ($input['display_order'] ?? 0));
         $isActive = ! empty($input['is_active']) ? 1 : 0;
 
         if ($code === '' || ! preg_match('/^[a-z0-9][a-z0-9_-]{1,49}$/', $code)) {
@@ -63,16 +63,16 @@ final class PaymentMethodRepository
 
         $table = $wpdb->prefix . 'safecontracts_payment_methods';
         $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (code, name, sort_order, is_active, created_at, updated_at)
+            "INSERT INTO {$table} (code, name, display_order, is_active, created_at, updated_at)
              VALUES (%s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())
              ON DUPLICATE KEY UPDATE
                 name = VALUES(name),
-                sort_order = VALUES(sort_order),
+                display_order = VALUES(display_order),
                 is_active = VALUES(is_active),
                 updated_at = UTC_TIMESTAMP()",
             $code,
             $name,
-            $sortOrder,
+            $displayOrder,
             $isActive
         );
 
@@ -81,12 +81,12 @@ final class PaymentMethodRepository
             throw new RuntimeException('Unable to save payment method.');
         }
 
-        do_action('safecontracts_payment_method_saved', $code, $name, $sortOrder, (bool) $isActive);
+        do_action('safecontracts_payment_method_saved', $code, $name, $displayOrder, (bool) $isActive);
 
         return [
             'code' => $code,
             'name' => $name,
-            'sort_order' => $sortOrder,
+            'display_order' => $displayOrder,
             'is_active' => (bool) $isActive,
         ];
     }
