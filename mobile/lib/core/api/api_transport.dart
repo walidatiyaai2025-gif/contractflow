@@ -15,5 +15,6 @@ abstract interface class SafeContractsTransport {
     required Uri uri,
     required String method,
     Map<String, String> headers = const <String, String>{},
+    String? body,
   });
 }
