@@ -1,7 +1,10 @@
 enum AppEnvironmentName { local, staging, production }
 
 final class AppEnvironment {
-  AppEnvironment._({required this.name, required this.apiBaseUri});
+  AppEnvironment._({
+    required this.name,
+    required this.apiBaseUri,
+  });
 
   final AppEnvironmentName name;
   final Uri apiBaseUri;
@@ -42,7 +45,9 @@ final class AppEnvironment {
       throw FormatException('Production SafeContracts API must use HTTPS.');
     }
 
-    final normalizedPath = uri.path.endsWith('/') ? uri.path : '${uri.path}/';
+    final normalizedPath = uri.path.endsWith('/')
+        ? uri.path
+        : '${uri.path}/';
     return AppEnvironment._(
       name: environmentName,
       apiBaseUri: uri.replace(path: normalizedPath),
