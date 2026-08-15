@@ -28,6 +28,8 @@ final class Router
             'callback' => [self::class, 'me'],
             'permission_callback' => [self::class, 'canAccess'],
         ]);
+
+        PaymentMethodsController::register();
     }
 
     public static function health(WP_REST_Request $request): WP_REST_Response
