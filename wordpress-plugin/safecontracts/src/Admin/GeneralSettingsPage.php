@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SafeContracts\Admin;
+
+use SafeContracts\Roles\Capabilities;
+use SafeContracts\Settings\GeneralSettings;
+use Throwable;
+
+final class GeneralSettingsPage
+{
+    public const SLUG = 'safecontracts-settings';
+    public const SAVE_ACTION = 'safecontracts_save_general_settings';
+
+    public static function register(): void
+    {
+        add_submenu_page(AdminShell::SLUG, __('SafeContracts Settings', 'safecontracts'), __('Settings', 'safecontracts'), Capabilities::MANAGE_SYSTEM, self::SLUG, [self::class, 'render']);
+    }
+
+    public static function handleSave(): void
+    {
+        if (! current_user_can(Capabilities::MANAGE_SYSTEM)) {
+            wp_die(__('You do not have permission to manage SafeContracts settings.', 'safecontracts'));
+        }
+        check_admin_referer(self::SAVE_ACTION);
+        $status = 'saved';
+        try {
+            (new GeneralSettings())->save([
+                'organization_name' => $_POST['organization_name'] ?? '',
+                'currency_code' => $_POST['currency_code'] ?? '',
+                'admin_page_size' => $_POST['admin_page_size'] ?? 50,
+            ]);
+        } catch (Throwable $error) {
+            unset($error);
+            $status = 'invalid';
+        }
+        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'safecontracts_status' => $status], admin_url('admin.php')));
+        exit;
+    }
+
+    public static function render(): void
+    {
+        if (! current_user_can(Capabilities::MANAGE_SYSTEM)) {
+            wp_die(__('You do not have permission to manage SafeContracts settings.', 'safecontracts'));
+        }
+        $settings = (new GeneralSettings())->read();
+        ?>
+        <div class="wrap safecontracts-settings" dir="auto">
+            <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('System configuration', 'safecontracts'); ?></p><h1><?php echo esc_html__('SafeContracts Settings', 'safecontracts'); ?></h1></div></div>
+            <section class="safecontracts-admin-card safecontracts-settings-card">
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>"><?php wp_nonce_field(self::SAVE_ACTION); ?>
+                    <p><label><?php echo esc_html__('Organization name', 'safecontracts'); ?><input class="widefat" name="organization_name" maxlength="191" required value="<?php echo esc_attr($settings['organization_name']); ?>"></label></p>
+                    <p><label><?php echo esc_html__('Single currency code', 'safecontracts'); ?><input class="widefat" name="currency_code" maxlength="3" value="<?php echo esc_attr($settings['currency_code']); ?>" placeholder="KWD"></label></p>
+                    <p class="description"><?php echo esc_html__('V1 remains single-currency. Leaving the currency blank keeps it explicitly unconfigured rather than guessing a business currency.', 'safecontracts'); ?></p>
+                    <p><label><?php echo esc_html__('Admin page size', 'safecontracts'); ?><input type="number" min="10" max="200" name="admin_page_size" value="<?php echo esc_attr((string) $settings['admin_page_size']); ?>"></label></p>
+                    <?php submit_button(__('Save SafeContracts Settings', 'safecontracts')); ?>
+                </form>
+                <p class="description"><?php echo esc_html__('These are non-secret operational preferences only. Authorization, assignment scope and financial rules remain server-side and cannot be disabled here.', 'safecontracts'); ?></p>
+            </section>
+        </div>
+        <?php
+    }
+}
