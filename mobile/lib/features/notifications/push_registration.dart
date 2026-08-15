@@ -41,9 +41,12 @@ abstract interface class PushMessagingGateway {
 
 final class FirebasePushMessagingGateway implements PushMessagingGateway {
   FirebasePushMessagingGateway([FirebaseMessaging? messaging])
-      : _messaging = messaging ?? FirebaseMessaging.instance;
+      : _messagingOverride = messaging;
 
-  final FirebaseMessaging _messaging;
+  final FirebaseMessaging? _messagingOverride;
+
+  FirebaseMessaging get _messaging =>
+      _messagingOverride ?? FirebaseMessaging.instance;
 
   @override
   Future<MobilePushPermissionState> requestPermission() async {
