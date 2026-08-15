@@ -31,3 +31,4 @@ This file records decisions that implementation must treat as baseline unless an
 | DEC-025 | Visual direction is corporate/FinTech: navy/blue + green success, Contract/Clipboard/Checkmark motif. | Locked |
 | DEC-026 | Production visuals exclude cryptocurrency/Ethereum imagery and visible WordPress branding. | Locked |
 | DEC-027 | Implementation baseline is 11 phases / 284 production tasks tracked in GitHub Issues. | Locked |
+| DEC-028 | SafeContracts native mobile client uses **Flutter/Dart**; WordPress remains the authoritative backend and mobile stays API-driven. | Locked |
