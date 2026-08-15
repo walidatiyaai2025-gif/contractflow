@@ -5,8 +5,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
+use SafeContracts\Admin\AdminFeedback;
 use SafeContracts\Admin\AdminShell;
+use SafeContracts\Admin\DashboardPage;
 use SafeContracts\Admin\ReportsPage;
+use SafeContracts\Audit\ContractArchiveAuditRecorder;
+use SafeContracts\Contracts\ContractArchiveRepository;
+use SafeContracts\Contracts\ContractArchiveService;
 use SafeContracts\Reports\ReportExportService;
 use SafeContracts\Reports\XlsxWorkbook;
 use SafeContracts\Roles\Capabilities;
@@ -57,4 +62,29 @@ sc_p6final_assert(($chain[AdminShell::RESPONSIVE_STYLE_HANDLE]['deps'] ?? []) ==
 sc_p6final_assert(($chain[AdminShell::SETTINGS_STYLE_HANDLE]['deps'] ?? []) === [AdminShell::OPS_STYLE_HANDLE]
     && ($chain[AdminShell::OPS_STYLE_HANDLE]['deps'] ?? []) === [AdminShell::CORE_STYLE_HANDLE], 'SC-P6-040 CSS dependency order remains deterministic');
 
-printf("SafeContracts P6 final validation SC-P6-039..040 passed (%d assertions).\n", $tests);
+// Issue #390 — user-visible bilingual validation feedback and safe dashboard deletion.
+$feedbackSource = file_get_contents((string) (new ReflectionClass(AdminFeedback::class))->getFileName()) ?: '';
+$dashboardSource = file_get_contents((string) (new ReflectionClass(DashboardPage::class))->getFileName()) ?: '';
+$archiveRepositorySource = file_get_contents((string) (new ReflectionClass(ContractArchiveRepository::class))->getFileName()) ?: '';
+$archiveServiceSource = file_get_contents((string) (new ReflectionClass(ContractArchiveService::class))->getFileName()) ?: '';
+$archiveAuditSource = file_get_contents((string) (new ReflectionClass(ContractArchiveAuditRecorder::class))->getFileName()) ?: '';
+$pluginSource = file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Plugin.php') ?: '';
+$feedbackJs = file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/assets/admin/safecontracts-admin-feedback.js') ?: '';
+$feedbackCss = file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/assets/admin/safecontracts-admin-feedback.css') ?: '';
+
+sc_p6final_assert(str_contains($feedbackSource, "safecontracts_status") && str_contains($feedbackSource, "get_user_locale") && str_contains($feedbackSource, "'saved'") && str_contains($feedbackSource, "'invalid'"), '#390 server redirects have visible locale-aware success/error feedback');
+sc_p6final_assert(str_contains($feedbackSource, 'راجع البيانات') && str_contains($feedbackSource, 'Check the form') && str_contains($feedbackSource, 'aria-live'), '#390 feedback contract contains Arabic/English accessible toast messages');
+sc_p6final_assert(str_contains($feedbackJs, 'checkValidity()') && str_contains($feedbackJs, "aria-invalid") && str_contains($feedbackJs, 'first.focus'), '#390 client validation marks and focuses invalid fields without replacing server authority');
+sc_p6final_assert(str_contains($feedbackJs, 'data-safecontracts-delete-form') && str_contains($feedbackJs, 'window.confirm'), '#390 dashboard delete requires an explicit browser confirmation');
+sc_p6final_assert(str_contains($feedbackCss, '.safecontracts-toast--error') && str_contains($feedbackCss, '.safecontracts-field-invalid'), '#390 validation toast and invalid-field states have dedicated visual treatment');
+
+sc_p6final_assert(str_contains($dashboardSource, 'ContractArchiveService') && str_contains($dashboardSource, 'Capabilities::MANAGE_SYSTEM'), '#390 dashboard delete delegates to a capability-protected domain service');
+sc_p6final_assert(str_contains($dashboardSource, "check_admin_referer(self::ARCHIVE_ACTION . '_' . \$contractId)") && str_contains($dashboardSource, 'data-safecontracts-delete-form'), '#390 dashboard archive mutation is nonce protected and wired to confirmation UX');
+sc_p6final_assert(str_contains($dashboardSource, 'is_archived') && str_contains($dashboardSource, 'Delete') && str_contains($dashboardSource, 'حذف') && ! str_contains($dashboardSource, '$wpdb'), '#390 dashboard exposes bilingual delete while persistence remains outside presentation');
+
+sc_p6final_assert(str_contains($archiveRepositorySource, 'SET is_archived = 1') && ! str_contains(strtoupper($archiveRepositorySource), 'DELETE FROM'), '#390 delete is a soft archive and cannot physically delete contract rows');
+sc_p6final_assert(str_contains($archiveServiceSource, 'Capabilities::MANAGE_SYSTEM') && str_contains($archiveServiceSource, 'VIEW_ALL') && str_contains($archiveServiceSource, 'VIEW_ASSIGNED'), '#390 archive service enforces admin capability and data scope');
+sc_p6final_assert(str_contains($archiveServiceSource, "do_action('safecontracts_contract_archived'") && str_contains($archiveAuditSource, "'contract_archived'") && str_contains($archiveAuditSource, "'is_archived' => true"), '#390 safe archive emits durable audit evidence');
+sc_p6final_assert(str_contains($pluginSource, 'AdminFeedback::enqueueAssets') && str_contains($pluginSource, "AdminFeedback::class, 'render'") && str_contains($pluginSource, 'DashboardPage::ARCHIVE_ACTION') && str_contains($pluginSource, 'ContractArchiveAuditRecorder::register'), '#390 plugin bootstrap wires feedback, archive endpoint and audit recorder');
+
+printf("SafeContracts P6 final validation SC-P6-039..040 + UX #390 passed (%d assertions).\n", $tests);
