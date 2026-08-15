@@ -135,9 +135,9 @@ List<String> _grantedCapabilities(SafeContractsSession session) {
 
 IconData _deviceIcon(String platform) {
   return switch (platform) {
-    'android' => Icons.android_outlined,
-    'ios' => Icons.phone_iphone_outlined,
-    'web' => Icons.language_outlined,
-    _ => Icons.devices_other_outlined,
+    'android' => Icons.android,
+    'ios' => Icons.phone_iphone,
+    'web' => Icons.language,
+    _ => Icons.devices_other,
   };
 }
