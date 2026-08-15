@@ -33,15 +33,12 @@ final class RequestGuard
 
     public static function response(mixed $data, array $meta = [], int $status = 200): WP_REST_Response
     {
-        return new WP_REST_Response([
-            'data' => $data,
-            'meta' => $meta,
-        ], $status);
+        return ApiResponse::ok($data, $meta, $status);
     }
 
     public static function forbidden(string $code, string $message): WP_Error
     {
-        return new WP_Error($code, $message, ['status' => 403]);
+        return ApiResponse::error($code, $message, 403);
     }
 
     public static function invalid(Throwable $error, string $code = 'safecontracts_invalid_request'): WP_Error
@@ -49,8 +46,7 @@ final class RequestGuard
         $message = $error instanceof InvalidArgumentException
             ? $error->getMessage()
             : __('The SafeContracts request is invalid.', 'safecontracts');
-
-        return new WP_Error($code, $message, ['status' => 422]);
+        return ApiResponse::error($code, $message, 422);
     }
 
     public static function domain(Throwable $error, string $code = 'safecontracts_request_forbidden'): WP_Error
@@ -58,17 +54,16 @@ final class RequestGuard
         $message = $error instanceof DomainException
             ? $error->getMessage()
             : __('The SafeContracts request is not allowed.', 'safecontracts');
-
-        return new WP_Error($code, $message, ['status' => 403]);
+        return ApiResponse::error($code, $message, 403);
     }
 
     public static function failure(Throwable $error, string $code = 'safecontracts_request_failed'): WP_Error
     {
         unset($error);
-        return new WP_Error(
+        return ApiResponse::error(
             $code,
             __('The SafeContracts request could not be completed.', 'safecontracts'),
-            ['status' => 500]
+            500
         );
     }
 }
