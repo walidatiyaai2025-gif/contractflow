@@ -6,6 +6,7 @@ require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
 use SafeContracts\Audit\AuditService;
+use SafeContracts\Collections\CollectionService;
 use SafeContracts\Database\Migrator;
 use SafeContracts\FollowUps\FollowUpService;
 use SafeContracts\FollowUps\FollowUpState;
@@ -27,6 +28,13 @@ $activate();
 sc_p4v_assert(version_compare(Migrator::LATEST_VERSION, '1.8.0', '>='), 'P4 follow-up/audit migration remains present after later phases');
 sc_p4v_assert(count($GLOBALS['sc_test_dbdelta']) >= 12, 'P4 follow-up/audit schemas remain present');
 do_action('plugins_loaded');
+
+$followupAccepted = $GLOBALS['sc_test_action_accepted_args']['safecontracts_followup_recorded'] ?? [];
+$settlementAccepted = $GLOBALS['sc_test_action_accepted_args']['safecontracts_payment_settled'] ?? [];
+$assignmentAccepted = $GLOBALS['sc_test_action_accepted_args']['safecontracts_contract_customer_assigned'] ?? [];
+sc_p4v_assert($followupAccepted !== [] && max($followupAccepted) >= 6, 'P4 audit hook explicitly accepts complete follow-up payload under WordPress semantics');
+sc_p4v_assert($settlementAccepted !== [] && max($settlementAccepted) >= 9, 'P4 audit hook explicitly accepts settlement before/after payload under WordPress semantics');
+sc_p4v_assert($assignmentAccepted !== [] && max($assignmentAccepted) >= 4, 'P4 audit hook explicitly accepts assignment old/new payload under WordPress semantics');
 
 $followups = new FollowUpService();
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS=>true, Capabilities::VIEW_ALL=>true, Capabilities::MANAGE_FOLLOWUPS=>true];
@@ -52,6 +60,7 @@ $beforePromise = count($GLOBALS['sc_test_queries']);
 $followups->promiseToPay(7001, '2026-08-28', 'Confirmed by finance');
 $promiseSql = implode("\n", array_slice($GLOBALS['sc_test_queries'], $beforePromise));
 sc_p4v_assert(str_contains($promiseSql, "'promised_to_pay'") && str_contains($promiseSql, "'2026-08-28'"), 'SC-P4-011 promise state/date are appended');
+sc_p4v_assert(str_contains($promiseSql, 'promised_date'), 'SC-P4-011 promised date reaches audit context under WordPress action semantics');
 sc_p4v_assert(! str_contains($promiseSql, 'UPDATE wp_safecontracts_scheduled_payments'), 'SC-P4-011 promise never rewrites contractual or expected payment dates');
 
 // SC-P4-012 — issue/deferred.
@@ -91,10 +100,24 @@ do_action('safecontracts_contract_base_value_changed', 501, '1250.0000', 42, '10
 $financialSql = implode("\n", array_slice($GLOBALS['sc_test_queries'], $beforeFinancial));
 sc_p4v_assert(str_contains($financialSql, 'contract_base_value_changed'), 'SC-P4-014 financial value change emits audit event');
 sc_p4v_assert(str_contains($financialSql, '1000.0000') && str_contains($financialSql, '1250.0000'), 'SC-P4-014 audit preserves financial before/after values');
+
+$collections = new CollectionService();
+$GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS=>true, Capabilities::VIEW_ALL=>true, Capabilities::MANAGE_COLLECTIONS=>true];
+$GLOBALS['sc_test_result_queue'] = [[sc_p4v_payment()], [['id'=>'2']], [['total'=>'0.0000']]];
+$GLOBALS['wpdb']->insert_id = 9601;
 $beforeSettlement = count($GLOBALS['sc_test_queries']);
-do_action('safecontracts_payment_settled', 7001, '100.0000', '100.0000', '400.0000', 'partially_paid', 42, '0.0000', '500.0000', 'due_soon');
+$collections->record([
+    'payment_id'=>7001,
+    'amount'=>'100.0000',
+    'collection_date'=>'2026-08-15',
+    'payment_method_id'=>2,
+]);
+$settlementArgs = end($GLOBALS['sc_test_fired_actions']['safecontracts_payment_settled']);
 $settlementSql = implode("\n", array_slice($GLOBALS['sc_test_queries'], $beforeSettlement));
-sc_p4v_assert(str_contains($settlementSql, 'payment_settled') && str_contains($settlementSql, '400.0000'), 'SC-P4-014 payment settlement audit preserves resulting balance');
+sc_p4v_assert(is_array($settlementArgs) && count($settlementArgs) === 9, 'SC-P4-014 settlement event carries complete new and prior state');
+sc_p4v_assert($settlementArgs[2] === '100.0000' && $settlementArgs[3] === '400.0000' && $settlementArgs[4] === PaymentStatus::PARTIALLY_PAID, 'SC-P4-014 settlement event exposes new paid/remaining/status');
+sc_p4v_assert($settlementArgs[6] === '0.0000' && $settlementArgs[7] === '500.0000' && $settlementArgs[8] === PaymentStatus::DUE_SOON, 'SC-P4-014 settlement event exposes prior paid/remaining/status');
+sc_p4v_assert(str_contains($settlementSql, 'payment_settled') && str_contains($settlementSql, '500.0000') && str_contains($settlementSql, '400.0000'), 'SC-P4-014 audit persists settlement before/after financial state');
 
 $audit = new AuditService();
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS=>true];
