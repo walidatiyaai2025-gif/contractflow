@@ -86,7 +86,7 @@ final class SafeContractsStateView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 44, excludeFromSemantics: true),
+              ExcludeSemantics(child: Icon(icon, size: 44)),
               const SizedBox(height: 12),
               Text(message, textAlign: TextAlign.center),
               if (retry != null) ...[
