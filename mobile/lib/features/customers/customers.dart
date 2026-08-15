@@ -112,13 +112,13 @@ final class CustomersRepository {
     required String order,
   }) async {
     if (page < 1 || page > 5) {
-      throw const ArgumentError('Customer page must be between 1 and 5.');
+      throw ArgumentError('Customer page must be between 1 and 5.');
     }
     if (perPage < 1 || perPage > 100) {
-      throw const ArgumentError('Customer page size must be between 1 and 100.');
+      throw ArgumentError('Customer page size must be between 1 and 100.');
     }
     if (order != 'asc' && order != 'desc') {
-      throw const ArgumentError('Customer order must be asc or desc.');
+      throw ArgumentError('Customer order must be asc or desc.');
     }
 
     final envelope = await client.get(
@@ -135,7 +135,7 @@ final class CustomersRepository {
 
   Future<SafeContractsCustomer> loadCustomer(int id) async {
     if (id <= 0) {
-      throw const ArgumentError('Customer ID must be positive.');
+      throw ArgumentError('Customer ID must be positive.');
     }
     final envelope = await client.get('customers/$id');
     return SafeContractsCustomer.fromData(envelope.data);
@@ -147,7 +147,7 @@ final class CustomersController extends ChangeNotifier {
     required this.repository,
     required int pageSize,
     required this.canAccess,
-  }) : pageSize = pageSize.clamp(1, 100);
+  }) : pageSize = pageSize.clamp(1, 100).toInt();
 
   final CustomersRepository repository;
   final int pageSize;
