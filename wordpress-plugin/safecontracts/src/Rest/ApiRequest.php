@@ -30,9 +30,19 @@ final class ApiRequest
         return self::positiveInt($value, $key);
     }
 
-    /** @return array{filters:array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string},page:int,per_page:int} */
-    public static function listQuery(WP_REST_Request $request): array
-    {
+    /**
+     * @param list<string> $allowedSort
+     * @return array{
+     *   filters:array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string},
+     *   page:int,per_page:int,sort:string,direction:string
+     * }
+     */
+    public static function listQuery(
+        WP_REST_Request $request,
+        array $allowedSort = ['id'],
+        string $defaultSort = 'id',
+        string $defaultDirection = 'asc'
+    ): array {
         $params = self::params($request);
         foreach (['customer_id', 'contract_id', 'accountant_user_id'] as $key) {
             if (array_key_exists($key, $params) && $params[$key] !== '' && $params[$key] !== null) {
@@ -59,11 +69,18 @@ final class ApiRequest
             }
         }
 
+        $filters = DashboardFilters::normalize($params);
+        if ($filters['due_from'] !== null && $filters['due_to'] !== null && $filters['due_from'] > $filters['due_to']) {
+            throw new InvalidArgumentException('due_from cannot be later than due_to.');
+        }
         $pagination = self::pagination($request);
+        $sort = self::sort($request, $allowedSort, $defaultSort, $defaultDirection);
         return [
-            'filters' => DashboardFilters::normalize($params),
+            'filters' => $filters,
             'page' => $pagination['page'],
             'per_page' => $pagination['per_page'],
+            'sort' => $sort['field'],
+            'direction' => $sort['direction'],
         ];
     }
 
@@ -72,9 +89,46 @@ final class ApiRequest
     {
         $params = self::params($request);
         return [
-            'page' => array_key_exists('page', $params) ? self::boundedInt($params['page'], 'page', 1, 5) : 1,
+            'page' => array_key_exists('page', $params) ? self::boundedInt($params['page'], 'page', 1, 100000) : 1,
             'per_page' => array_key_exists('per_page', $params) ? self::boundedInt($params['per_page'], 'per_page', 1, 100) : 50,
         ];
+    }
+
+    /** @param list<string> $allowedSort @return array{field:string,direction:string} */
+    public static function sort(WP_REST_Request $request, array $allowedSort, string $defaultSort, string $defaultDirection = 'asc'): array
+    {
+        $allowed = array_values(array_unique(array_filter(array_map(static fn (mixed $value): string => is_string($value) ? trim($value) : '', $allowedSort))));
+        if ($allowed === [] || ! in_array($defaultSort, $allowed, true)) {
+            throw new InvalidArgumentException('REST sort configuration is invalid.');
+        }
+        $defaultDirection = strtolower($defaultDirection);
+        if (! in_array($defaultDirection, ['asc', 'desc'], true)) {
+            throw new InvalidArgumentException('REST default sort direction is invalid.');
+        }
+
+        $params = self::params($request);
+        $field = $defaultSort;
+        if (array_key_exists('sort', $params) && $params['sort'] !== '' && $params['sort'] !== null) {
+            if (! is_string($params['sort'])) {
+                throw new InvalidArgumentException('sort must be a string.');
+            }
+            $field = trim($params['sort']);
+            if (! in_array($field, $allowed, true)) {
+                throw new InvalidArgumentException('sort field is not supported for this resource.');
+            }
+        }
+
+        $direction = $defaultDirection;
+        if (array_key_exists('direction', $params) && $params['direction'] !== '' && $params['direction'] !== null) {
+            if (! is_string($params['direction'])) {
+                throw new InvalidArgumentException('direction must be asc or desc.');
+            }
+            $direction = strtolower(trim($params['direction']));
+            if (! in_array($direction, ['asc', 'desc'], true)) {
+                throw new InvalidArgumentException('direction must be asc or desc.');
+            }
+        }
+        return ['field' => $field, 'direction' => $direction];
     }
 
     public static function optionalCustomerId(WP_REST_Request $request): int
