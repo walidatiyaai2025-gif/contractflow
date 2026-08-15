@@ -11,8 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 get_header();
 
-$copy     = safecontracts_copy();
-$demo_url = safecontracts_theme_url( 'safecontracts_demo_url', '#contact' );
+$copy               = safecontracts_copy();
+$hero_primary_url   = safecontracts_button_link( 'hero_primary' );
+$hero_secondary_url = safecontracts_button_link( 'hero_secondary' );
+$final_cta_url      = safecontracts_button_link( 'final_cta' );
 ?>
 <main id="main-content">
 	<section id="home" class="sc-hero sc-section-anchor">
@@ -24,8 +26,8 @@ $demo_url = safecontracts_theme_url( 'safecontracts_demo_url', '#contact' );
 				<h1><?php echo esc_html( $copy['hero']['title'] ); ?></h1>
 				<p class="sc-lead"><?php echo esc_html( $copy['hero']['text'] ); ?></p>
 				<div class="sc-hero-actions">
-					<a class="sc-btn sc-btn-solid sc-btn-large" href="<?php echo esc_url( $demo_url ); ?>"><?php echo esc_html( $copy['actions']['get_started'] ); ?></a>
-					<a class="sc-btn sc-btn-outline sc-btn-large" href="#benefits"><?php echo esc_html( $copy['actions']['explore'] ); ?></a>
+					<a class="sc-btn sc-btn-solid sc-btn-large" href="<?php echo esc_url( $hero_primary_url ); ?>"><?php echo esc_html( $copy['actions']['get_started'] ); ?></a>
+					<a class="sc-btn sc-btn-outline sc-btn-large" href="<?php echo esc_url( $hero_secondary_url ); ?>"><?php echo esc_html( $copy['actions']['explore'] ); ?></a>
 				</div>
 				<ul class="sc-trust-row" role="list">
 					<?php foreach ( $copy['hero']['points'] as $point ) : ?>
@@ -168,7 +170,7 @@ $demo_url = safecontracts_theme_url( 'safecontracts_demo_url', '#contact' );
 				<div class="sc-cta-copy">
 					<h2><?php echo esc_html( $copy['cta']['title'] ); ?></h2>
 					<p><?php echo esc_html( $copy['cta']['text'] ); ?></p>
-					<a class="sc-btn sc-btn-teal sc-btn-large" href="<?php echo esc_url( $demo_url ); ?>"><?php echo esc_html( $copy['cta']['button'] ); ?></a>
+					<a class="sc-btn sc-btn-teal sc-btn-large" href="<?php echo esc_url( $final_cta_url ); ?>"><?php echo esc_html( $copy['cta']['button'] ); ?></a>
 				</div>
 			</div>
 		</div>
