@@ -34,7 +34,8 @@ void main() {
       expect(
         () => AppEnvironment.fromValues(
           name: 'demo',
-          apiBaseUrl: 'https://contracts.example.test/wp-json/safecontracts/v1/',
+          apiBaseUrl:
+              'https://contracts.example.test/wp-json/safecontracts/v1/',
         ),
         throwsFormatException,
       );
