@@ -32,7 +32,7 @@ final class DashboardController
         }
 
         try {
-            $filters = RequestGuard::dashboardFilters($request);
+            $filters = RequestGuard::strictDashboardFilters($request);
             $read = new AdminReadRepository();
             return RequestGuard::response([
                 'filters' => $filters,
