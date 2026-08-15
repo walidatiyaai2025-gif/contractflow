@@ -178,8 +178,10 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
     switch (link.destination) {
       case SafeContractsDeepLinkDestination.contracts:
         _openContract(link.resourceId);
+        break;
       case SafeContractsDeepLinkDestination.customers:
         unawaited(widget.customersController.openCustomer(link.resourceId));
+        break;
       case SafeContractsDeepLinkDestination.payments:
       case SafeContractsDeepLinkDestination.followUps:
         break;
