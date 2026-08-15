@@ -101,8 +101,10 @@ final class SafeContractsApiClient {
     );
     final sessionHeaders = _validatedHeaders(await headersProvider());
     final encodedBody = body == null ? null : jsonEncode(body);
-    if (encodedBody != null && utf8.encode(encodedBody).length > maxJsonRequestBytes) {
-      throw const FormatException('SafeContracts API JSON request is too large.');
+    if (encodedBody != null &&
+        utf8.encode(encodedBody).length > maxJsonRequestBytes) {
+      throw const FormatException(
+          'SafeContracts API JSON request is too large.');
     }
 
     final response = await transport.send(
@@ -111,7 +113,8 @@ final class SafeContractsApiClient {
       headers: <String, String>{
         ...sessionHeaders,
         'Accept': 'application/json',
-        if (encodedBody != null) 'Content-Type': 'application/json; charset=utf-8',
+        if (encodedBody != null)
+          'Content-Type': 'application/json; charset=utf-8',
       },
       body: encodedBody,
     );
@@ -148,7 +151,8 @@ final class SafeContractsApiClient {
         metaValue == null ? <String, Object?>{} : _objectMap(metaValue, 'meta');
     final responseVersion = meta['api_version'];
     if (responseVersion != null && responseVersion != apiVersion) {
-      throw const FormatException('SafeContracts API version is not supported.');
+      throw const FormatException(
+          'SafeContracts API version is not supported.');
     }
     return ApiEnvelope(
       data: root['data'],
