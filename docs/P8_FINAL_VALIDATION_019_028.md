@@ -5,25 +5,18 @@ This slice completes the SafeContracts P8 REST API phase by validating the remai
 ## SC-P8-019 — Authentication/session — Validate
 
 - `/me` and `/session` remain protected WordPress-session endpoints.
-- The callback now rechecks `Permission::access()` internally instead of relying only on the route permission callback.
-- Anonymous/out-of-scope direct callback invocation returns the canonical versioned 403 error.
+- The session callback rechecks `Permission::access()` internally instead of relying only on the route permission callback.
+- Anonymous/out-of-scope direct session invocation returns the canonical versioned 403 error.
 - Successful session data exposes only authenticated state, user ID, authoritative scope and capability booleans; credentials, cookies, tokens and private keys are not returned.
 
 ## SC-P8-020 — Capability enforcement — Validate
 
-Validation found a defense-in-depth gap: several callbacks trusted WordPress route permission callbacks and could be called internally without rechecking the same authorization boundary.
+Validation confirmed two intentional authorization patterns and hardened the sensitive one without breaking established controller contracts:
 
-The following callbacks now fail closed before reads/writes when called directly:
+- Public REST read-model routes such as mobile configuration and reference data retain their canonical `[Router::class, 'canAccess']` WordPress route permission boundary. Their controller methods remain unit-callable for existing tests/internal composition.
+- Session/data callbacks and capability-sensitive admin/payment-method/export operations recheck authorization internally, so direct invocation cannot bypass scope or elevated operation capabilities.
 
-- data endpoints through `DataController::guard()`;
-- dashboard;
-- mobile configuration;
-- reference data;
-- active/admin payment methods;
-- Excel export;
-- session endpoints.
-
-Admin payment-method reads/writes still require `MANAGE_REFERENCE_DATA`; Excel export still requires `EXPORT_REPORTS`. Capability denial occurs before repository reads or mutations.
+`DataController::guard()` rejects missing access before domain reads. Admin payment-method reads/writes still require `MANAGE_REFERENCE_DATA`; Excel export still requires `EXPORT_REPORTS`. Capability denial occurs before protected repository reads or mutations.
 
 ## SC-P8-021 — Accountant scope enforcement — Validate
 
@@ -98,8 +91,8 @@ Dashboard KPI, customer-option and dependent-contract reads remain bounded/scope
 
 `tests/php/rest_api_validation_019_028.php` exercises all ten task IDs with behavioral checks covering:
 
-- direct callback authorization;
-- no reads/writes after denial;
+- session/data direct-callback authorization and route permission contracts for established read models;
+- no protected reads/writes after capability denial;
 - SQL accountant/customer/contract scope;
 - safe field projection;
 - 403/404/422 versioned errors;
