@@ -25,6 +25,11 @@ final class ReferenceDataController
     public static function show(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         unset($request);
+        $access = Router::canAccess();
+        if ($access instanceof WP_Error) {
+            return $access;
+        }
+
         try {
             $methods = array_map(
                 static fn (array $method): array => [
