@@ -1,0 +1,63 @@
+body.login {
+  background: linear-gradient(145deg, #071e2d, #0b2a3f 58%, #174f78);
+}
+
+body.login #login {
+  width: min(360px, calc(100% - 32px));
+  padding-top: 8vh;
+}
+
+body.login h1 a {
+  width: 92px;
+  height: 92px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  background-image: none;
+  color: #fff;
+  font-size: 0;
+  text-indent: 0;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
+}
+
+body.login h1 a::before {
+  content: "SC";
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+body.login form {
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.22);
+}
+
+body.login .button-primary {
+  border-color: #174f78;
+  background: #174f78;
+}
+
+body.login .button-primary:hover,
+body.login .button-primary:focus {
+  border-color: #1f8f67;
+  background: #1f8f67;
+}
+
+body.login #nav a,
+body.login #backtoblog a,
+body.login .privacy-policy-page-link a {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+body.login #nav a:hover,
+body.login #backtoblog a:hover,
+body.login .privacy-policy-page-link a:hover {
+  color: #fff;
+}
