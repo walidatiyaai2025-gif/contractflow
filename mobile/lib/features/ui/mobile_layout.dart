@@ -12,6 +12,13 @@ SafeContractsBreakpoint safeContractsBreakpoint(double width) {
   return SafeContractsBreakpoint.wide;
 }
 
+bool safeContractsIsRtlLanguage(String languageCode) {
+  final normalized = languageCode.trim().toLowerCase();
+  return normalized == 'ar' ||
+      normalized.startsWith('ar-') ||
+      normalized.startsWith('ar_');
+}
+
 final class SafeContractsDirectionScope extends StatelessWidget {
   const SafeContractsDirectionScope({
     required this.languageCode,
@@ -24,9 +31,9 @@ final class SafeContractsDirectionScope extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalized = languageCode.trim().toLowerCase();
-    final direction =
-        normalized == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+    final direction = safeContractsIsRtlLanguage(languageCode)
+        ? TextDirection.rtl
+        : TextDirection.ltr;
     return Directionality(textDirection: direction, child: child);
   }
 }
@@ -36,7 +43,7 @@ final class SafeContractsAdaptiveBody extends StatelessWidget {
     required this.child,
     this.maxWidth = 960,
     super.key,
-  });
+  }) : assert(maxWidth > 0);
 
   final Widget child;
   final double maxWidth;
