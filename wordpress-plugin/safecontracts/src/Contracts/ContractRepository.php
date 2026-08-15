@@ -22,7 +22,7 @@ final class ContractRepository
         return is_array($rows) && $rows !== [];
     }
 
-    /** @return array{id:int, contract_number:string, customer_id:int, accountant_user_id:?int, status:string, notes:string, is_archived:bool}|null */
+    /** @return array{id:int, contract_number:string, customer_id:int, accountant_user_id:?int, status:string, start_date:?string, end_date:?string, base_value:string, notes:string, is_archived:bool}|null */
     public function find(int $contractId): ?array
     {
         global $wpdb;
@@ -31,7 +31,7 @@ final class ContractRepository
         $table = $wpdb->prefix . 'safecontracts_contracts';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, contract_number, customer_id, accountant_user_id, status, notes, is_archived
+                "SELECT id, contract_number, customer_id, accountant_user_id, status, start_date, end_date, base_value, notes, is_archived
                  FROM {$table} WHERE id = %d LIMIT 1",
                 $contractId
             ),
@@ -51,6 +51,9 @@ final class ContractRepository
                 ? (int) $row['accountant_user_id']
                 : null,
             'status' => (string) ($row['status'] ?? ContractStatus::DRAFT),
+            'start_date' => isset($row['start_date']) && $row['start_date'] !== '' ? (string) $row['start_date'] : null,
+            'end_date' => isset($row['end_date']) && $row['end_date'] !== '' ? (string) $row['end_date'] : null,
+            'base_value' => DecimalAmount::normalize($row['base_value'] ?? '0'),
             'notes' => (string) ($row['notes'] ?? ''),
             'is_archived' => (bool) ($row['is_archived'] ?? false),
         ];
@@ -111,6 +114,47 @@ final class ContractRepository
             $contractId
         );
         $this->executeMutation($wpdb, $sql, 'Unable to edit contract.');
+    }
+
+    public function updateDates(int $contractId, ?string $startDate, ?string $endDate, int $actorId): void
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $table = $wpdb->prefix . 'safecontracts_contracts';
+        $startSql = $startDate === null ? 'NULL' : '%s';
+        $endSql = $endDate === null ? 'NULL' : '%s';
+        $args = [];
+        if ($startDate !== null) {
+            $args[] = $startDate;
+        }
+        if ($endDate !== null) {
+            $args[] = $endDate;
+        }
+        $args[] = $actorId;
+        $args[] = $contractId;
+        $sql = $wpdb->prepare(
+            "UPDATE {$table}
+             SET start_date = {$startSql}, end_date = {$endSql}, updated_by = %d, updated_at = UTC_TIMESTAMP()
+             WHERE id = %d",
+            ...$args
+        );
+        $this->executeMutation($wpdb, $sql, 'Unable to update contract dates.');
+    }
+
+    public function updateBaseValue(int $contractId, string $baseValue, int $actorId): void
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $table = $wpdb->prefix . 'safecontracts_contracts';
+        $sql = $wpdb->prepare(
+            "UPDATE {$table}
+             SET base_value = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
+             WHERE id = %d",
+            $baseValue,
+            $actorId,
+            $contractId
+        );
+        $this->executeMutation($wpdb, $sql, 'Unable to update contract base value.');
     }
 
     public function assignCustomer(int $contractId, int $customerId, int $actorId): void
