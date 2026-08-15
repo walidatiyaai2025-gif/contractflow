@@ -14,6 +14,7 @@ $GLOBALS['sc_test_action_accepted_args'] = [];
 $GLOBALS['sc_test_activation_hooks'] = [];
 $GLOBALS['sc_test_deactivation_hooks'] = [];
 $GLOBALS['sc_test_options'] = [];
+$GLOBALS['sc_test_option_autoload'] = [];
 $GLOBALS['sc_test_roles'] = [];
 $GLOBALS['sc_test_routes'] = [];
 $GLOBALS['sc_test_dbdelta'] = [];
@@ -130,7 +131,12 @@ function do_action(string $hook, mixed ...$args): void
     }
 }
 function get_option(string $key, mixed $default = false): mixed { return $GLOBALS['sc_test_options'][$key] ?? $default; }
-function update_option(string $key, mixed $value, bool $autoload = true): bool { unset($autoload); $GLOBALS['sc_test_options'][$key] = $value; return true; }
+function update_option(string $key, mixed $value, bool $autoload = true): bool
+{
+    $GLOBALS['sc_test_options'][$key] = $value;
+    $GLOBALS['sc_test_option_autoload'][$key] = $autoload;
+    return true;
+}
 function get_role(string $slug): ?SC_Test_Role { return $GLOBALS['sc_test_roles'][$slug] ?? null; }
 function add_role(string $slug, string $name, array $caps): SC_Test_Role { unset($name); $role = new SC_Test_Role($caps); $GLOBALS['sc_test_roles'][$slug] = $role; return $role; }
 function current_user_can(string $capability): bool { return (bool) ($GLOBALS['sc_test_current_caps'][$capability] ?? false); }
