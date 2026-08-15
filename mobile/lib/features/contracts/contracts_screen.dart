@@ -11,7 +11,7 @@ final class ContractsScreen extends StatefulWidget {
   const ContractsScreen({
     required this.controller,
     required this.customers,
-    required this.currency,
+    this.currency = const MobileCurrencyConfig.defaults(),
     required this.onOpenContract,
     super.key,
   });
@@ -92,8 +92,10 @@ final class _ContractsToolbar extends StatelessWidget {
         runSpacing: 10,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(l10n.t('Contracts'),
-              style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            l10n.t('Contracts'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           SizedBox(
             width: 210,
             child: DropdownButtonFormField<int>(
@@ -256,7 +258,8 @@ final class _ContractsContent extends StatelessWidget {
             const Icon(Icons.description_outlined, size: 48),
             const SizedBox(height: 12),
             Center(
-                child: Text(l10n.t('No contracts match the current filters.'))),
+              child: Text(l10n.t('No contracts match the current filters.')),
+            ),
           ],
         ),
       );
