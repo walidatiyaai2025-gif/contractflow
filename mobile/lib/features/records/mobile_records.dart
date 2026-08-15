@@ -1,38 +1,5 @@
 import '../../core/api/api_client.dart';
 
-final class CustomerRecord {
-  const CustomerRecord({
-    required this.id,
-    required this.name,
-    required this.isActive,
-    this.internalCode,
-    this.contactName,
-    this.email,
-    this.phone,
-  });
-
-  final int id;
-  final String name;
-  final bool isActive;
-  final String? internalCode;
-  final String? contactName;
-  final String? email;
-  final String? phone;
-
-  factory CustomerRecord.fromData(Object? value) {
-    final data = apiObjectMap(value, 'customer');
-    return CustomerRecord(
-      id: recordInt(data['id'], 'customer.id'),
-      name: recordString(data['name'], 'Customer'),
-      isActive: recordBool(data['is_active']),
-      internalCode: recordNullableString(data['internal_code']),
-      contactName: recordNullableString(data['contact_name']),
-      email: recordNullableString(data['email']),
-      phone: recordNullableString(data['phone']),
-    );
-  }
-}
-
 final class ContractRecord {
   const ContractRecord({
     required this.id,
@@ -255,6 +222,7 @@ final class FollowUpHistoryRecord {
 
 final class FollowUpReceipt {
   const FollowUpReceipt({required this.id, required this.paymentId});
+
   final int id;
   final int paymentId;
 
