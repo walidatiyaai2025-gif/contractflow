@@ -33,14 +33,28 @@ Use the header language switcher or append:
 
 Language selection is intentionally theme-local and does not change the WordPress admin locale or plugin behavior.
 
-## CTA configuration
+## Homepage backend editor
 
-In **Appearance → Customize → SafeContracts Public Page** configure:
+Open **Appearance → SafeContracts Home** to manage the public landing page without editing code.
 
-- Demo / primary CTA URL
-- Login URL
+The editor includes:
 
-The default login target uses WordPress' own login URL. No credentials are embedded in the theme.
+- Arabic homepage copy
+- English homepage copy
+- Primary, secondary and CTA button colors
+- Button destinations under **Links / الروابط**
+
+Editable button destinations are:
+
+- Request Demo — Header
+- Login
+- Hero Primary
+- Hero Secondary
+- Final CTA
+
+A destination may be a full URL, a site-relative path, or a same-page anchor such as `#benefits`.
+
+Legacy Demo/Login URLs from the WordPress Customizer are still used as fallbacks until a value is saved in the new button-links editor.
 
 ## Assets
 
