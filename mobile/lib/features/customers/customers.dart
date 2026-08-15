@@ -279,8 +279,8 @@ final class CustomersController extends ChangeNotifier {
 
 int _positiveInt(Object? value, String field) {
   final parsed = switch (value) {
-    int value => value,
-    String value => int.tryParse(value),
+    final int value => value,
+    final String value => int.tryParse(value),
     _ => null,
   };
   if (parsed == null || parsed <= 0) {
@@ -296,8 +296,8 @@ int _boundedInt(
   required int maximum,
 }) {
   final parsed = switch (value) {
-    int value => value,
-    String value => int.tryParse(value),
+    final int value => value,
+    final String value => int.tryParse(value),
     _ => null,
   };
   if (parsed == null || parsed < minimum || parsed > maximum) {
