@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+vendor/
+node_modules/
+coverage/
+*.log
+wordpress-plugin/safecontracts/.phpunit.result.cache
