@@ -5,6 +5,9 @@ declare(strict_types=1);
 if (! defined('ABSPATH')) {
     define('ABSPATH', __DIR__ . '/wp-stub/');
 }
+if (! defined('ARRAY_A')) {
+    define('ARRAY_A', 'ARRAY_A');
+}
 
 $GLOBALS['sc_test_actions'] = [];
 $GLOBALS['sc_test_activation_hooks'] = [];
@@ -14,6 +17,9 @@ $GLOBALS['sc_test_roles'] = [];
 $GLOBALS['sc_test_routes'] = [];
 $GLOBALS['sc_test_dbdelta'] = [];
 $GLOBALS['sc_test_queries'] = [];
+$GLOBALS['sc_test_read_queries'] = [];
+$GLOBALS['sc_test_results'] = [];
+$GLOBALS['sc_test_admin_pages'] = [];
 $GLOBALS['sc_test_current_caps'] = [];
 $GLOBALS['sc_test_fired_actions'] = [];
 
@@ -52,17 +58,32 @@ final class SC_Test_Wpdb
         return vsprintf($query, $prepared);
     }
 
-    public function query(string $sql): int
+    public function query(string $sql): int|false
     {
         $GLOBALS['sc_test_queries'][] = $sql;
         return 1;
+    }
+
+    public function get_results(string $sql, mixed $output = null): array
+    {
+        unset($output);
+        $GLOBALS['sc_test_read_queries'][] = $sql;
+        return $GLOBALS['sc_test_results'];
     }
 }
 
 $GLOBALS['wpdb'] = new SC_Test_Wpdb();
 $GLOBALS['sc_test_roles']['administrator'] = new SC_Test_Role(['read' => true]);
 
-class WP_REST_Request {}
+class WP_REST_Request
+{
+    public function __construct(private array $jsonParams = []) {}
+
+    public function get_json_params(): array
+    {
+        return $this->jsonParams;
+    }
+}
 class WP_REST_Response
 {
     public function __construct(public mixed $data = null, public int $status = 200) {}
@@ -70,6 +91,7 @@ class WP_REST_Response
 class WP_REST_Server
 {
     public const READABLE = 'GET';
+    public const CREATABLE = 'POST';
 }
 class WP_Error
 {
@@ -96,9 +118,21 @@ function add_role(string $slug, string $name, array $caps): SC_Test_Role { unset
 function current_user_can(string $capability): bool { return (bool) ($GLOBALS['sc_test_current_caps'][$capability] ?? false); }
 function get_current_user_id(): int { return 42; }
 function register_rest_route(string $namespace, string $route, array $args): void { $GLOBALS['sc_test_routes'][$namespace . $route] = $args; }
+function add_options_page(string $pageTitle, string $menuTitle, string $capability, string $menuSlug, callable $callback): string
+{
+    $GLOBALS['sc_test_admin_pages'][$menuSlug] = [
+        'page_title' => $pageTitle,
+        'menu_title' => $menuTitle,
+        'capability' => $capability,
+        'callback' => $callback,
+    ];
+    return 'settings_page_' . $menuSlug;
+}
 function __return_true(): bool { return true; }
 function __(string $text, string $domain = 'default'): string { unset($domain); return $text; }
 function esc_html__(string $text, string $domain = 'default'): string { unset($domain); return $text; }
+function sanitize_key(string $key): string { return preg_replace('/[^a-z0-9_-]/', '', strtolower($key)) ?? ''; }
+function sanitize_text_field(string $text): string { return trim(strip_tags($text)); }
 function deactivate_plugins(string $plugin): void { unset($plugin); }
 function wp_die(string $message, string $title = '', array $args = []): never { unset($title, $args); throw new RuntimeException($message); }
 function dbDelta(string $sql): array { $GLOBALS['sc_test_dbdelta'][] = $sql; return []; }
