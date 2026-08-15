@@ -26,7 +26,6 @@ void main() {
         ),
         throwsFormatException,
       );
-
       final environment = _environment();
       expect(
         () => environment.endpoint('https://evil.example.test/session'),
@@ -39,11 +38,11 @@ void main() {
       expect(() => environment.endpoint('../session'), throwsFormatException);
     });
 
-    test('typed JSON mutations are bounded and preserve canonical headers',
+    test('typed JSON mutations preserve canonical headers and body rules',
         () async {
-      final transport = FakeApiTransport((uri) => _ok(<String, Object?>{
-            'updated': true,
-          }));
+      final transport = FakeApiTransport(
+        (uri) => _ok(<String, Object?>{'updated': true}),
+      );
       final client = _client(
         transport,
         headersProvider: () async => <String, String>{
@@ -51,22 +50,16 @@ void main() {
           'X-SafeContracts-Session': 'opaque-test-session',
         },
       );
-
       await client.patch(
         'payments/21',
         body: <String, Object?>{'expected_payment_date': '2026-08-25'},
       );
-
       final request = transport.requests.single;
       expect(request.method, 'PATCH');
       expect(request.headers['Accept'], 'application/json');
       expect(request.headers['Content-Type'], 'application/json; charset=utf-8');
       expect(request.headers['X-SafeContracts-Session'], 'opaque-test-session');
-      expect(
-        jsonDecode(request.body!)['expected_payment_date'],
-        '2026-08-25',
-      );
-
+      expect(jsonDecode(request.body!)['expected_payment_date'], '2026-08-25');
       await expectLater(
         client.request('DELETE', 'payments/21', body: <String, Object?>{}),
         throwsFormatException,
@@ -94,7 +87,6 @@ void main() {
               ),
         ),
       );
-
       final v2Transport = FakeApiTransport(
         (uri) => _ok(
           <String, Object?>{'ok': true},
@@ -108,16 +100,17 @@ void main() {
   group('SC-P9-027 authentication/session validation', () {
     test('authenticated=false cannot create a local authenticated session',
         () async {
-      final transport = FakeApiTransport(
-        (uri) => _ok(<String, Object?>{
-          ..._sessionData(),
-          'authenticated': false,
-        }),
+      final controller = SessionController(
+        _client(
+          FakeApiTransport(
+            (uri) => _ok(<String, Object?>{
+              ..._sessionData(),
+              'authenticated': false,
+            }),
+          ),
+        ),
       );
-      final controller = SessionController(_client(transport));
-
       await controller.bootstrap();
-
       expect(controller.state, SessionState.error);
       expect(controller.session, isNull);
       controller.dispose();
@@ -131,7 +124,6 @@ void main() {
         }),
         throwsFormatException,
       );
-
       final controller = SessionController(
         _client(FakeApiTransport((uri) => _ok(_sessionData()))),
       );
@@ -147,13 +139,12 @@ void main() {
 
   test('SC-P9-028 dynamic configuration uses safe disabled fallbacks', () {
     final config = SafeContractsMobileConfig.fromData(<String, Object?>{
-      'support_text': 'x' * 501,
+      'support_text': List<String>.filled(501, 'x').join(),
       'default_page_size': 'not-a-number',
       'features': 'malformed',
       'firebase_service_account': 'server-secret-must-be-ignored',
       'access_token': 'must-be-ignored',
     });
-
     expect(config.supportText, isEmpty);
     expect(config.defaultPageSize, 25);
     expect(config.features.excelExport, isFalse);
@@ -182,9 +173,7 @@ void main() {
         'safecontracts_manage_followups': true,
       },
     );
-
     final policy = MobileNavigationPolicy.resolve(session, config);
-
     expect(policy.destinations, <MobileDestination>[MobileDestination.profile]);
     expect(policy.canEnterCollection, isFalse);
     expect(policy.canManageFollowUps, isFalse);
@@ -199,7 +188,6 @@ void main() {
         'overdue_exposure': '75.0500',
         'collected_total': '750.0250',
       });
-
       expect(kpis.contractCount, 3);
       expect(kpis.scheduledTotal, '1000.1250');
       expect(kpis.remainingTotal, '250.1000');
@@ -255,7 +243,6 @@ void main() {
         repository: DashboardRepository(_client(transport)),
         config: const SafeContractsMobileConfig.defaults(),
       );
-
       await expectLater(controller.selectCustomer(999), throwsArgumentError);
       expect(transport.requests, isEmpty);
       controller.dispose();
@@ -276,10 +263,8 @@ void main() {
         }
         return _error(404, 'not_found', 'Not found');
       });
-      final repository = DashboardRepository(_client(transport));
-
       await expectLater(
-        repository.loadContractOptions(8),
+        DashboardRepository(_client(transport)).loadContractOptions(8),
         throwsFormatException,
       );
     });
@@ -293,13 +278,11 @@ void main() {
       );
       await controller.load();
       expect(controller.availableContracts.single.id, 70);
-
       final pending = controller.selectCustomer(8);
       expect(controller.availableContracts, isEmpty);
       expect(controller.overview, isNull);
       expect(controller.lists, isNull);
       await pending;
-
       expect(controller.state, DashboardLoadState.ready);
       expect(controller.availableContracts.single.id, 80);
       controller.dispose();
@@ -310,7 +293,6 @@ void main() {
     test('invalid filters fail before any request', () async {
       final transport = FakeApiTransport(_dashboardHandler);
       final repository = DashboardRepository(_client(transport));
-
       await expectLater(
         repository.loadOverview(const DashboardFilters(customerId: 0)),
         throwsArgumentError,
@@ -352,25 +334,22 @@ void main() {
         }
         return _error(404, 'not_found', 'Not found');
       });
-      final repository = DashboardRepository(_client(transport));
-
       await expectLater(
-        repository.loadLists(const DashboardFilters(), pageSize: 25),
+        DashboardRepository(_client(transport))
+            .loadLists(const DashboardFilters(), pageSize: 25),
         throwsFormatException,
       );
     });
   });
 
   group('SC-P9-034 mobile Excel export validation', () {
-    test('requires a real XLSX local-file ZIP signature and strips extra metadata',
-        () {
+    test('requires XLSX signature and strips extra metadata', () {
       expect(
         () => MobileExcelExport.fromData(
           _exportData(bytes: const <int>[0x50, 0x4b, 0x01, 0x02, 0x03]),
         ),
         throwsFormatException,
       );
-
       final export = MobileExcelExport.fromData(
         _exportData(
           filters: <String, Object?>{
@@ -414,9 +393,7 @@ void main() {
       validation.dispose();
 
       final network = MobileExcelExportController(
-        repository: MobileExcelExportRepository(
-          _client(const _FailingTransport()),
-        ),
+        repository: MobileExcelExportRepository(_client(const _FailingTransport())),
         filtersProvider: () => const DashboardFilters(),
         canExport: true,
         saver: _MemorySaver(),
@@ -431,13 +408,10 @@ void main() {
     test('customer page rejects duplicate rows and invalid scope metadata', () {
       expect(
         () => CustomerPage.fromEnvelope(
-          _customerEnvelope(
-            <Object?>[
-              _customerData(7, 'Alpha'),
-              _customerData(7, 'Duplicate'),
-            ],
-            perPage: 25,
-          ),
+          _customerEnvelope(<Object?>[
+            _customerData(7, 'Alpha'),
+            _customerData(7, 'Duplicate'),
+          ]),
         ),
         throwsFormatException,
       );
@@ -461,12 +435,10 @@ void main() {
         pageSize: 25,
         canAccess: true,
       );
-
       await controller.openCustomer(0);
       expect(controller.detailState, CustomerDetailLoadState.error);
       expect(controller.detailErrorMessage, contains('invalid'));
       expect(transport.requests, isEmpty);
-
       await controller.openCustomer(7);
       expect(controller.selectedCustomer?.id, 7);
       expect(controller.selectedCustomer?.name, 'Alpha');
@@ -476,107 +448,92 @@ void main() {
   });
 }
 
-AppEnvironment _environment() {
-  return AppEnvironment.fromValues(
-    name: 'local',
-    apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
-  );
-}
+AppEnvironment _environment() => AppEnvironment.fromValues(
+      name: 'local',
+      apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
+    );
 
 SafeContractsApiClient _client(
   SafeContractsTransport transport, {
   ApiHeadersProvider? headersProvider,
-}) {
-  return SafeContractsApiClient(
-    environment: _environment(),
-    transport: transport,
-    headersProvider: headersProvider,
-  );
-}
+}) =>
+    SafeContractsApiClient(
+      environment: _environment(),
+      transport: transport,
+      headersProvider: headersProvider,
+    );
 
 ApiTransportResponse _ok(
   Object? data, {
   Map<String, Object?> meta = const <String, Object?>{'api_version': 'v1'},
-}) {
-  return ApiTransportResponse(
-    statusCode: 200,
-    headers: const <String, String>{'content-type': 'application/json'},
-    body: jsonEncode(<String, Object?>{'data': data, 'meta': meta}),
-  );
-}
+}) =>
+    ApiTransportResponse(
+      statusCode: 200,
+      headers: const <String, String>{'content-type': 'application/json'},
+      body: jsonEncode(<String, Object?>{'data': data, 'meta': meta}),
+    );
 
-ApiTransportResponse _error(int status, String code, String message) {
-  return ApiTransportResponse(
-    statusCode: status,
-    headers: const <String, String>{'content-type': 'application/json'},
-    body: jsonEncode(<String, Object?>{
-      'code': code,
-      'message': message,
-      'data': <String, Object?>{'status': status},
-    }),
-  );
-}
+ApiTransportResponse _error(int status, String code, String message) =>
+    ApiTransportResponse(
+      statusCode: status,
+      headers: const <String, String>{'content-type': 'application/json'},
+      body: jsonEncode(<String, Object?>{
+        'code': code,
+        'message': message,
+        'data': <String, Object?>{'status': status},
+      }),
+    );
 
-Map<String, Object?> _sessionData() {
-  return <String, Object?>{
-    'authenticated': true,
-    'user_id': 42,
-    'scope': 'assigned',
-    'capabilities': <String, Object?>{
-      'safecontracts_access': true,
-      'safecontracts_view_assigned': true,
-      'safecontracts_view_all': false,
-      'safecontracts_view_reports': true,
-      'safecontracts_export_reports': true,
-    },
-  };
-}
+Map<String, Object?> _sessionData() => <String, Object?>{
+      'authenticated': true,
+      'user_id': 42,
+      'scope': 'assigned',
+      'capabilities': <String, Object?>{
+        'safecontracts_access': true,
+        'safecontracts_view_assigned': true,
+        'safecontracts_view_all': false,
+        'safecontracts_view_reports': true,
+        'safecontracts_export_reports': true,
+      },
+    };
 
 Map<String, Object?> _dashboardData({
   List<Object?>? customers,
   List<Object?>? contracts,
-}) {
-  return <String, Object?>{
-    'filters': <String, Object?>{},
-    'kpis': <String, Object?>{
-      'contract_count': '1',
-      'scheduled_total': '100.0000',
-      'remaining_total': '40.0000',
-      'overdue_exposure': '40.0000',
-      'collected_total': '60.0000',
-    },
-    'customers': customers ??
-        <Object?>[
-          <String, Object?>{'id': 7, 'name': 'Alpha Customer'},
-          <String, Object?>{'id': 8, 'name': 'Beta Customer'},
-        ],
-    'contracts': contracts ??
-        <Object?>[
-          <String, Object?>{
-            'id': 70,
-            'contract_number': 'SC-70',
-            'customer_id': 7,
-          },
-        ],
-  };
-}
+}) =>
+    <String, Object?>{
+      'filters': <String, Object?>{},
+      'kpis': <String, Object?>{
+        'contract_count': '1',
+        'scheduled_total': '100.0000',
+        'remaining_total': '40.0000',
+        'overdue_exposure': '40.0000',
+        'collected_total': '60.0000',
+      },
+      'customers': customers ??
+          <Object?>[
+            <String, Object?>{'id': 7, 'name': 'Alpha Customer'},
+            <String, Object?>{'id': 8, 'name': 'Beta Customer'},
+          ],
+      'contracts': contracts ??
+          <Object?>[
+            <String, Object?>{
+              'id': 70,
+              'contract_number': 'SC-70',
+              'customer_id': 7,
+            },
+          ],
+    };
 
 ApiTransportResponse _dashboardHandler(Uri uri) {
   if (uri.path.endsWith('/filters/contracts')) {
     final customerId = uri.queryParameters['customer_id'];
     return _ok(<Object?>[
-      if (customerId == '8')
-        <String, Object?>{
-          'id': 80,
-          'contract_number': 'SC-80',
-          'customer_id': 8,
-        }
-      else
-        <String, Object?>{
-          'id': 70,
-          'contract_number': 'SC-70',
-          'customer_id': 7,
-        },
+      <String, Object?>{
+        'id': customerId == '8' ? 80 : 70,
+        'contract_number': customerId == '8' ? 'SC-80' : 'SC-70',
+        'customer_id': customerId == '8' ? 8 : 7,
+      },
     ]);
   }
   if (uri.path.endsWith('/dashboard')) {
@@ -584,18 +541,11 @@ ApiTransportResponse _dashboardHandler(Uri uri) {
     return _ok(
       _dashboardData(
         contracts: <Object?>[
-          if (customerId == '8')
-            <String, Object?>{
-              'id': 80,
-              'contract_number': 'SC-80',
-              'customer_id': 8,
-            }
-          else
-            <String, Object?>{
-              'id': 70,
-              'contract_number': 'SC-70',
-              'customer_id': 7,
-            },
+          <String, Object?>{
+            'id': customerId == '8' ? 80 : 70,
+            'contract_number': customerId == '8' ? 'SC-80' : 'SC-70',
+            'customer_id': customerId == '8' ? 8 : 7,
+          },
         ],
       ),
     );
@@ -657,61 +607,55 @@ const _xlsxBytes = <int>[0x50, 0x4b, 0x03, 0x04, 0x01, 0x02, 0x03];
 Map<String, Object?> _exportData({
   List<int> bytes = _xlsxBytes,
   Map<String, Object?> filters = const <String, Object?>{'customer_id': 7},
-}) {
-  return <String, Object?>{
-    'filename': 'SafeContracts-report.xlsx',
-    'content_type': MobileExcelExport.xlsxContentType,
-    'encoding': 'base64',
-    'content_base64': base64Encode(bytes),
-    'filters': filters,
-    'row_counts': <String, Object?>{
-      'customers': 1,
-      'contracts': 1,
-      'payments': 1,
-      'collections': 1,
-      'followups': 1,
-      'private_internal_rows': 999,
-    },
-  };
-}
+}) =>
+    <String, Object?>{
+      'filename': 'SafeContracts-report.xlsx',
+      'content_type': MobileExcelExport.xlsxContentType,
+      'encoding': 'base64',
+      'content_base64': base64Encode(bytes),
+      'filters': filters,
+      'row_counts': <String, Object?>{
+        'customers': 1,
+        'contracts': 1,
+        'payments': 1,
+        'collections': 1,
+        'followups': 1,
+        'private_internal_rows': 999,
+      },
+    };
 
-Map<String, Object?> _customerData(int id, String name) {
-  return <String, Object?>{
-    'id': id,
-    'internal_code': 'C$id',
-    'name': name,
-    'contact_name': 'Operations',
-    'email': 'ops@example.test',
-    'phone': '+96555555555',
-    'is_active': '1',
-  };
-}
+Map<String, Object?> _customerData(int id, String name) => <String, Object?>{
+      'id': id,
+      'internal_code': 'C$id',
+      'name': name,
+      'contact_name': 'Operations',
+      'email': 'ops@example.test',
+      'phone': '+96555555555',
+      'is_active': '1',
+    };
 
 ApiEnvelope _customerEnvelope(
   List<Object?> customers, {
-  int perPage = 25,
   String scope = 'assigned',
-}) {
-  return ApiEnvelope(
-    data: customers,
-    meta: <String, Object?>{
-      'api_version': 'v1',
-      'scope': scope,
-      'page': 1,
-      'per_page': perPage,
-      'sort': 'name',
-      'order': 'asc',
-      'bounded_window': 500,
-      'has_more': false,
-    },
-  );
-}
+}) =>
+    ApiEnvelope(
+      data: customers,
+      meta: <String, Object?>{
+        'api_version': 'v1',
+        'scope': scope,
+        'page': 1,
+        'per_page': 25,
+        'sort': 'name',
+        'order': 'asc',
+        'bounded_window': 500,
+        'has_more': false,
+      },
+    );
 
 final class _MemorySaver implements ExcelExportSaver {
   @override
-  Future<String> save(MobileExcelExport export) async {
-    return '/memory/${export.filename}';
-  }
+  Future<String> save(MobileExcelExport export) async =>
+      '/memory/${export.filename}';
 }
 
 final class _FailingTransport implements SafeContractsTransport {
