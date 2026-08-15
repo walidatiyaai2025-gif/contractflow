@@ -208,6 +208,9 @@ final class ContractService
     {
         $contract = $this->requireContract($contractId);
         $this->assertScope($contract);
+        if ($contract['is_archived']) {
+            throw new DomainException('Archived contracts cannot be edited.');
+        }
         return $contract;
     }
 
