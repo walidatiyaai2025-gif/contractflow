@@ -50,7 +50,8 @@ final class DevicesSnapshot {
     }
     final rows = apiObjectList(envelope.data, 'devices.data');
     if (rows.length > maxDevices) {
-      throw const FormatException('device payload exceeds the supported bound.');
+      throw const FormatException(
+          'device payload exceeds the supported bound.');
     }
     final devices =
         rows.map(SafeContractsDevice.fromData).toList(growable: false);
