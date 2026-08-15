@@ -82,9 +82,8 @@ final class NotificationPage {
 
   factory NotificationPage.fromEnvelope(ApiEnvelope envelope) {
     final rows = apiObjectList(envelope.data, 'notifications.data');
-    final notifications = rows
-        .map(SafeContractsNotification.fromData)
-        .toList(growable: false);
+    final notifications =
+        rows.map(SafeContractsNotification.fromData).toList(growable: false);
     final ids = <int>{};
     for (final notification in notifications) {
       if (!ids.add(notification.id)) {
@@ -100,7 +99,8 @@ final class NotificationPage {
     }
 
     return NotificationPage(
-      notifications: List<SafeContractsNotification>.unmodifiable(notifications),
+      notifications:
+          List<SafeContractsNotification>.unmodifiable(notifications),
       page: page,
       perPage: perPage,
       hasMore: _boolish(meta['has_more'], 'meta.has_more'),
@@ -141,7 +141,8 @@ final class NotificationsRepository {
     final data = apiObjectMap(envelope.data, 'notification_read.data');
     if (_positiveInt(data['id'], 'notification_read.id') != notificationId ||
         _boolish(data['is_read'], 'notification_read.is_read') != true) {
-      throw const FormatException('Notification read acknowledgement is invalid.');
+      throw const FormatException(
+          'Notification read acknowledgement is invalid.');
     }
   }
 }
@@ -190,7 +191,9 @@ final class NotificationsController extends ChangeNotifier {
       final nextPage = await repository.loadPage(page: page, perPage: pageSize);
       currentPage = nextPage;
       _readIds.addAll(
-        nextPage.notifications.where((item) => item.isRead).map((item) => item.id),
+        nextPage.notifications
+            .where((item) => item.isRead)
+            .map((item) => item.id),
       );
       state = NotificationsLoadState.ready;
     } on SafeContractsApiException catch (error) {
@@ -224,9 +227,9 @@ final class NotificationsController extends ChangeNotifier {
   Future<SafeContractsDeepLink?> openNotification(
     SafeContractsNotification notification,
   ) async {
-    final visible = currentPage?.notifications
-            .any((item) => item.id == notification.id) ??
-        false;
+    final visible =
+        currentPage?.notifications.any((item) => item.id == notification.id) ??
+            false;
     if (!visible) {
       return null;
     }
