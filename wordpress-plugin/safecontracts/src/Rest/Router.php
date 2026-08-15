@@ -30,6 +30,10 @@ final class Router
         ]);
 
         PaymentMethodsController::register();
+        DashboardController::register();
+        MobileConfigController::register();
+        ReferenceDataController::register();
+        ExcelExportController::register();
     }
 
     public static function health(WP_REST_Request $request): WP_REST_Response
