@@ -7,16 +7,19 @@ import 'core/api/io_api_transport.dart';
 import 'core/config/app_environment.dart';
 import 'features/bootstrap/mobile_bootstrap_controller.dart';
 import 'features/navigation/app_shell.dart';
+import 'features/ui/mobile_layout.dart';
 
 class SafeContractsApp extends StatefulWidget {
   const SafeContractsApp({
     required this.environment,
     this.client,
+    this.languageCode = 'en',
     super.key,
   });
 
   final AppEnvironment environment;
   final SafeContractsApiClient? client;
+  final String languageCode;
 
   @override
   State<SafeContractsApp> createState() => _SafeContractsAppState();
@@ -53,6 +56,10 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF173B65)),
         useMaterial3: true,
       ),
+      builder: (context, child) => SafeContractsDirectionScope(
+        languageCode: widget.languageCode,
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: _BootstrapView(
         environment: widget.environment,
         controller: _bootstrap,
@@ -82,6 +89,8 @@ final class _BootstrapView extends StatelessWidget {
           final dashboard = controller.dashboardController;
           final customers = controller.customersController;
           final contracts = controller.contractsController;
+          final notifications = controller.notificationsController;
+          final profile = controller.profileController;
           final excelExport = controller.excelExportController;
           if (session != null &&
               config != null &&
@@ -89,6 +98,8 @@ final class _BootstrapView extends StatelessWidget {
               dashboard != null &&
               customers != null &&
               contracts != null &&
+              notifications != null &&
+              profile != null &&
               excelExport != null) {
             return SafeContractsShell(
               session: session,
@@ -97,6 +108,8 @@ final class _BootstrapView extends StatelessWidget {
               dashboardController: dashboard,
               customersController: customers,
               contractsController: contracts,
+              notificationsController: notifications,
+              profileController: profile,
               excelExportController: excelExport,
               usingConfigDefaults: controller.usingConfigDefaults,
               onClearSession: controller.signOutLocalState,

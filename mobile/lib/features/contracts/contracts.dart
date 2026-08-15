@@ -13,6 +13,13 @@ enum ContractDetailLoadState {
   error,
 }
 
+const _supportedContractFilterStatuses = <String>{
+  'draft',
+  'active',
+  'completed',
+  'cancelled',
+};
+
 final class ContractSortOption {
   const ContractSortOption({
     required this.label,
@@ -67,7 +74,20 @@ final class ContractsFilters {
     return ContractsFilters(customerId: customerId, status: value);
   }
 
+  void validate() {
+    if (customerId != null && customerId! <= 0) {
+      throw ArgumentError.value(customerId, 'customerId', 'Invalid customer.');
+    }
+    if (status != null &&
+        status!.isNotEmpty &&
+        !_supportedContractFilterStatuses.contains(status)) {
+      throw ArgumentError.value(
+          status, 'status', 'Unsupported contract status.');
+    }
+  }
+
   Map<String, String> toQuery() {
+    validate();
     return <String, String>{
       if (customerId != null) 'customer_id': '$customerId',
       if (status != null && status!.isNotEmpty) 'status': status!,
@@ -114,10 +134,11 @@ final class SafeContractsContract {
         data['accountant_user_id'],
         'contract.accountant_user_id',
       ),
+      // Status is server-authoritative and intentionally opaque to mobile.
       status: _requiredText(data['status'], 'contract.status'),
-      startDate: _optionalText(data['start_date']),
-      endDate: _optionalText(data['end_date']),
-      baseValue: _optionalScalarText(data['base_value']),
+      startDate: _optionalIsoDate(data['start_date'], 'contract.start_date'),
+      endDate: _optionalIsoDate(data['end_date'], 'contract.end_date'),
+      baseValue: _optionalMoneyText(data['base_value'], 'contract.base_value'),
       isArchived: _boolish(data['is_archived'], 'contract.is_archived'),
     );
   }
@@ -148,6 +169,13 @@ final class ContractPage {
     final rows = apiObjectList(envelope.data, 'contracts.data');
     final contracts =
         rows.map(SafeContractsContract.fromData).toList(growable: false);
+    final ids = <int>{};
+    for (final contract in contracts) {
+      if (!ids.add(contract.id)) {
+        throw const FormatException('contracts contain duplicate IDs.');
+      }
+    }
+
     final meta = envelope.meta;
     final page = _boundedInt(meta['page'], 'meta.page', minimum: 1, maximum: 5);
     final perPage = _boundedInt(
@@ -170,6 +198,10 @@ final class ContractPage {
     if (order != 'asc' && order != 'desc') {
       throw const FormatException('Contract order metadata is invalid.');
     }
+    final scope = _optionalText(meta['scope']);
+    if (scope != null && scope != 'all' && scope != 'assigned') {
+      throw const FormatException('Contract scope metadata is invalid.');
+    }
 
     return ContractPage(
       contracts: List<SafeContractsContract>.unmodifiable(contracts),
@@ -179,7 +211,7 @@ final class ContractPage {
       order: order,
       hasMore: _boolish(meta['has_more'], 'meta.has_more'),
       boundedWindow: boundedWindow,
-      scope: _optionalText(meta['scope']),
+      scope: scope,
     );
   }
 }
@@ -204,6 +236,7 @@ final class ContractsRepository {
     if (!ContractSortOption.values.contains(sort)) {
       throw ArgumentError('Unsupported contract sort.');
     }
+    filters.validate();
 
     final query = filters.toQuery()
       ..addAll(<String, String>{
@@ -233,12 +266,7 @@ final class ContractsController extends ChangeNotifier {
     required this.canEditContract,
   }) : pageSize = pageSize.clamp(1, 100).toInt();
 
-  static const supportedContractStatuses = <String>{
-    'draft',
-    'active',
-    'completed',
-    'cancelled',
-  };
+  static const supportedContractStatuses = _supportedContractFilterStatuses;
 
   final ContractsRepository repository;
   final int pageSize;
@@ -274,6 +302,7 @@ final class ContractsController extends ChangeNotifier {
       return;
     }
 
+    currentPage = null;
     state = ContractsLoadState.loading;
     errorMessage = null;
     notifyListeners();
@@ -287,18 +316,18 @@ final class ContractsController extends ChangeNotifier {
       );
       state = ContractsLoadState.ready;
     } on SafeContractsApiException catch (error) {
+      currentPage = null;
       errorMessage = error.message;
       state = ContractsLoadState.error;
     } on Object catch (error) {
+      currentPage = null;
       errorMessage = error.toString();
       state = ContractsLoadState.error;
     }
     notifyListeners();
   }
 
-  Future<void> refresh() async {
-    await loadPage(currentPage?.page ?? 1);
-  }
+  Future<void> refresh() => loadPage(currentPage?.page ?? 1);
 
   Future<void> previousPage() async {
     final page = currentPage?.page ?? 1;
@@ -326,9 +355,12 @@ final class ContractsController extends ChangeNotifier {
     final normalized = status?.trim().toLowerCase();
     if (normalized != null &&
         normalized.isNotEmpty &&
-        !supportedContractStatuses.contains(normalized)) {
+        !_supportedContractFilterStatuses.contains(normalized)) {
       throw ArgumentError.value(
-          status, 'status', 'Unsupported contract status.');
+        status,
+        'status',
+        'Unsupported contract status.',
+      );
     }
     filters = filters.withStatus(
       normalized == null || normalized.isEmpty ? null : normalized,
@@ -348,8 +380,16 @@ final class ContractsController extends ChangeNotifier {
   }
 
   Future<void> openContract(int id) async {
-    if (!canAccess || id <= 0) {
-      selectedContractId = id > 0 ? id : null;
+    if (id <= 0) {
+      selectedContractId = null;
+      selectedContract = null;
+      detailErrorMessage = 'Contract ID is invalid.';
+      detailState = ContractDetailLoadState.error;
+      notifyListeners();
+      return;
+    }
+    if (!canAccess) {
+      selectedContractId = id;
       selectedContract = null;
       detailErrorMessage =
           'Contract access is not authorized for this session.';
@@ -447,7 +487,11 @@ String _requiredText(Object? value, String field) {
   if (value is! String || value.trim().isEmpty) {
     throw FormatException('$field must be a non-empty string.');
   }
-  return value.trim();
+  final normalized = value.trim();
+  if (normalized.length > 256) {
+    throw FormatException('$field is too long.');
+  }
+  return normalized;
 }
 
 String? _optionalText(Object? value) {
@@ -458,21 +502,43 @@ String? _optionalText(Object? value) {
     throw const FormatException('Contract text field must be string or null.');
   }
   final normalized = value.trim();
+  if (normalized.length > 256) {
+    throw const FormatException('Contract text field is too long.');
+  }
   return normalized.isEmpty ? null : normalized;
 }
 
-String? _optionalScalarText(Object? value) {
-  if (value == null) {
+String? _optionalIsoDate(Object? value, String field) {
+  final text = _optionalText(value);
+  if (text == null) {
     return null;
   }
-  if (value is String) {
-    final normalized = value.trim();
-    return normalized.isEmpty ? null : normalized;
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(text);
+  if (match == null) {
+    throw FormatException('$field must use YYYY-MM-DD.');
   }
-  if (value is num) {
-    return value.toString();
+  final parsed = DateTime.tryParse(text);
+  if (parsed == null ||
+      parsed.year != int.parse(match.group(1)!) ||
+      parsed.month != int.parse(match.group(2)!) ||
+      parsed.day != int.parse(match.group(3)!)) {
+    throw FormatException('$field is invalid.');
   }
-  throw const FormatException('Contract scalar field is invalid.');
+  return text;
+}
+
+String? _optionalMoneyText(Object? value, String field) {
+  if (value == null || value == '') {
+    return null;
+  }
+  if (value is! String) {
+    throw FormatException('$field must be an exact server money string.');
+  }
+  final normalized = value.trim();
+  if (!RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(normalized)) {
+    throw FormatException('$field is invalid.');
+  }
+  return normalized;
 }
 
 bool _boolish(Object? value, String field) {

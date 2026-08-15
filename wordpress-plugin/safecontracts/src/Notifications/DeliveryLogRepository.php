@@ -64,6 +64,57 @@ final class DeliveryLogRepository
         return is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
     }
 
+    /**
+     * Return only delivery data needed by the authenticated user's mobile inbox.
+     * Device tokens, transport responses and delivery errors stay server-internal.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function recentForUser(int $userId, int $limit = 51, int $offset = 0): array
+    {
+        global $wpdb;
+        if ($userId <= 0) {
+            throw new InvalidArgumentException('Notification inbox requires a valid user.');
+        }
+        $limit = max(1, min(101, $limit));
+        $offset = max(0, min(500, $offset));
+        $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, payment_id, user_id, template_code, scheduled_for, created_at
+                 FROM {$table}
+                 WHERE user_id = %d AND status = 'sent'
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT %d OFFSET %d",
+                $userId,
+                $limit,
+                $offset
+            ),
+            ARRAY_A
+        );
+        return is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
+    }
+
+    public function hasSentForUser(int $notificationId, int $userId): bool
+    {
+        global $wpdb;
+        if ($notificationId <= 0 || $userId <= 0) {
+            return false;
+        }
+        $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id FROM {$table}
+                 WHERE id = %d AND user_id = %d AND status = 'sent'
+                 LIMIT 1",
+                $notificationId,
+                $userId
+            ),
+            ARRAY_A
+        );
+        return is_array($rows) && $rows !== [];
+    }
+
     private function normalizeErrorCode(?string $value): ?string
     {
         if ($value === null || trim($value) === '') {
