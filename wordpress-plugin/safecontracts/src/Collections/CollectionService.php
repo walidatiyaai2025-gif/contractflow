@@ -9,7 +9,9 @@ use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Contracts\ContractMoney;
 use SafeContracts\Payments\PaymentRepository;
+use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
+use Throwable;
 
 final class CollectionService
 {
@@ -55,28 +57,64 @@ final class CollectionService
         $reference = $this->normalizeOptionalText($input['reference'] ?? null, 191, 'Collection reference');
         $details = $this->normalizeOptionalText($input['details'] ?? null, 5000, 'Collection details');
         $proofMediaId = $this->normalizeProofMediaId($input['proof_media_id'] ?? null);
-
-        $payment = $this->requirePayment($paymentId);
-        $this->assertScope($payment['accountant_user_id']);
-        if ($payment['contract_is_archived']) {
-            throw new DomainException('Collections cannot be recorded against archived contracts.');
-        }
-
-        if (! $this->repository->paymentMethodIsActive($paymentMethodId)) {
-            throw new InvalidArgumentException('Collection payment method must be an active SafeContracts payment method.');
-        }
-
         $actorId = get_current_user_id();
-        $collectionId = $this->repository->create(
-            $paymentId,
-            $amount,
-            $collectionDate,
-            $paymentMethodId,
-            $reference,
-            $details,
-            $proofMediaId,
-            $actorId
-        );
+
+        $this->repository->beginTransaction();
+        try {
+            $payment = $this->repository->lockPayment($paymentId);
+            if ($payment === null) {
+                throw new InvalidArgumentException('Collection payment was not found.');
+            }
+            $this->assertScope($payment['accountant_user_id']);
+            if ($payment['contract_is_archived']) {
+                throw new DomainException('Collections cannot be recorded against archived contracts.');
+            }
+            if (! $this->repository->paymentMethodIsActive($paymentMethodId)) {
+                throw new InvalidArgumentException('Collection payment method must be an active SafeContracts payment method.');
+            }
+
+            $originalAmount = ContractMoney::normalizeNonNegative($payment['original_amount']);
+            $storedPaid = ContractMoney::normalizeNonNegative($payment['paid_amount']);
+            $storedRemaining = ContractMoney::normalizeNonNegative($payment['remaining_amount']);
+            $ledgerCollected = ContractMoney::normalizeNonNegative($this->repository->collectedTotal($paymentId));
+
+            $this->assertStoredIntegrity(
+                $originalAmount,
+                $storedPaid,
+                $storedRemaining,
+                $ledgerCollected,
+                $payment['status']
+            );
+
+            $newPaid = ContractMoney::add($ledgerCollected, $amount);
+            if (ContractMoney::compare($newPaid, $originalAmount) > 0) {
+                throw new DomainException('Collection amount exceeds the payment remaining balance.');
+            }
+            $newRemaining = ContractMoney::subtract($originalAmount, $newPaid);
+            $newStatus = $newRemaining === '0.0000' ? PaymentStatus::PAID : PaymentStatus::PARTIALLY_PAID;
+
+            $collectionId = $this->repository->create(
+                $paymentId,
+                $amount,
+                $collectionDate,
+                $paymentMethodId,
+                $reference,
+                $details,
+                $proofMediaId,
+                $actorId
+            );
+            $this->repository->updatePaymentSettlement(
+                $paymentId,
+                $newPaid,
+                $newRemaining,
+                $newStatus,
+                $actorId
+            );
+            $this->repository->commitTransaction();
+        } catch (Throwable $error) {
+            $this->repository->rollbackTransaction();
+            throw $error;
+        }
 
         do_action(
             'safecontracts_collection_recorded',
@@ -86,6 +124,15 @@ final class CollectionService
             $collectionDate,
             $paymentMethodId,
             $proofMediaId,
+            $actorId
+        );
+        do_action(
+            'safecontracts_payment_settled',
+            $paymentId,
+            $amount,
+            $newPaid,
+            $newRemaining,
+            $newStatus,
             $actorId
         );
 
@@ -102,6 +149,50 @@ final class CollectionService
         return $this->repository->forPayment($paymentId);
     }
 
+    /**
+     * @return array{
+     *   original_amount:string, ledger_collected:string, stored_paid_amount:string,
+     *   stored_remaining_amount:string, expected_remaining_amount:string,
+     *   stored_status:string, expected_financial_status:?string,
+     *   over_collected:bool, is_balanced:bool
+     * }
+     */
+    public function reconcilePayment(int $paymentId): array
+    {
+        $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts collection reconciliation.');
+        $payment = $this->requirePayment($paymentId);
+        $this->assertScope($payment['accountant_user_id']);
+
+        $original = ContractMoney::normalizeNonNegative($payment['original_amount']);
+        $ledger = ContractMoney::normalizeNonNegative($this->repository->collectedTotal($paymentId));
+        $storedPaid = ContractMoney::normalizeNonNegative($payment['paid_amount']);
+        $storedRemaining = ContractMoney::normalizeNonNegative($payment['remaining_amount']);
+        $overCollected = ContractMoney::compare($ledger, $original) > 0;
+        $expectedRemaining = ContractMoney::difference($original, $ledger);
+        $expectedStatus = null;
+        if ($ledger !== '0.0000' && ! $overCollected) {
+            $expectedStatus = $ledger === $original ? PaymentStatus::PAID : PaymentStatus::PARTIALLY_PAID;
+        }
+
+        $amountsBalanced = ! $overCollected
+            && ContractMoney::compare($ledger, $storedPaid) === 0
+            && $expectedRemaining === $storedRemaining
+            && ContractMoney::add($storedPaid, $storedRemaining) === $original;
+        $statusBalanced = $expectedStatus === null || PaymentStatus::normalize($payment['status']) === $expectedStatus;
+
+        return [
+            'original_amount' => $original,
+            'ledger_collected' => $ledger,
+            'stored_paid_amount' => $storedPaid,
+            'stored_remaining_amount' => $storedRemaining,
+            'expected_remaining_amount' => $expectedRemaining,
+            'stored_status' => PaymentStatus::normalize($payment['status']),
+            'expected_financial_status' => $expectedStatus,
+            'over_collected' => $overCollected,
+            'is_balanced' => $amountsBalanced && $statusBalanced,
+        ];
+    }
+
     /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, accountant_user_id:?int, contract_is_archived:bool} */
     private function requirePayment(int $paymentId): array
     {
@@ -114,6 +205,35 @@ final class CollectionService
         }
 
         return $payment;
+    }
+
+    private function assertStoredIntegrity(
+        string $originalAmount,
+        string $storedPaid,
+        string $storedRemaining,
+        string $ledgerCollected,
+        string $status
+    ): void {
+        if (ContractMoney::compare($ledgerCollected, $originalAmount) > 0) {
+            throw new DomainException('Collection ledger already exceeds the payment original amount.');
+        }
+        if (ContractMoney::compare($storedPaid, $ledgerCollected) !== 0) {
+            throw new DomainException('Payment paid amount does not reconcile with the collection ledger.');
+        }
+        $expectedRemaining = ContractMoney::subtract($originalAmount, $ledgerCollected);
+        if ($storedRemaining !== $expectedRemaining) {
+            throw new DomainException('Payment remaining amount does not reconcile with original amount and collections.');
+        }
+        if (ContractMoney::add($storedPaid, $storedRemaining) !== $originalAmount) {
+            throw new DomainException('Payment paid and remaining balances do not reconcile to the original amount.');
+        }
+
+        if ($ledgerCollected !== '0.0000') {
+            $expectedStatus = $ledgerCollected === $originalAmount ? PaymentStatus::PAID : PaymentStatus::PARTIALLY_PAID;
+            if (PaymentStatus::normalize($status) !== $expectedStatus) {
+                throw new DomainException('Payment financial status does not reconcile with collected amount.');
+            }
+        }
     }
 
     private function assertScope(?int $accountantUserId): void

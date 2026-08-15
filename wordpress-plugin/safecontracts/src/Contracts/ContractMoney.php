@@ -38,6 +38,48 @@ final class ContractMoney
         return self::fromScaled($scaled);
     }
 
+    public static function add(string $left, string $right): string
+    {
+        return self::fromScaled(
+            self::addScaled(
+                self::toScaled(self::normalizeNonNegative($left)),
+                self::toScaled(self::normalizeNonNegative($right))
+            )
+        );
+    }
+
+    public static function compare(string $left, string $right): int
+    {
+        return self::compareScaled(
+            self::toScaled(self::normalizeNonNegative($left)),
+            self::toScaled(self::normalizeNonNegative($right))
+        );
+    }
+
+    public static function subtract(string $left, string $right): string
+    {
+        $leftScaled = self::toScaled(self::normalizeNonNegative($left));
+        $rightScaled = self::toScaled(self::normalizeNonNegative($right));
+        if (self::compareScaled($leftScaled, $rightScaled) < 0) {
+            throw new InvalidArgumentException('Financial subtraction cannot produce a negative amount.');
+        }
+
+        return self::fromScaled(self::subtractScaled($leftScaled, $rightScaled));
+    }
+
+    public static function difference(string $left, string $right): string
+    {
+        $leftScaled = self::toScaled(self::normalizeNonNegative($left));
+        $rightScaled = self::toScaled(self::normalizeNonNegative($right));
+        $comparison = self::compareScaled($leftScaled, $rightScaled);
+
+        if ($comparison >= 0) {
+            return self::fromScaled(self::subtractScaled($leftScaled, $rightScaled));
+        }
+
+        return '-' . self::fromScaled(self::subtractScaled($rightScaled, $leftScaled));
+    }
+
     public static function reconcile(string $base, string $items, string $additions, string $discounts): string
     {
         $gross = self::addScaled(
