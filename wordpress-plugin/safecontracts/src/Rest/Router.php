@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Rest;
 
+use SafeContracts\Config\Environment;
 use SafeContracts\Roles\AccessScope;
 use SafeContracts\Roles\Capabilities;
 use WP_Error;
@@ -39,6 +40,7 @@ final class Router
                 'service' => 'SafeContracts',
                 'plugin_version' => SAFECONTRACTS_VERSION,
                 'api_version' => 'v1',
+                'environment' => Environment::name(),
                 'status' => 'ok',
             ],
             'meta' => [],
