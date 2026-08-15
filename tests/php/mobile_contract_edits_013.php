@@ -107,6 +107,7 @@ $missing = ContractEditController::edit(new WP_REST_Request([
 ]));
 sc_p9_013_assert($missing instanceof WP_Error && ($missing->data['status'] ?? 0) === 404, 'SC-P9-013 missing contract maps to not-found');
 
+$GLOBALS['sc_test_result_queue'] = [[sc_p9_013_contract()]];
 $invalid = ContractEditController::edit(new WP_REST_Request([
     'id' => '11', 'operation' => 'dates', 'start_date' => '2026-12-31', 'end_date' => '2026-01-01',
 ]));
