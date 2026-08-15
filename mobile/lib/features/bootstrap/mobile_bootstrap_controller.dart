@@ -7,6 +7,8 @@ import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_repository.dart';
 import '../export/mobile_excel_export.dart';
 import '../navigation/navigation_policy.dart';
+import '../notifications/mobile_notifications.dart';
+import '../profile/profile_screen.dart';
 import '../session/session_controller.dart';
 
 enum MobileBootstrapState { idle, loading, ready, blocked, error }
@@ -22,6 +24,8 @@ final class MobileBootstrapController extends ChangeNotifier {
   DashboardController? dashboardController;
   CustomersController? customersController;
   MobileExcelExportController? excelExportController;
+  MobileNotificationsController? notificationsController;
+  ProfileDeviceController? profileDeviceController;
   MobileNavigationPolicy? navigationPolicy;
   String? message;
   bool usingConfigDefaults = false;
@@ -70,7 +74,17 @@ final class MobileBootstrapController extends ChangeNotifier {
       filtersProvider: () => dashboard.filters,
       canExport: policy.destinations.contains(MobileDestination.export),
     );
-    await dashboard.load();
+    final notificationRepository = MobileNotificationsRepository(client);
+    final notifications = MobileNotificationsController(notificationRepository);
+    final profileDevice = ProfileDeviceController(notificationRepository);
+    notificationsController = notifications;
+    profileDeviceController = profileDevice;
+
+    await Future.wait<void>([
+      dashboard.load(),
+      notifications.load(preserveVisibleData: false),
+      profileDevice.load(),
+    ]);
 
     state = MobileBootstrapState.ready;
     notifyListeners();
@@ -81,9 +95,13 @@ final class MobileBootstrapController extends ChangeNotifier {
     dashboardController?.dispose();
     customersController?.dispose();
     excelExportController?.dispose();
+    notificationsController?.dispose();
+    profileDeviceController?.dispose();
     dashboardController = null;
     customersController = null;
     excelExportController = null;
+    notificationsController = null;
+    profileDeviceController = null;
     navigationPolicy = null;
     state = MobileBootstrapState.blocked;
     message = 'Local SafeContracts session state was cleared.';
@@ -97,6 +115,8 @@ final class MobileBootstrapController extends ChangeNotifier {
     dashboardController?.dispose();
     customersController?.dispose();
     excelExportController?.dispose();
+    notificationsController?.dispose();
+    profileDeviceController?.dispose();
     super.dispose();
   }
 }
