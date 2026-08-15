@@ -55,9 +55,10 @@ void main() {
       ),
       isTrue,
     );
-    final body = jsonDecode(transport.requests.single.body!)
-        as Map<String, dynamic>;
-    expect(body.keys, containsAll(<String>['contract_number', 'start_date', 'end_date']));
+    final body =
+        jsonDecode(transport.requests.single.body!) as Map<String, dynamic>;
+    expect(body.keys,
+        containsAll(<String>['contract_number', 'start_date', 'end_date']));
     expect(body.containsKey('base_value'), isFalse);
     expect(body.containsKey('status'), isFalse);
     allowed.dispose();
@@ -147,8 +148,8 @@ void main() {
     );
 
     expect(receipt.id, 31);
-    final body = jsonDecode(transport.requests.single.body!)
-        as Map<String, dynamic>;
+    final body =
+        jsonDecode(transport.requests.single.body!) as Map<String, dynamic>;
     expect(body['amount'], '10.1250');
     expect(body['payment_method_id'], 4);
     expect(body['proof_media_id'], 99);
@@ -182,7 +183,8 @@ void main() {
     final methods = await repository.paymentMethods();
 
     expect(methods.map((value) => value.id), <int>[4, 7]);
-    expect(methods.map((value) => value.name), <String>['Bank transfer', 'Cash']);
+    expect(
+        methods.map((value) => value.name), <String>['Bank transfer', 'Cash']);
     expect(transport.requests.single.uri.path, endsWith('/reference-data'));
   });
 
@@ -247,8 +249,8 @@ void main() {
     expect(queue.items.single.remainingAmount, '40.0000');
     expect(history.single.note, 'Called customer');
     expect(receipt.id, 502);
-    final body = jsonDecode(transport.requests.last.body!)
-        as Map<String, dynamic>;
+    final body =
+        jsonDecode(transport.requests.last.body!) as Map<String, dynamic>;
     expect(body['operation'], 'promise');
     expect(body['promised_date'], '2026-08-20');
     expect(body.containsKey('status'), isFalse);
