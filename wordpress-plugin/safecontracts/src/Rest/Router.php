@@ -38,6 +38,8 @@ final class Router
         MobileConfigController::register();
         ReferenceDataController::register();
         ExcelExportController::register();
+        NotificationsController::register();
+        DevicesController::register();
     }
 
     public static function health(WP_REST_Request $request): WP_REST_Response
