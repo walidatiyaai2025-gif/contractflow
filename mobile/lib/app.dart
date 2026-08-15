@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'core/config/app_environment.dart';
 
 class SafeContractsApp extends StatelessWidget {
-  const SafeContractsApp({required this.environment, super.key});
+  const SafeContractsApp({
+    required this.environment,
+    super.key,
+  });
 
   final AppEnvironment environment;
 
@@ -13,7 +16,9 @@ class SafeContractsApp extends StatelessWidget {
       title: 'SafeContracts',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF173B65)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF173B65),
+        ),
         useMaterial3: true,
       ),
       home: _FoundationScreen(environment: environment),
