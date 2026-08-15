@@ -14,6 +14,8 @@ import '../dashboard/dashboard_models.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
+import '../followups/followups.dart';
+import '../followups/followups_screen.dart';
 import '../notifications/deep_link.dart';
 import '../notifications/notifications.dart';
 import '../notifications/notifications_screen.dart';
@@ -115,6 +117,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
   }
 
   Widget _body() {
+    final apiClient = widget.contractsController.repository.client;
     return switch (_selected) {
       MobileDestination.dashboard => DashboardScreen(
           controller: widget.dashboardController,
@@ -129,11 +132,18 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           onOpenContract: _openContract,
         ),
       MobileDestination.payments => PaymentsScreen(
-          repository: PaymentsRepository(
-            widget.contractsController.repository.client,
-          ),
+          repository: PaymentsRepository(apiClient),
           pageSize: widget.config.defaultPageSize,
           filters: widget.dashboardController.filters,
+          canManagePayments:
+              widget.session.can('safecontracts_manage_payments'),
+          canEnterCollection: widget.policy.canEnterCollection,
+        ),
+      MobileDestination.followUps => FollowUpsScreen(
+          repository: FollowUpsRepository(apiClient),
+          pageSize: widget.config.defaultPageSize,
+          filters: widget.dashboardController.filters,
+          canManage: widget.policy.canManageFollowUps,
         ),
       MobileDestination.notifications => NotificationsScreen(
           controller: widget.notificationsController,
