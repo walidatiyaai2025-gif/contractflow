@@ -1,5 +1,18 @@
 import '../../core/api/api_client.dart';
 
+const dashboardSupportedStatuses = <String>{
+  'draft',
+  'active',
+  'completed',
+  'cancelled',
+  'upcoming',
+  'due_soon',
+  'due',
+  'overdue',
+  'partially_paid',
+  'paid',
+};
+
 final class DashboardFilters {
   const DashboardFilters({
     this.customerId,
@@ -54,10 +67,31 @@ final class DashboardFilters {
     );
   }
 
+  void validate() {
+    if (customerId != null && customerId! <= 0) {
+      throw ArgumentError.value(customerId, 'customerId', 'Must be positive.');
+    }
+    if (contractId != null && contractId! <= 0) {
+      throw ArgumentError.value(contractId, 'contractId', 'Must be positive.');
+    }
+    if (status != null &&
+        status!.isNotEmpty &&
+        !dashboardSupportedStatuses.contains(status)) {
+      throw ArgumentError.value(
+          status, 'status', 'Unsupported dashboard status.');
+    }
+    _validateIsoDate(dueFrom, 'dueFrom');
+    _validateIsoDate(dueTo, 'dueTo');
+    if (dueFrom != null && dueTo != null && dueFrom!.compareTo(dueTo!) > 0) {
+      throw ArgumentError('Dashboard due date range is reversed.');
+    }
+  }
+
   Map<String, String> toQuery({
     bool includeContract = true,
     bool includeDueRange = true,
   }) {
+    validate();
     return <String, String>{
       if (customerId != null) 'customer_id': customerId.toString(),
       if (includeContract && contractId != null)
@@ -87,11 +121,26 @@ final class DashboardKpis {
   factory DashboardKpis.fromData(Object? value) {
     final data = apiObjectMap(value, 'dashboard.kpis');
     return DashboardKpis(
-      contractCount: _int(data['contract_count'], 'contract_count'),
-      scheduledTotal: _string(data['scheduled_total'], '0.0000'),
-      remainingTotal: _string(data['remaining_total'], '0.0000'),
-      overdueExposure: _string(data['overdue_exposure'], '0.0000'),
-      collectedTotal: _string(data['collected_total'], '0.0000'),
+      contractCount: _nonNegativeInt(
+        data['contract_count'],
+        'dashboard.kpis.contract_count',
+      ),
+      scheduledTotal: _moneyText(
+        data['scheduled_total'],
+        'dashboard.kpis.scheduled_total',
+      ),
+      remainingTotal: _moneyText(
+        data['remaining_total'],
+        'dashboard.kpis.remaining_total',
+      ),
+      overdueExposure: _moneyText(
+        data['overdue_exposure'],
+        'dashboard.kpis.overdue_exposure',
+      ),
+      collectedTotal: _moneyText(
+        data['collected_total'],
+        'dashboard.kpis.collected_total',
+      ),
     );
   }
 }
@@ -105,8 +154,8 @@ final class CustomerOption {
   factory CustomerOption.fromData(Object? value) {
     final data = apiObjectMap(value, 'dashboard.customer');
     return CustomerOption(
-      id: _int(data['id'], 'customer.id'),
-      name: _string(data['name'], ''),
+      id: _positiveInt(data['id'], 'customer.id'),
+      name: _requiredText(data['name'], 'customer.name'),
     );
   }
 }
@@ -125,9 +174,12 @@ final class ContractOption {
   factory ContractOption.fromData(Object? value) {
     final data = apiObjectMap(value, 'dashboard.contract');
     return ContractOption(
-      id: _int(data['id'], 'contract.id'),
-      contractNumber: _string(data['contract_number'], ''),
-      customerId: _int(data['customer_id'], 'contract.customer_id'),
+      id: _positiveInt(data['id'], 'contract.id'),
+      contractNumber: _requiredText(
+        data['contract_number'],
+        'contract.contract_number',
+      ),
+      customerId: _positiveInt(data['customer_id'], 'contract.customer_id'),
     );
   }
 }
@@ -145,16 +197,24 @@ final class DashboardOverview {
 
   factory DashboardOverview.fromData(Object? value) {
     final data = apiObjectMap(value, 'dashboard.data');
-    final customers = apiObjectList(data['customers'], 'dashboard.customers');
-    final contracts = apiObjectList(data['contracts'], 'dashboard.contracts');
+    final rawCustomers =
+        apiObjectList(data['customers'], 'dashboard.customers');
+    final rawContracts =
+        apiObjectList(data['contracts'], 'dashboard.contracts');
+    final customers = rawCustomers.map(CustomerOption.fromData).toList();
+    final contracts = rawContracts.map(ContractOption.fromData).toList();
+    _ensureUniqueIds(
+      customers.map((item) => item.id),
+      'dashboard customer options',
+    );
+    _ensureUniqueIds(
+      contracts.map((item) => item.id),
+      'dashboard contract options',
+    );
     return DashboardOverview(
       kpis: DashboardKpis.fromData(data['kpis']),
-      customers: List<CustomerOption>.unmodifiable(
-        customers.map(CustomerOption.fromData),
-      ),
-      contracts: List<ContractOption>.unmodifiable(
-        contracts.map(ContractOption.fromData),
-      ),
+      customers: List<CustomerOption>.unmodifiable(customers),
+      contracts: List<ContractOption>.unmodifiable(contracts),
     );
   }
 }
@@ -185,56 +245,87 @@ final class DashboardRecord {
   factory DashboardRecord.contract(Object? value) {
     final data = apiObjectMap(value, 'contracts.item');
     return DashboardRecord(
-      id: _int(data['id'], 'contract.id'),
+      id: _positiveInt(data['id'], 'contract.id'),
       type: DashboardRecordType.contract,
-      title: _string(data['contract_number'], 'Contract'),
-      status: _nullableString(data['status']),
-      customerName: _nullableString(data['customer_name']),
-      amount: _nullableString(data['base_value']),
+      title: _requiredText(data['contract_number'], 'contract.contract_number'),
+      status: _optionalText(data['status'], 'contract.status'),
+      customerName: _optionalText(
+        data['customer_name'],
+        'contract.customer_name',
+      ),
+      amount: _optionalMoneyText(data['base_value'], 'contract.base_value'),
     );
   }
 
   factory DashboardRecord.payment(Object? value) {
     final data = apiObjectMap(value, 'payments.item');
-    final id = _int(data['id'], 'payment.id');
+    final id = _positiveInt(data['id'], 'payment.id');
     return DashboardRecord(
       id: id,
       type: DashboardRecordType.payment,
-      title: _nullableString(data['reference']) ?? 'Payment #$id',
-      status: _nullableString(data['status']),
-      date: _nullableString(data['due_date']),
-      customerName: _nullableString(data['customer_name']),
-      remainingAmount: _nullableString(data['remaining_amount']),
-      amount: _nullableString(data['original_amount']),
+      title: _optionalText(data['reference'], 'payment.reference') ??
+          'Payment #$id',
+      status: _optionalText(data['status'], 'payment.status'),
+      date: _optionalDate(data['due_date'], 'payment.due_date'),
+      customerName: _optionalText(
+        data['customer_name'],
+        'payment.customer_name',
+      ),
+      remainingAmount: _optionalMoneyText(
+        data['remaining_amount'],
+        'payment.remaining_amount',
+      ),
+      amount: _optionalMoneyText(
+        data['original_amount'],
+        'payment.original_amount',
+      ),
     );
   }
 
   factory DashboardRecord.collection(Object? value) {
     final data = apiObjectMap(value, 'collections.item');
-    final id = _int(data['id'], 'collection.id');
+    final id = _positiveInt(data['id'], 'collection.id');
     return DashboardRecord(
       id: id,
       type: DashboardRecordType.collection,
-      title: _nullableString(data['reference']) ?? 'Collection #$id',
-      status: _nullableString(data['payment_status']),
-      date: _nullableString(data['collection_date']),
-      customerName: _nullableString(data['customer_name']),
-      remainingAmount: _nullableString(data['remaining_amount']),
-      amount: _nullableString(data['amount']),
+      title: _optionalText(data['reference'], 'collection.reference') ??
+          'Collection #$id',
+      status: _optionalText(
+        data['payment_status'],
+        'collection.payment_status',
+      ),
+      date: _optionalDate(
+        data['collection_date'],
+        'collection.collection_date',
+      ),
+      customerName: _optionalText(
+        data['customer_name'],
+        'collection.customer_name',
+      ),
+      remainingAmount: _optionalMoneyText(
+        data['remaining_amount'],
+        'collection.remaining_amount',
+      ),
+      amount: _optionalMoneyText(data['amount'], 'collection.amount'),
     );
   }
 
   factory DashboardRecord.followUp(Object? value) {
     final data = apiObjectMap(value, 'followups.item');
-    final id = _int(data['payment_id'], 'followup.payment_id');
+    final id = _positiveInt(data['payment_id'], 'followup.payment_id');
     return DashboardRecord(
       id: id,
       type: DashboardRecordType.followUp,
-      title: _nullableString(data['reference']) ?? 'Payment #$id',
-      status: _nullableString(data['followup_state']) ??
-          _nullableString(data['status']),
-      date: _nullableString(data['due_date']),
-      remainingAmount: _nullableString(data['remaining_amount']),
+      title: _optionalText(data['reference'], 'followup.reference') ??
+          'Payment #$id',
+      status:
+          _optionalText(data['followup_state'], 'followup.followup_state') ??
+              _optionalText(data['status'], 'followup.status'),
+      date: _optionalDate(data['due_date'], 'followup.due_date'),
+      remainingAmount: _optionalMoneyText(
+        data['remaining_amount'],
+        'followup.remaining_amount',
+      ),
     );
   }
 }
@@ -259,38 +350,104 @@ final class DashboardLists {
       followUps.isEmpty;
 }
 
-int _int(Object? value, String field) {
+int _positiveInt(Object? value, String field) {
+  final parsed = _parseInt(value);
+  if (parsed == null || parsed <= 0) {
+    throw FormatException('$field must be a positive integer.');
+  }
+  return parsed;
+}
+
+int _nonNegativeInt(Object? value, String field) {
+  final parsed = _parseInt(value);
+  if (parsed == null || parsed < 0) {
+    throw FormatException('$field must be a non-negative integer.');
+  }
+  return parsed;
+}
+
+int? _parseInt(Object? value) {
   if (value is int) {
     return value;
   }
-  if (value is String) {
-    final parsed = int.tryParse(value);
-    if (parsed != null) {
-      return parsed;
-    }
+  if (value is String && RegExp(r'^\d+$').hasMatch(value)) {
+    return int.tryParse(value);
   }
-  throw FormatException('$field must be an integer.');
+  return null;
 }
 
-String _string(Object? value, String fallback) {
-  if (value is String) {
-    return value;
+String _requiredText(Object? value, String field) {
+  if (value is! String || value.trim().isEmpty) {
+    throw FormatException('$field must be a non-empty string.');
   }
-  if (value is num) {
-    return value.toString();
-  }
-  return fallback;
+  return value.trim();
 }
 
-String? _nullableString(Object? value) {
+String? _optionalText(Object? value, String field) {
   if (value == null) {
     return null;
   }
-  if (value is String) {
-    return value.isEmpty ? null : value;
+  if (value is! String) {
+    throw FormatException('$field must be a string or null.');
   }
-  if (value is num) {
-    return value.toString();
+  final normalized = value.trim();
+  return normalized.isEmpty ? null : normalized;
+}
+
+String _moneyText(Object? value, String field) {
+  if (value is! String || !RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(value)) {
+    throw FormatException('$field must be a non-negative decimal string.');
   }
-  return null;
+  return value;
+}
+
+String? _optionalMoneyText(Object? value, String field) {
+  if (value == null) {
+    return null;
+  }
+  return _moneyText(value, field);
+}
+
+String? _optionalDate(Object? value, String field) {
+  if (value == null) {
+    return null;
+  }
+  if (value is! String) {
+    throw FormatException('$field must use YYYY-MM-DD or null.');
+  }
+  try {
+    _validateIsoDate(value, field);
+  } on ArgumentError {
+    throw FormatException('$field is not a valid YYYY-MM-DD date.');
+  }
+  return value;
+}
+
+void _validateIsoDate(String? value, String field) {
+  if (value == null) {
+    return;
+  }
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
+  if (match == null) {
+    throw ArgumentError('$field must use YYYY-MM-DD.');
+  }
+  final year = int.parse(match.group(1)!);
+  final month = int.parse(match.group(2)!);
+  final day = int.parse(match.group(3)!);
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null ||
+      parsed.year != year ||
+      parsed.month != month ||
+      parsed.day != day) {
+    throw ArgumentError('$field is not a valid calendar date.');
+  }
+}
+
+void _ensureUniqueIds(Iterable<int> ids, String field) {
+  final seen = <int>{};
+  for (final id in ids) {
+    if (!seen.add(id)) {
+      throw FormatException('$field contains a duplicate ID.');
+    }
+  }
 }

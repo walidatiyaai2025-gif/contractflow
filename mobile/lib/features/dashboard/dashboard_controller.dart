@@ -12,19 +12,6 @@ final class DashboardController extends ChangeNotifier {
     required this.config,
   });
 
-  static const supportedStatuses = <String>{
-    'draft',
-    'active',
-    'completed',
-    'cancelled',
-    'upcoming',
-    'due_soon',
-    'due',
-    'overdue',
-    'partially_paid',
-    'paid',
-  };
-
   final DashboardRepository repository;
   final SafeContractsMobileConfig config;
 
@@ -36,7 +23,7 @@ final class DashboardController extends ChangeNotifier {
   String? errorMessage;
 
   Future<void> load() async {
-    await _reload();
+    await _reload(clearExisting: true);
   }
 
   Future<void> refresh() async {
@@ -50,13 +37,20 @@ final class DashboardController extends ChangeNotifier {
       throw ArgumentError.value(customerId, 'customerId', 'Unknown customer.');
     }
     filters = filters.withCustomer(customerId);
+    availableContracts = const <ContractOption>[];
+    overview = null;
+    lists = null;
+    state = DashboardLoadState.loading;
+    errorMessage = null;
     notifyListeners();
 
     try {
       final options = await repository.loadContractOptions(customerId);
-      availableContracts = options;
-      await _reload(contractOptions: options);
+      await _reload(contractOptions: options, clearExisting: true);
     } on Object catch (error) {
+      availableContracts = const <ContractOption>[];
+      overview = null;
+      lists = null;
       state = DashboardLoadState.error;
       errorMessage = error.toString();
       notifyListeners();
@@ -69,33 +63,46 @@ final class DashboardController extends ChangeNotifier {
       throw ArgumentError.value(contractId, 'contractId', 'Unknown contract.');
     }
     filters = filters.withContract(contractId);
-    await _reload(contractOptions: availableContracts);
+    await _reload(
+      contractOptions: availableContracts,
+      clearExisting: true,
+    );
   }
 
   Future<void> selectStatus(String? status) async {
     final normalized = status?.trim().toLowerCase();
     if (normalized != null &&
         normalized.isNotEmpty &&
-        !supportedStatuses.contains(normalized)) {
+        !dashboardSupportedStatuses.contains(normalized)) {
       throw ArgumentError.value(status, 'status', 'Unsupported status.');
     }
     filters = filters.withStatus(
       normalized == null || normalized.isEmpty ? null : normalized,
     );
-    await _reload(contractOptions: availableContracts);
+    await _reload(
+      contractOptions: availableContracts,
+      clearExisting: true,
+    );
   }
 
   Future<void> setDueRange(String? from, String? to) async {
-    _validateDate(from, 'from');
-    _validateDate(to, 'to');
-    if (from != null && to != null && from.compareTo(to) > 0) {
-      throw ArgumentError('Due date range is reversed.');
-    }
-    filters = filters.withDueRange(from, to);
-    await _reload(contractOptions: availableContracts);
+    final candidate = filters.withDueRange(from, to);
+    candidate.validate();
+    filters = candidate;
+    await _reload(
+      contractOptions: availableContracts,
+      clearExisting: true,
+    );
   }
 
-  Future<void> _reload({List<ContractOption>? contractOptions}) async {
+  Future<void> _reload({
+    List<ContractOption>? contractOptions,
+    bool clearExisting = false,
+  }) async {
+    if (clearExisting) {
+      overview = null;
+      lists = null;
+    }
     state = DashboardLoadState.loading;
     errorMessage = null;
     notifyListeners();
@@ -111,29 +118,13 @@ final class DashboardController extends ChangeNotifier {
       availableContracts = contractOptions ?? nextOverview.contracts;
       state = DashboardLoadState.ready;
     } on Object catch (error) {
+      if (clearExisting) {
+        overview = null;
+        lists = null;
+      }
       errorMessage = error.toString();
       state = DashboardLoadState.error;
     }
     notifyListeners();
-  }
-}
-
-void _validateDate(String? value, String field) {
-  if (value == null) {
-    return;
-  }
-  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(value);
-  if (match == null) {
-    throw ArgumentError('$field due date must use YYYY-MM-DD.');
-  }
-  final year = int.parse(match.group(1)!);
-  final month = int.parse(match.group(2)!);
-  final day = int.parse(match.group(3)!);
-  final parsed = DateTime.tryParse(value);
-  if (parsed == null ||
-      parsed.year != year ||
-      parsed.month != month ||
-      parsed.day != day) {
-    throw ArgumentError('$field due date is invalid.');
   }
 }

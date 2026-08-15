@@ -78,6 +78,18 @@ final class CustomerPage {
       minimum: 1,
       maximum: 500,
     );
+    if (customers.length > perPage || customers.length > boundedWindow) {
+      throw const FormatException(
+        'Customer page contains more rows than its bounded metadata allows.',
+      );
+    }
+    final seen = <int>{};
+    for (final customer in customers) {
+      if (!seen.add(customer.id)) {
+        throw const FormatException('Customer page contains a duplicate ID.');
+      }
+    }
+
     final sort = _requiredText(meta['sort'], 'meta.sort');
     if (sort != 'name' && sort != 'id') {
       throw const FormatException('Customer sort metadata is invalid.');
@@ -86,6 +98,7 @@ final class CustomerPage {
     if (order != 'asc' && order != 'desc') {
       throw const FormatException('Customer order metadata is invalid.');
     }
+    final scope = _scope(meta['scope']);
 
     return CustomerPage(
       customers: List<SafeContractsCustomer>.unmodifiable(customers),
@@ -95,7 +108,7 @@ final class CustomerPage {
       order: order,
       hasMore: _boolish(meta['has_more'], 'meta.has_more'),
       boundedWindow: boundedWindow,
-      scope: _optionalText(meta['scope']),
+      scope: scope,
     );
   }
 }
@@ -230,10 +243,18 @@ final class CustomersController extends ChangeNotifier {
   }
 
   Future<void> openCustomer(int id) async {
-    if (!canAccess || id <= 0) {
+    if (!canAccess) {
       selectedCustomerId = id > 0 ? id : null;
       selectedCustomer = null;
       detailErrorMessage = 'Customer access is not authorized.';
+      detailState = CustomerDetailLoadState.error;
+      notifyListeners();
+      return;
+    }
+    if (id <= 0) {
+      selectedCustomerId = null;
+      selectedCustomer = null;
+      detailErrorMessage = 'Customer ID is invalid.';
       detailState = CustomerDetailLoadState.error;
       notifyListeners();
       return;
@@ -319,10 +340,22 @@ String? _optionalText(Object? value) {
   }
   if (value is! String) {
     throw const FormatException(
-        'Customer text field must be a string or null.');
+      'Customer text field must be a string or null.',
+    );
   }
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;
+}
+
+String? _scope(Object? value) {
+  final normalized = _optionalText(value);
+  if (normalized == null) {
+    return null;
+  }
+  if (normalized != 'all' && normalized != 'assigned') {
+    throw const FormatException('Customer page scope metadata is invalid.');
+  }
+  return normalized;
 }
 
 bool _boolish(Object? value, String field) {

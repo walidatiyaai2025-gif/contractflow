@@ -44,6 +44,19 @@ final class AppEnvironment {
         uri.scheme != 'https') {
       throw FormatException('Production SafeContracts API must use HTTPS.');
     }
+    if (uri.userInfo.isNotEmpty) {
+      throw FormatException(
+        'SC_API_BASE_URL must not contain embedded credentials.',
+      );
+    }
+    if (uri.hasQuery || uri.fragment.isNotEmpty) {
+      throw FormatException(
+        'SC_API_BASE_URL must not contain a query string or fragment.',
+      );
+    }
+    if (_containsTraversal(uri.pathSegments)) {
+      throw FormatException('SC_API_BASE_URL must not contain path traversal.');
+    }
 
     final normalizedPath = uri.path.endsWith('/') ? uri.path : '${uri.path}/';
     return AppEnvironment._(
@@ -53,7 +66,40 @@ final class AppEnvironment {
   }
 
   Uri endpoint(String relativePath) {
-    final cleanPath = relativePath.replaceFirst(RegExp(r'^/+'), '');
-    return apiBaseUri.resolve(cleanPath);
+    final rawPath = relativePath.trim();
+    if (rawPath.isEmpty || rawPath.contains('\\')) {
+      throw FormatException('SafeContracts API path is invalid.');
+    }
+
+    final parsed = Uri.tryParse(rawPath);
+    if (parsed == null ||
+        parsed.hasScheme ||
+        parsed.hasAuthority ||
+        parsed.host.isNotEmpty ||
+        parsed.userInfo.isNotEmpty ||
+        parsed.hasQuery ||
+        parsed.fragment.isNotEmpty) {
+      throw FormatException('SafeContracts API path must be relative.');
+    }
+    if (_containsTraversal(parsed.pathSegments)) {
+      throw FormatException('SafeContracts API path must not traverse upward.');
+    }
+
+    final cleanPath = parsed.path.replaceFirst(RegExp(r'^/+'), '');
+    if (cleanPath.isEmpty) {
+      throw FormatException('SafeContracts API path is empty.');
+    }
+    final endpoint = apiBaseUri.resolve(cleanPath);
+    if (endpoint.scheme != apiBaseUri.scheme ||
+        endpoint.host != apiBaseUri.host ||
+        endpoint.port != apiBaseUri.port ||
+        !endpoint.path.startsWith(apiBaseUri.path)) {
+      throw FormatException('SafeContracts API endpoint escaped its base URL.');
+    }
+    return endpoint;
   }
+}
+
+bool _containsTraversal(List<String> segments) {
+  return segments.any((segment) => segment == '.' || segment == '..');
 }

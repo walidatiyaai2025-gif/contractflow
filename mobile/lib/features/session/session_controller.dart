@@ -20,6 +20,8 @@ final class SafeContractsSession {
     required this.capabilities,
   });
 
+  static const maxCapabilities = 128;
+
   final int userId;
   final SafeContractsDataScope scope;
   final Map<String, bool> capabilities;
@@ -28,6 +30,12 @@ final class SafeContractsSession {
 
   factory SafeContractsSession.fromData(Object? value) {
     final data = apiObjectMap(value, 'session.data');
+    if (data['authenticated'] != true) {
+      throw const FormatException(
+        'session.authenticated must be true for an authenticated session.',
+      );
+    }
+
     final userId = _positiveInt(data['user_id'], 'session.user_id');
     final scope = switch (data['scope']) {
       'all' => SafeContractsDataScope.all,
@@ -39,8 +47,16 @@ final class SafeContractsSession {
       data['capabilities'],
       'session.capabilities',
     );
+    if (rawCapabilities.length > maxCapabilities) {
+      throw const FormatException(
+          'session.capabilities contains too many entries.');
+    }
+
     final capabilities = <String, bool>{};
     for (final entry in rawCapabilities.entries) {
+      if (!_validCapabilityName(entry.key)) {
+        throw const FormatException('session capability name is invalid.');
+      }
       final value = entry.value;
       if (value is! bool) {
         throw FormatException(
@@ -113,4 +129,11 @@ int _positiveInt(Object? value, String field) {
     }
   }
   throw FormatException('$field must be a positive integer.');
+}
+
+bool _validCapabilityName(String value) {
+  if (value.isEmpty || value.length > 80) {
+    return false;
+  }
+  return RegExp(r'^safecontracts_[a-z0-9_]+$').hasMatch(value);
 }
