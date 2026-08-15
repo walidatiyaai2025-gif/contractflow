@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/core/api/api_client.dart';
-import 'package:safecontracts_mobile/core/api/io_api_transport.dart';
+import 'package:safecontracts_mobile/core/api/api_transport.dart';
 import 'package:safecontracts_mobile/features/config/mobile_config.dart';
 import 'package:safecontracts_mobile/features/navigation/navigation_policy.dart';
 import 'package:safecontracts_mobile/features/notifications/deep_link.dart';
