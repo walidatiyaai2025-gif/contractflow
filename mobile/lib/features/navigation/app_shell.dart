@@ -5,6 +5,11 @@ import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
+import '../records/contracts_screen.dart';
+import '../records/customers_screen.dart';
+import '../records/followups_screen.dart';
+import '../records/mobile_records_repository.dart';
+import '../records/payments_screen.dart';
 import '../session/session_controller.dart';
 import 'navigation_policy.dart';
 
@@ -34,6 +39,13 @@ final class SafeContractsShell extends StatefulWidget {
 
 final class _SafeContractsShellState extends State<SafeContractsShell> {
   MobileDestination _selected = MobileDestination.dashboard;
+  late final MobileRecordsRepository _records;
+
+  @override
+  void initState() {
+    super.initState();
+    _records = MobileRecordsRepository(widget.dashboardController.repository.client);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,9 +103,33 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
   }
 
   Widget _body() {
+    final filters = widget.dashboardController.filters;
     return switch (_selected) {
       MobileDestination.dashboard => DashboardScreen(
           controller: widget.dashboardController,
+        ),
+      MobileDestination.customers => CustomersScreen(
+          repository: _records,
+          pageSize: widget.config.defaultPageSize,
+        ),
+      MobileDestination.contracts => ContractsScreen(
+          repository: _records,
+          pageSize: widget.config.defaultPageSize,
+          session: widget.session,
+          filters: filters,
+        ),
+      MobileDestination.payments => PaymentsScreen(
+          repository: _records,
+          pageSize: widget.config.defaultPageSize,
+          session: widget.session,
+          canEnterCollection: widget.policy.canEnterCollection,
+          filters: filters,
+        ),
+      MobileDestination.followUps => FollowUpsScreen(
+          repository: _records,
+          pageSize: widget.config.defaultPageSize,
+          filters: filters,
+          canManage: widget.policy.canManageFollowUps,
         ),
       MobileDestination.export => MobileExcelExportScreen(
           controller: widget.excelExportController,
@@ -103,7 +139,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           config: widget.config,
           onClearSession: widget.onClearSession,
         ),
-      _ => _PlannedDestination(destination: _selected),
+      MobileDestination.collections =>
+        _PlannedDestination(destination: _selected),
     };
   }
 }
