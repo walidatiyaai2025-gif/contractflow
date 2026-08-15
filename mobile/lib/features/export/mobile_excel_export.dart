@@ -46,7 +46,8 @@ final class MobileExcelExport {
     );
     final bytes = Uint8List.fromList(base64Decode(contentBase64));
     if (!_looksLikeZip(bytes)) {
-      throw const FormatException('Excel export payload is not a valid XLSX file.');
+      throw const FormatException(
+          'Excel export payload is not a valid XLSX file.');
     }
 
     final filters = apiObjectMap(data['filters'], 'excel_export.filters');
