@@ -39,12 +39,11 @@ final class SafeContractsMobileConfig {
     final data = apiObjectMap(value, 'mobile_config.data');
     final features = apiObjectMap(data['features'], 'mobile_config.features');
     final configuredPageSize = _pageSize(data['default_page_size']);
+    final supportValue = data['support_text'];
 
     return SafeContractsMobileConfig(
-      supportText: data['support_text'] is String
-          ? (data['support_text']! as String).trim()
-          : '',
-      defaultPageSize: configuredPageSize.clamp(10, 100),
+      supportText: supportValue is String ? supportValue.trim() : '',
+      defaultPageSize: configuredPageSize.clamp(10, 100).toInt(),
       features: MobileFeatureFlags(
         excelExport: features['excel_export'] == true,
         pushNotifications: features['push_notifications'] == true,
