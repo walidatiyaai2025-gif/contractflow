@@ -40,6 +40,8 @@ final class SafeContractsDevice {
 final class DevicesSnapshot {
   const DevicesSnapshot({required this.devices});
 
+  static const maxDevices = 32;
+
   final List<SafeContractsDevice> devices;
 
   factory DevicesSnapshot.fromEnvelope(ApiEnvelope envelope) {
@@ -47,6 +49,9 @@ final class DevicesSnapshot {
       throw const FormatException('device scope metadata is invalid.');
     }
     final rows = apiObjectList(envelope.data, 'devices.data');
+    if (rows.length > maxDevices) {
+      throw const FormatException('device payload exceeds the supported bound.');
+    }
     final devices =
         rows.map(SafeContractsDevice.fromData).toList(growable: false);
     final ids = <int>{};
