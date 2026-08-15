@@ -18,6 +18,8 @@ jobs:
           python-version: "3.13"
       - name: Validate repository foundation
         run: python3 scripts/validate-foundation.py
+      - name: Validate production release readiness
+        run: python3 scripts/validate-release-readiness.py
 
   backend-foundation:
     runs-on: ubuntu-latest
