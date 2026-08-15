@@ -14,9 +14,10 @@ final class PrivateImportStorage
 
     public function __construct(?string $baseDir = null, ?Closure $mover = null)
     {
-        $default = defined('WP_CONTENT_DIR')
-            ? rtrim((string) WP_CONTENT_DIR, '/\\') . '/safecontracts-private/imports'
-            : rtrim(sys_get_temp_dir(), '/\\') . '/safecontracts-private-imports';
+        $privateRoot = defined('SAFECONTRACTS_PRIVATE_DIR')
+            ? rtrim((string) constant('SAFECONTRACTS_PRIVATE_DIR'), '/\\')
+            : rtrim(sys_get_temp_dir(), '/\\') . '/safecontracts-private';
+        $default = $privateRoot . '/imports';
         $this->baseDir = rtrim($baseDir ?? (string) apply_filters('safecontracts_import_storage_dir', $default), '/\\');
         $this->mover = $mover ?? static function (string $source, string $destination): bool {
             return is_uploaded_file($source) && move_uploaded_file($source, $destination);
