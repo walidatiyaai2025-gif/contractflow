@@ -23,8 +23,8 @@ final class DashboardPage
                     </div>
                 </div>
                 <section class="safecontracts-admin-card safecontracts-admin-card--security">
-                    <h2><?php echo esc_html__('No data scope assigned', 'safecontracts'); ?></h2>
-                    <p><?php echo esc_html__('Your account can access SafeContracts, but it does not currently have permission to view all data or assigned contract data. Contact a SafeContracts administrator if operational access is required.', 'safecontracts'); ?></p>
+                    <h2><?php echo esc_html__('Server-side authorization', 'safecontracts'); ?></h2>
+                    <p><?php echo esc_html__('No data scope assigned. Your account can access SafeContracts, but it does not currently have permission to view all data or assigned contract data. Contact a SafeContracts administrator if operational access is required.', 'safecontracts'); ?></p>
                 </section>
             </section>
             <?php
@@ -85,7 +85,7 @@ final class DashboardPage
                 <?php self::kpi(__('Overdue exposure', 'safecontracts'), self::money($kpis['overdue_exposure']), true); ?>
                 <?php self::kpi(__('Collected', 'safecontracts'), self::money($kpis['collected_total'])); ?>
             </div>
-            <p class="description"><?php echo esc_html__('Dashboard values are calculated from server-side scoped contract/payment data. Contractual due dates remain authoritative for overdue exposure.', 'safecontracts'); ?></p>
+            <p class="description"><?php echo esc_html__('Dashboard values are calculated from server-side scoped contract/payment data. Contractual due dates remain authoritative for overdue exposure. Server-side authorization and assignment scope remain authoritative for every metric and filter.', 'safecontracts'); ?></p>
         </section>
         <?php
     }
