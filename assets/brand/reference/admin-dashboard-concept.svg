@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+<title id="title">SafeContracts admin dashboard concept</title>
+<desc id="desc">White-label SafeContracts dashboard with navy navigation, KPI cards, filters, tracked contracts and payments.</desc>
+<rect width="1600" height="1000" rx="36" fill="#F4F7FA"/>
+<rect width="330" height="1000" rx="36" fill="#173F67"/>
+<rect x="0" y="0" width="330" height="145" rx="36" fill="#102A43"/>
+<circle cx="78" cy="73" r="38" fill="#2F6FB2"/>
+<path d="M58 73 L72 88 L100 55" fill="none" stroke="#24B34B" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="135" y="82" font-family="Arial, sans-serif" font-size="37" font-weight="700" fill="#FFFFFF">SafeContracts</text>
+<g font-family="Arial, sans-serif" font-size="29" fill="#EAF2FB">
+  <text x="70" y="235">Dashboard</text>
+  <text x="70" y="315">Customers</text>
+  <text x="70" y="395">Contracts</text>
+  <text x="70" y="475">Payments</text>
+  <text x="70" y="555">Collections</text>
+  <text x="70" y="635">Follow-up</text>
+  <text x="70" y="715">Reports</text>
+  <text x="70" y="795">Settings</text>
+</g>
+<rect x="36" y="188" width="258" height="68" rx="16" fill="#2F6FB2" opacity=".7"/>
+<text x="390" y="100" font-family="Arial, sans-serif" font-size="56" font-weight="700" fill="#102A43">Dashboard</text>
+<text x="390" y="145" font-family="Arial, sans-serif" font-size="23" fill="#627D98">Contracts, receivables and collection follow-up</text>
+<g font-family="Arial, sans-serif">
+  <rect x="390" y="190" width="380" height="72" rx="18" fill="#FFFFFF" stroke="#D9E2EC"/><text x="420" y="236" font-size="24" fill="#627D98">Customer: All Customers ▼</text>
+  <rect x="790" y="190" width="380" height="72" rx="18" fill="#FFFFFF" stroke="#D9E2EC"/><text x="820" y="236" font-size="24" fill="#627D98">Contract: All Contracts ▼</text>
+  <rect x="1190" y="190" width="330" height="72" rx="18" fill="#24B34B"/><text x="1355" y="236" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF">Export Excel</text>
+</g>
+<g font-family="Arial, sans-serif">
+  <g><rect x="390" y="305" width="260" height="160" rx="24" fill="#FFFFFF" stroke="#D9E2EC"/><text x="420" y="350" font-size="22" fill="#627D98">Active Contracts</text><text x="420" y="420" font-size="54" font-weight="700" fill="#102A43">42</text></g>
+  <g><rect x="680" y="305" width="260" height="160" rx="24" fill="#FFFFFF" stroke="#D9E2EC"/><text x="710" y="350" font-size="22" fill="#627D98">Due Soon</text><text x="710" y="420" font-size="54" font-weight="700" fill="#D99000">8</text></g>
+  <g><rect x="970" y="305" width="260" height="160" rx="24" fill="#FFFFFF" stroke="#D9E2EC"/><text x="1000" y="350" font-size="22" fill="#627D98">Overdue</text><text x="1000" y="420" font-size="54" font-weight="700" fill="#D64545">4</text></g>
+  <g><rect x="1260" y="305" width="260" height="160" rx="24" fill="#FFFFFF" stroke="#D9E2EC"/><text x="1290" y="350" font-size="22" fill="#627D98">Collected</text><text x="1290" y="420" font-size="43" font-weight="700" fill="#24B34B">1.2M</text></g>
+</g>
+<rect x="390" y="510" width="1130" height="410" rx="28" fill="#FFFFFF" stroke="#D9E2EC"/>
+<text x="430" y="570" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#102A43">Upcoming &amp; Overdue Payments</text>
+<g font-family="Arial, sans-serif" font-size="21" fill="#627D98">
+  <text x="430" y="635">Contract</text><text x="700" y="635">Customer</text><text x="980" y="635">Due Date</text><text x="1180" y="635">Amount</text><text x="1370" y="635">Status</text>
+  <line x1="430" y1="655" x2="1480" y2="655" stroke="#D9E2EC"/>
+  <text x="430" y="710">SC-1024</text><text x="700" y="710">Customer A</text><text x="980" y="710">25 Aug</text><text x="1180" y="710">75,000</text><text x="1370" y="710" fill="#D99000">Due Soon</text>
+  <line x1="430" y1="735" x2="1480" y2="735" stroke="#EEF2F6"/>
+  <text x="430" y="790">SC-1018</text><text x="700" y="790">Customer B</text><text x="980" y="790">10 Aug</text><text x="1180" y="790">40,000</text><text x="1370" y="790" fill="#D64545">Overdue</text>
+  <line x1="430" y1="815" x2="1480" y2="815" stroke="#EEF2F6"/>
+  <text x="430" y="870">SC-1009</text><text x="700" y="870">Customer C</text><text x="980" y="870">30 Aug</text><text x="1180" y="870">55,000</text><text x="1370" y="870" fill="#24B34B">Tracked</text>
+</g>
+</svg>
