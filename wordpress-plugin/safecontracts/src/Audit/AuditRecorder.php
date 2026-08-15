@@ -12,16 +12,22 @@ final class AuditRecorder
 
     /** @var list<string> */
     private const EVENTS = [
+        'safecontracts_contract_created',
+        'safecontracts_contract_edited',
         'safecontracts_contract_base_value_changed',
         'safecontracts_contract_financial_item_added',
         'safecontracts_contract_adjustment_added',
-        'safecontracts_payment_settled',
+        'safecontracts_contract_attachment_added',
+        'safecontracts_contract_attachment_removed',
         'safecontracts_contract_customer_assigned',
         'safecontracts_contract_accountant_assigned',
         'safecontracts_contract_status_changed',
         'safecontracts_contract_dates_changed',
+        'safecontracts_payment_created',
+        'safecontracts_payment_settled',
         'safecontracts_payment_status_changed',
         'safecontracts_payment_dates_changed',
+        'safecontracts_collection_recorded',
         'safecontracts_followup_recorded',
         'safecontracts_export_completed',
         'safecontracts_import_uploaded',
@@ -29,6 +35,14 @@ final class AuditRecorder
         'safecontracts_import_mapping_saved',
         'safecontracts_import_validated',
         'safecontracts_import_completed',
+        'safecontracts_notification_rule_saved',
+        'safecontracts_general_settings_saved',
+        'safecontracts_mobile_configuration_saved',
+        'safecontracts_firebase_public_settings_saved',
+        'safecontracts_firebase_credential_reference_saved',
+        'safecontracts_device_token_registered',
+        'safecontracts_device_token_revoked',
+        'safecontracts_database_migrated',
     ];
 
     public static function register(): void
@@ -71,6 +85,13 @@ final class AuditRecorder
     private static function map(string $hook, array $args): array
     {
         return match ($hook) {
+            'safecontracts_contract_created' => [
+                'contract', (int) ($args[0] ?? 0), 'contract_created', (int) ($args[1] ?? 0), null,
+                ['customer_id' => $args[2] ?? null, 'accountant_user_id' => $args[3] ?? null], null,
+            ],
+            'safecontracts_contract_edited' => [
+                'contract', (int) ($args[0] ?? 0), 'contract_edited', (int) ($args[1] ?? 0), null, null, null,
+            ],
             'safecontracts_contract_base_value_changed' => [
                 'contract', (int) ($args[0] ?? 0), 'contract_base_value_changed', (int) ($args[2] ?? 0),
                 ['base_value' => $args[3] ?? null], ['base_value' => $args[1] ?? null], null,
@@ -83,11 +104,41 @@ final class AuditRecorder
                 'contract', (int) ($args[0] ?? 0), 'contract_adjustment_added', (int) ($args[4] ?? 0),
                 null, ['adjustment_id' => (int) ($args[1] ?? 0), 'type' => $args[2] ?? null, 'amount' => $args[3] ?? null], null,
             ],
+            'safecontracts_contract_attachment_added' => [
+                'contract', (int) ($args[0] ?? 0), 'contract_attachment_added', (int) ($args[2] ?? 0),
+                null, ['media_id' => (int) ($args[1] ?? 0)], null,
+            ],
+            'safecontracts_contract_attachment_removed' => [
+                'contract', (int) ($args[0] ?? 0), 'contract_attachment_removed', (int) ($args[2] ?? 0),
+                ['media_id' => (int) ($args[1] ?? 0)], null, null,
+            ],
+            'safecontracts_payment_created' => [
+                'payment', (int) ($args[0] ?? 0), 'payment_created', (int) ($args[6] ?? 0), null,
+                [
+                    'contract_id' => (int) ($args[1] ?? 0),
+                    'sequence_no' => (int) ($args[2] ?? 0),
+                    'due_date' => $args[3] ?? null,
+                    'expected_payment_date' => $args[4] ?? null,
+                    'original_amount' => $args[5] ?? null,
+                ],
+                null,
+            ],
             'safecontracts_payment_settled' => [
                 'payment', (int) ($args[0] ?? 0), 'payment_settled', (int) ($args[5] ?? 0),
                 ['paid_amount' => $args[6] ?? null, 'remaining_amount' => $args[7] ?? null, 'status' => $args[8] ?? null],
                 ['paid_amount' => $args[2] ?? null, 'remaining_amount' => $args[3] ?? null, 'status' => $args[4] ?? null],
                 ['collection_amount' => $args[1] ?? null],
+            ],
+            'safecontracts_collection_recorded' => [
+                'collection', (int) ($args[0] ?? 0), 'collection_recorded', (int) ($args[6] ?? 0), null,
+                [
+                    'payment_id' => (int) ($args[1] ?? 0),
+                    'amount' => $args[2] ?? null,
+                    'collection_date' => $args[3] ?? null,
+                    'payment_method_id' => (int) ($args[4] ?? 0),
+                    'proof_media_id' => $args[5] === null ? null : (int) $args[5],
+                ],
+                null,
             ],
             'safecontracts_contract_customer_assigned' => [
                 'contract', (int) ($args[0] ?? 0), 'contract_customer_assigned', (int) ($args[2] ?? 0),
@@ -126,6 +177,35 @@ final class AuditRecorder
             'safecontracts_import_mapping_saved' => self::externalEvent('import', 'import_mapping_saved', $args),
             'safecontracts_import_validated' => self::externalEvent('import', 'import_validated', $args),
             'safecontracts_import_completed' => self::externalEvent('import', 'import_completed', $args),
+            'safecontracts_notification_rule_saved' => [
+                'notification_rule', null, 'notification_rule_saved', (int) ($args[1] ?? 0), null,
+                is_array($args[2] ?? null) ? $args[2] : ['code' => (string) ($args[0] ?? '')], null,
+            ],
+            'safecontracts_general_settings_saved' => [
+                'configuration', null, 'general_settings_saved', (int) ($args[0] ?? 0), null,
+                is_array($args[1] ?? null) ? $args[1] : null, null,
+            ],
+            'safecontracts_mobile_configuration_saved' => [
+                'configuration', null, 'mobile_configuration_saved', (int) ($args[0] ?? 0), null,
+                is_array($args[1] ?? null) ? $args[1] : null, null,
+            ],
+            'safecontracts_firebase_public_settings_saved' => [
+                'configuration', null, 'firebase_public_settings_saved', (int) ($args[0] ?? 0), null, null, null,
+            ],
+            'safecontracts_firebase_credential_reference_saved' => [
+                'configuration', null, 'firebase_credential_reference_saved', (int) ($args[0] ?? 0), null, null, null,
+            ],
+            'safecontracts_device_token_registered' => [
+                'device', (int) ($args[0] ?? 0), 'device_token_registered', (int) ($args[0] ?? 0), null, null,
+                ['platform' => (string) ($args[2] ?? '')],
+            ],
+            'safecontracts_device_token_revoked' => [
+                'device', (int) ($args[0] ?? 0), 'device_token_revoked', (int) ($args[0] ?? 0), null, null, null,
+            ],
+            'safecontracts_database_migrated' => [
+                'system', null, 'database_migrated', get_current_user_id(), null, null,
+                ['version' => (string) ($args[0] ?? '')],
+            ],
             default => ['system', null, $hook, get_current_user_id(), null, null, null],
         };
     }
