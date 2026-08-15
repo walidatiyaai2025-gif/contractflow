@@ -55,6 +55,13 @@ final class FirebaseSettings
         return $reference;
     }
 
+    public function clearCredentialReference(): void
+    {
+        $this->requireManage();
+        delete_option(self::CREDENTIAL_REFERENCE_OPTION);
+        do_action('safecontracts_firebase_credential_reference_cleared', get_current_user_id());
+    }
+
     public function credentialReference(): string
     {
         $this->requireManage();
