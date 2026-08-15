@@ -91,7 +91,7 @@ $read->customers(['customer_id' => 12]);
 $customerQuery = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
 sc_p6v4_assert(str_contains($customerQuery, 'cu.id = 12') && str_contains($customerQuery, 'accountant_user_id = 42'), 'SC-P6-026 customer lookup combines selected customer with assigned-contract scope');
 $customerPageSource = file_get_contents((string) (new ReflectionClass(CustomersPage::class))->getFileName()) ?: '';
-sc_p6v4_assert(str_contains($customerPageSource, "$read->customers(['customer_id' => $editId])"), 'SC-P6-026 customer edit selection reuses scoped admin read model');
+sc_p6v4_assert(str_contains($customerPageSource, "\$read->customers(['customer_id' => \$editId])"), 'SC-P6-026 customer edit selection reuses scoped admin read model');
 sc_p6v4_assert(! str_contains($customerPageSource, 'CustomerService())->find($editId)'), 'SC-P6-026 customer edit selection no longer bypasses list scope through raw service find');
 sc_p6v4_assert(str_contains($customerPageSource, 'esc_html') && str_contains($customerPageSource, 'esc_attr') && str_contains($customerPageSource, 'esc_textarea'), 'SC-P6-026 customer output paths use WordPress escaping helpers');
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::MANAGE_REFERENCE_DATA => true];
@@ -145,7 +145,7 @@ $GLOBALS['sc_test_result_queue'] = [[$archivedPayment]];
 sc_p6v4_expect(DomainException::class, fn () => (new PaymentService())->updateDates(81, '2026-08-20', '2026-09-01'), 'SC-P6-028 payment edits on archived contracts remain blocked server-side');
 $paymentPageSource = file_get_contents((string) (new ReflectionClass(PaymentsPage::class))->getFileName()) ?: '';
 sc_p6v4_assert(str_contains($paymentPageSource, 'PaymentService())->find($selectedId)'), 'SC-P6-028 payment page uses scoped domain detail lookup');
-sc_p6v4_assert(! str_contains($paymentPageSource, "$read->payments(['contract_id' => 0])"), 'SC-P6-028 payment page removed unbounded 500-row detail fallback');
+sc_p6v4_assert(! str_contains($paymentPageSource, "\$read->payments(['contract_id' => 0])"), 'SC-P6-028 payment page removed unbounded 500-row detail fallback');
 sc_p6v4_assert(str_contains($paymentPageSource, 'ContractMoney::compare') && str_contains($paymentPageSource, 'contract_is_archived'), 'SC-P6-028 terminal detection uses fixed-point zero comparison and archive state');
 sc_p6v4_assert(str_contains($paymentPageSource, 'Contractual due date controls') && ! str_contains($paymentPageSource, '$wpdb'), 'SC-P6-028 payment presentation preserves due-date and persistence boundaries');
 
