@@ -15,10 +15,12 @@ final class SafeContractsLoginScreen extends StatefulWidget {
   final Future<void> Function() onAuthenticated;
 
   @override
-  State<SafeContractsLoginScreen> createState() => _SafeContractsLoginScreenState();
+  State<SafeContractsLoginScreen> createState() =>
+      _SafeContractsLoginScreenState();
 }
 
-final class _SafeContractsLoginScreenState extends State<SafeContractsLoginScreen> {
+final class _SafeContractsLoginScreenState
+    extends State<SafeContractsLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _username = TextEditingController();
   final _password = TextEditingController();
@@ -61,8 +63,8 @@ final class _SafeContractsLoginScreenState extends State<SafeContractsLoginScree
                   child: AnimatedBuilder(
                     animation: widget.controller,
                     builder: (context, child) {
-                      final submitting =
-                          widget.controller.state == MobileLoginState.submitting;
+                      final submitting = widget.controller.state ==
+                          MobileLoginState.submitting;
                       return Form(
                         key: _formKey,
                         child: AutofillGroup(
@@ -74,7 +76,8 @@ final class _SafeContractsLoginScreenState extends State<SafeContractsLoginScree
                               Text(
                                 'SafeContracts',
                                 textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.headlineMedium,
+                                style:
+                                    Theme.of(context).textTheme.headlineMedium,
                               ),
                               const SizedBox(height: 8),
                               Text(
@@ -98,9 +101,10 @@ final class _SafeContractsLoginScreenState extends State<SafeContractsLoginScree
                                   prefixIcon: Icon(Icons.person_outline),
                                   border: OutlineInputBorder(),
                                 ),
-                                validator: (value) => value == null || value.trim().isEmpty
-                                    ? 'Enter your username.'
-                                    : null,
+                                validator: (value) =>
+                                    value == null || value.trim().isEmpty
+                                        ? 'Enter your username.'
+                                        : null,
                               ),
                               const SizedBox(height: 16),
                               TextFormField(
@@ -120,7 +124,8 @@ final class _SafeContractsLoginScreenState extends State<SafeContractsLoginScree
                                     onPressed: submitting
                                         ? null
                                         : () => setState(() {
-                                              _obscurePassword = !_obscurePassword;
+                                              _obscurePassword =
+                                                  !_obscurePassword;
                                             }),
                                     icon: Icon(
                                       _obscurePassword
@@ -129,9 +134,10 @@ final class _SafeContractsLoginScreenState extends State<SafeContractsLoginScree
                                     ),
                                   ),
                                 ),
-                                validator: (value) => value == null || value.isEmpty
-                                    ? 'Enter your password.'
-                                    : null,
+                                validator: (value) =>
+                                    value == null || value.isEmpty
+                                        ? 'Enter your password.'
+                                        : null,
                               ),
                               if (widget.controller.errorMessage != null) ...[
                                 const SizedBox(height: 16),
@@ -141,21 +147,26 @@ final class _SafeContractsLoginScreenState extends State<SafeContractsLoginScree
                                     widget.controller.errorMessage!,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: Theme.of(context).colorScheme.error,
+                                      color:
+                                          Theme.of(context).colorScheme.error,
                                     ),
                                   ),
                                 ),
                               ],
                               const SizedBox(height: 24),
                               FilledButton.icon(
-                                onPressed: submitting ? null : () => unawaited(_submit()),
+                                onPressed: submitting
+                                    ? null
+                                    : () => unawaited(_submit()),
                                 icon: submitting
                                     ? const SizedBox.square(
                                         dimension: 18,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
                                       )
                                     : const Icon(Icons.login),
-                                label: Text(submitting ? 'Signing in…' : 'Sign in'),
+                                label: Text(
+                                    submitting ? 'Signing in…' : 'Sign in'),
                               ),
                             ],
                           ),

@@ -198,7 +198,8 @@ final class _BootstrapView extends StatelessWidget {
           }
         }
 
-        if (controller.sessionController?.state == SessionState.unauthenticated) {
+        if (controller.sessionController?.state ==
+            SessionState.unauthenticated) {
           return SafeContractsLoginScreen(
             controller: loginController,
             onAuthenticated: onAuthenticated,
