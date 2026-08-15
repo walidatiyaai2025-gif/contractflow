@@ -30,8 +30,8 @@ final class ApiRequest
         return self::positiveInt($value, $key);
     }
 
-    /** @return array{filters:array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string},page:int,per_page:int} */
-    public static function listQuery(WP_REST_Request $request): array
+    /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} */
+    public static function filters(WP_REST_Request $request): array
     {
         $params = self::params($request);
         foreach (['customer_id', 'contract_id', 'accountant_user_id'] as $key) {
@@ -53,15 +53,26 @@ final class ApiRequest
                 throw new InvalidArgumentException('status is not supported.');
             }
         }
+
+        $rawDates = ['due_from' => null, 'due_to' => null];
         foreach (['due_from', 'due_to'] as $key) {
             if (array_key_exists($key, $params) && $params[$key] !== '' && $params[$key] !== null) {
-                self::date($params[$key], $key);
+                $rawDates[$key] = self::date($params[$key], $key);
             }
         }
+        if ($rawDates['due_from'] !== null && $rawDates['due_to'] !== null && $rawDates['due_to'] < $rawDates['due_from']) {
+            throw new InvalidArgumentException('due_to must not be earlier than due_from.');
+        }
 
+        return DashboardFilters::normalize($params);
+    }
+
+    /** @return array{filters:array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string},page:int,per_page:int} */
+    public static function listQuery(WP_REST_Request $request): array
+    {
         $pagination = self::pagination($request);
         return [
-            'filters' => DashboardFilters::normalize($params),
+            'filters' => self::filters($request),
             'page' => $pagination['page'],
             'per_page' => $pagination['per_page'],
         ];

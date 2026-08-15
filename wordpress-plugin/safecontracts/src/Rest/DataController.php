@@ -164,7 +164,7 @@ final class DataController
 
     public static function followUpHistory(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
-        return self::guard(function () use ($request): WP_REST_Response {
+        return self::guard(function () use ($request): WP_REST_Response|WP_Error {
             $paymentId = ApiRequest::routeId($request, 'payment_id');
             $query = ApiListQuery::pagination(
                 $request,
@@ -173,13 +173,24 @@ final class DataController
                 'desc',
                 ['payment_id']
             );
-            $rows = (new FollowUpService())->history($paymentId, ApiListQuery::BOUNDED_WINDOW);
+            try {
+                $rows = (new FollowUpService())->history($paymentId, ApiListQuery::BOUNDED_WINDOW);
+            } catch (InvalidArgumentException $error) {
+                if ($error->getMessage() === 'Follow-up payment was not found.') {
+                    return ApiResponse::notFound('Payment');
+                }
+                throw $error;
+            }
             return self::page(array_map([self::class, 'followUpHistoryView'], $rows), $query);
         });
     }
 
     private static function guard(callable $callback): WP_REST_Response|WP_Error
     {
+        $access = Permission::access();
+        if ($access instanceof WP_Error) {
+            return $access;
+        }
         try {
             return $callback();
         } catch (InvalidArgumentException $error) {
