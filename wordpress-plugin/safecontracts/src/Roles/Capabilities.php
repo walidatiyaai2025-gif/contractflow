@@ -21,6 +21,7 @@ final class Capabilities
     public const VIEW_REPORTS = 'safecontracts_view_reports';
     public const EXPORT_REPORTS = 'safecontracts_export_reports';
     public const MANAGE_NOTIFICATIONS = 'safecontracts_manage_notifications';
+    public const MANAGE_FIREBASE = 'safecontracts_manage_firebase';
     public const RUN_IMPORTS = 'safecontracts_run_imports';
     public const VIEW_AUDIT = 'safecontracts_view_audit';
 
@@ -43,6 +44,7 @@ final class Capabilities
             self::VIEW_REPORTS,
             self::EXPORT_REPORTS,
             self::MANAGE_NOTIFICATIONS,
+            self::MANAGE_FIREBASE,
             self::RUN_IMPORTS,
             self::VIEW_AUDIT,
         ];
