@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +18,11 @@ REQUIRED_PATHS = (
     "docs/MASTER_PLAN.md",
     "docs/DEVELOPMENT_STANDARDS.md",
     "docs/ENVIRONMENT.md",
+    "docs/PRODUCTION_ENVIRONMENT_BUILD.md",
+    "AGENTS.md",
+    "Last verified Plugin/README.md",
+    "Last verified apk/README.md",
+    "scripts/verified_artifacts.py",
     "mobile/pubspec.yaml",
     "mobile/analysis_options.yaml",
     "mobile/lib/main.dart",
@@ -138,6 +144,15 @@ def validate_ci_contract() -> int:
     return len(required_commands)
 
 
+def validate_artifact_policy() -> int:
+    command = [sys.executable, str(ROOT / "scripts/verified_artifacts.py"), "check"]
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        fail("verified artifact policy failed" + (f": {detail}" if detail else ""))
+    return 1
+
+
 def main() -> int:
     checks = 0
     checks += validate_required_paths()
@@ -146,6 +161,7 @@ def main() -> int:
     checks += validate_mobile_boundary()
     checks += validate_example_config()
     checks += validate_ci_contract()
+    checks += validate_artifact_policy()
     print(f"SafeContracts foundation validation passed ({checks} checks).")
     return 0
 
