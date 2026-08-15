@@ -24,7 +24,7 @@ final class ReportExportService
     /** @param array<string,mixed> $input */
     public function generate(array $input): array
     {
-        if (! current_user_can(Capabilities::VIEW_REPORTS)) {
+        if (! current_user_can(Capabilities::EXPORT_REPORTS)) {
             throw new \DomainException('You do not have permission to export SafeContracts reports.');
         }
 
