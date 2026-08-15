@@ -10,7 +10,7 @@ import 'dashboard_models.dart';
 final class DashboardScreen extends StatelessWidget {
   const DashboardScreen({
     required this.controller,
-    required this.currency,
+    this.currency = const MobileCurrencyConfig.defaults(),
     super.key,
   });
 
@@ -310,7 +310,8 @@ final class _DashboardListsView extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Center(
-            child: Text(l10n.t('No records match the current filters.'))),
+          child: Text(l10n.t('No records match the current filters.')),
+        ),
       );
     }
 
