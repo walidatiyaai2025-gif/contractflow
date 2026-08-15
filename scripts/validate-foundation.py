@@ -41,6 +41,11 @@ FORBIDDEN_SECRET_KEY = re.compile(
     re.IGNORECASE,
 )
 
+PHP_NAMESPACE = re.compile(
+    r"^namespace SafeContracts(?:\\[A-Za-z_][A-Za-z0-9_]*)*;$",
+    re.MULTILINE,
+)
+
 
 def fail(message: str) -> None:
     print(f"FAIL: {message}", file=sys.stderr)
@@ -72,7 +77,7 @@ def validate_php_standards() -> int:
         content = path.read_text(encoding="utf-8")
         if "declare(strict_types=1);" not in content:
             fail(f"PHP source must declare strict types: {path.relative_to(ROOT)}")
-        if "namespace SafeContracts\\" not in content:
+        if PHP_NAMESPACE.search(content) is None:
             fail(f"PHP source must use SafeContracts namespace: {path.relative_to(ROOT)}")
         checks += 2
 
