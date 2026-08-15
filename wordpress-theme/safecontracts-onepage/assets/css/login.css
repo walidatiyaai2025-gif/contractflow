@@ -1,0 +1,72 @@
+body.login {
+  background:
+    radial-gradient(circle at 15% 15%,rgba(17,189,181,.12),transparent 28%),
+    radial-gradient(circle at 85% 15%,rgba(20,119,232,.14),transparent 28%),
+    linear-gradient(180deg,#f8fbff 0%,#eef5fb 100%);
+  color:#10233f;
+  font-family:Inter,"Segoe UI",Tahoma,Arial,sans-serif;
+}
+
+.login #login {width:380px;max-width:calc(100% - 32px);padding-top:7vh}
+.login h1 a {
+  width:76px;
+  height:76px;
+  margin-bottom:18px;
+  background-image:url('../images/logo-mark.svg');
+  background-size:76px 76px;
+}
+.login h1:after {
+  content:"SafeContracts";
+  display:block;
+  margin-top:-8px;
+  margin-bottom:18px;
+  color:#062d5b;
+  font-size:24px;
+  font-weight:800;
+  letter-spacing:-.03em;
+}
+.login form {
+  border:1px solid #dbe7f2;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 22px 55px rgba(6,45,91,.12);
+  padding:28px;
+}
+.login label {color:#344b66;font-weight:600}
+.login input[type=text],
+.login input[type=password] {
+  border:1px solid #c8d8e7;
+  border-radius:10px;
+  min-height:46px;
+  box-shadow:none;
+}
+.login input[type=text]:focus,
+.login input[type=password]:focus {
+  border-color:#1477e8;
+  box-shadow:0 0 0 1px #1477e8;
+}
+.wp-core-ui .button-primary {
+  min-height:42px;
+  border:0;
+  border-radius:10px;
+  background:linear-gradient(135deg,#1477e8,#062d5b);
+  box-shadow:0 8px 18px rgba(20,119,232,.18);
+  font-weight:700;
+}
+.wp-core-ui .button-primary:hover,
+.wp-core-ui .button-primary:focus {background:linear-gradient(135deg,#0b68d4,#05284e)}
+.login #nav,
+.login #backtoblog {text-align:center}
+.login #nav a,
+.login #backtoblog a {color:#48617d}
+.login #nav a:hover,
+.login #backtoblog a:hover {color:#1477e8}
+.login .message,
+.login .notice,
+.login .success {
+  border-left-color:#11bdb5;
+  border-radius:10px;
+  box-shadow:0 8px 20px rgba(6,45,91,.06);
+}
+.login .privacy-policy-page-link a {color:#607086}
+@media (max-width:480px){.login #login{padding-top:28px}.login form{padding:22px}}
