@@ -117,7 +117,11 @@ sc_p9final_assert(! str_contains($paymentsMobile, "PaymentMethodOption(id: 1"), 
 
 // SC-P9-044 — Follow-up workflow — Validate.
 foreach ([
-    "'note', 'promise', 'issue', 'defer', 'escalate'",
+    "'note' =>",
+    "'promise' =>",
+    "'issue' =>",
+    "'defer' =>",
+    "'escalate' =>",
     'Capabilities::MANAGE_FOLLOWUPS',
     'new FollowUpService()',
     'Promise follow-up requires promised_date only.',
