@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/mobile_failure.dart';
 import 'deep_links.dart';
 
 final class MobileNotification {
@@ -122,25 +123,21 @@ final class MobileNotificationsController extends ChangeNotifier {
 
   NotificationsState state = NotificationsState.idle;
   List<MobileNotification> items = const <MobileNotification>[];
-  String? errorMessage;
+  MobileFailure? failure;
 
   int get unreadCount => items.where((item) => !item.isRead).length;
 
   Future<void> load({bool preserveVisibleData = true}) async {
     final previous = items;
     state = NotificationsState.loading;
-    errorMessage = null;
+    failure = null;
     notifyListeners();
     try {
       items = await repository.inbox();
       state = NotificationsState.ready;
     } on Object catch (error) {
-      if (!preserveVisibleData) {
-        items = const <MobileNotification>[];
-      } else {
-        items = previous;
-      }
-      errorMessage = error.toString();
+      items = preserveVisibleData ? previous : const <MobileNotification>[];
+      failure = MobileFailure.from(error);
       state = NotificationsState.error;
     }
     notifyListeners();
