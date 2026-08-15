@@ -23,6 +23,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
   late final TextEditingController _baseValue;
   late String _status;
   String? _message;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -46,7 +47,6 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final busy = widget.controller.editState == ContractEditState.saving;
     return Scaffold(
       appBar: AppBar(title: Text('Edit ${widget.contract.contractNumber}')),
       body: SafeArea(
@@ -64,7 +64,9 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                 child: ListTile(
                   leading: Icon(Icons.archive_outlined),
                   title: Text('Archived contract'),
-                  subtitle: Text('The server will reject light edits to archived contracts.'),
+                  subtitle: Text(
+                    'The server will reject light edits to archived contracts.',
+                  ),
                 ),
               ),
             ],
@@ -80,13 +82,13 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
               title: 'Contract number',
               child: TextField(
                 controller: _number,
-                enabled: !busy,
+                enabled: !_saving,
                 decoration: const InputDecoration(
                   labelText: 'Contract number',
                   border: OutlineInputBorder(),
                 ),
               ),
-              onSave: busy ? null : _saveNumber,
+              onSave: _saving ? null : _saveNumber,
               buttonLabel: 'Save contract number',
             ),
             _EditSection(
@@ -95,7 +97,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                 children: [
                   TextField(
                     controller: _startDate,
-                    enabled: !busy,
+                    enabled: !_saving,
                     decoration: const InputDecoration(
                       labelText: 'Start date (YYYY-MM-DD)',
                       border: OutlineInputBorder(),
@@ -104,7 +106,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _endDate,
-                    enabled: !busy,
+                    enabled: !_saving,
                     decoration: const InputDecoration(
                       labelText: 'End date (YYYY-MM-DD)',
                       border: OutlineInputBorder(),
@@ -112,21 +114,22 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                   ),
                 ],
               ),
-              onSave: busy ? null : _saveDates,
+              onSave: _saving ? null : _saveDates,
               buttonLabel: 'Save dates',
             ),
             _EditSection(
               title: 'Base value',
               child: TextField(
                 controller: _baseValue,
-                enabled: !busy,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                enabled: !_saving,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: 'Base value',
                   border: OutlineInputBorder(),
                 ),
               ),
-              onSave: busy ? null : _saveBaseValue,
+              onSave: _saving ? null : _saveBaseValue,
               buttonLabel: 'Save base value',
             ),
             _EditSection(
@@ -147,7 +150,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                       ),
                     )
                     .toList(growable: false),
-                onChanged: busy
+                onChanged: _saving
                     ? null
                     : (value) {
                         if (value != null) {
@@ -155,10 +158,10 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                         }
                       },
               ),
-              onSave: busy ? null : _saveStatus,
+              onSave: _saving ? null : _saveStatus,
               buttonLabel: 'Save status',
             ),
-            if (busy) const LinearProgressIndicator(),
+            if (_saving) const LinearProgressIndicator(),
           ],
         ),
       ),
@@ -167,7 +170,10 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
 
   Future<void> _saveNumber() async {
     await _save(
-      () => widget.controller.editContractNumber(widget.contract.id, _number.text),
+      () => widget.controller.editContractNumber(
+        widget.contract.id,
+        _number.text,
+      ),
       'Contract number saved.',
     );
   }
@@ -185,7 +191,10 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
 
   Future<void> _saveBaseValue() async {
     await _save(
-      () => widget.controller.editBaseValue(widget.contract.id, _baseValue.text),
+      () => widget.controller.editBaseValue(
+        widget.contract.id,
+        _baseValue.text,
+      ),
       'Base value saved.',
     );
   }
@@ -198,26 +207,33 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
   }
 
   Future<void> _save(Future<bool> Function() action, String success) async {
-    setState(() => _message = null);
+    if (_saving) {
+      return;
+    }
+    setState(() {
+      _message = null;
+      _saving = true;
+    });
     final ok = await action();
     if (!mounted) {
       return;
     }
-    if (ok) {
-      final refreshed = widget.controller.selectedContract;
-      if (refreshed != null && refreshed.id == widget.contract.id) {
-        _number.text = refreshed.contractNumber;
-        _startDate.text = refreshed.startDate ?? '';
-        _endDate.text = refreshed.endDate ?? '';
-        _baseValue.text = refreshed.baseValue ?? '0';
-        _status = refreshed.status;
-      }
-      setState(() => _message = success);
-    } else {
-      setState(() {
-        _message = widget.controller.editErrorMessage ?? 'Contract edit failed.';
-      });
+
+    final refreshed = widget.controller.selectedContract;
+    if (ok && refreshed != null && refreshed.id == widget.contract.id) {
+      _number.text = refreshed.contractNumber;
+      _startDate.text = refreshed.startDate ?? '';
+      _endDate.text = refreshed.endDate ?? '';
+      _baseValue.text = refreshed.baseValue ?? '0';
+      _status = refreshed.status;
     }
+
+    setState(() {
+      _saving = false;
+      _message = ok
+          ? success
+          : widget.controller.editErrorMessage ?? 'Contract edit failed.';
+    });
   }
 }
 
