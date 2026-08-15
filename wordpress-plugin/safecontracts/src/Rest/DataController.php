@@ -47,8 +47,9 @@ final class DataController
     public static function customers(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
-            return self::page(array_map([self::class, 'customerView'], (new AdminReadRepository())->customers($query['filters'])), $query['page'], $query['per_page']);
+            $query = ApiListQuery::parse($request, ['customer_id'], ['name', 'id'], 'name');
+            $rows = array_map([self::class, 'customerView'], (new AdminReadRepository())->customers($query['filters']));
+            return self::page($rows, $query);
         });
     }
 
@@ -63,6 +64,7 @@ final class DataController
     public static function contractOptions(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
+            ApiAbuseGuard::safeParams($request, ['customer_id']);
             $customerId = ApiRequest::optionalCustomerId($request);
             return ApiResponse::ok((new AdminReadRepository())->contractOptions($customerId), [
                 'scope' => ApiScope::mode(), 'customer_id' => $customerId, 'client_may_offer_all_option' => true,
@@ -73,8 +75,15 @@ final class DataController
     public static function contracts(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
-            return self::page(array_map([self::class, 'contractView'], (new AdminReadRepository())->contracts($query['filters'])), $query['page'], $query['per_page']);
+            $query = ApiListQuery::parse(
+                $request,
+                ['customer_id', 'contract_id', 'accountant_user_id', 'status'],
+                ['id', 'contract_number', 'customer_name', 'status', 'start_date', 'end_date'],
+                'id',
+                'desc'
+            );
+            $rows = array_map([self::class, 'contractView'], (new AdminReadRepository())->contracts($query['filters']));
+            return self::page($rows, $query);
         });
     }
 
@@ -89,8 +98,14 @@ final class DataController
     public static function payments(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
-            return self::page(array_map([self::class, 'paymentListView'], (new AdminReadRepository())->payments($query['filters'])), $query['page'], $query['per_page']);
+            $query = ApiListQuery::parse(
+                $request,
+                ['customer_id', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to'],
+                ['id', 'due_date', 'expected_payment_date', 'remaining_amount', 'status', 'contract_number'],
+                'due_date'
+            );
+            $rows = array_map([self::class, 'paymentListView'], (new AdminReadRepository())->payments($query['filters']));
+            return self::page($rows, $query);
         });
     }
 
@@ -109,8 +124,15 @@ final class DataController
     public static function collections(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
-            return self::page(array_map([self::class, 'collectionListView'], (new AdminReadRepository())->collections($query['filters'])), $query['page'], $query['per_page']);
+            $query = ApiListQuery::parse(
+                $request,
+                ['customer_id', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to'],
+                ['id', 'collection_date', 'amount', 'due_date', 'remaining_amount'],
+                'collection_date',
+                'desc'
+            );
+            $rows = array_map([self::class, 'collectionListView'], (new AdminReadRepository())->collections($query['filters']));
+            return self::page($rows, $query);
         });
     }
 
@@ -129,9 +151,14 @@ final class DataController
     public static function followUps(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $query = ApiRequest::listQuery($request);
-            $rows = self::filterFollowUps((new FollowUpService())->queue(500), $query['filters']);
-            return self::page(array_map([self::class, 'followUpQueueView'], $rows), $query['page'], $query['per_page']);
+            $query = ApiListQuery::parse(
+                $request,
+                ['customer_id', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to'],
+                ['payment_id', 'due_date', 'expected_payment_date', 'remaining_amount', 'status', 'followup_state'],
+                'due_date'
+            );
+            $rows = self::filterFollowUps((new FollowUpService())->queue(ApiListQuery::BOUNDED_WINDOW), $query['filters']);
+            return self::page(array_map([self::class, 'followUpQueueView'], $rows), $query);
         });
     }
 
@@ -139,9 +166,15 @@ final class DataController
     {
         return self::guard(function () use ($request): WP_REST_Response {
             $paymentId = ApiRequest::routeId($request, 'payment_id');
-            $pagination = ApiRequest::pagination($request);
-            $rows = (new FollowUpService())->history($paymentId, 500);
-            return self::page(array_map([self::class, 'followUpHistoryView'], $rows), $pagination['page'], $pagination['per_page']);
+            $query = ApiListQuery::pagination(
+                $request,
+                ['id', 'created_at', 'promised_date', 'deferred_until'],
+                'created_at',
+                'desc',
+                ['payment_id']
+            );
+            $rows = (new FollowUpService())->history($paymentId, ApiListQuery::BOUNDED_WINDOW);
+            return self::page(array_map([self::class, 'followUpHistoryView'], $rows), $query);
         });
     }
 
@@ -159,14 +192,22 @@ final class DataController
         }
     }
 
-    /** @param list<array<string,mixed>> $rows */
-    private static function page(array $rows, int $page, int $perPage): WP_REST_Response
+    /** @param list<array<string,mixed>> $rows @param array{page:int,per_page:int,sort:string,order:string} $query */
+    private static function page(array $rows, array $query): WP_REST_Response
     {
-        $offset = ($page - 1) * $perPage;
-        $items = array_slice($rows, $offset, $perPage);
+        $rows = ApiListQuery::sortRows($rows, $query['sort'], $query['order']);
+        $offset = ($query['page'] - 1) * $query['per_page'];
+        $items = array_slice($rows, $offset, $query['per_page']);
         return ApiResponse::ok($items, [
-            'scope' => ApiScope::mode(), 'page' => $page, 'per_page' => $perPage, 'returned' => count($items),
-            'available_in_bounded_read' => count($rows), 'has_more' => ($offset + count($items)) < count($rows),
+            'scope' => ApiScope::mode(),
+            'page' => $query['page'],
+            'per_page' => $query['per_page'],
+            'sort' => $query['sort'],
+            'order' => $query['order'],
+            'returned' => count($items),
+            'available_in_bounded_read' => count($rows),
+            'bounded_window' => ApiListQuery::BOUNDED_WINDOW,
+            'has_more' => ($offset + count($items)) < count($rows),
         ]);
     }
 
