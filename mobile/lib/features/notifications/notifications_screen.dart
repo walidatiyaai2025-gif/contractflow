@@ -35,7 +35,8 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
       builder: (context, child) {
         final controller = widget.controller;
         final page = controller.currentPage;
-        if (controller.state == NotificationsLoadState.loading && page == null) {
+        if (controller.state == NotificationsLoadState.loading &&
+            page == null) {
           return const SafeContractsStateView(
             kind: MobileStateKind.loading,
             message: 'Loading notifications…',
@@ -137,9 +138,8 @@ final class _PagingControls extends StatelessWidget {
           ),
           Text('Page ${page.page}'),
           OutlinedButton.icon(
-            onPressed: page.hasMore
-                ? () => unawaited(controller.nextPage())
-                : null,
+            onPressed:
+                page.hasMore ? () => unawaited(controller.nextPage()) : null,
             icon: const Icon(Icons.chevron_right),
             label: const Text('Next'),
           ),
