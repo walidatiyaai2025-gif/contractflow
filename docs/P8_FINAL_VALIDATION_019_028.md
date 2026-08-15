@@ -89,4 +89,4 @@ Dashboard KPI, customer-option and dependent-contract reads remain bounded/scope
 
 `tests/php/rest_api_validation_019_028.php` exercises all ten task IDs with behavioral checks covering session/data direct-callback authorization, route permission contracts for established read models, pre-read capability denial, SQL scope, safe field projection, 403/404/422 errors, strict date ranges, follow-up semantics and dashboard scope.
 
-Quality Gates #146 passed the final merge candidate. The PHP pipeline passed every prior P8 suite (`001..018`) and the final `SC-P8-019..028` suite passed 50 assertions; repository standards and Flutter format/analyze/tests also passed.
+The PHP pipeline passes every prior P8 suite (`001..018`) before the final `SC-P8-019..028` suite, which contains 50 assertions. Repository standards and Flutter format/analyze/tests are part of the same Quality Gates. Because mobile P9 work can land concurrently, the PR is revalidated against the latest `main` merge candidate before merge rather than relying on an earlier green head.
