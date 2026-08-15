@@ -24,6 +24,10 @@ final class AuditRecorder
         'safecontracts_payment_dates_changed',
         'safecontracts_followup_recorded',
         'safecontracts_export_completed',
+        'safecontracts_import_uploaded',
+        'safecontracts_import_discovered',
+        'safecontracts_import_mapping_saved',
+        'safecontracts_import_validated',
         'safecontracts_import_completed',
     ];
 
@@ -117,6 +121,10 @@ final class AuditRecorder
                 ['promised_date' => $args[4] ?? null, 'deferred_until' => $args[5] ?? null],
             ],
             'safecontracts_export_completed' => self::externalEvent('export', 'export_completed', $args),
+            'safecontracts_import_uploaded' => self::externalEvent('import', 'import_uploaded', $args),
+            'safecontracts_import_discovered' => self::externalEvent('import', 'import_discovered', $args),
+            'safecontracts_import_mapping_saved' => self::externalEvent('import', 'import_mapping_saved', $args),
+            'safecontracts_import_validated' => self::externalEvent('import', 'import_validated', $args),
             'safecontracts_import_completed' => self::externalEvent('import', 'import_completed', $args),
             default => ['system', null, $hook, get_current_user_id(), null, null, null],
         };
@@ -126,7 +134,8 @@ final class AuditRecorder
     private static function externalEvent(string $entityType, string $eventType, array $args): array
     {
         $context = is_array($args[0] ?? null) ? $args[0] : [];
-        $entityId = isset($context['id']) && (int) $context['id'] > 0 ? (int) $context['id'] : null;
+        $rawEntityId = $context['run_id'] ?? $context['id'] ?? null;
+        $entityId = $rawEntityId !== null && (int) $rawEntityId > 0 ? (int) $rawEntityId : null;
         $actorId = isset($args[1]) ? (int) $args[1] : get_current_user_id();
         return [$entityType, $entityId, $eventType, $actorId, null, null, $context];
     }
@@ -139,7 +148,7 @@ final class AuditRecorder
         $clean = [];
         foreach ($context as $key => $value) {
             $name = strtolower((string) $key);
-            if (preg_match('/token|secret|password|credential|authorization|private[_-]?key|service[_-]?account/', $name)) {
+            if (preg_match('/token|secret|password|credential|authorization|private[_-]?key|service[_-]?account|storage[_-]?key|sha256|tmp[_-]?name|workbook[_-]?(content|bytes|path)/', $name)) {
                 continue;
             }
             $clean[$key] = is_array($value) ? self::sanitize($value) : $value;
