@@ -147,7 +147,8 @@ final class _ContractDetailsBody extends StatelessWidget {
           ),
           onRetry: () => unawaited(controller.openContract(contractId)),
         ),
-      ContractDetailLoadState.idle || ContractDetailLoadState.loading =>
+      ContractDetailLoadState.idle ||
+      ContractDetailLoadState.loading =>
         const Center(child: CircularProgressIndicator()),
     };
   }
@@ -195,7 +196,8 @@ final class _ReadyContractDetails extends StatelessWidget {
           _DetailsSection(
             title: l10n.t('Contract'),
             children: [
-              _DetailValue(label: l10n.t('Contract ID'), value: '${contract.id}'),
+              _DetailValue(
+                  label: l10n.t('Contract ID'), value: '${contract.id}'),
               _DetailValue(
                 label: l10n.t('Status'),
                 value: l10n.status(contract.status),
@@ -216,7 +218,8 @@ final class _ReadyContractDetails extends StatelessWidget {
             children: [
               _DetailValue(
                 label: l10n.t('Customer'),
-                value: contract.customerName ?? l10n.customerNumber(contract.customerId),
+                value: contract.customerName ??
+                    l10n.customerNumber(contract.customerId),
               ),
               _DetailValue(
                 label: l10n.t('Customer ID'),
