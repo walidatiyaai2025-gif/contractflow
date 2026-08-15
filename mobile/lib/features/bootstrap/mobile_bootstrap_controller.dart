@@ -8,6 +8,8 @@ import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_repository.dart';
 import '../export/mobile_excel_export.dart';
 import '../navigation/navigation_policy.dart';
+import '../notifications/notifications.dart';
+import '../profile/profile.dart';
 import '../session/session_controller.dart';
 
 enum MobileBootstrapState { idle, loading, ready, blocked, error }
@@ -25,6 +27,8 @@ final class MobileBootstrapController extends ChangeNotifier {
   DashboardController? dashboardController;
   CustomersController? customersController;
   ContractsController? contractsController;
+  NotificationsController? notificationsController;
+  ProfileController? profileController;
   MobileExcelExportController? excelExportController;
   MobileNavigationPolicy? navigationPolicy;
   String? message;
@@ -78,6 +82,12 @@ final class MobileBootstrapController extends ChangeNotifier {
       canEditContract:
           canAccessContracts && session.can(contractEditCapability),
     );
+    notificationsController = NotificationsController(
+      repository: NotificationsRepository(client),
+      pageSize: config.defaultPageSize,
+      canAccess: policy.destinations.contains(MobileDestination.notifications),
+    );
+    profileController = ProfileController(ProfileRepository(client));
     excelExportController = MobileExcelExportController(
       repository: MobileExcelExportRepository(client),
       filtersProvider: () => dashboard.filters,
@@ -94,10 +104,14 @@ final class MobileBootstrapController extends ChangeNotifier {
     dashboardController?.dispose();
     customersController?.dispose();
     contractsController?.dispose();
+    notificationsController?.dispose();
+    profileController?.dispose();
     excelExportController?.dispose();
     dashboardController = null;
     customersController = null;
     contractsController = null;
+    notificationsController = null;
+    profileController = null;
     excelExportController = null;
     navigationPolicy = null;
     state = MobileBootstrapState.blocked;
@@ -112,6 +126,8 @@ final class MobileBootstrapController extends ChangeNotifier {
     dashboardController?.dispose();
     customersController?.dispose();
     contractsController?.dispose();
+    notificationsController?.dispose();
+    profileController?.dispose();
     excelExportController?.dispose();
     super.dispose();
   }
