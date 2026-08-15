@@ -66,8 +66,8 @@ final class PaymentStatus
             throw new InvalidArgumentException('Due-soon window cannot be negative.');
         }
 
-        $due = self::parseDate($dueDate);
         $today = self::today($today);
+        $due = self::parseDate($dueDate, $today->getTimezone());
         $dueKey = $due->format('Y-m-d');
         $todayKey = $today->format('Y-m-d');
 
@@ -92,10 +92,10 @@ final class PaymentStatus
         return self::temporalForDueDate($dueDate, $today) === self::OVERDUE;
     }
 
-    private static function parseDate(mixed $value): DateTimeImmutable
+    private static function parseDate(mixed $value, DateTimeZone $timezone): DateTimeImmutable
     {
         $date = trim((string) $value);
-        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date, $timezone);
         if (! $parsed || $parsed->format('Y-m-d') !== $date) {
             throw new InvalidArgumentException('Payment due date must use YYYY-MM-DD and be a valid calendar date.');
         }
