@@ -411,7 +411,11 @@ String? _optionalDate(Object? value, String field) {
   if (value is! String) {
     throw FormatException('$field must use YYYY-MM-DD or null.');
   }
-  _validateIsoDate(value, field);
+  try {
+    _validateIsoDate(value, field);
+  } on ArgumentError {
+    throw FormatException('$field is not a valid YYYY-MM-DD date.');
+  }
   return value;
 }
 
