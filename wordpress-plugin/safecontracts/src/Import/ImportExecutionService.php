@@ -49,7 +49,12 @@ final class ImportExecutionService
         if ($run === null || $run['mapping'] === [] || trim((string) ($run['selected_sheet'] ?? '')) === '') {
             throw new InvalidArgumentException('Import run must have a validated worksheet mapping before execution.');
         }
+        if (! in_array((string) ($run['status'] ?? ''), ['mapped', 'validated'], true)) {
+            throw new DomainException('Import run is not executable in its current state. Completed, running and failed runs are terminal.');
+        }
 
+        // A mapped/validated retry is a fresh validation attempt. Terminal runs cannot reach this path.
+        $this->runs->clearErrors($runId);
         $sheet = ColumnMapping::sheet($run['discovery'], (string) $run['selected_sheet']);
         $path = $this->storage->pathForKey((string) $run['storage_key']);
         $sourceRows = $this->reader->rows($path, (string) $run['selected_sheet'], (int) $sheet['header_row'], 50000);
@@ -76,6 +81,12 @@ final class ImportExecutionService
             'error_rows' => count($validationErrorRows),
         ];
         $this->runs->updateStatus($runId, 'validated', $counts, $strategy);
+        do_action('safecontracts_import_validated', [
+            'run_id' => $runId,
+            'status' => 'validated',
+            'duplicate_strategy' => $strategy,
+            'counts' => $counts,
+        ], get_current_user_id());
 
         // Fail closed: no business entity is mutated until every source row passes validation.
         if ($validationErrorRows !== []) {
@@ -159,7 +170,6 @@ final class ImportExecutionService
         }
 
         $contract = $this->lookup->contract((string) $data['contract_number']);
-        $contractWasExisting = $contract !== null;
         if ($contract === null) {
             $contractId = $this->contracts->create([
                 'contract_number' => $data['contract_number'],
@@ -218,7 +228,6 @@ final class ImportExecutionService
             throw new DomainException('Existing payment reference cannot be changed by import update.');
         }
         $this->payments->updateDates((int) $payment['id'], $data['payment_due_date'], $data['payment_expected_date']);
-        unset($contractWasExisting);
         return 'imported';
     }
 
