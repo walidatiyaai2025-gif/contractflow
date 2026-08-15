@@ -50,3 +50,16 @@ jobs:
         run: flutter analyze
       - name: Test
         run: flutter test
+
+  release-readiness:
+    needs: [repository-standards, backend-foundation, mobile-foundation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verify backup and restore manifest
+        run: python3 scripts/backup_manifest.py --check
+      - name: Verify production release readiness
+        run: python3 scripts/release_readiness.py --check
