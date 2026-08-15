@@ -36,20 +36,33 @@ final class PaymentMethodsController
         ]);
     }
 
-    public static function active(WP_REST_Request $request): WP_REST_Response
+    public static function active(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         unset($request);
+        $access = Router::canAccess();
+        if ($access instanceof WP_Error) {
+            return $access;
+        }
         return ApiResponse::ok((new PaymentMethodRepository())->all(true));
     }
 
-    public static function all(WP_REST_Request $request): WP_REST_Response
+    public static function all(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         unset($request);
+        $permission = self::canManage();
+        if ($permission instanceof WP_Error) {
+            return $permission;
+        }
         return ApiResponse::ok((new PaymentMethodRepository())->all(false));
     }
 
     public static function save(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
+        $permission = self::canManage();
+        if ($permission instanceof WP_Error) {
+            return $permission;
+        }
+
         $input = $request->get_json_params();
 
         try {
