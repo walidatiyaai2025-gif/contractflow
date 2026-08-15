@@ -98,7 +98,7 @@ final class ContractFinancialRepository
             "INSERT INTO {$table}
                 (contract_id, media_id, label, is_active, created_by, updated_by, created_at, updated_at)
              VALUES (%d, %d, %s, 1, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())
-             ON DUPLICATE KEY UPDATE label = VALUES(label), is_active = 1, updated_by = VALUES(updated_by), updated_at = VALUES(updated_at)",
+             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), label = VALUES(label), is_active = 1, updated_by = VALUES(updated_by), updated_at = VALUES(updated_at)",
             $contractId,
             $mediaId,
             $label,
