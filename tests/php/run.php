@@ -33,8 +33,8 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
 
 sc_assert(get_option(Migrator::VERSION_OPTION) === Migrator::LATEST_VERSION, 'migration version stored after successful migration');
-sc_assert(Migrator::LATEST_VERSION === '1.6.0', 'payment schedule migration version registered');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 9, 'foundation, master data, contracts, financials, history and payment schemas migrated once');
+sc_assert(Migrator::LATEST_VERSION === '1.7.0', 'collection ledger migration version registered');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'foundation through collection schemas migrated once');
 sc_assert(str_contains($GLOBALS['sc_test_dbdelta'][0], 'wp_safecontracts_meta'), 'foundation migration uses WordPress prefix');
 
 $customerSchema = $GLOBALS['sc_test_dbdelta'][1];
@@ -76,6 +76,11 @@ $scheduledPaymentSchema = $GLOBALS['sc_test_dbdelta'][8];
 sc_assert(str_contains($scheduledPaymentSchema, 'wp_safecontracts_scheduled_payments'), 'scheduled payment table created');
 sc_assert(str_contains($scheduledPaymentSchema, 'UNIQUE KEY contract_sequence (contract_id, sequence_no)'), 'scheduled payment sequence is unique per contract');
 
+$collectionSchema = $GLOBALS['sc_test_dbdelta'][9];
+sc_assert(str_contains($collectionSchema, 'wp_safecontracts_payment_collections'), 'collection transaction table created');
+sc_assert(str_contains($collectionSchema, 'payment_method_id bigint(20) unsigned NOT NULL'), 'collection payment method is mandatory');
+sc_assert(str_contains($collectionSchema, 'proof_media_id bigint(20) unsigned NULL'), 'collection proof remains optional');
+
 sc_assert(count($GLOBALS['sc_test_queries']) === 3, 'three default payment methods are seeded');
 $seedSql = implode("\n", $GLOBALS['sc_test_queries']);
 sc_assert(str_contains($seedSql, "'cash', 'Cash'"), 'Cash payment method seeded');
@@ -111,7 +116,7 @@ sc_assert(isset($admin[Capabilities::MANAGE_REFERENCE_DATA]), 'native WordPress 
 
 $seedCountBeforeBoot = count($GLOBALS['sc_test_queries']);
 do_action('plugins_loaded');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 9, 'migrations are not replayed after stored version is current');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 10, 'migrations are not replayed after stored version is current');
 sc_assert(count($GLOBALS['sc_test_queries']) === $seedCountBeforeBoot, 'default payment methods are not reseeded after current migration');
 sc_assert(isset($GLOBALS['sc_test_actions']['rest_api_init']), 'REST registration hook attached');
 sc_assert(isset($GLOBALS['sc_test_actions']['admin_menu']), 'reference-data admin menu hook attached');
