@@ -117,7 +117,8 @@ final class _BootstrapView extends StatelessWidget {
                       const CircularProgressIndicator()
                     else ...[
                       Text(
-                        controller.message ?? 'SafeContracts mobile is unavailable.',
+                        controller.message ??
+                            'SafeContracts mobile is unavailable.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
