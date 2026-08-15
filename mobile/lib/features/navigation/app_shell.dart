@@ -19,6 +19,7 @@ import '../followups/followups_screen.dart';
 import '../notifications/deep_link.dart';
 import '../notifications/notifications.dart';
 import '../notifications/notifications_screen.dart';
+import '../notifications/push_registration.dart';
 import '../payments/payments.dart';
 import '../payments/payments_screen.dart';
 import '../profile/profile.dart';
@@ -37,6 +38,7 @@ final class SafeContractsShell extends StatefulWidget {
     required this.notificationsController,
     required this.profileController,
     required this.excelExportController,
+    required this.pushRegistration,
     required this.usingConfigDefaults,
     required this.onClearSession,
     super.key,
@@ -51,6 +53,7 @@ final class SafeContractsShell extends StatefulWidget {
   final NotificationsController notificationsController;
   final ProfileController profileController;
   final MobileExcelExportController excelExportController;
+  final MobilePushRegistration pushRegistration;
   final bool usingConfigDefaults;
   final VoidCallback onClearSession;
 
@@ -156,6 +159,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           session: widget.session,
           config: widget.config,
           controller: widget.profileController,
+          pushRegistration: widget.pushRegistration,
           onClearSession: widget.onClearSession,
         ),
       _ => _PlannedDestination(destination: _selected),

@@ -122,11 +122,14 @@ final class FirebaseSettingsPage
         check_admin_referer(self::TEST_PUSH_ACTION);
         $status = 'test_push_failed';
         try {
-            $devices = (new DeviceTokenRepository())->activeForUsers([get_current_user_id()]);
+            $repository = new DeviceTokenRepository();
+            $currentUserId = get_current_user_id();
+            $devices = $repository->activeForUsers([$currentUserId]);
             $device = $devices === [] ? null : $devices[count($devices) - 1];
             $token = is_array($device) ? trim((string) ($device['token'] ?? '')) : '';
             if ($token === '') {
-                self::redirect('test_push_no_device');
+                $diagnostics = $repository->activeDiagnostics($currentUserId);
+                self::redirect($diagnostics['active_devices'] > 0 ? 'test_push_other_user_device' : 'test_push_no_device');
             }
             $result = (new FirebasePushTransport())->send($token, [
                 'title' => 'SafeContracts',
@@ -158,6 +161,18 @@ final class FirebaseSettingsPage
             && trim((string) $summary['app_id']) !== '';
         $status = sanitize_key((string) ($_GET['safecontracts_status'] ?? ''));
         $notice = self::notice($status);
+        $currentUserId = get_current_user_id();
+        $deviceDiagnostics = [
+            'current_user_active_devices' => 0,
+            'active_devices' => 0,
+            'active_users' => 0,
+            'truncated' => false,
+        ];
+        try {
+            $deviceDiagnostics = (new DeviceTokenRepository())->activeDiagnostics($currentUserId);
+        } catch (Throwable $error) {
+            unset($error);
+        }
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Push infrastructure', 'safecontracts'); ?></p><h1><?php echo esc_html__('Firebase Settings', 'safecontracts'); ?></h1></div><span class="safecontracts-state-chip <?php echo $ready ? 'is-success' : 'is-warning'; ?>"><?php echo $ready ? esc_html__('Ready', 'safecontracts') : esc_html__('Incomplete', 'safecontracts'); ?></span></div>
@@ -200,13 +215,22 @@ final class FirebaseSettingsPage
                     <?php submit_button($metadata === null ? __('Upload Service Account', 'safecontracts') : __('Replace Service Account', 'safecontracts'), 'primary'); ?>
                 </form>
 
+                <h3><?php echo esc_html__('Mobile device registration', 'safecontracts'); ?></h3>
+                <table class="widefat striped"><tbody>
+                    <tr><th><?php echo esc_html__('Current WordPress user ID', 'safecontracts'); ?></th><td><?php echo esc_html((string) $currentUserId); ?></td></tr>
+                    <tr><th><?php echo esc_html__('Active devices for this user', 'safecontracts'); ?></th><td><?php echo esc_html((string) $deviceDiagnostics['current_user_active_devices']); ?></td></tr>
+                    <tr><th><?php echo esc_html__('Active devices in SafeContracts', 'safecontracts'); ?></th><td><?php echo esc_html((string) $deviceDiagnostics['active_devices']); ?><?php echo $deviceDiagnostics['truncated'] ? esc_html__(' (500-user diagnostic limit reached)', 'safecontracts') : ''; ?></td></tr>
+                    <tr><th><?php echo esc_html__('Users with active devices', 'safecontracts'); ?></th><td><?php echo esc_html((string) $deviceDiagnostics['active_users']); ?></td></tr>
+                </tbody></table>
+                <p class="description"><?php echo esc_html__('Compare the current WordPress user ID above with User ID in the SafeContracts mobile Profile. No FCM token or bearer credential is displayed here.', 'safecontracts'); ?></p>
+
                 <?php if ($metadata !== null) : ?>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::TEST_ACTION); ?>"><?php wp_nonce_field(self::TEST_ACTION); ?><?php submit_button(__('Test Firebase Connection', 'safecontracts'), 'secondary', 'submit', false); ?></form>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::TEST_PUSH_ACTION); ?>"><?php wp_nonce_field(self::TEST_PUSH_ACTION); ?><?php submit_button(__('Send Test Notification', 'safecontracts'), 'secondary', 'submit', false); ?></form>
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('<?php echo esc_js(__('Delete the stored Firebase service account?', 'safecontracts')); ?>');"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><?php wp_nonce_field(self::DELETE_ACTION); ?><?php submit_button(__('Delete Credential', 'safecontracts'), 'delete', 'submit', false); ?></form>
                     </div>
-                    <p class="description"><?php echo esc_html__('Test Notification targets the latest active device registered for your current WordPress user. Sign in to the SafeContracts mobile app first if no device is registered.', 'safecontracts'); ?></p>
+                    <p class="description"><?php echo esc_html__('Test Notification targets the latest active device registered for this exact WordPress user. Mobile Profile now shows registration and diagnostic state when registration is incomplete.', 'safecontracts'); ?></p>
                 <?php endif; ?>
             </section>
         </div>
@@ -235,7 +259,8 @@ final class FirebaseSettingsPage
             'credential_deleted' => ['class' => 'notice-success', 'message' => __('Firebase service account deleted.', 'safecontracts')],
             'test_ok' => ['class' => 'notice-success', 'message' => __('Firebase OAuth and FCM HTTP v1 authorization test succeeded.', 'safecontracts')],
             'test_push_ok' => ['class' => 'notice-success', 'message' => __('Test notification sent to your latest active SafeContracts device.', 'safecontracts')],
-            'test_push_no_device' => ['class' => 'notice-warning', 'message' => __('No active mobile device is registered for your WordPress user. Sign in to the SafeContracts app first.', 'safecontracts')],
+            'test_push_no_device' => ['class' => 'notice-warning', 'message' => __('No active SafeContracts mobile device is registered yet. Open Mobile Profile and use Retry device registration.', 'safecontracts')],
+            'test_push_other_user_device' => ['class' => 'notice-warning', 'message' => __('Active SafeContracts devices exist, but none belong to this WordPress user. Compare the WordPress user ID on this page with User ID in the mobile Profile.', 'safecontracts')],
             'invalid' => ['class' => 'notice-error', 'message' => __('Firebase settings are invalid.', 'safecontracts')],
             'credential_invalid' => ['class' => 'notice-error', 'message' => __('The Firebase service-account JSON is invalid or does not match this Firebase project.', 'safecontracts')],
             'credential_delete_failed' => ['class' => 'notice-error', 'message' => __('Firebase service-account deletion failed.', 'safecontracts')],

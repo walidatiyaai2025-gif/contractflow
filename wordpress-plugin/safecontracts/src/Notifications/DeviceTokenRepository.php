@@ -15,7 +15,7 @@ final class DeviceTokenRepository
         $hash = hash('sha256', $token);
         $now = gmdate('Y-m-d H:i:s');
 
-        $wpdb->query($wpdb->prepare(
+        $result = $wpdb->query($wpdb->prepare(
             "INSERT INTO {$table}
                 (user_id, token_hash, token, platform, is_active, last_seen_at, created_at, updated_at)
              VALUES (%d, %s, %s, %s, 1, %s, %s, %s)
@@ -34,18 +34,24 @@ final class DeviceTokenRepository
             $now,
             $now
         ));
+        if ($result === false) {
+            throw new \RuntimeException('SafeContracts device token persistence failed.');
+        }
     }
 
     public function revokeOwned(int $userId, string $token): void
     {
         global $wpdb;
         $table = $wpdb->prefix . 'safecontracts_device_tokens';
-        $wpdb->query($wpdb->prepare(
+        $result = $wpdb->query($wpdb->prepare(
             "UPDATE {$table} SET is_active = 0, updated_at = %s WHERE user_id = %d AND token_hash = %s",
             gmdate('Y-m-d H:i:s'),
             $userId,
             hash('sha256', $token)
         ));
+        if ($result === false) {
+            throw new \RuntimeException('SafeContracts device token revocation failed.');
+        }
     }
 
     /** @param list<int> $userIds @return list<array{id:int,user_id:int,token:string,platform:string}> */
@@ -79,6 +85,53 @@ final class DeviceTokenRepository
             ];
         }
         return $normalized;
+    }
+
+    /**
+     * Safe operator diagnostics. No token/hash material is selected or returned.
+     *
+     * @return array{current_user_active_devices:int,active_devices:int,active_users:int,truncated:bool}
+     */
+    public function activeDiagnostics(int $currentUserId): array
+    {
+        global $wpdb;
+        if ($currentUserId <= 0) {
+            throw new InvalidArgumentException('Device diagnostics require a valid current user.');
+        }
+        $table = $wpdb->prefix . 'safecontracts_device_tokens';
+        $rows = $wpdb->get_results(
+            "SELECT user_id, COUNT(*) AS device_count FROM {$table}
+             WHERE is_active = 1
+             GROUP BY user_id
+             ORDER BY user_id ASC
+             LIMIT 501",
+            ARRAY_A
+        );
+
+        $activeDevices = 0;
+        $activeUsers = 0;
+        $currentUserDevices = 0;
+        $normalizedRows = is_array($rows) ? $rows : [];
+        $truncated = count($normalizedRows) > 500;
+        foreach (array_slice($normalizedRows, 0, 500) as $row) {
+            $userId = (int) ($row['user_id'] ?? 0);
+            $deviceCount = max(0, (int) ($row['device_count'] ?? 0));
+            if ($userId <= 0 || $deviceCount <= 0) {
+                continue;
+            }
+            $activeUsers++;
+            $activeDevices += $deviceCount;
+            if ($userId === $currentUserId) {
+                $currentUserDevices = $deviceCount;
+            }
+        }
+
+        return [
+            'current_user_active_devices' => $currentUserDevices,
+            'active_devices' => $activeDevices,
+            'active_users' => $activeUsers,
+            'truncated' => $truncated,
+        ];
     }
 
     /**

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../config/mobile_config.dart';
+import '../notifications/push_registration.dart';
 import '../session/session_controller.dart';
 import '../ui/mobile_layout.dart';
 import '../ui/mobile_states.dart';
@@ -13,6 +14,7 @@ final class ProfileScreen extends StatefulWidget {
     required this.session,
     required this.config,
     required this.controller,
+    required this.pushRegistration,
     required this.onClearSession,
     super.key,
   });
@@ -20,6 +22,7 @@ final class ProfileScreen extends StatefulWidget {
   final SafeContractsSession session;
   final SafeContractsMobileConfig config;
   final ProfileController controller;
+  final MobilePushRegistration pushRegistration;
   final VoidCallback onClearSession;
 
   @override
@@ -52,6 +55,13 @@ final class _ProfileScreenState extends State<ProfileScreen> {
               ],
               const SizedBox(height: 24),
               Text(
+                'Push registration',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              _pushSection(),
+              const SizedBox(height: 24),
+              Text(
                 'Granted capabilities',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
@@ -79,6 +89,89 @@ final class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+  }
+
+  Widget _pushSection() {
+    if (!widget.config.features.pushNotifications) {
+      return const Card(
+        child: ListTile(
+          leading: Icon(Icons.notifications_off_outlined),
+          title:
+              Text('Push notifications are disabled by mobile configuration.'),
+          subtitle: Text(
+            'Enable Push notifications in SafeContracts → Mobile Configuration.',
+          ),
+        ),
+      );
+    }
+
+    return ValueListenableBuilder<MobilePushRegistrationSnapshot>(
+      valueListenable: widget.pushRegistration.status,
+      builder: (context, status, child) {
+        final registered = status.backendRegistered;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      registered
+                          ? Icons.notifications_active_outlined
+                          : Icons.sync_problem_outlined,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        registered
+                            ? 'Device registered with SafeContracts'
+                            : 'Device registration is not complete',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                    'Notification permission: ${_permissionLabel(status.permission)}'),
+                Text(
+                    'FCM token acquired: ${status.tokenAcquired ? 'Yes' : 'No'}'),
+                Text(
+                    'Backend registration: ${_backendLabel(status.backendState)}'),
+                if (status.errorCode != null)
+                  Text('Diagnostic code: ${status.errorCode}'),
+                if (status.permission == MobilePushPermissionState.denied) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Android notification permission is denied. The device can still register, but notification display remains blocked until permission is enabled.',
+                  ),
+                ],
+                if (!registered) ...[
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    onPressed: status.backendState ==
+                            MobilePushBackendState.registering
+                        ? null
+                        : () => unawaited(_retryPushRegistration()),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry device registration'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _retryPushRegistration() async {
+    await widget.pushRegistration.retryNow();
+    if (widget.pushRegistration.status.value.backendRegistered) {
+      await widget.controller.load();
+    }
   }
 
   Widget _deviceSection() {
@@ -123,6 +216,24 @@ final class _ProfileScreenState extends State<ProfileScreen> {
           .toList(growable: false),
     );
   }
+}
+
+String _permissionLabel(MobilePushPermissionState permission) {
+  return switch (permission) {
+    MobilePushPermissionState.authorized => 'Allowed',
+    MobilePushPermissionState.provisional => 'Provisional',
+    MobilePushPermissionState.denied => 'Denied',
+    MobilePushPermissionState.unknown => 'Unknown',
+  };
+}
+
+String _backendLabel(MobilePushBackendState state) {
+  return switch (state) {
+    MobilePushBackendState.idle => 'Not started',
+    MobilePushBackendState.registering => 'Registering…',
+    MobilePushBackendState.registered => 'Registered',
+    MobilePushBackendState.error => 'Failed',
+  };
 }
 
 List<String> _grantedCapabilities(SafeContractsSession session) {
