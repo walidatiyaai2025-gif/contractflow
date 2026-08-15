@@ -18,3 +18,12 @@ abstract interface class SafeContractsTransport {
     String? body,
   });
 }
+
+final class SafeContractsTransportException implements Exception {
+  const SafeContractsTransportException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
