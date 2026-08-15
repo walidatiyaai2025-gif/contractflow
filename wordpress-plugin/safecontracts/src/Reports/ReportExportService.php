@@ -42,7 +42,7 @@ final class ReportExportService
             'Contracts' => $this->rows($contracts, ['id','contract_number','customer_id','customer_name','accountant_user_id','status','start_date','end_date','base_value','is_archived']),
             'Payments' => $this->rows($payments, ['id','contract_id','contract_number','customer_id','customer_name','accountant_user_id','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status']),
             'Collections' => $this->rows($collections, ['id','payment_id','contract_id','contract_number','customer_id','customer_name','accountant_user_id','collection_date','amount','payment_method_name','reference','created_by','created_at']),
-            'Follow-up Queue' => $this->rows($followUps, ['payment_id','contract_id','customer_id','accountant_user_id','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','followup_state']),
+            'Follow-up Queue' => $this->rows($followUps, ['payment_id','contract_id','customer_id','accountant_user_id','contract_status','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','followup_state']),
         ];
 
         $binary = $this->workbook->build($sheets);
@@ -108,7 +108,8 @@ final class ReportExportService
     /** @param list<array<string,mixed>> $rows @param array<string,mixed> $filters @return list<array<string,mixed>> */
     private function filterFollowUps(array $rows, array $filters): array
     {
-        return array_values(array_filter($rows, static function (array $row) use ($filters): bool {
+        $paymentStatuses = ['upcoming', 'due_soon', 'due', 'overdue', 'partially_paid', 'paid'];
+        return array_values(array_filter($rows, static function (array $row) use ($filters, $paymentStatuses): bool {
             if (($filters['customer_id'] ?? 0) > 0 && (int) ($row['customer_id'] ?? 0) !== (int) $filters['customer_id']) {
                 return false;
             }
@@ -119,8 +120,14 @@ final class ReportExportService
                 && (int) ($row['accountant_user_id'] ?? 0) !== (int) $filters['accountant_user_id']) {
                 return false;
             }
-            if (($filters['status'] ?? '') !== '' && (string) ($row['status'] ?? '') !== (string) $filters['status']) {
-                return false;
+            $status = (string) ($filters['status'] ?? '');
+            if ($status !== '') {
+                $rowStatus = in_array($status, $paymentStatuses, true)
+                    ? (string) ($row['status'] ?? '')
+                    : (string) ($row['contract_status'] ?? '');
+                if ($rowStatus !== $status) {
+                    return false;
+                }
             }
             $due = (string) ($row['due_date'] ?? '');
             if (($filters['due_from'] ?? null) !== null && $due < (string) $filters['due_from']) {
