@@ -25,7 +25,8 @@ final class SafeContractsDirectionScope extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalized = languageCode.trim().toLowerCase();
-    final direction = normalized == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+    final direction =
+        normalized == 'ar' ? TextDirection.rtl : TextDirection.ltr;
     return Directionality(textDirection: direction, child: child);
   }
 }
