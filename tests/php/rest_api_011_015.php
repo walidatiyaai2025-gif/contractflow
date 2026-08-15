@@ -77,7 +77,7 @@ sc_p8_011_assert(str_contains($dashboardSql, 'accountant_user_id = 42') && ! str
 sc_p8_011_assert(count($dashboard->data['data']['contracts'] ?? []) === 1 && ($dashboard->data['data']['contracts'][0]['customer_id'] ?? 0) === 7, 'SC-P8-011 dependent contracts stay customer-scoped');
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true];
 $dashboardDenied = DashboardController::canView();
-sc_p8_011_assert($dashboardDenied instanceof WP_Error && $dashboardDenied->code === 'safecontracts_dashboard_scope_forbidden', 'SC-P8-011 ACCESS without data scope fails closed');
+sc_p8_011_assert($dashboardDenied instanceof WP_Error && $dashboardDenied->code === 'safecontracts_forbidden', 'SC-P8-011 ACCESS without data scope fails closed through canonical access-scope error');
 
 // SC-P8-012 — mobile config exposes only the normalized non-secret bootstrap contract.
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true];
