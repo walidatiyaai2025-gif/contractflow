@@ -57,7 +57,8 @@ void main() {
       final request = transport.requests.single;
       expect(request.method, 'PATCH');
       expect(request.headers['Accept'], 'application/json');
-      expect(request.headers['Content-Type'], 'application/json; charset=utf-8');
+      expect(
+          request.headers['Content-Type'], 'application/json; charset=utf-8');
       expect(request.headers['X-SafeContracts-Session'], 'opaque-test-session');
       expect(jsonDecode(request.body!)['expected_payment_date'], '2026-08-25');
       await expectLater(
@@ -93,7 +94,8 @@ void main() {
           meta: <String, Object?>{'api_version': 'v2'},
         ),
       );
-      await expectLater(_client(v2Transport).get('health'), throwsFormatException);
+      await expectLater(
+          _client(v2Transport).get('health'), throwsFormatException);
     });
   });
 
@@ -231,7 +233,8 @@ void main() {
         throwsFormatException,
       );
       expect(
-        () => CustomerOption.fromData(<String, Object?>{'id': 0, 'name': 'Bad'}),
+        () =>
+            CustomerOption.fromData(<String, Object?>{'id': 0, 'name': 'Bad'}),
         throwsFormatException,
       );
     });
@@ -370,7 +373,8 @@ void main() {
         () async {
       final forbidden = MobileExcelExportController(
         repository: MobileExcelExportRepository(
-          _client(FakeApiTransport((uri) => _error(403, 'forbidden', 'No access'))),
+          _client(
+              FakeApiTransport((uri) => _error(403, 'forbidden', 'No access'))),
         ),
         filtersProvider: () => const DashboardFilters(),
         canExport: true,
@@ -382,7 +386,8 @@ void main() {
 
       final validation = MobileExcelExportController(
         repository: MobileExcelExportRepository(
-          _client(FakeApiTransport((uri) => _error(422, 'invalid', 'Bad filter'))),
+          _client(
+              FakeApiTransport((uri) => _error(422, 'invalid', 'Bad filter'))),
         ),
         filtersProvider: () => const DashboardFilters(),
         canExport: true,
@@ -393,7 +398,8 @@ void main() {
       validation.dispose();
 
       final network = MobileExcelExportController(
-        repository: MobileExcelExportRepository(_client(const _FailingTransport())),
+        repository:
+            MobileExcelExportRepository(_client(const _FailingTransport())),
         filtersProvider: () => const DashboardFilters(),
         canExport: true,
         saver: _MemorySaver(),
@@ -417,7 +423,8 @@ void main() {
       );
       expect(
         () => CustomerPage.fromEnvelope(
-          _customerEnvelope(<Object?>[_customerData(7, 'Alpha')], scope: 'admin'),
+          _customerEnvelope(<Object?>[_customerData(7, 'Alpha')],
+              scope: 'admin'),
         ),
         throwsFormatException,
       );
