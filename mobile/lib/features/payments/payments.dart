@@ -124,8 +124,8 @@ final class PaymentMethodOption {
       id: _positiveInt(data['id'], 'payment_method.id'),
       code: _boundedText(data['code'], 'payment_method.code', 64),
       name: _boundedText(data['name'], 'payment_method.name', 191),
-      displayOrder:
-          _nonNegativeInt(data['display_order'], 'payment_method.display_order'),
+      displayOrder: _nonNegativeInt(
+          data['display_order'], 'payment_method.display_order'),
     );
   }
 }
