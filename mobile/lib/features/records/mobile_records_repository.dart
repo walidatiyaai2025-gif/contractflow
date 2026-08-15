@@ -42,7 +42,8 @@ final class MobileRecordsRepository {
       if (updateDates) 'end_date': endDate,
     };
     if (body.isEmpty) {
-      throw ArgumentError('At least one contract light-edit field is required.');
+      throw ArgumentError(
+          'At least one contract light-edit field is required.');
     }
     await client.patchJson('contracts/$id/light', body: body);
   }
