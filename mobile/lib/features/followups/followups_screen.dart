@@ -110,7 +110,8 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
           children: <Widget>[
             const SizedBox(height: 180),
             Center(
-              child: Text(l10n.t('No follow-up items match the authorized filters.')),
+              child: Text(
+                  l10n.t('No follow-up items match the authorized filters.')),
             ),
           ],
         ),
@@ -131,7 +132,8 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
                 final item = page.items[index];
                 return Card(
                   child: ListTile(
-                    title: Text(item.reference ?? l10n.paymentNumber(item.paymentId)),
+                    title: Text(
+                        item.reference ?? l10n.paymentNumber(item.paymentId)),
                     subtitle: Text(
                       '${l10n.t('Due')} ${item.dueDate} · ${l10n.status(item.paymentStatus)}\n'
                       '${l10n.t('Remaining')} ${l10n.money(item.remainingAmount, widget.currency)} · '
@@ -310,13 +312,16 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
                                 children: [
                                   Text(
                                     l10n.status(item.state),
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
                                   ),
                                   Text(item.createdAt),
                                   if (item.promisedDate != null)
-                                    Text('${l10n.t('Promised:')} ${item.promisedDate}'),
+                                    Text(
+                                        '${l10n.t('Promised:')} ${item.promisedDate}'),
                                   if (item.deferredUntil != null)
-                                    Text('${l10n.t('Deferred until:')} ${item.deferredUntil}'),
+                                    Text(
+                                        '${l10n.t('Deferred until:')} ${item.deferredUntil}'),
                                   if (item.note != null) ...[
                                     const SizedBox(height: 8),
                                     Text(item.note!),
@@ -352,7 +357,13 @@ final class _FollowUpDialog extends StatefulWidget {
 }
 
 final class _FollowUpDialogState extends State<_FollowUpDialog> {
-  static const _operations = <String>['note', 'promise', 'issue', 'defer', 'escalate'];
+  static const _operations = <String>[
+    'note',
+    'promise',
+    'issue',
+    'defer',
+    'escalate'
+  ];
   String _operation = 'note';
   final _note = TextEditingController();
   final _date = TextEditingController();
