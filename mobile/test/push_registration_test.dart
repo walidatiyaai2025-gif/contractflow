@@ -10,7 +10,8 @@ import 'package:safecontracts_mobile/features/notifications/push_registration.da
 import 'fake_api_transport.dart';
 
 void main() {
-  test('denied notification permission does not block device registration', () async {
+  test('denied notification permission does not block device registration',
+      () async {
     const token = 'safecontracts-fcm-registration-token-1234567890';
     final messaging = _FakePushMessagingGateway(
       permission: MobilePushPermissionState.denied,
@@ -32,12 +33,14 @@ void main() {
 
     await registration.start();
 
-    expect(registration.status.value.permission, MobilePushPermissionState.denied);
+    expect(
+        registration.status.value.permission, MobilePushPermissionState.denied);
     expect(registration.status.value.tokenAcquired, isTrue);
     expect(registration.status.value.backendRegistered, isTrue);
     expect(registration.status.value.errorCode, isNull);
     expect(transport.requests, hasLength(1));
-    final body = jsonDecode(transport.requests.single.body!) as Map<String, Object?>;
+    final body =
+        jsonDecode(transport.requests.single.body!) as Map<String, Object?>;
     expect(body['token'], token);
     expect(body['platform'], 'android');
 
@@ -84,7 +87,8 @@ void main() {
     await messaging.dispose();
   });
 
-  test('token refresh can recover after initial token is unavailable', () async {
+  test('token refresh can recover after initial token is unavailable',
+      () async {
     const refreshedToken = 'safecontracts-fcm-refreshed-token-1234567890123';
     final messaging = _FakePushMessagingGateway(
       permission: MobilePushPermissionState.authorized,
@@ -161,7 +165,8 @@ final class _FakePushMessagingGateway implements PushMessagingGateway {
 
   final MobilePushPermissionState permission;
   final List<String?> _tokens;
-  final StreamController<String> _refresh = StreamController<String>.broadcast();
+  final StreamController<String> _refresh =
+      StreamController<String>.broadcast();
   int getTokenCalls = 0;
 
   @override
