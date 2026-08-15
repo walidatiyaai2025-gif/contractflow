@@ -19,6 +19,7 @@ final class FollowUpRepository
         $followups = $wpdb->prefix . 'safecontracts_payment_followups';
         $scope = $accountantUserId === null ? '' : ' AND c.accountant_user_id = %d';
         $sql = "SELECT p.id AS payment_id, p.contract_id, c.customer_id, c.accountant_user_id,
+                       c.status AS contract_status,
                        p.reference, p.due_date, p.expected_payment_date, p.original_amount,
                        p.paid_amount, p.remaining_amount, p.status,
                        (SELECT f.state FROM {$followups} f WHERE f.payment_id = p.id
