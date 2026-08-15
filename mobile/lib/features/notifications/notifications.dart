@@ -12,6 +12,7 @@ final class SafeContractsNotification {
     required this.templateCode,
     required this.scheduledFor,
     required this.createdAt,
+    required this.isRead,
     required this.deepLink,
   });
 
@@ -20,6 +21,7 @@ final class SafeContractsNotification {
   final String templateCode;
   final String scheduledFor;
   final String createdAt;
+  final bool isRead;
   final SafeContractsDeepLink? deepLink;
 
   factory SafeContractsNotification.fromData(Object? value) {
@@ -59,6 +61,7 @@ final class SafeContractsNotification {
       templateCode: templateCode,
       scheduledFor: scheduledFor,
       createdAt: createdAt,
+      isRead: _boolish(data['is_read'], 'notification.is_read'),
       deepLink: deepLink,
     );
   }
@@ -129,6 +132,18 @@ final class NotificationsRepository {
     );
     return NotificationPage.fromEnvelope(envelope);
   }
+
+  Future<void> markRead(int notificationId) async {
+    if (notificationId <= 0) {
+      throw ArgumentError('Notification ID must be positive.');
+    }
+    final envelope = await client.post('notifications/$notificationId/read');
+    final data = apiObjectMap(envelope.data, 'notification_read.data');
+    if (_positiveInt(data['id'], 'notification_read.id') != notificationId ||
+        _boolish(data['is_read'], 'notification_read.is_read') != true) {
+      throw const FormatException('Notification read acknowledgement is invalid.');
+    }
+  }
 }
 
 final class NotificationsController extends ChangeNotifier {
@@ -167,11 +182,16 @@ final class NotificationsController extends ChangeNotifier {
       return;
     }
 
+    currentPage = null;
     state = NotificationsLoadState.loading;
     errorMessage = null;
     notifyListeners();
     try {
-      currentPage = await repository.loadPage(page: page, perPage: pageSize);
+      final nextPage = await repository.loadPage(page: page, perPage: pageSize);
+      currentPage = nextPage;
+      _readIds.addAll(
+        nextPage.notifications.where((item) => item.isRead).map((item) => item.id),
+      );
       state = NotificationsLoadState.ready;
     } on SafeContractsApiException catch (error) {
       currentPage = null;
@@ -201,15 +221,27 @@ final class NotificationsController extends ChangeNotifier {
     }
   }
 
-  SafeContractsDeepLink? openNotification(SafeContractsNotification notification) {
+  Future<SafeContractsDeepLink?> openNotification(
+    SafeContractsNotification notification,
+  ) async {
     final visible = currentPage?.notifications
             .any((item) => item.id == notification.id) ??
         false;
     if (!visible) {
       return null;
     }
-    _readIds.add(notification.id);
-    notifyListeners();
+    if (!_readIds.contains(notification.id)) {
+      try {
+        await repository.markRead(notification.id);
+        _readIds.add(notification.id);
+        errorMessage = null;
+        notifyListeners();
+      } on Object catch (error) {
+        // Opening remains useful even if read-state persistence temporarily fails.
+        errorMessage = error.toString();
+        notifyListeners();
+      }
+    }
     return notification.deepLink;
   }
 }
