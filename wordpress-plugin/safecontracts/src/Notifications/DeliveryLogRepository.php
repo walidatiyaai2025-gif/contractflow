@@ -95,6 +95,26 @@ final class DeliveryLogRepository
         return is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
     }
 
+    public function hasSentForUser(int $notificationId, int $userId): bool
+    {
+        global $wpdb;
+        if ($notificationId <= 0 || $userId <= 0) {
+            return false;
+        }
+        $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id FROM {$table}
+                 WHERE id = %d AND user_id = %d AND status = 'sent'
+                 LIMIT 1",
+                $notificationId,
+                $userId
+            ),
+            ARRAY_A
+        );
+        return is_array($rows) && $rows !== [];
+    }
+
     private function normalizeErrorCode(?string $value): ?string
     {
         if ($value === null || trim($value) === '') {
