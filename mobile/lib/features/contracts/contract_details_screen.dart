@@ -2,18 +2,22 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/localization/safecontracts_localizations.dart';
+import '../config/mobile_config.dart';
 import 'contracts.dart';
 
 final class ContractDetailsScreen extends StatefulWidget {
   const ContractDetailsScreen({
     required this.controller,
     required this.contractId,
+    required this.currency,
     required this.onEditContract,
     super.key,
   });
 
   final ContractsController controller;
   final int contractId;
+  final MobileCurrencyConfig currency;
   final ValueChanged<int>? onEditContract;
 
   @override
@@ -44,6 +48,7 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
@@ -57,14 +62,16 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(
-              readyForCurrent ? contract.contractNumber : 'Contract details',
+              readyForCurrent
+                  ? contract.contractNumber
+                  : l10n.t('Contract details'),
             ),
             actions: [
               if (readyForCurrent &&
                   controller.canEditContract &&
                   widget.onEditContract != null)
                 IconButton(
-                  tooltip: 'Edit contract',
+                  tooltip: l10n.t('Edit contract'),
                   onPressed: () => widget.onEditContract!(contract.id),
                   icon: const Icon(Icons.edit_outlined),
                 ),
@@ -74,6 +81,7 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
             child: _ContractDetailsBody(
               controller: controller,
               contractId: widget.contractId,
+              currency: widget.currency,
               onEditContract: widget.onEditContract,
             ),
           ),
@@ -87,15 +95,18 @@ final class _ContractDetailsBody extends StatelessWidget {
   const _ContractDetailsBody({
     required this.controller,
     required this.contractId,
+    required this.currency,
     required this.onEditContract,
   });
 
   final ContractsController controller;
   final int contractId;
+  final MobileCurrencyConfig currency;
   final ValueChanged<int>? onEditContract;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     if (controller.selectedContractId != contractId ||
         controller.detailState == ContractDetailLoadState.loading ||
         controller.detailState == ContractDetailLoadState.idle) {
@@ -105,32 +116,38 @@ final class _ContractDetailsBody extends StatelessWidget {
     return switch (controller.detailState) {
       ContractDetailLoadState.ready => _ReadyContractDetails(
           contract: controller.selectedContract!,
+          currency: currency,
           canEdit: controller.canEditContract,
           onEditContract: onEditContract,
         ),
       ContractDetailLoadState.notFound => _ContractDetailError(
           icon: Icons.search_off_outlined,
-          title: 'Contract not found',
-          message: controller.detailErrorMessage ??
-              'This contract was not found in your authorized scope.',
+          title: l10n.t('Contract not found'),
+          message: l10n.rawMessage(
+            controller.detailErrorMessage ??
+                'This contract was not found in your authorized scope.',
+          ),
           onRetry: () => unawaited(controller.openContract(contractId)),
         ),
       ContractDetailLoadState.forbidden => _ContractDetailError(
           icon: Icons.lock_outline,
-          title: 'Contract access denied',
-          message: controller.detailErrorMessage ??
-              'You do not have permission to view this contract.',
+          title: l10n.t('Contract access denied'),
+          message: l10n.rawMessage(
+            controller.detailErrorMessage ??
+                'You do not have permission to view this contract.',
+          ),
           onRetry: () => unawaited(controller.openContract(contractId)),
         ),
       ContractDetailLoadState.error => _ContractDetailError(
           icon: Icons.error_outline,
-          title: 'Unable to load contract',
-          message: controller.detailErrorMessage ??
-              'SafeContracts could not load this contract.',
+          title: l10n.t('Unable to load contract'),
+          message: l10n.rawMessage(
+            controller.detailErrorMessage ??
+                'SafeContracts could not load this contract.',
+          ),
           onRetry: () => unawaited(controller.openContract(contractId)),
         ),
-      ContractDetailLoadState.idle ||
-      ContractDetailLoadState.loading =>
+      ContractDetailLoadState.idle || ContractDetailLoadState.loading =>
         const Center(child: CircularProgressIndicator()),
     };
   }
@@ -139,16 +156,19 @@ final class _ContractDetailsBody extends StatelessWidget {
 final class _ReadyContractDetails extends StatelessWidget {
   const _ReadyContractDetails({
     required this.contract,
+    required this.currency,
     required this.canEdit,
     required this.onEditContract,
   });
 
   final SafeContractsContract contract;
+  final MobileCurrencyConfig currency;
   final bool canEdit;
   final ValueChanged<int>? onEditContract;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -163,66 +183,68 @@ final class _ReadyContractDetails extends StatelessWidget {
                 contract.contractNumber,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
-              Chip(label: Text(contract.status)),
+              Chip(label: Text(l10n.status(contract.status))),
               if (contract.isArchived)
-                const Chip(
-                  avatar: Icon(Icons.archive_outlined, size: 16),
-                  label: Text('Archived'),
+                Chip(
+                  avatar: const Icon(Icons.archive_outlined, size: 16),
+                  label: Text(l10n.t('Archived')),
                 ),
             ],
           ),
           const SizedBox(height: 20),
           _DetailsSection(
-            title: 'Contract',
+            title: l10n.t('Contract'),
             children: [
-              _DetailValue(label: 'Contract ID', value: '${contract.id}'),
+              _DetailValue(label: l10n.t('Contract ID'), value: '${contract.id}'),
               _DetailValue(
-                label: 'Status',
-                value: contract.status,
+                label: l10n.t('Status'),
+                value: l10n.status(contract.status),
               ),
               _DetailValue(
-                label: 'Start date',
+                label: l10n.t('Start date'),
                 value: contract.startDate ?? '—',
               ),
               _DetailValue(
-                label: 'End date',
+                label: l10n.t('End date'),
                 value: contract.endDate ?? '—',
               ),
             ],
           ),
           const SizedBox(height: 16),
           _DetailsSection(
-            title: 'Customer & assignment',
+            title: l10n.t('Customer & assignment'),
             children: [
               _DetailValue(
-                label: 'Customer',
-                value:
-                    contract.customerName ?? 'Customer #${contract.customerId}',
+                label: l10n.t('Customer'),
+                value: contract.customerName ?? l10n.customerNumber(contract.customerId),
               ),
               _DetailValue(
-                label: 'Customer ID',
+                label: l10n.t('Customer ID'),
                 value: '${contract.customerId}',
               ),
               _DetailValue(
-                label: 'Assigned accountant user ID',
+                label: l10n.t('Assigned accountant user ID'),
                 value: contract.accountantUserId?.toString() ?? '—',
               ),
             ],
           ),
           const SizedBox(height: 16),
           _DetailsSection(
-            title: 'Financial values',
+            title: l10n.t('Financial values'),
             children: [
               _DetailValue(
-                label: 'Base value',
-                value: contract.baseValue ?? '—',
+                label: l10n.t('Base value'),
+                value: contract.baseValue == null
+                    ? '—'
+                    : l10n.money(contract.baseValue!, currency),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            'Status and financial values are displayed exactly as returned by '
-            'the SafeContracts server. The mobile app does not recalculate them.',
+            l10n.t(
+              'Status and financial values are displayed exactly as returned by the SafeContracts server. The mobile app does not recalculate them.',
+            ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 24),
@@ -230,11 +252,11 @@ final class _ReadyContractDetails extends StatelessWidget {
             FilledButton.tonalIcon(
               onPressed: () => onEditContract!(contract.id),
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit contract'),
+              label: Text(l10n.t('Edit contract')),
             )
           else
             Text(
-              'This contract is read-only for the current session.',
+              l10n.t('This contract is read-only for the current session.'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
         ],
@@ -316,7 +338,10 @@ final class _ContractDetailError extends StatelessWidget {
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            FilledButton(
+              onPressed: onRetry,
+              child: Text(context.scL10n.t('Retry')),
+            ),
           ],
         ),
       ),
