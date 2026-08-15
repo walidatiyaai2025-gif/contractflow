@@ -25,11 +25,6 @@ final class MobileConfigController
     public static function show(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         unset($request);
-        $access = Router::canAccess();
-        if ($access instanceof WP_Error) {
-            return $access;
-        }
-
         try {
             $config = (new MobileConfiguration())->read();
             return RequestGuard::response([
