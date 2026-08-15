@@ -6,6 +6,7 @@ import '../contracts/contracts_screen.dart';
 import '../customers/customers.dart';
 import '../customers/customers_screen.dart';
 import '../dashboard/dashboard_controller.dart';
+import '../dashboard/dashboard_models.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
