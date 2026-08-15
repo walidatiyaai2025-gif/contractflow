@@ -26,8 +26,8 @@ final class AppEnvironment {
       'staging' => AppEnvironmentName.staging,
       'production' => AppEnvironmentName.production,
       _ => throw FormatException(
-        'Unsupported SafeContracts environment: $name',
-      ),
+          'Unsupported SafeContracts environment: $name',
+        ),
     };
 
     final uri = Uri.tryParse(apiBaseUrl.trim());
