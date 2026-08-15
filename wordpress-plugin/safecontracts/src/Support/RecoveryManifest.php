@@ -37,6 +37,8 @@ final class RecoveryManifest
         return [
             'safecontracts_db_version',
             'safecontracts_db_migrated_at',
+            'safecontracts_installed_at',
+            'safecontracts_plugin_version',
             'safecontracts_general_settings',
             'safecontracts_mobile_configuration',
             'safecontracts_firebase_public_config',
