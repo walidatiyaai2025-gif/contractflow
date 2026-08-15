@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once get_theme_file_path( '/inc/i18n.php' );
+require_once get_theme_file_path( '/inc/admin-settings.php' );
 
 /**
  * Register theme capabilities.
