@@ -48,6 +48,11 @@ final class MobileOperationsController
 
     public static function editContract(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
+        $permission = self::canEditContract();
+        if ($permission instanceof WP_Error) {
+            return $permission;
+        }
+
         try {
             $id = ApiRequest::routeId($request);
             $params = self::safeBody($request, ['id', 'contract_number', 'start_date', 'end_date']);
@@ -84,6 +89,11 @@ final class MobileOperationsController
 
     public static function editPayment(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
+        $permission = self::canEditPayment();
+        if ($permission instanceof WP_Error) {
+            return $permission;
+        }
+
         try {
             $id = ApiRequest::routeId($request);
             $params = self::safeBody($request, ['id', 'expected_payment_date']);
@@ -111,6 +121,11 @@ final class MobileOperationsController
 
     public static function recordCollection(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
+        $permission = self::canRecordCollection();
+        if ($permission instanceof WP_Error) {
+            return $permission;
+        }
+
         try {
             $params = self::safeBody($request, [
                 'payment_id', 'amount', 'collection_date', 'payment_method_id',
@@ -129,6 +144,11 @@ final class MobileOperationsController
 
     public static function recordFollowUp(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
+        $permission = self::canManageFollowUps();
+        if ($permission instanceof WP_Error) {
+            return $permission;
+        }
+
         try {
             $paymentId = ApiRequest::routeId($request);
             $params = self::safeBody($request, ['id', 'action', 'note', 'date']);
