@@ -29,6 +29,7 @@ final class GeneralSettingsPage
             (new GeneralSettings())->save([
                 'organization_name' => $_POST['organization_name'] ?? '',
                 'currency_code' => $_POST['currency_code'] ?? '',
+                'currency_symbol' => $_POST['currency_symbol'] ?? '',
                 'admin_page_size' => $_POST['admin_page_size'] ?? 50,
             ]);
         } catch (Throwable $error) {
@@ -53,7 +54,8 @@ final class GeneralSettingsPage
                     <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>"><?php wp_nonce_field(self::SAVE_ACTION); ?>
                     <p><label><?php echo esc_html__('Organization name', 'safecontracts'); ?><input class="widefat" name="organization_name" maxlength="191" required value="<?php echo esc_attr($settings['organization_name']); ?>"></label></p>
                     <p><label><?php echo esc_html__('Single currency code', 'safecontracts'); ?><input class="widefat" name="currency_code" maxlength="3" value="<?php echo esc_attr($settings['currency_code']); ?>" placeholder="KWD"></label></p>
-                    <p class="description"><?php echo esc_html__('V1 remains single-currency. Leaving the currency blank keeps it explicitly unconfigured rather than guessing a business currency.', 'safecontracts'); ?></p>
+                    <p><label><?php echo esc_html__('Currency symbol', 'safecontracts'); ?><input class="widefat" name="currency_symbol" maxlength="16" value="<?php echo esc_attr($settings['currency_symbol']); ?>" placeholder="د.ك"></label></p>
+                    <p class="description"><?php echo esc_html__('V1 remains single-currency. Configure both the three-letter code and the display symbol used by mobile financial values. Leaving either blank keeps it explicitly unconfigured.', 'safecontracts'); ?></p>
                     <p><label><?php echo esc_html__('Admin page size', 'safecontracts'); ?><input type="number" min="10" max="200" name="admin_page_size" value="<?php echo esc_attr((string) $settings['admin_page_size']); ?>"></label></p>
                     <?php submit_button(__('Save SafeContracts Settings', 'safecontracts')); ?>
                 </form>
