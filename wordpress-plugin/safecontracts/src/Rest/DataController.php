@@ -164,8 +164,13 @@ final class DataController
 
     public static function followUpHistory(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
-        return self::guard(function () use ($request): WP_REST_Response {
+        return self::guard(function () use ($request): WP_REST_Response|WP_Error {
             $paymentId = ApiRequest::routeId($request, 'payment_id');
+            $payment = (new PaymentRepository())->find($paymentId);
+            if ($payment === null) {
+                return ApiResponse::notFound('Payment');
+            }
+            ApiScope::assertAccountant($payment['accountant_user_id']);
             $query = ApiListQuery::pagination(
                 $request,
                 ['id', 'created_at', 'promised_date', 'deferred_until'],
@@ -180,6 +185,10 @@ final class DataController
 
     private static function guard(callable $callback): WP_REST_Response|WP_Error
     {
+        $access = Permission::access();
+        if ($access instanceof WP_Error) {
+            return $access;
+        }
         try {
             return $callback();
         } catch (InvalidArgumentException $error) {
