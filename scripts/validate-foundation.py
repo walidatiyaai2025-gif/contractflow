@@ -121,7 +121,8 @@ def validate_ci_contract() -> int:
     required_commands = (
         "python3 scripts/validate-foundation.py",
         "./scripts/test-php.sh",
-        "dart format --output=none --set-exit-if-changed lib test",
+        "dart format --output=none lib test",
+        "git diff --exit-code -- lib test",
         "flutter analyze",
         "flutter test",
     )
