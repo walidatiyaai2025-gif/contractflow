@@ -8,6 +8,7 @@ use SafeContracts\Admin\PaymentMethodsPage;
 use SafeContracts\Audit\AuditRecorder;
 use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
+use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Rest\Router;
 
 final class Plugin
@@ -35,6 +36,7 @@ final class Plugin
         (new Migrator())->maybeMigrate();
         ContractHistoryRecorder::register();
         AuditRecorder::register();
+        NotificationScheduler::register();
 
         add_action('rest_api_init', [Router::class, 'register']);
         add_action('admin_menu', [PaymentMethodsPage::class, 'register']);
