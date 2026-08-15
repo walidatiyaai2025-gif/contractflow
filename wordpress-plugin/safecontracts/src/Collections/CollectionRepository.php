@@ -8,6 +8,21 @@ use RuntimeException;
 
 final class CollectionRepository
 {
+    public function beginTransaction(): void
+    {
+        $this->executeRaw('START TRANSACTION', 'Unable to start collection transaction.');
+    }
+
+    public function commit(): void
+    {
+        $this->executeRaw('COMMIT', 'Unable to commit collection transaction.');
+    }
+
+    public function rollBack(): void
+    {
+        $this->executeRaw('ROLLBACK', 'Unable to roll back collection transaction.');
+    }
+
     public function paymentMethodIsActive(int $paymentMethodId): bool
     {
         global $wpdb;
@@ -22,6 +37,26 @@ final class CollectionRepository
         );
 
         return is_array($rows) && $rows !== [];
+    }
+
+    public function totalForPayment(int $paymentId): string
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $table = $wpdb->prefix . 'safecontracts_payment_collections';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT COALESCE(SUM(amount), 0) AS total FROM {$table} WHERE payment_id = %d",
+                $paymentId
+            ),
+            ARRAY_A
+        );
+
+        if (! is_array($rows) || $rows === []) {
+            return '0.0000';
+        }
+
+        return (string) ($rows[0]['total'] ?? '0.0000');
     }
 
     public function create(
@@ -112,6 +147,15 @@ final class CollectionRepository
             ],
             $rows
         );
+    }
+
+    private function executeRaw(string $sql, string $message): void
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        if ($wpdb->query($sql) === false) {
+            throw new RuntimeException($message);
+        }
     }
 
     private function assertWpdb(mixed $wpdb): void
