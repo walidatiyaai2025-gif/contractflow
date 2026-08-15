@@ -30,12 +30,6 @@ def read_contract(relative: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def require_contains(relative: str, text: str, description: str) -> None:
-    content = read_contract(relative)
-    if text not in content:
-        ERRORS.append(f"{relative}: missing {description}")
-
-
 def semver_key(value: str) -> tuple[int, int, int]:
     parts = value.split(".")
     if len(parts) != 3 or not all(part.isdigit() for part in parts):
@@ -99,6 +93,9 @@ for table in [
         ERRORS.append(f"RecoveryManifest.php: missing critical table contract {table}")
 for option in [
     "safecontracts_db_version",
+    "safecontracts_db_migrated_at",
+    "safecontracts_installed_at",
+    "safecontracts_plugin_version",
     "safecontracts_general_settings",
     "safecontracts_mobile_configuration",
     "safecontracts_firebase_public_config",
