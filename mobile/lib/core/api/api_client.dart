@@ -76,9 +76,8 @@ final class SafeContractsApiClient {
       );
     }
     final metaValue = root['meta'];
-    final meta = metaValue == null
-        ? <String, Object?>{}
-        : _objectMap(metaValue, 'meta');
+    final meta =
+        metaValue == null ? <String, Object?>{} : _objectMap(metaValue, 'meta');
     return ApiEnvelope(data: root['data'], meta: meta);
   }
 
@@ -100,7 +99,8 @@ List<Object?> apiObjectList(Object? value, String field) {
 
 Map<String, Object?> _decodeObject(String body) {
   if (body.trim().isEmpty) {
-    throw const FormatException('SafeContracts API returned an empty response.');
+    throw const FormatException(
+        'SafeContracts API returned an empty response.');
   }
   final Object? decoded = jsonDecode(body) as Object?;
   return _objectMap(decoded, 'response');
