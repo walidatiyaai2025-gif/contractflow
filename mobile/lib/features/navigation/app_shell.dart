@@ -47,7 +47,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
   @override
   void initState() {
     super.initState();
-    _records = MobileRecordsRepository(widget.dashboardController.repository.client);
+    _records =
+        MobileRecordsRepository(widget.dashboardController.repository.client);
   }
 
   @override
