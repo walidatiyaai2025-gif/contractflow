@@ -23,9 +23,9 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_contract_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
 
-sc_contract_assert(Migrator::LATEST_VERSION === '1.4.0', 'contract schema migrations are current');
-sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.4.0', 'current contract schema version is stored');
-sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'contract and financial schemas migrate without replay');
+sc_contract_assert(Migrator::LATEST_VERSION === '1.5.0', 'contract schema migrations are current');
+sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.5.0', 'current contract schema version is stored');
+sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'contract, financial and history schemas migrate without replay');
 
 $schema = $GLOBALS['sc_test_dbdelta'][3];
 sc_contract_assert(str_contains($schema, 'wp_safecontracts_contracts'), 'dedicated contracts table uses the WordPress prefix');
@@ -45,6 +45,12 @@ sc_contract_assert(str_contains($schema, 'KEY customer_status (customer_id, stat
 sc_contract_assert(str_contains($schema, 'KEY accountant_status (accountant_user_id, status, is_archived)'), 'Accountant scope/status queries are indexed');
 sc_contract_assert(str_contains($schema, 'KEY contract_dates (start_date, end_date)'), 'contract date-range queries are indexed');
 sc_contract_assert(! str_contains($schema, 'currency_code'), 'contract rows do not introduce a competing per-contract currency');
+
+$historySchema = $GLOBALS['sc_test_dbdelta'][7];
+sc_contract_assert(str_contains($historySchema, 'wp_safecontracts_contract_history'), 'contract history uses a dedicated prefixed table');
+sc_contract_assert(str_contains($historySchema, 'event_type varchar(64) NOT NULL'), 'contract history records event type');
+sc_contract_assert(str_contains($historySchema, 'actor_user_id bigint(20) unsigned NULL'), 'contract history records actor when available');
+sc_contract_assert(str_contains($historySchema, 'snapshot_json longtext NULL'), 'contract history records state snapshot');
 
 $dbDeltaCount = count($GLOBALS['sc_test_dbdelta']);
 do_action('plugins_loaded');

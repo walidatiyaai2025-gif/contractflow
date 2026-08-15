@@ -33,8 +33,8 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
 
 sc_assert(get_option(Migrator::VERSION_OPTION) === Migrator::LATEST_VERSION, 'migration version stored after successful migration');
-sc_assert(Migrator::LATEST_VERSION === '1.4.0', 'contract financial migration version registered');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'foundation, master data and contract schemas migrated once');
+sc_assert(Migrator::LATEST_VERSION === '1.5.0', 'contract history migration version registered');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'foundation, master data, contracts, financials and history schemas migrated once');
 sc_assert(str_contains($GLOBALS['sc_test_dbdelta'][0], 'wp_safecontracts_meta'), 'foundation migration uses WordPress prefix');
 
 $customerSchema = $GLOBALS['sc_test_dbdelta'][1];
@@ -66,6 +66,11 @@ sc_assert(str_contains($contractSchema, 'base_value decimal(20,4) NOT NULL DEFAU
 sc_assert(str_contains($contractSchema, 'is_archived tinyint(1) NOT NULL DEFAULT 0'), 'contract archive state is non-destructive');
 sc_assert(str_contains($contractSchema, 'KEY customer_status (customer_id, status, is_archived)'), 'contract customer/status filtering is indexed');
 sc_assert(str_contains($contractSchema, 'KEY accountant_status (accountant_user_id, status, is_archived)'), 'contract Accountant scope filtering is indexed');
+
+$historySchema = $GLOBALS['sc_test_dbdelta'][7];
+sc_assert(str_contains($historySchema, 'wp_safecontracts_contract_history'), 'contract history table created');
+sc_assert(str_contains($historySchema, 'snapshot_json longtext NULL'), 'contract history stores immutable state snapshots');
+sc_assert(str_contains($historySchema, 'KEY contract_created (contract_id, created_at, id)'), 'contract history timeline reads are indexed');
 
 sc_assert(count($GLOBALS['sc_test_queries']) === 3, 'three default payment methods are seeded');
 $seedSql = implode("\n", $GLOBALS['sc_test_queries']);
@@ -102,11 +107,14 @@ sc_assert(isset($admin[Capabilities::MANAGE_REFERENCE_DATA]), 'native WordPress 
 
 $seedCountBeforeBoot = count($GLOBALS['sc_test_queries']);
 do_action('plugins_loaded');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'migrations are not replayed after stored version is current');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'migrations are not replayed after stored version is current');
 sc_assert(count($GLOBALS['sc_test_queries']) === $seedCountBeforeBoot, 'default payment methods are not reseeded after current migration');
 sc_assert(isset($GLOBALS['sc_test_actions']['rest_api_init']), 'REST registration hook attached');
 sc_assert(isset($GLOBALS['sc_test_actions']['admin_menu']), 'reference-data admin menu hook attached');
 sc_assert(isset($GLOBALS['sc_test_actions']['admin_post_' . PaymentMethodsPage::SAVE_ACTION]), 'reference-data admin save hook attached');
+sc_assert(isset($GLOBALS['sc_test_actions']['safecontracts_contract_created']), 'contract history recorder hooks contract creation');
+sc_assert(isset($GLOBALS['sc_test_actions']['safecontracts_contract_edited']), 'contract history recorder hooks contract edits');
+sc_assert(isset($GLOBALS['sc_test_actions']['safecontracts_contract_customer_assigned']), 'contract history recorder hooks customer assignment');
 
 do_action('admin_menu');
 sc_assert(isset($GLOBALS['sc_test_admin_pages'][PaymentMethodsPage::SLUG]), 'payment-method settings page registered');

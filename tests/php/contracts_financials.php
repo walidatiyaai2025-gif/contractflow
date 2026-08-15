@@ -61,8 +61,8 @@ function sc_fin_contract(array $overrides = []): array
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_fin_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
-sc_fin_assert(Migrator::LATEST_VERSION === '1.4.0', 'financial migration is current');
-sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'three contract finance/reference tables are added');
+sc_fin_assert(Migrator::LATEST_VERSION === '1.5.0', 'contract history migration is current after financial schema');
+sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'contract financial schemas remain present before history schema');
 
 $itemSchema = $GLOBALS['sc_test_dbdelta'][4];
 $adjustmentSchema = $GLOBALS['sc_test_dbdelta'][5];
@@ -175,6 +175,6 @@ sc_fin_expect(DomainException::class, fn () => $service->reconcile(501), 'financ
 
 $dbDeltaCount = count($GLOBALS['sc_test_dbdelta']);
 do_action('plugins_loaded');
-sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'financial migration is idempotent after stored version is current');
+sc_fin_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'financial and history migrations are idempotent after stored version is current');
 
 echo "SafeContracts contract financial tests passed ({$financialTests} assertions).\n";
