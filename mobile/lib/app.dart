@@ -1,11 +1,48 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import 'core/api/api_client.dart';
+import 'core/api/io_api_transport.dart';
 import 'core/config/app_environment.dart';
+import 'features/bootstrap/mobile_bootstrap_controller.dart';
+import 'features/navigation/app_shell.dart';
 
-class SafeContractsApp extends StatelessWidget {
-  const SafeContractsApp({required this.environment, super.key});
+class SafeContractsApp extends StatefulWidget {
+  const SafeContractsApp({
+    required this.environment,
+    this.client,
+    super.key,
+  });
 
   final AppEnvironment environment;
+  final SafeContractsApiClient? client;
+
+  @override
+  State<SafeContractsApp> createState() => _SafeContractsAppState();
+}
+
+final class _SafeContractsAppState extends State<SafeContractsApp> {
+  late final SafeContractsApiClient _client;
+  late final MobileBootstrapController _bootstrap;
+
+  @override
+  void initState() {
+    super.initState();
+    _client = widget.client ??
+        SafeContractsApiClient(
+          environment: widget.environment,
+          transport: IoApiTransport(),
+        );
+    _bootstrap = MobileBootstrapController(_client);
+    unawaited(_bootstrap.bootstrap());
+  }
+
+  @override
+  void dispose() {
+    _bootstrap.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,44 +53,87 @@ class SafeContractsApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF173B65)),
         useMaterial3: true,
       ),
-      home: _FoundationScreen(environment: environment),
+      home: _BootstrapView(
+        environment: widget.environment,
+        controller: _bootstrap,
+      ),
     );
   }
 }
 
-class _FoundationScreen extends StatelessWidget {
-  const _FoundationScreen({required this.environment});
+final class _BootstrapView extends StatelessWidget {
+  const _BootstrapView({
+    required this.environment,
+    required this.controller,
+  });
 
   final AppEnvironment environment;
+  final MobileBootstrapController controller;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.fact_check_outlined, size: 56),
-                const SizedBox(height: 16),
-                Text(
-                  'SafeContracts',
-                  style: Theme.of(context).textTheme.headlineMedium,
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        if (controller.state == MobileBootstrapState.ready) {
+          final session = controller.sessionController?.session;
+          final config = controller.configController?.config;
+          final policy = controller.navigationPolicy;
+          final dashboard = controller.dashboardController;
+          if (session != null &&
+              config != null &&
+              policy != null &&
+              dashboard != null) {
+            return SafeContractsShell(
+              session: session,
+              config: config,
+              policy: policy,
+              dashboardController: dashboard,
+              usingConfigDefaults: controller.usingConfigDefaults,
+              onClearSession: controller.signOutLocalState,
+            );
+          }
+        }
+
+        return Scaffold(
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.fact_check_outlined, size: 56),
+                    const SizedBox(height: 16),
+                    Text(
+                      'SafeContracts',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Environment: ${environment.name.name}'),
+                    const SizedBox(height: 16),
+                    if (controller.state == MobileBootstrapState.idle ||
+                        controller.state == MobileBootstrapState.loading)
+                      const CircularProgressIndicator()
+                    else ...[
+                      Text(
+                        controller.message ??
+                            'SafeContracts mobile is unavailable.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: () => unawaited(controller.bootstrap()),
+                        child: const Text('Retry session'),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Mobile foundation ready. Business data remains server-authoritative.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text('Environment: ${environment.name.name}'),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
