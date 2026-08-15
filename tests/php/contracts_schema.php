@@ -23,9 +23,9 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_contract_assert(is_callable($activate), 'plugin activation hook is available');
 $activate();
 
-sc_contract_assert(Migrator::LATEST_VERSION === '1.5.0', 'contract schema migrations are current');
-sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.5.0', 'current contract schema version is stored');
-sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'contract, financial and history schemas migrate without replay');
+sc_contract_assert(Migrator::LATEST_VERSION === '1.6.0', 'schema migrations are current through payment schedule foundation');
+sc_contract_assert(get_option(Migrator::VERSION_OPTION) === '1.6.0', 'current schema version is stored');
+sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === 9, 'contract, financial, history and payment schemas migrate without replay');
 
 $schema = $GLOBALS['sc_test_dbdelta'][3];
 sc_contract_assert(str_contains($schema, 'wp_safecontracts_contracts'), 'dedicated contracts table uses the WordPress prefix');
@@ -52,15 +52,19 @@ sc_contract_assert(str_contains($historySchema, 'event_type varchar(64) NOT NULL
 sc_contract_assert(str_contains($historySchema, 'actor_user_id bigint(20) unsigned NULL'), 'contract history records actor when available');
 sc_contract_assert(str_contains($historySchema, 'snapshot_json longtext NULL'), 'contract history records state snapshot');
 
+$paymentSchema = $GLOBALS['sc_test_dbdelta'][8];
+sc_contract_assert(str_contains($paymentSchema, 'wp_safecontracts_scheduled_payments'), 'payment schedule extends schema without replacing contract tables');
+sc_contract_assert(str_contains($paymentSchema, 'contract_id bigint(20) unsigned NOT NULL'), 'payment schedule remains contract-linked');
+
 $dbDeltaCount = count($GLOBALS['sc_test_dbdelta']);
 do_action('plugins_loaded');
-sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'current contract migrations are idempotent on runtime bootstrap');
+sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'current migrations are idempotent on runtime bootstrap');
 
 $optionsBeforeDeactivate = $GLOBALS['sc_test_options'];
 $deactivate = $GLOBALS['sc_test_deactivation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_contract_assert(is_callable($deactivate), 'plugin deactivation hook is available');
 $deactivate();
-sc_contract_assert($GLOBALS['sc_test_options'] === $optionsBeforeDeactivate, 'deactivation preserves contract schema/version state');
-sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'deactivation does not alter contract schema/data');
+sc_contract_assert($GLOBALS['sc_test_options'] === $optionsBeforeDeactivate, 'deactivation preserves schema/version state');
+sc_contract_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'deactivation does not alter contract/payment schema data');
 
 echo "SafeContracts contract data-model tests passed ({$tests} assertions).\n";
