@@ -81,12 +81,14 @@ final class _BootstrapView extends StatelessWidget {
           final policy = controller.navigationPolicy;
           final dashboard = controller.dashboardController;
           final customers = controller.customersController;
+          final contracts = controller.contractsController;
           final excelExport = controller.excelExportController;
           if (session != null &&
               config != null &&
               policy != null &&
               dashboard != null &&
               customers != null &&
+              contracts != null &&
               excelExport != null) {
             return SafeContractsShell(
               session: session,
@@ -94,6 +96,7 @@ final class _BootstrapView extends StatelessWidget {
               policy: policy,
               dashboardController: dashboard,
               customersController: customers,
+              contractsController: contracts,
               excelExportController: excelExport,
               usingConfigDefaults: controller.usingConfigDefaults,
               onClearSession: controller.signOutLocalState,
