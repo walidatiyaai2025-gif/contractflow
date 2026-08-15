@@ -5,11 +5,13 @@ final class RecordedApiRequest {
     required this.uri,
     required this.method,
     required this.headers,
+    required this.body,
   });
 
   final Uri uri;
   final String method;
   final Map<String, String> headers;
+  final String? body;
 }
 
 typedef FakeApiHandler = ApiTransportResponse Function(Uri uri);
@@ -25,12 +27,14 @@ final class FakeApiTransport implements SafeContractsTransport {
     required Uri uri,
     required String method,
     Map<String, String> headers = const <String, String>{},
+    String? body,
   }) async {
     requests.add(
       RecordedApiRequest(
         uri: uri,
         method: method,
         headers: Map<String, String>.unmodifiable(headers),
+        body: body,
       ),
     );
     return handler(uri);

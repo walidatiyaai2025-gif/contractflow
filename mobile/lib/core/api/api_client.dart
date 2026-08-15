@@ -44,6 +44,29 @@ final class SafeContractsApiClient {
   Future<ApiEnvelope> get(
     String path, {
     Map<String, String> query = const <String, String>{},
+  }) {
+    return _request('GET', path, query: query);
+  }
+
+  Future<ApiEnvelope> postJson(
+    String path, {
+    required Map<String, Object?> body,
+  }) {
+    return _request('POST', path, body: body);
+  }
+
+  Future<ApiEnvelope> patchJson(
+    String path, {
+    required Map<String, Object?> body,
+  }) {
+    return _request('PATCH', path, body: body);
+  }
+
+  Future<ApiEnvelope> _request(
+    String method,
+    String path, {
+    Map<String, String> query = const <String, String>{},
+    Map<String, Object?>? body,
   }) async {
     final baseUri = environment.endpoint(path);
     final uri = baseUri.replace(
@@ -54,11 +77,13 @@ final class SafeContractsApiClient {
     final sessionHeaders = await headersProvider();
     final response = await transport.send(
       uri: uri,
-      method: 'GET',
+      method: method,
       headers: <String, String>{
         'Accept': 'application/json',
+        if (body != null) 'Content-Type': 'application/json; charset=utf-8',
         ...sessionHeaders,
       },
+      body: body == null ? null : jsonEncode(body),
     );
 
     final root = _decodeObject(response.body);
@@ -100,7 +125,8 @@ List<Object?> apiObjectList(Object? value, String field) {
 Map<String, Object?> _decodeObject(String body) {
   if (body.trim().isEmpty) {
     throw const FormatException(
-        'SafeContracts API returned an empty response.');
+      'SafeContracts API returned an empty response.',
+    );
   }
   final Object? decoded = jsonDecode(body) as Object?;
   return _objectMap(decoded, 'response');

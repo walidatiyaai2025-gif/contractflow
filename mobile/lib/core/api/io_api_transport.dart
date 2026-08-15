@@ -18,6 +18,7 @@ final class IoApiTransport implements SafeContractsTransport {
     required Uri uri,
     required String method,
     Map<String, String> headers = const <String, String>{},
+    String? body,
   }) async {
     final client = HttpClient()..connectionTimeout = timeout;
     try {
@@ -25,13 +26,17 @@ final class IoApiTransport implements SafeContractsTransport {
       for (final entry in headers.entries) {
         request.headers.set(entry.key, entry.value);
       }
+      if (body != null) {
+        request.write(body);
+      }
 
       final response = await request.close().timeout(timeout);
       final bytes = <int>[];
       await for (final chunk in response.timeout(timeout)) {
         if (bytes.length + chunk.length > maxResponseBytes) {
           throw const FormatException(
-              'SafeContracts API response is too large.');
+            'SafeContracts API response is too large.',
+          );
         }
         bytes.addAll(chunk);
       }
