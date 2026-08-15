@@ -9,3 +9,4 @@ find "$ROOT/wordpress-plugin/safecontracts" "$ROOT/tests/php" -name '*.php' -pri
 php "$ROOT/tests/php/run.php"
 php "$ROOT/tests/php/contracts_schema.php"
 php "$ROOT/tests/php/contracts_workflow.php"
+php "$ROOT/tests/php/contracts_finance.php"
