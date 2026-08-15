@@ -13,6 +13,23 @@ final class DashboardPage
         if (! current_user_can(Capabilities::ACCESS)) {
             wp_die(__('You do not have permission to access SafeContracts.', 'safecontracts'));
         }
+        if (! current_user_can(Capabilities::VIEW_ALL) && ! current_user_can(Capabilities::VIEW_ASSIGNED)) {
+            ?>
+            <section class="safecontracts-dashboard" aria-labelledby="safecontracts-dashboard-title">
+                <div class="safecontracts-section-heading">
+                    <div>
+                        <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Operational overview', 'safecontracts'); ?></p>
+                        <h2 id="safecontracts-dashboard-title"><?php echo esc_html__('Dashboard', 'safecontracts'); ?></h2>
+                    </div>
+                </div>
+                <section class="safecontracts-admin-card safecontracts-admin-card--security">
+                    <h2><?php echo esc_html__('No data scope assigned', 'safecontracts'); ?></h2>
+                    <p><?php echo esc_html__('Your account can access SafeContracts, but it does not currently have permission to view all data or assigned contract data. Contact a SafeContracts administrator if operational access is required.', 'safecontracts'); ?></p>
+                </section>
+            </section>
+            <?php
+            return;
+        }
         $filters = DashboardFilters::normalize($_GET);
         $read = new AdminReadRepository();
         $kpis = $read->kpis($filters);
