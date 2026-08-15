@@ -36,10 +36,12 @@ Endpoint-provided metadata cannot override `api_version`; the canonical router v
 Regression coverage validates the complete registered REST surface rather than one controller:
 
 - Every route is registered under `safecontracts/v1`.
-- Every route defines `methods`, `callback` and `permission_callback`.
+- Single-endpoint and multi-method route definitions are both validated.
+- Every endpoint defines `methods`, `callback` and `permission_callback`.
 - V1 currently exposes bounded readable/creatable method contracts only.
 - `/health` remains the intentionally public liveness endpoint.
 - All other registered routes retain a non-public permission callback, preserving WordPress capability/scope enforcement.
+- Controller implementations use `ApiResponse`/`RequestGuard` rather than constructing ad-hoc `WP_REST_Response` or `WP_Error` envelopes.
 
 ## Health contract
 
@@ -47,15 +49,16 @@ The health endpoint keeps the service name, plugin version, API version and `ok`
 
 ## Compatibility hardening found during validation
 
-Validation found two version-drift risks and repaired them without changing route paths or existing response status codes:
+Validation found three convention/version-drift risks and repaired them without changing route paths or existing response status codes:
 
 1. Success metadata previously hard-coded `v1` independently of `Router::API_VERSION`.
 2. A controller could previously pass `meta['api_version']` and override the default value; error responses did not carry API version metadata at all.
+3. The older `PaymentMethodsController` still constructed raw `WP_REST_Response`/`WP_Error` objects, bypassing the canonical v1 envelope used by the newer controllers.
 
-The response helper now centralizes and locks version metadata to `Router::API_VERSION` for both success and error paths.
+The response helper now centralizes and locks version metadata to `Router::API_VERSION` for both success and error paths. Payment-method list/admin/write responses now use the same helper while preserving their existing payload data, error code and HTTP status behavior; management authorization now delegates to the shared `Permission::capability()` boundary.
 
 ## Regression evidence
 
-`tests/php/rest_api_validation_018.php` validates namespace constants, success/error/not-found envelopes, non-overridable version metadata, route registration/method/permission conventions, health payload/envelope consistency and absence of accidental `safecontracts/v2` drift in REST source files.
+`tests/php/rest_api_validation_018.php` validates namespace constants, success/error/not-found envelopes, non-overridable version metadata, single/multi-method route registration conventions, protected-route permission callbacks, health payload/envelope consistency, controller envelope usage and absence of accidental `safecontracts/v2` drift in REST source files.
 
 The suite is wired into `scripts/test-php.sh` and executes after the P8 implementation regressions in Quality Gates.
