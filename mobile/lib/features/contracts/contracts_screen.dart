@@ -77,6 +77,7 @@ final class _ContractsToolbar extends StatelessWidget {
     final customerExists = selectedCustomer == 0 ||
         customers.any((customer) => customer.id == selectedCustomer);
     final safeCustomer = customerExists ? selectedCustomer : 0;
+    final selectedStatus = controller.filters.status ?? '';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -89,7 +90,8 @@ final class _ContractsToolbar extends StatelessWidget {
           SizedBox(
             width: 210,
             child: DropdownButtonFormField<int>(
-              value: safeCustomer,
+              key: ValueKey<int>(safeCustomer),
+              initialValue: safeCustomer,
               decoration: const InputDecoration(
                 labelText: 'Customer',
                 isDense: true,
@@ -122,7 +124,8 @@ final class _ContractsToolbar extends StatelessWidget {
           SizedBox(
             width: 170,
             child: DropdownButtonFormField<String>(
-              value: controller.filters.status ?? '',
+              key: ValueKey<String>(selectedStatus),
+              initialValue: selectedStatus,
               decoration: const InputDecoration(
                 labelText: 'Status',
                 isDense: true,
@@ -159,7 +162,10 @@ final class _ContractsToolbar extends StatelessWidget {
           SizedBox(
             width: 190,
             child: DropdownButtonFormField<ContractSortOption>(
-              value: controller.sort,
+              key: ValueKey<String>(
+                '${controller.sort.field}:${controller.sort.order}',
+              ),
+              initialValue: controller.sort,
               decoration: const InputDecoration(
                 labelText: 'Sort',
                 isDense: true,
