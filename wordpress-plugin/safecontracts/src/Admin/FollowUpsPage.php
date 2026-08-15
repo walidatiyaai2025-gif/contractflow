@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use SafeContracts\FollowUps\FollowUpService;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Support\Input;
 use Throwable;
 
 final class FollowUpsPage
@@ -24,18 +25,24 @@ final class FollowUpsPage
             wp_die(__('You do not have permission to manage follow-up.', 'safecontracts'));
         }
         check_admin_referer(self::SAVE_ACTION);
-        $paymentId = max(0, (int) ($_POST['payment_id'] ?? 0));
-        $operation = sanitize_key((string) ($_POST['followup_operation'] ?? 'note'));
-        $note = sanitize_text_field((string) ($_POST['note'] ?? ''));
+        $paymentId = 0;
         $status = 'saved';
         $service = new FollowUpService();
         try {
+            $paymentId = Input::int($_POST['payment_id'] ?? '', 'Payment ID', 1);
+            $operation = Input::oneOf(
+                $_POST['followup_operation'] ?? 'note',
+                ['note', 'promise', 'issue', 'defer', 'escalate'],
+                'Follow-up operation'
+            );
+            $note = sanitize_text_field(Input::string($_POST['note'] ?? '', 'Follow-up note'));
+
             if ($operation === 'promise') {
-                $service->promiseToPay($paymentId, $_POST['promised_date'] ?? '', $note);
+                $service->promiseToPay($paymentId, Input::string($_POST['promised_date'] ?? '', 'Promised date'), $note);
             } elseif ($operation === 'issue') {
                 $service->markIssue($paymentId, $note);
             } elseif ($operation === 'defer') {
-                $service->defer($paymentId, $_POST['deferred_until'] ?? '', $note);
+                $service->defer($paymentId, Input::string($_POST['deferred_until'] ?? '', 'Deferred until'), $note);
             } elseif ($operation === 'escalate') {
                 $service->escalate($paymentId, $note);
             } else {
@@ -61,7 +68,14 @@ final class FollowUpsPage
             unset($error);
             $queue = [];
         }
-        $selectedPaymentId = max(0, (int) ($_GET['payment_id'] ?? 0));
+        try {
+            $selectedPaymentId = isset($_GET['payment_id']) && $_GET['payment_id'] !== ''
+                ? Input::int($_GET['payment_id'], 'Payment ID', 1)
+                : 0;
+        } catch (Throwable $error) {
+            unset($error);
+            $selectedPaymentId = 0;
+        }
         $history = [];
         if ($selectedPaymentId > 0) {
             try {

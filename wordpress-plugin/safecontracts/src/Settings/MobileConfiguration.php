@@ -7,6 +7,7 @@ namespace SafeContracts\Settings;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Support\Input;
 
 final class MobileConfiguration
 {
@@ -59,7 +60,7 @@ final class MobileConfiguration
 
     private function normalizeText(mixed $value): string
     {
-        $text = trim(strip_tags((string) $value));
+        $text = trim(strip_tags(Input::string($value, 'Mobile support text')));
         if (strlen($text) > 500 || preg_match('/[\x00]/', $text)) {
             throw new InvalidArgumentException('Mobile support text must not exceed 500 characters.');
         }
@@ -91,14 +92,17 @@ final class MobileConfiguration
 
     private function readText(mixed $value): string
     {
+        if (! is_scalar($value) && $value !== null) {
+            return '';
+        }
         $text = trim(strip_tags((string) $value));
         return strlen($text) <= 500 ? $text : '';
     }
 
     private function readPageSize(mixed $value): int
     {
-        $size = (int) $value;
-        return $size >= 10 && $size <= 200 ? $size : self::defaults()['default_page_size'];
+        $size = filter_var($value, FILTER_VALIDATE_INT);
+        return $size !== false && $size >= 10 && $size <= 200 ? (int) $size : self::defaults()['default_page_size'];
     }
 
     private function readBool(mixed $value): bool

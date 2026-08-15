@@ -9,6 +9,7 @@ use SafeContracts\Notifications\NotificationRuleService;
 use SafeContracts\Notifications\NotificationTemplateRepository;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Roles\RoleRegistrar;
+use SafeContracts\Support\Input;
 use Throwable;
 
 final class NotificationSettingsPage
@@ -29,22 +30,22 @@ final class NotificationSettingsPage
         check_admin_referer(self::SAVE_ACTION);
         $status = 'saved';
         try {
-            $originalCode = sanitize_key((string) ($_POST['original_code'] ?? ''));
-            $code = $originalCode !== '' ? $originalCode : sanitize_key((string) ($_POST['code'] ?? ''));
-            $recipientRoles = is_array($_POST['recipient_roles'] ?? null) ? array_map('sanitize_key', $_POST['recipient_roles']) : [];
-            $escalationRoles = is_array($_POST['escalation_roles'] ?? null) ? array_map('sanitize_key', $_POST['escalation_roles']) : [];
+            $originalCode = sanitize_key(Input::string($_POST['original_code'] ?? '', 'Original notification rule code'));
+            $code = $originalCode !== '' ? $originalCode : sanitize_key(Input::string($_POST['code'] ?? '', 'Notification rule code'));
+            $recipientRoles = self::normalizeRoleInput($_POST['recipient_roles'] ?? []);
+            $escalationRoles = self::normalizeRoleInput($_POST['escalation_roles'] ?? []);
             (new NotificationRuleService())->save([
                 'code' => $code,
-                'name' => sanitize_text_field((string) ($_POST['name'] ?? '')),
-                'trigger_type' => sanitize_key((string) ($_POST['trigger_type'] ?? '')),
-                'days_before' => (int) ($_POST['days_before'] ?? 0),
-                'days_after' => (int) ($_POST['days_after'] ?? 0),
-                'repeat_interval_days' => (int) ($_POST['repeat_interval_days'] ?? 0),
-                'max_repeats' => (int) ($_POST['max_repeats'] ?? 0),
+                'name' => sanitize_text_field(Input::string($_POST['name'] ?? '', 'Notification rule name')),
+                'trigger_type' => sanitize_key(Input::string($_POST['trigger_type'] ?? '', 'Notification trigger')),
+                'days_before' => $_POST['days_before'] ?? 0,
+                'days_after' => $_POST['days_after'] ?? 0,
+                'repeat_interval_days' => $_POST['repeat_interval_days'] ?? 0,
+                'max_repeats' => $_POST['max_repeats'] ?? 0,
                 'recipient_roles' => $recipientRoles,
                 'escalation_roles' => $escalationRoles,
                 'target_assigned_accountant' => isset($_POST['target_assigned_accountant']),
-                'template_code' => sanitize_key((string) ($_POST['template_code'] ?? '')),
+                'template_code' => sanitize_key(Input::string($_POST['template_code'] ?? '', 'Notification template code')),
                 'is_active' => isset($_POST['is_active']),
             ]);
         } catch (Throwable $error) {
@@ -64,7 +65,12 @@ final class NotificationSettingsPage
         $rules = $service->all();
         $templates = (new NotificationTemplateRepository())->all(true);
         $selected = null;
-        $selectedCode = sanitize_key((string) ($_GET['rule'] ?? ''));
+        try {
+            $selectedCode = sanitize_key(Input::string($_GET['rule'] ?? '', 'Notification rule code'));
+        } catch (Throwable $error) {
+            unset($error);
+            $selectedCode = '';
+        }
         if ($selectedCode !== '') {
             $selected = $service->findByCode($selectedCode);
         }
@@ -107,5 +113,18 @@ final class NotificationSettingsPage
             </div>
         </div>
         <?php
+    }
+
+    /** @return list<string> */
+    private static function normalizeRoleInput(mixed $value): array
+    {
+        if (! is_array($value)) {
+            throw new \InvalidArgumentException('Notification role selection must be an array.');
+        }
+
+        return array_map(
+            static fn (mixed $role): string => sanitize_key(Input::string($role, 'Notification recipient role')),
+            $value
+        );
     }
 }

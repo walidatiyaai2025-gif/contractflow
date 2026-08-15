@@ -19,7 +19,7 @@ final class ReportsPage
 
     public static function handleExport(): void
     {
-        if (! current_user_can(Capabilities::VIEW_REPORTS)) {
+        if (! current_user_can(Capabilities::EXPORT_REPORTS)) {
             wp_die(__('You do not have permission to export reports.', 'safecontracts'));
         }
         check_admin_referer(self::EXPORT_ACTION);
@@ -57,6 +57,7 @@ final class ReportsPage
                     <label><?php echo esc_html__('Due to', 'safecontracts'); ?><input type="date" name="due_to" value="<?php echo esc_attr((string) ($filters['due_to'] ?? '')); ?>"></label>
                     <button class="button button-primary" type="submit"><?php echo esc_html__('Run report', 'safecontracts'); ?></button>
                 </form>
+                <?php if (current_user_can(Capabilities::EXPORT_REPORTS)) : ?>
                 <form class="safecontracts-export-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="<?php echo esc_attr(self::EXPORT_ACTION); ?>">
                     <?php foreach ($filters as $key => $value) : ?><input type="hidden" name="<?php echo esc_attr((string) $key); ?>" value="<?php echo esc_attr((string) ($value ?? '')); ?>"><?php endforeach; ?>
@@ -64,6 +65,7 @@ final class ReportsPage
                     <button class="button" type="submit"><?php echo esc_html__('Export current filters to Excel', 'safecontracts'); ?></button>
                     <span class="description"><?php echo esc_html__('XLSX is generated server-side from your authorized report scope.', 'safecontracts'); ?></span>
                 </form>
+                <?php endif; ?>
             </section>
             <div class="safecontracts-kpi-grid">
                 <?php self::metric(__('Contracts', 'safecontracts'), (string) $summary['contract_count']); ?>
