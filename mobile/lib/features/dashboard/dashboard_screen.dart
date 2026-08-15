@@ -309,7 +309,8 @@ final class _DashboardListsView extends StatelessWidget {
     if (value == null || value.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: Text(l10n.t('No records match the current filters.'))),
+        child: Center(
+            child: Text(l10n.t('No records match the current filters.'))),
       );
     }
 
