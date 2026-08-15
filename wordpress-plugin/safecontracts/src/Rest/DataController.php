@@ -166,11 +166,6 @@ final class DataController
     {
         return self::guard(function () use ($request): WP_REST_Response|WP_Error {
             $paymentId = ApiRequest::routeId($request, 'payment_id');
-            $payment = (new PaymentRepository())->find($paymentId);
-            if ($payment === null) {
-                return ApiResponse::notFound('Payment');
-            }
-            ApiScope::assertAccountant($payment['accountant_user_id']);
             $query = ApiListQuery::pagination(
                 $request,
                 ['id', 'created_at', 'promised_date', 'deferred_until'],
@@ -178,7 +173,14 @@ final class DataController
                 'desc',
                 ['payment_id']
             );
-            $rows = (new FollowUpService())->history($paymentId, ApiListQuery::BOUNDED_WINDOW);
+            try {
+                $rows = (new FollowUpService())->history($paymentId, ApiListQuery::BOUNDED_WINDOW);
+            } catch (InvalidArgumentException $error) {
+                if ($error->getMessage() === 'Follow-up payment was not found.') {
+                    return ApiResponse::notFound('Payment');
+                }
+                throw $error;
+            }
             return self::page(array_map([self::class, 'followUpHistoryView'], $rows), $query);
         });
     }
