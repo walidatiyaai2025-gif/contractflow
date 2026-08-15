@@ -13,7 +13,7 @@ enum ContractDetailLoadState {
   error,
 }
 
-const _supportedContractStatuses = <String>{
+const _supportedContractFilterStatuses = <String>{
   'draft',
   'active',
   'completed',
@@ -80,7 +80,7 @@ final class ContractsFilters {
     }
     if (status != null &&
         status!.isNotEmpty &&
-        !_supportedContractStatuses.contains(status)) {
+        !_supportedContractFilterStatuses.contains(status)) {
       throw ArgumentError.value(status, 'status', 'Unsupported contract status.');
     }
   }
@@ -121,10 +121,6 @@ final class SafeContractsContract {
 
   factory SafeContractsContract.fromData(Object? value) {
     final data = apiObjectMap(value, 'contract');
-    final status = _requiredText(data['status'], 'contract.status').toLowerCase();
-    if (!_supportedContractStatuses.contains(status)) {
-      throw const FormatException('contract.status is invalid.');
-    }
     return SafeContractsContract(
       id: _positiveInt(data['id'], 'contract.id'),
       contractNumber: _requiredText(
@@ -137,7 +133,8 @@ final class SafeContractsContract {
         data['accountant_user_id'],
         'contract.accountant_user_id',
       ),
-      status: status,
+      // Status is server-authoritative and intentionally opaque to mobile.
+      status: _requiredText(data['status'], 'contract.status'),
       startDate: _optionalIsoDate(data['start_date'], 'contract.start_date'),
       endDate: _optionalIsoDate(data['end_date'], 'contract.end_date'),
       baseValue: _optionalMoneyText(data['base_value'], 'contract.base_value'),
@@ -268,7 +265,7 @@ final class ContractsController extends ChangeNotifier {
     required this.canEditContract,
   }) : pageSize = pageSize.clamp(1, 100).toInt();
 
-  static const supportedContractStatuses = _supportedContractStatuses;
+  static const supportedContractStatuses = _supportedContractFilterStatuses;
 
   final ContractsRepository repository;
   final int pageSize;
@@ -329,9 +326,7 @@ final class ContractsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refresh() async {
-    await loadPage(currentPage?.page ?? 1);
-  }
+  Future<void> refresh() => loadPage(currentPage?.page ?? 1);
 
   Future<void> previousPage() async {
     final page = currentPage?.page ?? 1;
@@ -359,7 +354,7 @@ final class ContractsController extends ChangeNotifier {
     final normalized = status?.trim().toLowerCase();
     if (normalized != null &&
         normalized.isNotEmpty &&
-        !_supportedContractStatuses.contains(normalized)) {
+        !_supportedContractFilterStatuses.contains(normalized)) {
       throw ArgumentError.value(
         status,
         'status',
