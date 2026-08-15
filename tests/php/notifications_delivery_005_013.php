@@ -114,8 +114,8 @@ sc_p5d_assert(str_contains($templateSaveSql, 'wp_safecontracts_notification_temp
 
 $firebase = new FirebaseSettings();
 $GLOBALS['sc_test_current_caps'] = [];
-sc_p5d_expect(DomainException::class, fn () => $firebase->savePublic(['project_id'=>'safecontracts','messaging_sender_id'=>'123456','app_id'=>'app']), 'SC-P5-009 Firebase settings require notification administration');
-$GLOBALS['sc_test_current_caps'] = [Capabilities::MANAGE_NOTIFICATIONS=>true];
+sc_p5d_expect(DomainException::class, fn () => $firebase->savePublic(['project_id'=>'safecontracts','messaging_sender_id'=>'123456','app_id'=>'app']), 'SC-P5-009 Firebase settings require system administration');
+$GLOBALS['sc_test_current_caps'] = [Capabilities::MANAGE_SYSTEM=>true];
 $config = $firebase->savePublic(['project_id'=>'safecontracts-prod','messaging_sender_id'=>'123456789','app_id'=>'1:123:web:abc']);
 sc_p5d_assert($config['project_id'] === 'safecontracts-prod', 'SC-P5-009 public Firebase metadata is normalized and stored server-side');
 $reference = $firebase->saveCredentialReference('SAFECONTRACTS_FIREBASE_SERVICE_ACCOUNT');
