@@ -1,11 +1,11 @@
 # SafeContracts
 
-SafeContracts is a contract receivables tracking platform for an advertising company. WordPress + the SafeContracts custom plugin are the backend and single source of truth; the mobile application is an API client for monitoring and light operational updates.
+SafeContracts is a contract receivables tracking platform for an advertising company. WordPress + the SafeContracts custom plugin are the backend and single source of truth; the Flutter mobile application is an API client for monitoring and light operational updates.
 
 ## Repository structure
 
 - `wordpress-plugin/safecontracts/` — WordPress backend plugin.
-- `mobile/` — mobile application (introduced by its P0 foundation task).
+- `mobile/` — Flutter/Dart mobile client foundation.
 - `tests/` — automated/contract tests.
 - `scripts/` — validation helpers.
 - `docs/` — approved specifications, roadmap, architecture and standards.
@@ -13,13 +13,28 @@ SafeContracts is a contract receivables tracking platform for an advertising com
 
 ## Foundation validation
 
-Requires PHP 8.1+:
+PHP foundation:
 
 ```bash
-./scripts/test-php.sh
+bash scripts/test-php.sh
 ```
 
-The foundation suite syntax-checks plugin/test PHP and validates plugin lifecycle registration, versioned migration behavior, role/capability defaults, Accountant/Manager scope primitives and REST namespace registration.
+Repository and mobile architecture contracts:
+
+```bash
+bash scripts/validate-repository.sh
+bash scripts/validate-mobile-foundation.sh
+```
+
+The PHP suite syntax-checks plugin/test PHP and validates plugin lifecycle registration, versioned migration behavior, role/capability defaults, Accountant/Manager scope primitives, environment safety and REST namespace registration.
+
+Pull requests to `main` run `.github/workflows/quality-gates.yml` so the same foundation/policy checks are enforced by GitHub rather than depending only on local execution.
+
+## Environment & mobile
+
+- Server environment/secrets rules: `docs/ENVIRONMENT_AND_SECRETS.md`.
+- Mobile architecture: `docs/MOBILE_ARCHITECTURE.md`.
+- Mobile API base URL is supplied via `SAFECONTRACTS_API_BASE_URL`; no production endpoint or server secret is hard-coded into the app.
 
 ## Delivery tracking
 
