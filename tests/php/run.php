@@ -33,8 +33,8 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
 
 sc_assert(get_option(Migrator::VERSION_OPTION) === Migrator::LATEST_VERSION, 'migration version stored after successful migration');
-sc_assert(Migrator::LATEST_VERSION === '1.4.0', 'contract financial migration version registered');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'foundation, master data and contract schemas migrated once');
+sc_assert(Migrator::LATEST_VERSION === '1.5.0', 'contract history migration version registered');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'foundation, master data and contract schemas migrated once');
 sc_assert(str_contains($GLOBALS['sc_test_dbdelta'][0], 'wp_safecontracts_meta'), 'foundation migration uses WordPress prefix');
 
 $customerSchema = $GLOBALS['sc_test_dbdelta'][1];
@@ -102,7 +102,7 @@ sc_assert(isset($admin[Capabilities::MANAGE_REFERENCE_DATA]), 'native WordPress 
 
 $seedCountBeforeBoot = count($GLOBALS['sc_test_queries']);
 do_action('plugins_loaded');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 7, 'migrations are not replayed after stored version is current');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 8, 'migrations are not replayed after stored version is current');
 sc_assert(count($GLOBALS['sc_test_queries']) === $seedCountBeforeBoot, 'default payment methods are not reseeded after current migration');
 sc_assert(isset($GLOBALS['sc_test_actions']['rest_api_init']), 'REST registration hook attached');
 sc_assert(isset($GLOBALS['sc_test_actions']['admin_menu']), 'reference-data admin menu hook attached');
