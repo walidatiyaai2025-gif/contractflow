@@ -27,6 +27,7 @@ foreach ([
     Router::NAMESPACE . '/contracts/(?P<id>\d+)/light-edit',
     Router::NAMESPACE . '/payments/(?P<id>\d+)/light-edit',
     Router::NAMESPACE . '/collections',
+    Router::NAMESPACE . '/payments/(?P<id>\d+)/followups/action',
 ] as $route) {
     $definition = $GLOBALS['sc_test_routes'][$route] ?? [];
     sc_p9_bridge_assert(($definition['methods'] ?? null) === WP_REST_Server::CREATABLE, "{$route} is POST-only");
@@ -37,6 +38,7 @@ $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::
 sc_p9_bridge_assert(MobileOperationsController::canEditContract() instanceof WP_Error, 'contract edit requires EDIT_CONTRACTS');
 sc_p9_bridge_assert(MobileOperationsController::canEditPayment() instanceof WP_Error, 'payment edit requires MANAGE_PAYMENTS');
 sc_p9_bridge_assert(MobileOperationsController::canRecordCollection() instanceof WP_Error, 'collection create requires MANAGE_COLLECTIONS');
+sc_p9_bridge_assert(MobileOperationsController::canManageFollowUps() instanceof WP_Error, 'follow-up action requires MANAGE_FOLLOWUPS');
 
 $GLOBALS['sc_test_current_caps'][Capabilities::EDIT_CONTRACTS] = true;
 $GLOBALS['sc_test_result_queue'] = [[[
@@ -82,10 +84,25 @@ $unknownField = MobileOperationsController::recordCollection(new WP_REST_Request
 ]));
 sc_p9_bridge_assert($unknownField instanceof WP_Error && ($unknownField->data['status'] ?? 0) === 422, 'collection bridge rejects unknown financial override fields');
 
+$GLOBALS['sc_test_current_caps'][Capabilities::MANAGE_FOLLOWUPS] = true;
+$GLOBALS['sc_test_result_queue'] = [[$paymentRow]];
+$followUp = MobileOperationsController::recordFollowUp(new WP_REST_Request([
+    'id' => '21', 'action' => 'promise', 'note' => 'Customer confirmed', 'date' => '2026-08-25',
+]));
+sc_p9_bridge_assert($followUp instanceof WP_REST_Response && $followUp->status === 201, 'follow-up action delegates successfully');
+sc_p9_bridge_assert(($followUp->data['data']['payment_id'] ?? 0) === 21, 'follow-up action preserves payment identity');
+sc_p9_bridge_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'safecontracts_payment_followups'), 'follow-up bridge persists through FollowUpService repository path');
+
+$badFollowUp = MobileOperationsController::recordFollowUp(new WP_REST_Request([
+    'id' => '21', 'action' => 'invented_state',
+]));
+sc_p9_bridge_assert($badFollowUp instanceof WP_Error && ($badFollowUp->data['status'] ?? 0) === 422, 'unsupported follow-up action fails closed before mutation');
+
 $source = file_get_contents((string) (new ReflectionClass(MobileOperationsController::class))->getFileName()) ?: '';
 sc_p9_bridge_assert(str_contains($source, 'new ContractService()'), 'REST bridge delegates contract business logic');
 sc_p9_bridge_assert(str_contains($source, 'new PaymentService()'), 'REST bridge delegates payment business logic');
 sc_p9_bridge_assert(str_contains($source, 'new CollectionService()'), 'REST bridge delegates collection business logic');
+sc_p9_bridge_assert(str_contains($source, 'new FollowUpService()'), 'REST bridge delegates follow-up business logic');
 sc_p9_bridge_assert(! str_contains($source, '$wpdb'), 'REST bridge contains no direct SQL');
 
 printf("SafeContracts P9 mobile operations REST bridge passed (%d assertions).\n", $tests);
