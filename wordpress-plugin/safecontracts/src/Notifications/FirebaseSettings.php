@@ -7,6 +7,7 @@ namespace SafeContracts\Notifications;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Support\Input;
 
 final class FirebaseSettings
 {
@@ -42,7 +43,7 @@ final class FirebaseSettings
     public function saveCredentialReference(mixed $value): string
     {
         $this->requireManage();
-        $reference = strtoupper(trim((string) $value));
+        $reference = strtoupper(trim(Input::string($value, 'Firebase credential reference')));
         if (! preg_match('/^[A-Z][A-Z0-9_]{2,127}$/', $reference)) {
             throw new InvalidArgumentException('Firebase credential reference must be an environment/secret identifier, not secret content.');
         }
@@ -68,7 +69,7 @@ final class FirebaseSettings
 
     private function normalizeValue(mixed $value, string $field, int $max): string
     {
-        $text = trim((string) $value);
+        $text = trim(Input::string($value, $field));
         if ($text === '' || strlen($text) > $max || preg_match('/[\r\n\x00]/', $text)) {
             throw new InvalidArgumentException("{$field} is invalid.");
         }
@@ -77,7 +78,7 @@ final class FirebaseSettings
 
     private function normalizeDigits(mixed $value): string
     {
-        $text = trim((string) $value);
+        $text = trim(Input::string($value, 'Firebase messaging sender ID'));
         if (! preg_match('/^\d{3,32}$/', $text)) {
             throw new InvalidArgumentException('Firebase messaging sender ID must contain digits only.');
         }
@@ -86,7 +87,7 @@ final class FirebaseSettings
 
     private function requireManage(): void
     {
-        if (! current_user_can(Capabilities::MANAGE_NOTIFICATIONS)) {
+        if (! current_user_can(Capabilities::MANAGE_SYSTEM)) {
             throw new DomainException('You do not have permission to manage SafeContracts Firebase settings.');
         }
     }
