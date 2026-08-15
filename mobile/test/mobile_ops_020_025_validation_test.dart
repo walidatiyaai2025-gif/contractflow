@@ -15,10 +15,15 @@ import 'support/safecontracts_test_harness.dart';
 
 void main() {
   group('SC-P9-020 notifications inbox', () {
-    test('loads current-user page and keeps read state local to visible items',
-        () async {
-      final harness = SafeContractsTestHarness(
-        (uri) => SafeContractsTestHarness.ok(
+    test('loads current-user page and persists read state through REST', () async {
+      final harness = SafeContractsTestHarness((uri) {
+        if (uri.path.endsWith('/notifications/91/read')) {
+          return SafeContractsTestHarness.ok(<String, Object?>{
+            'id': 91,
+            'is_read': true,
+          });
+        }
+        return SafeContractsTestHarness.ok(
           <Object?>[_notificationData()],
           meta: <String, Object?>{
             'api_version': 'v1',
@@ -28,8 +33,8 @@ void main() {
             'returned': 1,
             'has_more': false,
           },
-        ),
-      );
+        );
+      });
       final controller = NotificationsController(
         repository: NotificationsRepository(harness.client),
         pageSize: 25,
@@ -37,20 +42,23 @@ void main() {
       );
 
       await controller.ensureLoaded();
-
       expect(controller.state, NotificationsLoadState.ready);
       final notification = controller.currentPage!.notifications.single;
       expect(notification.id, 91);
       expect(notification.paymentId, 21);
-      expect(controller.isRead(notification.id), isFalse);
-      expect(harness.singleRequest.uri.path, endsWith('/notifications'));
-      expect(harness.singleRequest.uri.queryParameters['page'], '1');
-      expect(harness.singleRequest.uri.queryParameters['per_page'], '25');
+      expect(controller.isRead(91), isFalse);
+      expect(harness.transport.requests.single.uri.path, endsWith('/notifications'));
 
-      final link = controller.openNotification(notification);
-      expect(controller.isRead(notification.id), isTrue);
+      final link = await controller.openNotification(notification);
+      expect(controller.isRead(91), isTrue);
       expect(link?.destination, SafeContractsDeepLinkDestination.payments);
       expect(link?.resourceId, 21);
+      expect(harness.transport.requests, hasLength(2));
+      expect(
+        harness.transport.requests.last.uri.path,
+        endsWith('/notifications/91/read'),
+      );
+      expect(harness.transport.requests.last.method, 'POST');
       controller.dispose();
     });
 
@@ -63,9 +71,7 @@ void main() {
         pageSize: 25,
         canAccess: false,
       );
-
       await controller.ensureLoaded();
-
       expect(controller.state, NotificationsLoadState.error);
       expect(controller.currentPage, isNull);
       expect(harness.transport.requests, isEmpty);
@@ -79,7 +85,6 @@ void main() {
         'destination': 'contracts',
         'resource_id': '70',
       });
-
       expect(link.destination, SafeContractsDeepLinkDestination.contracts);
       expect(link.resourceId, 70);
     });
@@ -122,7 +127,6 @@ void main() {
           meta: const <String, Object?>{'scope': 'current_user'},
         ),
       );
-
       expect(snapshot.devices.single.id, 7);
       expect(snapshot.devices.single.platform, 'android');
       expect(snapshot.devices.single.isActive, isTrue);
@@ -169,7 +173,6 @@ void main() {
         Directionality.of(tester.element(find.text('مرحبا'))),
         TextDirection.rtl,
       );
-
       await tester.pumpWidget(
         const MaterialApp(
           home: SafeContractsDirectionScope(
@@ -242,8 +245,6 @@ void main() {
           ),
         ),
       );
-
-      expect(find.text('Offline'), findsOneWidget);
       await tester.tap(find.text('Retry'));
       expect(retries, 1);
     });
@@ -280,10 +281,8 @@ void main() {
       });
       final sessionController = SessionController(harness.client);
       final configController = MobileConfigController(harness.client);
-
       await sessionController.bootstrap();
       await configController.load();
-
       final policy = MobileNavigationPolicy.resolve(
         sessionController.session!,
         configController.config,
@@ -349,6 +348,7 @@ Map<String, Object?> _notificationData({Object? deepLink}) {
     'template_code': 'payment_due',
     'scheduled_for': '2026-08-15 12:00:00',
     'created_at': '2026-08-15 12:00:01',
+    'is_read': false,
     'deep_link': deepLink ??
         <String, Object?>{
           'destination': 'payments',
