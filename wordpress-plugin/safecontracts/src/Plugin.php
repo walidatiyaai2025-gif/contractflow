@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace SafeContracts;
 
 use SafeContracts\Admin\AdminShell;
+use SafeContracts\Admin\ContractsPage;
+use SafeContracts\Admin\CustomersPage;
 use SafeContracts\Admin\LoginBranding;
 use SafeContracts\Admin\NavigationCleanup;
 use SafeContracts\Admin\PaymentMethodsPage;
+use SafeContracts\Admin\PaymentsPage;
 use SafeContracts\Audit\AuditRecorder;
 use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
@@ -43,8 +46,14 @@ final class Plugin
 
         add_action('rest_api_init', [Router::class, 'register']);
         add_action('admin_menu', [AdminShell::class, 'register'], 5);
+        add_action('admin_menu', [CustomersPage::class, 'register'], 10);
+        add_action('admin_menu', [ContractsPage::class, 'register'], 11);
+        add_action('admin_menu', [PaymentsPage::class, 'register'], 12);
         add_action('admin_menu', [PaymentMethodsPage::class, 'register']);
         add_action('admin_enqueue_scripts', [AdminShell::class, 'enqueueAssets']);
+        add_action('admin_post_' . CustomersPage::SAVE_ACTION, [CustomersPage::class, 'handleSave']);
+        add_action('admin_post_' . ContractsPage::SAVE_ACTION, [ContractsPage::class, 'handleSave']);
+        add_action('admin_post_' . PaymentsPage::SAVE_ACTION, [PaymentsPage::class, 'handleSave']);
         add_action('admin_post_' . PaymentMethodsPage::SAVE_ACTION, [PaymentMethodsPage::class, 'handleSave']);
         do_action('safecontracts_loaded');
     }
