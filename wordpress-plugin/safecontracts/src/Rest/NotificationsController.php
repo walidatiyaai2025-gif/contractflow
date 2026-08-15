@@ -6,6 +6,7 @@ namespace SafeContracts\Rest;
 
 use InvalidArgumentException;
 use SafeContracts\Notifications\DeliveryLogRepository;
+use SafeContracts\Notifications\NotificationReadStateRepository;
 use Throwable;
 use WP_Error;
 use WP_REST_Request;
@@ -21,6 +22,11 @@ final class NotificationsController
             'callback' => [self::class, 'index'],
             'permission_callback' => [Router::class, 'canAccess'],
         ]);
+        register_rest_route(Router::NAMESPACE, '/notifications/(?P<id>\d+)/read', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [self::class, 'markRead'],
+            'permission_callback' => [Router::class, 'canAccess'],
+        ]);
     }
 
     public static function index(WP_REST_Request $request): WP_REST_Response|WP_Error
@@ -34,15 +40,12 @@ final class NotificationsController
             $params = ApiAbuseGuard::safeParams($request, ['page', 'per_page']);
             $page = self::boundedInt($params['page'] ?? 1, 1, 5, 'page');
             $perPage = self::boundedInt($params['per_page'] ?? 25, 1, 50, 'per_page');
-            $userId = get_current_user_id();
-            if ($userId <= 0) {
-                return RequestGuard::forbidden(
-                    'safecontracts_notifications_forbidden',
-                    __('Notification inbox requires an authenticated SafeContracts user.', 'safecontracts')
-                );
-            }
+            $userId = self::currentUserId();
+            $repository = new DeliveryLogRepository();
+            $readRepository = new NotificationReadStateRepository();
+            $readSet = array_fill_keys($readRepository->idsForUser($userId), true);
 
-            $rows = (new DeliveryLogRepository())->recentForUser(
+            $rows = $repository->recentForUser(
                 $userId,
                 $perPage + 1,
                 ($page - 1) * $perPage
@@ -51,14 +54,16 @@ final class NotificationsController
             $rows = array_slice($rows, 0, $perPage);
 
             $items = array_map(
-                static function (array $row): array {
+                static function (array $row) use ($readSet): array {
+                    $id = (int) ($row['id'] ?? 0);
                     $paymentId = (int) ($row['payment_id'] ?? 0);
                     return [
-                        'id' => (int) ($row['id'] ?? 0),
+                        'id' => $id,
                         'payment_id' => $paymentId,
                         'template_code' => (string) ($row['template_code'] ?? ''),
                         'scheduled_for' => (string) ($row['scheduled_for'] ?? ''),
                         'created_at' => (string) ($row['created_at'] ?? ''),
+                        'is_read' => isset($readSet[$id]),
                         'deep_link' => $paymentId > 0
                             ? [
                                 'destination' => 'payments',
@@ -82,6 +87,41 @@ final class NotificationsController
         } catch (Throwable $error) {
             return RequestGuard::failure($error, 'safecontracts_notifications_failed');
         }
+    }
+
+    public static function markRead(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        $access = Permission::access();
+        if ($access instanceof WP_Error) {
+            return $access;
+        }
+
+        try {
+            $params = ApiAbuseGuard::safeParams($request, ['id']);
+            $id = self::boundedInt($params['id'] ?? 0, 1, PHP_INT_MAX, 'id');
+            $userId = self::currentUserId();
+            if (! (new DeliveryLogRepository())->hasSentForUser($id, $userId)) {
+                return ApiResponse::notFound('Notification');
+            }
+            (new NotificationReadStateRepository())->markRead($userId, $id);
+            return RequestGuard::response([
+                'id' => $id,
+                'is_read' => true,
+            ]);
+        } catch (InvalidArgumentException $error) {
+            return RequestGuard::invalid($error, 'safecontracts_notification_read_invalid');
+        } catch (Throwable $error) {
+            return RequestGuard::failure($error, 'safecontracts_notification_read_failed');
+        }
+    }
+
+    private static function currentUserId(): int
+    {
+        $userId = get_current_user_id();
+        if ($userId <= 0) {
+            throw new InvalidArgumentException('Notification inbox requires an authenticated SafeContracts user.');
+        }
+        return $userId;
     }
 
     private static function boundedInt(mixed $value, int $minimum, int $maximum, string $field): int
