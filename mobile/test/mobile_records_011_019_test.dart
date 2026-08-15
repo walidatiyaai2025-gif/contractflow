@@ -129,7 +129,8 @@ void main() {
     expect(body.containsKey('remaining_amount'), isFalse);
   });
 
-  test('SC-P9-019 follow-up queue/history and mutation stay server authoritative',
+  test(
+      'SC-P9-019 follow-up queue/history and mutation stay server authoritative',
       () async {
     final transport = FakeApiTransport((uri) {
       if (uri.path.endsWith('/payments/21/followups/record')) {
