@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/mobile_config.dart';
 import '../contracts/contract_details_screen.dart';
+import '../contracts/contract_edit_screen.dart';
 import '../contracts/contracts.dart';
 import '../contracts/contracts_screen.dart';
 import '../customers/customers.dart';
@@ -57,19 +58,14 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('SafeContracts'),
-            Text(
-              _label(_selected),
-              style: Theme.of(context).textTheme.labelMedium,
-            ),
+            Text(_label(_selected), style: Theme.of(context).textTheme.labelMedium),
           ],
         ),
       ),
       drawer: NavigationDrawer(
         selectedIndex: widget.policy.destinations.indexOf(_selected),
         onDestinationSelected: (index) {
-          setState(() {
-            _selected = widget.policy.destinations[index];
-          });
+          setState(() => _selected = widget.policy.destinations[index]);
           Navigator.of(context).pop();
         },
         children: [
@@ -102,21 +98,14 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
 
   Widget _body() {
     return switch (_selected) {
-      MobileDestination.dashboard => DashboardScreen(
-          controller: widget.dashboardController,
-        ),
-      MobileDestination.customers => CustomersScreen(
-          controller: widget.customersController,
-        ),
+      MobileDestination.dashboard => DashboardScreen(controller: widget.dashboardController),
+      MobileDestination.customers => CustomersScreen(controller: widget.customersController),
       MobileDestination.contracts => ContractsScreen(
           controller: widget.contractsController,
-          customers: widget.dashboardController.overview?.customers ??
-              const <CustomerOption>[],
+          customers: widget.dashboardController.overview?.customers ?? const <CustomerOption>[],
           onOpenContract: _openContract,
         ),
-      MobileDestination.export => MobileExcelExportScreen(
-          controller: widget.excelExportController,
-        ),
+      MobileDestination.export => MobileExcelExportScreen(controller: widget.excelExportController),
       MobileDestination.profile => _ProfileView(
           session: widget.session,
           config: widget.config,
@@ -132,53 +121,22 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
         builder: (context) => ContractDetailsScreen(
           controller: widget.contractsController,
           contractId: contractId,
-          onEditContract: widget.contractsController.canEditContract
-              ? _openContractEdit
-              : null,
+          onEditContract: widget.contractsController.canEditContract ? _openContractEdit : null,
         ),
       ),
     );
   }
 
   void _openContractEdit(int contractId) {
+    final contract = widget.contractsController.selectedContract;
+    if (contract == null || contract.id != contractId) {
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => _ContractEditHandoff(contractId: contractId),
-      ),
-    );
-  }
-}
-
-final class _ContractEditHandoff extends StatelessWidget {
-  const _ContractEditHandoff({required this.contractId});
-
-  final int contractId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Edit contract')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.edit_note_outlined, size: 52),
-              const SizedBox(height: 16),
-              Text(
-                'Contract #$contractId',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Your session is authorized to request contract edits. '
-                'The supported edit fields, validation, conflicts and audit '
-                'write flow are implemented in SC-P9-013.',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+        builder: (context) => ContractEditScreen(
+          controller: widget.contractsController,
+          contract: contract,
         ),
       ),
     );
