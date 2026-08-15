@@ -80,12 +80,3 @@ final class IoApiTransport implements SafeContractsTransport {
     }
   }
 }
-
-final class SafeContractsTransportException implements Exception {
-  const SafeContractsTransportException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
