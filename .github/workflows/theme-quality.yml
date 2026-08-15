@@ -66,3 +66,31 @@ jobs:
           grep -Fq 'id="contact"' "$THEME/front-page.php"
           grep -Fq 'prefers-reduced-motion' "$THEME/assets/css/theme.css"
           grep -Fq 'dir-rtl' "$THEME/assets/css/theme.css"
+      - name: Build deterministic installable theme ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          python3 wordpress-theme/package_theme.py build --output dist/SafeContracts-OnePage-theme.zip
+          python3 wordpress-theme/package_theme.py build --output dist/SafeContracts-OnePage-theme-repeat.zip
+          cmp dist/SafeContracts-OnePage-theme.zip dist/SafeContracts-OnePage-theme-repeat.zip
+          rm dist/SafeContracts-OnePage-theme-repeat.zip
+          python3 wordpress-theme/package_theme.py check dist/SafeContracts-OnePage-theme.zip
+          sha256sum dist/SafeContracts-OnePage-theme.zip > dist/SafeContracts-OnePage-theme.zip.sha256
+          printf '%s\n' \
+            "SafeContracts One Page WordPress theme candidate" \
+            "source_commit=$GITHUB_SHA" \
+            "install_path=wp-content/themes/safecontracts-onepage" \
+            "public_homepage=true" \
+            "languages=ar,en" \
+            > dist/THEME-CANDIDATE.txt
+      - name: Upload installable theme candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: safecontracts-wordpress-theme-candidate
+          path: |
+            dist/SafeContracts-OnePage-theme.zip
+            dist/SafeContracts-OnePage-theme.zip.sha256
+            dist/THEME-CANDIDATE.txt
+          if-no-files-found: error
+          retention-days: 14
