@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/localization/safecontracts_localizations.dart';
+import '../config/mobile_config.dart';
 import '../dashboard/dashboard_models.dart';
 import 'collection_entry_dialog.dart';
 import 'payments.dart';
@@ -14,6 +16,7 @@ final class PaymentsScreen extends StatefulWidget {
     required this.repository,
     required this.pageSize,
     required this.filters,
+    required this.currency,
     this.canManagePayments = false,
     this.canEnterCollection = false,
     this.onEditExpectedDate,
@@ -24,6 +27,7 @@ final class PaymentsScreen extends StatefulWidget {
   final PaymentsRepository repository;
   final int pageSize;
   final DashboardFilters filters;
+  final MobileCurrencyConfig currency;
   final bool canManagePayments;
   final bool canEnterCollection;
   final PaymentAction? onEditExpectedDate;
@@ -86,6 +90,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
         builder: (_) => PaymentDetailScreen(
           repository: widget.repository,
           paymentId: payment.id,
+          currency: widget.currency,
           onEditExpectedDate: widget.onEditExpectedDate ??
               (widget.canManagePayments ? _editExpectedDate : null),
           onRecordCollection: widget.onRecordCollection ??
@@ -97,22 +102,23 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Future<void> _editExpectedDate(SafeContractsPayment payment) async {
+    final l10n = context.scL10n;
     final input =
         TextEditingController(text: payment.expectedPaymentDate ?? '');
     final result = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Expected payment date'),
+        title: Text(l10n.t('Expected payment date')),
         content: TextField(
           controller: input,
-          decoration: const InputDecoration(
-            labelText: 'YYYY-MM-DD (blank clears)',
+          decoration: InputDecoration(
+            labelText: l10n.t('YYYY-MM-DD (blank clears)'),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(l10n.t('Cancel')),
           ),
           FilledButton(
             onPressed: () {
@@ -120,7 +126,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               if (!_validNullableDate(value)) return;
               Navigator.pop(dialogContext, value);
             },
-            child: const Text('Save'),
+            child: Text(l10n.t('Save')),
           ),
         ],
       ),
@@ -135,7 +141,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Expected payment date updated.')),
+        SnackBar(content: Text(context.scL10n.t('Expected payment date updated.'))),
       );
     } on SafeContractsApiException catch (error) {
       if (!mounted) return;
@@ -150,32 +156,35 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
       builder: (_) => CollectionEntryDialog(
         repository: widget.repository,
         payment: payment,
+        currency: widget.currency,
       ),
     );
     if (receipt == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Collection #${receipt.id} recorded.')),
+      SnackBar(content: Text(context.scL10n.collectionRecorded(receipt.id))),
     );
   }
 
   void _showApiError(SafeContractsApiException error) {
+    final l10n = context.scL10n;
     final prefix = switch (error.statusCode) {
-      422 => 'Validation',
-      403 => 'Forbidden',
-      409 => 'Conflict',
-      _ => 'Error',
+      422 => l10n.t('Validation'),
+      403 => l10n.t('Forbidden'),
+      409 => l10n.t('Conflict'),
+      _ => l10n.t('Error'),
     };
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$prefix: ${error.message}')),
+      SnackBar(content: Text('$prefix: ${l10n.rawMessage(error.message)}')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return _ErrorState(
-        message: _error!,
+        message: l10n.rawMessage(_error!),
         onRetry: () => _load(_pageNumber),
       );
     }
@@ -185,9 +194,9 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
         onRefresh: () => _load(1),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const <Widget>[
-            SizedBox(height: 180),
-            Center(child: Text('No payments match the authorized filters.')),
+          children: <Widget>[
+            const SizedBox(height: 180),
+            Center(child: Text(l10n.t('No payments match the authorized filters.'))),
           ],
         ),
       );
@@ -205,11 +214,15 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final payment = page.payments[index];
+                final owner = payment.customerName ??
+                    payment.contractNumber ??
+                    l10n.contractNumber(payment.contractId);
                 return Card(
                   child: ListTile(
-                    title: Text(payment.reference ?? 'Payment #${payment.id}'),
+                    title: Text(payment.reference ?? l10n.paymentNumber(payment.id)),
                     subtitle: Text(
-                      '${payment.customerName ?? payment.contractNumber ?? 'Contract #${payment.contractId}'} · ${payment.dueDate} · ${payment.status}\nRemaining: ${payment.remainingAmount}',
+                      '$owner · ${payment.dueDate} · ${l10n.status(payment.status)}\n'
+                      '${l10n.t('Remaining')}: ${l10n.money(payment.remainingAmount, widget.currency)}',
                     ),
                     isThreeLine: true,
                     trailing: const Icon(Icons.chevron_right),
@@ -225,7 +238,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
           child: Row(
             children: [
               IconButton(
-                tooltip: 'Previous page',
+                tooltip: l10n.t('Previous page'),
                 onPressed: page.page > 1
                     ? () => unawaited(_load(page.page - 1))
                     : null,
@@ -233,12 +246,12 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               ),
               Expanded(
                 child: Text(
-                  'Page ${page.page} · ${page.sort} ${page.order}',
+                  '${l10n.pageNumber(page.page)} · ${page.sort} ${page.order}',
                   textAlign: TextAlign.center,
                 ),
               ),
               IconButton(
-                tooltip: 'Next page',
+                tooltip: l10n.t('Next page'),
                 onPressed: page.hasMore && page.page < 5
                     ? () => unawaited(_load(page.page + 1))
                     : null,
@@ -256,6 +269,7 @@ final class PaymentDetailScreen extends StatefulWidget {
   const PaymentDetailScreen({
     required this.repository,
     required this.paymentId,
+    required this.currency,
     this.onEditExpectedDate,
     this.onRecordCollection,
     super.key,
@@ -263,6 +277,7 @@ final class PaymentDetailScreen extends StatefulWidget {
 
   final PaymentsRepository repository;
   final int paymentId;
+  final MobileCurrencyConfig currency;
   final PaymentAction? onEditExpectedDate;
   final PaymentAction? onRecordCollection;
 
@@ -327,45 +342,59 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final payment = _payment;
     return Scaffold(
-      appBar: AppBar(title: const Text('Payment details')),
+      appBar: AppBar(title: Text(l10n.t('Payment details'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _errorTitle != null
               ? _ErrorState(
-                  title: _errorTitle!,
-                  message: _errorMessage ?? 'SafeContracts request failed.',
+                  title: l10n.t(_errorTitle!),
+                  message: l10n.rawMessage(
+                    _errorMessage ?? 'SafeContracts request failed.',
+                  ),
                   onRetry: _load,
                 )
               : payment == null
-                  ? const Center(child: Text('Payment not found.'))
+                  ? Center(child: Text(l10n.t('Payment not found.')))
                   : SingleChildScrollView(
                       padding: const EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            payment.reference ?? 'Payment #${payment.id}',
+                            payment.reference ?? l10n.paymentNumber(payment.id),
                             style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           const SizedBox(height: 16),
-                          _Value('Status', payment.status),
-                          _Value('Contractual due date', payment.dueDate),
+                          _Value(l10n.t('Status'), l10n.status(payment.status)),
+                          _Value(l10n.t('Contractual due date'), payment.dueDate),
                           _Value(
-                            'Expected payment date',
+                            l10n.t('Expected payment date'),
                             payment.expectedPaymentDate ?? '—',
                           ),
-                          _Value('Original amount', payment.originalAmount),
-                          _Value('Paid amount', payment.paidAmount),
-                          _Value('Remaining amount', payment.remainingAmount),
                           _Value(
-                            'Contract archived',
-                            payment.contractIsArchived ? 'Yes' : 'No',
+                            l10n.t('Original amount'),
+                            l10n.money(payment.originalAmount, widget.currency),
+                          ),
+                          _Value(
+                            l10n.t('Paid amount'),
+                            l10n.money(payment.paidAmount, widget.currency),
+                          ),
+                          _Value(
+                            l10n.t('Remaining amount'),
+                            l10n.money(payment.remainingAmount, widget.currency),
+                          ),
+                          _Value(
+                            l10n.t('Contract archived'),
+                            l10n.yesNo(payment.contractIsArchived),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Dates, balances and status are server-authoritative. Mobile does not recalculate receivables.',
+                          Text(
+                            l10n.t(
+                              'Dates, balances and status are server-authoritative. Mobile does not recalculate receivables.',
+                            ),
                           ),
                           if (!payment.contractIsArchived &&
                               widget.onEditExpectedDate != null) ...[
@@ -375,7 +404,7 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 _runAction(widget.onEditExpectedDate!),
                               ),
                               icon: const Icon(Icons.event_available_outlined),
-                              label: const Text('Edit expected payment date'),
+                              label: Text(l10n.t('Edit expected payment date')),
                             ),
                           ],
                           if (!payment.contractIsArchived &&
@@ -386,7 +415,7 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 _runAction(widget.onRecordCollection!),
                               ),
                               icon: const Icon(Icons.add_card_outlined),
-                              label: const Text('Record collection'),
+                              label: Text(l10n.t('Record collection')),
                             ),
                           ],
                         ],
@@ -398,7 +427,6 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
 
 final class _Value extends StatelessWidget {
   const _Value(this.label, this.value);
-
   final String label;
   final String value;
 
@@ -428,13 +456,14 @@ final class _ErrorState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              Text(context.scL10n.t(title),
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Text(message, textAlign: TextAlign.center),
               const SizedBox(height: 12),
               FilledButton.tonal(
                 onPressed: () => unawaited(onRetry()),
-                child: const Text('Retry'),
+                child: Text(context.scL10n.t('Retry')),
               ),
             ],
           ),
