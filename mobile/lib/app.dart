@@ -38,8 +38,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   late final MobileAuthRepository _authRepository;
   late final MobileLoginController _loginController;
   late final MobileBootstrapController _bootstrap;
-  MobilePushRegistration? _pushRegistration;
-  bool _pushStarted = false;
+  late final MobilePushRegistration _pushRegistration;
 
   @override
   void initState() {
@@ -65,6 +64,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
     );
     _loginController = MobileLoginController(repository: _authRepository);
     _bootstrap = MobileBootstrapController(_client);
+    _pushRegistration = MobilePushRegistration(client: _client);
     unawaited(_bootstrap.bootstrap());
   }
 
@@ -75,28 +75,21 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
 
   Future<void> _startPushIfNeeded() async {
     final config = _bootstrap.configController?.config;
-    if (_pushStarted || config == null || !config.features.pushNotifications) {
+    if (config == null || !config.features.pushNotifications) {
       return;
     }
-    _pushStarted = true;
-    final registration = MobilePushRegistration(client: _client);
-    _pushRegistration = registration;
-    try {
-      await registration.start();
-    } on Object {
-      // Push registration is non-blocking; the authenticated app remains usable.
-      _pushStarted = false;
+    await _pushRegistration.start();
+    if (_pushRegistration.status.value.backendRegistered) {
+      await _bootstrap.profileController?.load();
     }
   }
 
   Future<void> _logout() async {
     try {
-      await _pushRegistration?.revokeAndStop();
+      await _pushRegistration.revokeAndStop();
     } on Object {
       // Continue to revoke the SafeContracts mobile session.
     }
-    _pushRegistration = null;
-    _pushStarted = false;
     try {
       await _authRepository.logout();
     } on Object {
@@ -107,9 +100,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
 
   @override
   void dispose() {
-    if (_pushRegistration != null) {
-      unawaited(_pushRegistration!.dispose());
-    }
+    unawaited(_pushRegistration.dispose());
     _loginController.dispose();
     _bootstrap.dispose();
     super.dispose();
@@ -132,6 +123,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         environment: widget.environment,
         controller: _bootstrap,
         loginController: _loginController,
+        pushRegistration: _pushRegistration,
         onAuthenticated: _afterAuthenticated,
         onReady: _startPushIfNeeded,
         onLogout: _logout,
@@ -145,6 +137,7 @@ final class _BootstrapView extends StatelessWidget {
     required this.environment,
     required this.controller,
     required this.loginController,
+    required this.pushRegistration,
     required this.onAuthenticated,
     required this.onReady,
     required this.onLogout,
@@ -153,6 +146,7 @@ final class _BootstrapView extends StatelessWidget {
   final AppEnvironment environment;
   final MobileBootstrapController controller;
   final MobileLoginController loginController;
+  final MobilePushRegistration pushRegistration;
   final Future<void> Function() onAuthenticated;
   final Future<void> Function() onReady;
   final Future<void> Function() onLogout;
@@ -192,6 +186,7 @@ final class _BootstrapView extends StatelessWidget {
               notificationsController: notifications,
               profileController: profile,
               excelExportController: excelExport,
+              pushRegistration: pushRegistration,
               usingConfigDefaults: controller.usingConfigDefaults,
               onClearSession: () => unawaited(onLogout()),
             );
