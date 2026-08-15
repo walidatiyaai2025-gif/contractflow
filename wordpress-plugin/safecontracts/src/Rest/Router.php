@@ -39,7 +39,6 @@ final class Router
     public static function health(WP_REST_Request $request): WP_REST_Response
     {
         unset($request);
-
         return ApiResponse::ok([
             'service' => 'SafeContracts',
             'plugin_version' => SAFECONTRACTS_VERSION,
@@ -51,7 +50,6 @@ final class Router
     public static function me(WP_REST_Request $request): WP_REST_Response
     {
         unset($request);
-
         $capabilities = [];
         foreach (Capabilities::all() as $capability) {
             $capabilities[$capability] = current_user_can($capability);
@@ -67,14 +65,6 @@ final class Router
 
     public static function canAccess(): bool|WP_Error
     {
-        if (get_current_user_id() > 0 && AccessScope::canAccess()) {
-            return true;
-        }
-
-        return ApiResponse::error(
-            'safecontracts_forbidden',
-            __('You do not have access to SafeContracts.', 'safecontracts'),
-            403
-        );
+        return Permission::access();
     }
 }
