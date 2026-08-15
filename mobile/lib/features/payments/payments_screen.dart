@@ -141,7 +141,8 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.scL10n.t('Expected payment date updated.'))),
+        SnackBar(
+            content: Text(context.scL10n.t('Expected payment date updated.'))),
       );
     } on SafeContractsApiException catch (error) {
       if (!mounted) return;
@@ -196,7 +197,9 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: <Widget>[
             const SizedBox(height: 180),
-            Center(child: Text(l10n.t('No payments match the authorized filters.'))),
+            Center(
+                child:
+                    Text(l10n.t('No payments match the authorized filters.'))),
           ],
         ),
       );
@@ -219,7 +222,8 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
                     l10n.contractNumber(payment.contractId);
                 return Card(
                   child: ListTile(
-                    title: Text(payment.reference ?? l10n.paymentNumber(payment.id)),
+                    title: Text(
+                        payment.reference ?? l10n.paymentNumber(payment.id)),
                     subtitle: Text(
                       '$owner · ${payment.dueDate} · ${l10n.status(payment.status)}\n'
                       '${l10n.t('Remaining')}: ${l10n.money(payment.remainingAmount, widget.currency)}',
@@ -368,7 +372,8 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                             style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           const SizedBox(height: 16),
-                          _Value(l10n.t('Status'), l10n.status(payment.status)),
+                          _Value(
+                              l10n.t('Status'), l10n.status(payment.status)),
                           _Value(l10n.t('Contractual due date'), payment.dueDate),
                           _Value(
                             l10n.t('Expected payment date'),
@@ -404,7 +409,8 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 _runAction(widget.onEditExpectedDate!),
                               ),
                               icon: const Icon(Icons.event_available_outlined),
-                              label: Text(l10n.t('Edit expected payment date')),
+                              label:
+                                  Text(l10n.t('Edit expected payment date')),
                             ),
                           ],
                           if (!payment.contractIsArchived &&
