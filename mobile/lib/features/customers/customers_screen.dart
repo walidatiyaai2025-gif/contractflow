@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/localization/safecontracts_localizations.dart';
 import 'customers.dart';
 
 final class CustomersScreen extends StatefulWidget {
@@ -62,6 +63,7 @@ final class _CustomersToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final busy = controller.state == CustomersLoadState.loading;
     final page = controller.currentPage;
 
@@ -72,16 +74,14 @@ final class _CustomersToolbar extends StatelessWidget {
         spacing: 12,
         runSpacing: 8,
         children: [
-          Text('Customers', style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.t('Customers'), style: Theme.of(context).textTheme.titleLarge),
           ChoiceChip(
             label: const Text('A–Z'),
             selected: controller.order == 'asc',
             onSelected: busy
                 ? null
                 : (selected) {
-                    if (selected) {
-                      unawaited(controller.setOrder('asc'));
-                    }
+                    if (selected) unawaited(controller.setOrder('asc'));
                   },
           ),
           ChoiceChip(
@@ -90,19 +90,17 @@ final class _CustomersToolbar extends StatelessWidget {
             onSelected: busy
                 ? null
                 : (selected) {
-                    if (selected) {
-                      unawaited(controller.setOrder('desc'));
-                    }
+                    if (selected) unawaited(controller.setOrder('desc'));
                   },
           ),
           IconButton(
-            tooltip: 'Refresh customers',
+            tooltip: l10n.t('Refresh customers'),
             onPressed: busy ? null : () => unawaited(controller.refresh()),
             icon: const Icon(Icons.refresh),
           ),
           if (page != null)
             Text(
-              'Page ${page.page} • ${page.customers.length} shown',
+              l10n.pageShown(page.page, page.customers.length),
               style: Theme.of(context).textTheme.bodySmall,
             ),
         ],
@@ -112,16 +110,14 @@ final class _CustomersToolbar extends StatelessWidget {
 }
 
 final class _CustomersContent extends StatelessWidget {
-  const _CustomersContent({
-    required this.controller,
-    required this.wide,
-  });
+  const _CustomersContent({required this.controller, required this.wide});
 
   final CustomersController controller;
   final bool wide;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final page = controller.currentPage;
 
     if (controller.state == CustomersLoadState.loading && page == null) {
@@ -129,19 +125,18 @@ final class _CustomersContent extends StatelessWidget {
     }
     if (controller.state == CustomersLoadState.error && page == null) {
       return _CustomersError(
-        message: controller.errorMessage ?? 'Unable to load customers.',
+        message: l10n.rawMessage(
+          controller.errorMessage ?? 'Unable to load customers.',
+        ),
         onRetry: () => unawaited(controller.loadPage(1)),
       );
     }
     if (page == null) {
-      return const Center(child: Text('Customers are not loaded yet.'));
+      return Center(child: Text(l10n.t('Customers are not loaded yet.')));
     }
 
     final list = _CustomerList(controller: controller, page: page);
-    final detail = _CustomerDetailPane(
-      controller: controller,
-      showBack: !wide,
-    );
+    final detail = _CustomerDetailPane(controller: controller, showBack: !wide);
 
     if (wide) {
       return Row(
@@ -153,9 +148,7 @@ final class _CustomersContent extends StatelessWidget {
       );
     }
 
-    if (controller.selectedCustomerId != null) {
-      return detail;
-    }
+    if (controller.selectedCustomerId != null) return detail;
     return list;
   }
 }
@@ -168,16 +161,17 @@ final class _CustomerList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     if (page.customers.isEmpty) {
       return RefreshIndicator(
         onRefresh: controller.refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 120),
-            Icon(Icons.business_outlined, size: 48),
-            SizedBox(height: 12),
-            Center(child: Text('No customers are available in your scope.')),
+          children: <Widget>[
+            const SizedBox(height: 120),
+            const Icon(Icons.business_outlined, size: 48),
+            const SizedBox(height: 12),
+            Center(child: Text(l10n.t('No customers are available in your scope.'))),
           ],
         ),
       );
@@ -189,7 +183,9 @@ final class _CustomerList extends StatelessWidget {
           const LinearProgressIndicator(),
         if (controller.state == CustomersLoadState.error)
           _InlineCustomerError(
-            message: controller.errorMessage ?? 'Customer refresh failed.',
+            message: l10n.rawMessage(
+              controller.errorMessage ?? 'Customer refresh failed.',
+            ),
           ),
         Expanded(
           child: RefreshIndicator(
@@ -214,7 +210,7 @@ final class _CustomerList extends StatelessWidget {
                     ].join(' • '),
                   ),
                   trailing: Chip(
-                    label: Text(customer.isActive ? 'Active' : 'Inactive'),
+                    label: Text(l10n.status(customer.isActive ? 'active' : 'inactive')),
                   ),
                   onTap: () => unawaited(controller.openCustomer(customer.id)),
                 );
@@ -236,6 +232,7 @@ final class _CustomerPagination extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final busy = controller.state == CustomersLoadState.loading;
     return SafeArea(
       top: false,
@@ -249,7 +246,7 @@ final class _CustomerPagination extends StatelessWidget {
                   ? null
                   : () => unawaited(controller.previousPage()),
               icon: const Icon(Icons.chevron_left),
-              label: const Text('Previous'),
+              label: Text(l10n.t('Previous')),
             ),
             const SizedBox(width: 12),
             Text('${page.page} / 5'),
@@ -259,7 +256,7 @@ final class _CustomerPagination extends StatelessWidget {
                   ? null
                   : () => unawaited(controller.nextPage()),
               icon: const Icon(Icons.chevron_right),
-              label: const Text('Next'),
+              label: Text(l10n.t('Next')),
             ),
           ],
         ),
@@ -269,22 +266,20 @@ final class _CustomerPagination extends StatelessWidget {
 }
 
 final class _CustomerDetailPane extends StatelessWidget {
-  const _CustomerDetailPane({
-    required this.controller,
-    required this.showBack,
-  });
+  const _CustomerDetailPane({required this.controller, required this.showBack});
 
   final CustomersController controller;
   final bool showBack;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final selectedId = controller.selectedCustomerId;
     if (selectedId == null) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('Select a customer to view authorized details.'),
+          padding: const EdgeInsets.all(24),
+          child: Text(l10n.t('Select a customer to view authorized details.')),
         ),
       );
     }
@@ -299,17 +294,18 @@ final class _CustomerDetailPane extends StatelessWidget {
             child: TextButton.icon(
               onPressed: controller.closeCustomer,
               icon: const Icon(Icons.arrow_back),
-              label: const Text('Customers'),
+              label: Text(l10n.t('Customers')),
             ),
           ),
         if (controller.detailState == CustomerDetailLoadState.loading) ...[
           const LinearProgressIndicator(),
           const SizedBox(height: 20),
-          Text('Loading customer #$selectedId…'),
+          Text(l10n.loadingCustomer(selectedId)),
         ] else if (controller.detailState == CustomerDetailLoadState.error) ...[
           _CustomersError(
-            message:
-                controller.detailErrorMessage ?? 'Unable to load customer.',
+            message: l10n.rawMessage(
+              controller.detailErrorMessage ?? 'Unable to load customer.',
+            ),
             onRetry: () => unawaited(controller.openCustomer(selectedId)),
           ),
         ] else if (customer != null) ...[
@@ -322,24 +318,26 @@ final class _CustomerDetailPane extends StatelessWidget {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
               ),
-              Chip(label: Text(customer.isActive ? 'Active' : 'Inactive')),
+              Chip(
+                label: Text(l10n.status(customer.isActive ? 'active' : 'inactive')),
+              ),
             ],
           ),
           const SizedBox(height: 20),
-          _CustomerField(label: 'Customer ID', value: '${customer.id}'),
+          _CustomerField(label: l10n.t('Customer ID'), value: '${customer.id}'),
           _CustomerField(
-            label: 'Internal code',
+            label: l10n.t('Internal code'),
             value: customer.internalCode ?? '—',
           ),
           _CustomerField(
-            label: 'Contact name',
+            label: l10n.t('Contact name'),
             value: customer.contactName ?? '—',
           ),
-          _CustomerField(label: 'Email', value: customer.email ?? '—'),
-          _CustomerField(label: 'Phone', value: customer.phone ?? '—'),
+          _CustomerField(label: l10n.t('Email'), value: customer.email ?? '—'),
+          _CustomerField(label: l10n.t('Phone'), value: customer.phone ?? '—'),
           const SizedBox(height: 12),
           Text(
-            'Only server-authorized customer fields are shown.',
+            l10n.t('Only server-authorized customer fields are shown.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -350,65 +348,59 @@ final class _CustomerDetailPane extends StatelessWidget {
 
 final class _CustomerField extends StatelessWidget {
   const _CustomerField({required this.label, required this.value});
-
   final String label;
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 4),
-          SelectableText(value),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 4),
+            SelectableText(value),
+          ],
+        ),
+      );
 }
 
 final class _CustomersError extends StatelessWidget {
   const _CustomersError({required this.message, required this.onRetry});
-
   final String message;
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 44),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
-          ],
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 44),
+              const SizedBox(height: 12),
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: onRetry,
+                child: Text(context.scL10n.t('Retry')),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 final class _InlineCustomerError extends StatelessWidget {
   const _InlineCustomerError({required this.message});
-
   final String message;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Text(
-        message,
-        style: TextStyle(color: Theme.of(context).colorScheme.error),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child: Text(
+          message,
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
+      );
 }
