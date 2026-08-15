@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../operations/followup_screen.dart';
 import '../operations/operations_repository.dart';
 import '../operations/operations_screens.dart';
 import '../session/session_controller.dart';
@@ -121,6 +122,12 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           pageSize: pageSize,
           canRecord: widget.policy.canEnterCollection,
         ),
+      MobileDestination.followUps => FollowUpScreen(
+          repository: repository,
+          filters: filters,
+          pageSize: pageSize,
+          canManage: widget.policy.canManageFollowUps,
+        ),
       MobileDestination.export => ExcelExportScreen(
           repository: repository,
           filters: filters,
@@ -129,9 +136,6 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           session: widget.session,
           config: widget.config,
           onClearSession: widget.onClearSession,
-        ),
-      MobileDestination.followUps => const _PlannedDestination(
-          destination: MobileDestination.followUps,
         ),
     };
   }
@@ -168,26 +172,6 @@ final class _ProfileView extends StatelessWidget {
           child: const Text('Clear local session state'),
         ),
       ],
-    );
-  }
-}
-
-final class _PlannedDestination extends StatelessWidget {
-  const _PlannedDestination({required this.destination});
-
-  final MobileDestination destination;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          '${_label(destination)} navigation is authorized. '
-          'Its dedicated mobile screen is implemented in the corresponding roadmap task.',
-          textAlign: TextAlign.center,
-        ),
-      ),
     );
   }
 }
