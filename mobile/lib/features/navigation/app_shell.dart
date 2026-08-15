@@ -5,9 +5,12 @@ import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
+import '../operations/collections_screen.dart';
+import '../operations/contracts_screen.dart';
+import '../operations/customers_screen.dart';
 import '../operations/followup_screen.dart';
 import '../operations/operations_repository.dart';
-import '../operations/operations_screens.dart';
+import '../operations/payments_screen.dart';
 import '../session/session_controller.dart';
 import 'navigation_policy.dart';
 
