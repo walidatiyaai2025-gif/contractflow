@@ -92,6 +92,7 @@ final class _ContractsToolbar extends StatelessWidget {
             child: DropdownButtonFormField<int>(
               key: ValueKey<int>(safeCustomer),
               initialValue: safeCustomer,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Customer',
                 isDense: true,
@@ -126,6 +127,7 @@ final class _ContractsToolbar extends StatelessWidget {
             child: DropdownButtonFormField<String>(
               key: ValueKey<String>(selectedStatus),
               initialValue: selectedStatus,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Status',
                 isDense: true,
@@ -166,6 +168,7 @@ final class _ContractsToolbar extends StatelessWidget {
                 '${controller.sort.field}:${controller.sort.order}',
               ),
               initialValue: controller.sort,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Sort',
                 isDense: true,
@@ -175,7 +178,10 @@ final class _ContractsToolbar extends StatelessWidget {
                   .map(
                     (option) => DropdownMenuItem<ContractSortOption>(
                       value: option,
-                      child: Text(option.label),
+                      child: Text(
+                        option.label,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   )
                   .toList(growable: false),
