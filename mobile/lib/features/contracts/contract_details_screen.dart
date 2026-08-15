@@ -49,10 +49,10 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
       builder: (context, child) {
         final controller = widget.controller;
         final contract = controller.selectedContract;
-        final readyForCurrent = controller.detailState ==
-                ContractDetailLoadState.ready &&
-            controller.selectedContractId == widget.contractId &&
-            contract != null;
+        final readyForCurrent =
+            controller.detailState == ContractDetailLoadState.ready &&
+                controller.selectedContractId == widget.contractId &&
+                contract != null;
 
         return Scaffold(
           appBar: AppBar(
@@ -129,7 +129,8 @@ final class _ContractDetailsBody extends StatelessWidget {
               'SafeContracts could not load this contract.',
           onRetry: () => unawaited(controller.openContract(contractId)),
         ),
-      ContractDetailLoadState.idle || ContractDetailLoadState.loading =>
+      ContractDetailLoadState.idle ||
+      ContractDetailLoadState.loading =>
         const Center(child: CircularProgressIndicator()),
     };
   }
@@ -193,7 +194,8 @@ final class _ReadyContractDetails extends StatelessWidget {
           children: [
             _DetailValue(
               label: 'Customer',
-              value: contract.customerName ?? 'Customer #${contract.customerId}',
+              value:
+                  contract.customerName ?? 'Customer #${contract.customerId}',
             ),
             _DetailValue(
               label: 'Customer ID',
