@@ -10,6 +10,7 @@ final class AdminShell
 {
     public const SLUG = 'safecontracts';
     public const STYLE_HANDLE = 'safecontracts-admin';
+    public const CORE_STYLE_HANDLE = 'safecontracts-admin-core';
 
     public static function register(): void
     {
@@ -34,6 +35,12 @@ final class AdminShell
             self::STYLE_HANDLE,
             SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin.css',
             [],
+            SAFECONTRACTS_VERSION
+        );
+        wp_enqueue_style(
+            self::CORE_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-core.css',
+            [self::STYLE_HANDLE],
             SAFECONTRACTS_VERSION
         );
     }
