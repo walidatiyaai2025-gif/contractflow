@@ -125,6 +125,9 @@ def validate_ci_contract() -> int:
         "git diff --exit-code -- lib test",
         "flutter analyze",
         "flutter test",
+        "release-readiness:",
+        "python3 scripts/backup_manifest.py --check",
+        "python3 scripts/release_readiness.py --check",
     )
     missing = [command for command in required_commands if command not in workflow]
     if missing:
