@@ -10,6 +10,7 @@ if (! defined('ARRAY_A')) {
 }
 
 $GLOBALS['sc_test_actions'] = [];
+$GLOBALS['sc_test_action_accepted_args'] = [];
 $GLOBALS['sc_test_activation_hooks'] = [];
 $GLOBALS['sc_test_deactivation_hooks'] = [];
 $GLOBALS['sc_test_options'] = [];
@@ -113,12 +114,18 @@ function plugin_dir_url(string $file): string { return 'https://example.test/wp-
 function plugin_basename(string $file): string { return basename(dirname($file)) . '/' . basename($file); }
 function register_activation_hook(string $file, callable $callback): void { $GLOBALS['sc_test_activation_hooks'][$file] = $callback; }
 function register_deactivation_hook(string $file, callable $callback): void { $GLOBALS['sc_test_deactivation_hooks'][$file] = $callback; }
-function add_action(string $hook, callable $callback): void { $GLOBALS['sc_test_actions'][$hook][] = $callback; }
+function add_action(string $hook, callable $callback, int $priority = 10, int $acceptedArgs = 1): void
+{
+    unset($priority);
+    $GLOBALS['sc_test_actions'][$hook][] = $callback;
+    $GLOBALS['sc_test_action_accepted_args'][$hook][] = max(0, $acceptedArgs);
+}
 function do_action(string $hook, mixed ...$args): void
 {
     $GLOBALS['sc_test_fired_actions'][$hook][] = $args;
-    foreach ($GLOBALS['sc_test_actions'][$hook] ?? [] as $cb) {
-        $cb(...$args);
+    foreach ($GLOBALS['sc_test_actions'][$hook] ?? [] as $index => $cb) {
+        $acceptedArgs = $GLOBALS['sc_test_action_accepted_args'][$hook][$index] ?? 1;
+        $cb(...array_slice($args, 0, $acceptedArgs));
     }
 }
 function get_option(string $key, mixed $default = false): mixed { return $GLOBALS['sc_test_options'][$key] ?? $default; }
