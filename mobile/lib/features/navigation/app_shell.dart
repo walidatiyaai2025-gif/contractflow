@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../config/mobile_config.dart';
 import '../contracts/contract_details_screen.dart';
+import '../contracts/contract_edit_screen.dart';
 import '../contracts/contracts.dart';
 import '../contracts/contracts_screen.dart';
 import '../customers/customers.dart';
@@ -16,6 +17,8 @@ import '../export/mobile_excel_export_screen.dart';
 import '../notifications/deep_link.dart';
 import '../notifications/notifications.dart';
 import '../notifications/notifications_screen.dart';
+import '../payments/payments.dart';
+import '../payments/payments_screen.dart';
 import '../profile/profile.dart';
 import '../profile/profile_screen.dart';
 import '../session/session_controller.dart';
@@ -125,6 +128,13 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
               const <CustomerOption>[],
           onOpenContract: _openContract,
         ),
+      MobileDestination.payments => PaymentsScreen(
+          repository: PaymentsRepository(
+            widget.contractsController.repository.client,
+          ),
+          pageSize: widget.config.defaultPageSize,
+          filters: widget.dashboardController.filters,
+        ),
       MobileDestination.notifications => NotificationsScreen(
           controller: widget.notificationsController,
           onOpenDeepLink: _openDeepLink,
@@ -159,7 +169,10 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
   void _openContractEdit(int contractId) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => _ContractEditHandoff(contractId: contractId),
+        builder: (context) => ContractEditScreen(
+          contractsController: widget.contractsController,
+          contractId: contractId,
+        ),
       ),
     );
   }
@@ -186,42 +199,6 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
       case SafeContractsDeepLinkDestination.followUps:
         break;
     }
-  }
-}
-
-final class _ContractEditHandoff extends StatelessWidget {
-  const _ContractEditHandoff({required this.contractId});
-
-  final int contractId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Edit contract')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.edit_note_outlined, size: 52),
-              const SizedBox(height: 16),
-              Text(
-                'Contract #$contractId',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Your session is authorized to request contract edits. '
-                'The supported edit fields, validation, conflicts and audit '
-                'write flow are implemented in SC-P9-013.',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
