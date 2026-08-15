@@ -97,7 +97,8 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Future<void> _editExpectedDate(SafeContractsPayment payment) async {
-    final input = TextEditingController(text: payment.expectedPaymentDate ?? '');
+    final input =
+        TextEditingController(text: payment.expectedPaymentDate ?? '');
     final result = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
