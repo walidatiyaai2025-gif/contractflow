@@ -13,9 +13,9 @@ final class ApiResponse
     {
         return new WP_REST_Response([
             'data' => $data,
-            'meta' => array_merge([
+            'meta' => array_merge($meta, [
                 'api_version' => Router::API_VERSION,
-            ], $meta),
+            ]),
         ], $status);
     }
 
