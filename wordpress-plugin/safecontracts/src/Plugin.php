@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace SafeContracts;
 
+use SafeContracts\Admin\AdminFeedback;
 use SafeContracts\Admin\AdminShell;
 use SafeContracts\Admin\CollectionsPage;
 use SafeContracts\Admin\ContractsPage;
 use SafeContracts\Admin\CustomersPage;
+use SafeContracts\Admin\DashboardPage;
 use SafeContracts\Admin\FirebaseSettingsPage;
 use SafeContracts\Admin\FollowUpsPage;
 use SafeContracts\Admin\GeneralSettingsPage;
@@ -22,6 +24,7 @@ use SafeContracts\Admin\PaymentsPage;
 use SafeContracts\Admin\ReportsPage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Audit\AuditRecorder;
+use SafeContracts\Audit\ContractArchiveAuditRecorder;
 use SafeContracts\Auth\MobileBearerAuthentication;
 use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
@@ -55,6 +58,7 @@ final class Plugin
         (new Migrator())->maybeMigrate();
         ContractHistoryRecorder::register();
         AuditRecorder::register();
+        ContractArchiveAuditRecorder::register();
         LoginBranding::register();
         NavigationCleanup::register();
 
@@ -75,9 +79,12 @@ final class Plugin
         add_action('admin_menu', [FirebaseSettingsPage::class, 'register'], 33);
         add_action('admin_menu', [MobileConfigurationPage::class, 'register'], 34);
         add_action('admin_enqueue_scripts', [AdminShell::class, 'enqueueAssets']);
+        add_action('admin_enqueue_scripts', [AdminFeedback::class, 'enqueueAssets'], 20);
+        add_action('admin_notices', [AdminFeedback::class, 'render']);
 
         add_action('admin_post_' . CustomersPage::SAVE_ACTION, [CustomersPage::class, 'handleSave']);
         add_action('admin_post_' . ContractsPage::SAVE_ACTION, [ContractsPage::class, 'handleSave']);
+        add_action('admin_post_' . DashboardPage::ARCHIVE_ACTION, [DashboardPage::class, 'handleArchive']);
         add_action('admin_post_' . PaymentsPage::SAVE_ACTION, [PaymentsPage::class, 'handleSave']);
         add_action('admin_post_' . CollectionsPage::SAVE_ACTION, [CollectionsPage::class, 'handleSave']);
         add_action('admin_post_' . FollowUpsPage::SAVE_ACTION, [FollowUpsPage::class, 'handleSave']);
