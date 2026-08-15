@@ -11,6 +11,7 @@ use SafeContracts\Admin\CustomersPage;
 use SafeContracts\Admin\FirebaseSettingsPage;
 use SafeContracts\Admin\FollowUpsPage;
 use SafeContracts\Admin\GeneralSettingsPage;
+use SafeContracts\Admin\ImportsPage;
 use SafeContracts\Admin\LoginBranding;
 use SafeContracts\Admin\MobileConfigurationPage;
 use SafeContracts\Admin\NavigationCleanup;
@@ -63,6 +64,7 @@ final class Plugin
         add_action('admin_menu', [NotificationsPage::class, 'register'], 15);
         add_action('admin_menu', [ReportsPage::class, 'register'], 16);
         add_action('admin_menu', [UsersRolesPage::class, 'register'], 17);
+        add_action('admin_menu', [ImportsPage::class, 'register'], 18);
         add_action('admin_menu', [GeneralSettingsPage::class, 'register'], 30);
         add_action('admin_menu', [PaymentMethodsPage::class, 'register'], 31);
         add_action('admin_menu', [NotificationSettingsPage::class, 'register'], 32);
@@ -76,6 +78,8 @@ final class Plugin
         add_action('admin_post_' . CollectionsPage::SAVE_ACTION, [CollectionsPage::class, 'handleSave']);
         add_action('admin_post_' . FollowUpsPage::SAVE_ACTION, [FollowUpsPage::class, 'handleSave']);
         add_action('admin_post_' . ReportsPage::EXPORT_ACTION, [ReportsPage::class, 'handleExport']);
+        add_action('admin_post_' . ImportsPage::UPLOAD_ACTION, [ImportsPage::class, 'handleUpload']);
+        add_action('admin_post_' . ImportsPage::MAP_ACTION, [ImportsPage::class, 'handleMapping']);
         add_action('admin_post_' . GeneralSettingsPage::SAVE_ACTION, [GeneralSettingsPage::class, 'handleSave']);
         add_action('admin_post_' . PaymentMethodsPage::SAVE_ACTION, [PaymentMethodsPage::class, 'handleSave']);
         add_action('admin_post_' . NotificationSettingsPage::SAVE_ACTION, [NotificationSettingsPage::class, 'handleSave']);
