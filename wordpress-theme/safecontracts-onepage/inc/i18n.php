@@ -39,12 +39,12 @@ function safecontracts_direction() {
 }
 
 /**
- * Landing-page translations.
+ * Complete bilingual landing-page copy catalog.
  *
- * @return array<string,mixed>
+ * @return array<string,array<string,mixed>>
  */
-function safecontracts_copy() {
-	$copy = array(
+function safecontracts_copy_catalog() {
+	return array(
 		'ar' => array(
 			'brand_tagline' => 'إدارة العقود بذكاء وأمان',
 			'nav' => array(
@@ -190,6 +190,21 @@ function safecontracts_copy() {
 			'footer' => array( 'about' => 'About', 'support' => 'Support', 'privacy' => 'Privacy', 'contact' => 'Contact' ),
 		),
 	);
+}
 
-	return $copy[ safecontracts_current_lang() ];
+/**
+ * Landing-page translations with optional WordPress-admin overrides.
+ *
+ * @return array<string,mixed>
+ */
+function safecontracts_copy() {
+	$lang    = safecontracts_current_lang();
+	$catalog = safecontracts_copy_catalog();
+	$current = $catalog[ $lang ];
+
+	if ( function_exists( 'safecontracts_apply_home_overrides' ) ) {
+		$current = safecontracts_apply_home_overrides( $current, $lang );
+	}
+
+	return $current;
 }
