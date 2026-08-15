@@ -216,8 +216,8 @@ void main() {
 
       final envelope = await harness.client.get('session');
 
-      expect(harness.environment.name, 'local');
-      expect(harness.environment.apiBaseUrl.host, '127.0.0.1');
+      expect(harness.environment.name, AppEnvironmentName.local);
+      expect(harness.environment.apiBaseUri.host, '127.0.0.1');
       expect(envelope.data, <String, Object?>{'ok': true});
       expect(harness.transport.requests, hasLength(1));
       expect(harness.singleRequest.method, 'GET');
