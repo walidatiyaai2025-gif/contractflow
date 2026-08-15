@@ -15,7 +15,8 @@ import 'support/safecontracts_test_harness.dart';
 
 void main() {
   group('SC-P9-020 notifications inbox', () {
-    test('loads current-user page and persists read state through REST', () async {
+    test('loads current-user page and persists read state through REST',
+        () async {
       final harness = SafeContractsTestHarness((uri) {
         if (uri.path.endsWith('/notifications/91/read')) {
           return SafeContractsTestHarness.ok(<String, Object?>{
@@ -47,7 +48,8 @@ void main() {
       expect(notification.id, 91);
       expect(notification.paymentId, 21);
       expect(controller.isRead(91), isFalse);
-      expect(harness.transport.requests.single.uri.path, endsWith('/notifications'));
+      expect(harness.transport.requests.single.uri.path,
+          endsWith('/notifications'));
 
       final link = await controller.openNotification(notification);
       expect(controller.isRead(91), isTrue);
@@ -297,7 +299,8 @@ void main() {
   });
 
   group('SC-P9-045 notifications inbox validation', () {
-    test('duplicate IDs, invalid scope and mismatched deep links fail closed', () {
+    test('duplicate IDs, invalid scope and mismatched deep links fail closed',
+        () {
       expect(
         () => NotificationPage.fromEnvelope(
           ApiEnvelope(
