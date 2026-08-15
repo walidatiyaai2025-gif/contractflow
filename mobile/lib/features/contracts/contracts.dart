@@ -303,7 +303,8 @@ final class ContractsController extends ChangeNotifier {
     if (normalized != null &&
         normalized.isNotEmpty &&
         !supportedContractStatuses.contains(normalized)) {
-      throw ArgumentError.value(status, 'status', 'Unsupported contract status.');
+      throw ArgumentError.value(
+          status, 'status', 'Unsupported contract status.');
     }
     filters = filters.withStatus(
       normalized == null || normalized.isEmpty ? null : normalized,
