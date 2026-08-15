@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 
@@ -180,11 +179,14 @@ String _requiredString(Object? value, String field) {
 }
 
 int _nonNegativeInt(Object? value, String field) {
-  final parsed = switch (value) {
-    int value => value,
-    String value => int.tryParse(value),
-    _ => null,
-  };
+  final int? parsed;
+  if (value is int) {
+    parsed = value;
+  } else if (value is String) {
+    parsed = int.tryParse(value);
+  } else {
+    parsed = null;
+  }
   if (parsed == null || parsed < 0) {
     throw FormatException('$field must be a non-negative integer.');
   }
