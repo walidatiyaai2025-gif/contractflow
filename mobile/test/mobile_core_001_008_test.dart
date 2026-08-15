@@ -48,7 +48,8 @@ void main() {
       );
     });
 
-    test('maps WordPress REST failures without exposing a second auth store', () async {
+    test('maps WordPress REST failures without exposing a second auth store',
+        () async {
       final transport = FakeApiTransport(
         (uri) => _error(
           403,
@@ -104,7 +105,8 @@ void main() {
     });
   });
 
-  test('SC-P9-003 mobile config is typed, bounded and ignores unknown fields', () {
+  test('SC-P9-003 mobile config is typed, bounded and ignores unknown fields',
+      () {
     final config = SafeContractsMobileConfig.fromData(<String, Object?>{
       'support_text': 'Support desk',
       'default_page_size': 200,
@@ -124,7 +126,8 @@ void main() {
     expect(config.features.collectionEntry, isFalse);
   });
 
-  test('SC-P9-004 navigation derives from capabilities instead of role names', () {
+  test('SC-P9-004 navigation derives from capabilities instead of role names',
+      () {
     final session = SafeContractsSession(
       userId: 42,
       scope: SafeContractsDataScope.assigned,
@@ -171,7 +174,8 @@ void main() {
   });
 
   group('SC-P9-006..008 dashboard selectors and lists', () {
-    test('customer change resets contract and loads dependent options', () async {
+    test('customer change resets contract and loads dependent options',
+        () async {
       final transport = FakeApiTransport(_dashboardHandler);
       final repository = DashboardRepository(_client(transport));
       final controller = DashboardController(
@@ -199,7 +203,8 @@ void main() {
       controller.dispose();
     });
 
-    test('contract and status filters propagate to server list requests', () async {
+    test('contract and status filters propagate to server list requests',
+        () async {
       final transport = FakeApiTransport(_dashboardHandler);
       final controller = DashboardController(
         repository: DashboardRepository(_client(transport)),
