@@ -2,7 +2,8 @@ import java.io.File
 
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    // Flutter stable on AGP 9 uses Android built-in Kotlin. Do not re-apply
+    // kotlin-android here; doing so selects deprecated DSL APIs.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -14,10 +15,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -69,6 +66,12 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
