@@ -17,6 +17,12 @@ Minimum production topology:
 
 The WordPress plugin is the system of record. Mobile communicates only through the versioned SafeContracts REST API.
 
+Current production WordPress host supplied by the operator:
+
+- WordPress: `https://cms.50sols.com/`
+- SafeContracts API: `https://cms.50sols.com/wp-json/safecontracts/v1/`
+- Public non-destructive health endpoint: `https://cms.50sols.com/wp-json/safecontracts/v1/health`
+
 ## 2. WordPress / web-server prerequisites
 
 Before go-live provide:
@@ -58,12 +64,12 @@ Server-side secret/configuration sources must cover, as applicable:
 - hosting/API credentials,
 - Android signing keystore/passwords used by CI/release tooling.
 
-The mobile application may receive only public compile-time configuration. For production the required SafeContracts mobile values include:
+The mobile application may receive only public compile-time configuration. The production SafeContracts mobile values are now fixed to:
 
 - `SC_ENV=production`
-- `SC_API_BASE_URL=https://<production-host>/wp-json/safecontracts/v1/`
+- `SC_API_BASE_URL=https://cms.50sols.com/wp-json/safecontracts/v1/`
 
-A production API URL using plain HTTP is forbidden.
+A production API URL using plain HTTP is forbidden. The CI release candidate runs the public `/health` smoke check against this endpoint before it builds the APK candidate.
 
 ## 5. Firebase / notifications
 
@@ -88,11 +94,13 @@ bash scripts/bootstrap_android.sh
 
 The committed release contract lives in `mobile/android-release/`. It fixes the application ID to `com.safecontracts.safecontracts_mobile`, prevents release builds from falling back to debug signing, and requires all signing inputs together or none.
 
-The `release-candidates` CI job generates the scaffold and builds a real **release-mode APK candidate** using a short-lived CI-only signing key plus a reserved `.invalid` HTTPS API URL. That artifact proves the Android/Gradle/signing build path but is not production and must never be retained as `SafeContracts-latest.apk`.
+The `release-candidates` CI job generates the scaffold and builds a real **release-mode APK candidate** using a short-lived CI-only signing key. The candidate is now compiled against the real production API base URL `https://cms.50sols.com/wp-json/safecontracts/v1/`, but it remains a candidate because the signing key is not the production key. Before the APK build starts, CI calls the public SafeContracts `/health` endpoint and verifies `service=SafeContracts`, `api_version=v1`, `status=ok`, a non-empty plugin version and same-origin HTTPS behavior.
+
+That artifact proves the Android/Gradle build path and production endpoint binding, but it is not the production Android release and must never be retained as `SafeContracts-latest.apk`.
 
 Before producing the real `SafeContracts-latest.apk`:
 
-1. Provide the real production HTTPS `SC_API_BASE_URL`.
+1. Keep the production HTTPS API bound to `https://cms.50sols.com/wp-json/safecontracts/v1/` and require the CI health smoke check to pass.
 2. Provide production Android release signing material outside Git through:
    - `SC_ANDROID_KEYSTORE_PATH`
    - `SC_ANDROID_KEYSTORE_PASSWORD`
@@ -104,7 +112,7 @@ Before producing the real `SafeContracts-latest.apk`:
 6. Build a **release** APK, never a debug APK.
 7. Verify the APK signature using Android build-tools (`apksigner verify`).
 8. Install the exact signed APK on at least one representative real Android device.
-9. Execute the mobile UAT flows against the target production/staging API.
+9. Execute the mobile UAT flows against the production API.
 10. Verify authentication, permissions, dashboard/filtering, contracts/payments, collection/follow-up, notifications/deep links, RTL and offline/error handling.
 11. Record real-device and UAT evidence references.
 12. Only then publish the APK with `scripts/verified_artifacts.py publish-apk`.
@@ -141,7 +149,7 @@ python3 scripts/verified_artifacts.py publish-plugin \
   --quality-gates-passed
 ```
 
-The plugin is intentionally publishable independently of the mobile APK.
+The plugin is intentionally publishable independently of the mobile APK. The operator has installed the plugin on the production WordPress host at `https://cms.50sols.com/`; CI health verification is the automated proof that the deployed plugin exposes the expected public SafeContracts API health contract.
 
 ## 8. Backup and restore gate
 
@@ -195,14 +203,14 @@ Logs must not expose authorization headers, passwords, tokens, Firebase private 
 Recommended release order:
 
 1. Freeze the exact functional source candidate.
-2. Pass all four GitHub Quality Gates and the post-gate `release-candidates` job.
+2. Pass all four GitHub Quality Gates and the post-gate `release-candidates` job, including the live production `/health` smoke check.
 3. Take and record the pre-release backup/snapshot.
 4. Rehearse/verify restore if required by the change class.
 5. Build the deterministic plugin ZIP and deploy/upgrade it on staging.
 6. Run migration/UAT smoke tests and publish the verified plugin with `publish-plugin`.
 7. Deploy the exact verified plugin ZIP to production.
 8. Verify schema, REST health, permissions, audit trail, scheduled work and core business smoke tests.
-9. Build/sign/test the exact mobile release against the real production HTTPS endpoint.
+9. Build/sign/test the exact mobile release against `https://cms.50sols.com/wp-json/safecontracts/v1/`.
 10. Verify the APK signature and execute real-device/UAT acceptance.
 11. Publish the verified APK with `publish-apk` only after the external evidence exists.
 12. Retain only the newest verified ZIP/APK in their mandatory repository folders; historical binaries go to GitHub Releases.
@@ -216,9 +224,10 @@ A production release/change record should contain:
 - GitHub Quality Gates run ID and successful conclusion,
 - plugin ZIP SHA-256,
 - APK SHA-256,
+- production `/health` smoke-test result and reported plugin version,
 - database snapshot/backup identifier,
 - schema version after deployment,
-- staging/production smoke-test result,
+- staging/production business smoke-test result,
 - APK signature verification result,
 - real-device APK test result,
 - Firebase notification/deep-link evidence when enabled,
@@ -228,15 +237,17 @@ A production release/change record should contain:
 
 ## 13. Current blockers before first real production APK
 
-The repository now contains a reproducible Android build contract and CI exercises a release APK/signing candidate on every successful Quality Gates run. Therefore Android scaffold generation itself is no longer the primary blocker.
+The repository contains a reproducible Android build contract and CI exercises a release APK/signing candidate on every successful Quality Gates run. The production WordPress/API target is now known and committed as public configuration:
+
+`https://cms.50sols.com/wp-json/safecontracts/v1/`
 
 The remaining human/environment-specific requirements before the first **production-verified** APK are:
 
-- the real production HTTPS SafeContracts API URL,
 - production Android signing keystore + passwords stored outside Git,
 - any required Firebase Android client configuration,
-- signature verification of the exact production APK,
+- signature verification of the exact production-signed APK,
 - real-device acceptance evidence,
-- business UAT sign-off.
+- business UAT sign-off,
+- production backup/restore evidence required for go-live governance.
 
-Until those are available, `Last verified apk/` must remain without a production APK. The CI release candidate is evidence of build-path health only and must not be promoted.
+Until those are available, `Last verified apk/` must remain without a production APK. The CI release candidate is valid evidence of the production endpoint/build-path contract only and must not be promoted as the production-signed application.
