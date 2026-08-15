@@ -181,7 +181,8 @@ def validate_ci_contract() -> int:
         '"service": "SafeContracts"',
         '"status": "ok"',
         '"api_version": "v1"',
-        "redirected to a different origin",
+        "def same_origin(",
+        "rest_route",
     ):
         if marker not in health_script:
             fail(f"production health verifier missing marker: {marker}")
@@ -200,7 +201,7 @@ def validate_ci_contract() -> int:
     missing_retain = [marker for marker in retain_markers if marker not in retain]
     if missing_retain:
         fail("verified plugin retention workflow missing markers: " + ", ".join(missing_retain))
-    return len(required_commands) + 5 + len(retain_markers) + 1
+    return len(required_commands) + 6 + len(retain_markers) + 1
 
 
 def validate_artifact_policy() -> int:
