@@ -190,7 +190,6 @@ $missingHistory = DataController::followUpHistory(new WP_REST_Request(['payment_
 sc_p8v_final_assert($missingHistory instanceof WP_Error && ($missingHistory->data['status'] ?? 0) === 404, 'SC-P8-027 missing payment follow-up history returns 404 instead of validation 422');
 $GLOBALS['sc_test_result_queue'] = [
     [[...sc_p8v_final_payment_row(42)]],
-    [[...sc_p8v_final_payment_row(42)]],
     [[
         'id' => '501', 'payment_id' => '21', 'state' => 'contacted', 'note' => 'Called customer',
         'promised_date' => null, 'deferred_until' => null, 'created_by' => '42', 'created_at' => '2026-08-15 10:00:00',
