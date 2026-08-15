@@ -64,7 +64,7 @@ final class PaymentMethodsController
             $saved = (new PaymentMethodRepository())->save([
                 'code' => sanitize_key((string) ($input['code'] ?? '')),
                 'name' => sanitize_text_field((string) ($input['name'] ?? '')),
-                'sort_order' => (int) ($input['sort_order'] ?? 0),
+                'display_order' => (int) ($input['display_order'] ?? 0),
                 'is_active' => ! empty($input['is_active']),
             ]);
         } catch (InvalidArgumentException $error) {
