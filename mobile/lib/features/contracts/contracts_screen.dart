@@ -92,7 +92,8 @@ final class _ContractsToolbar extends StatelessWidget {
         runSpacing: 10,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(l10n.t('Contracts'), style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.t('Contracts'),
+              style: Theme.of(context).textTheme.titleLarge),
           SizedBox(
             width: 210,
             child: DropdownButtonFormField<int>(
@@ -254,7 +255,8 @@ final class _ContractsContent extends StatelessWidget {
             const SizedBox(height: 120),
             const Icon(Icons.description_outlined, size: 48),
             const SizedBox(height: 12),
-            Center(child: Text(l10n.t('No contracts match the current filters.'))),
+            Center(
+                child: Text(l10n.t('No contracts match the current filters.'))),
           ],
         ),
       );
@@ -319,7 +321,8 @@ final class _ContractTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     final dates = <String>[
-      if (contract.startDate != null) '${l10n.t('Start')} ${contract.startDate}',
+      if (contract.startDate != null)
+        '${l10n.t('Start')} ${contract.startDate}',
       if (contract.endDate != null) '${l10n.t('End')} ${contract.endDate}',
     ].join(' • ');
     final secondary = <String>[
