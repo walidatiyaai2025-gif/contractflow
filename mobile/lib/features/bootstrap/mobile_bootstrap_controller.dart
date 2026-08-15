@@ -15,6 +15,8 @@ enum MobileBootstrapState { idle, loading, ready, blocked, error }
 final class MobileBootstrapController extends ChangeNotifier {
   MobileBootstrapController(this.client);
 
+  static const contractEditCapability = 'safecontracts_edit_contracts';
+
   final SafeContractsApiClient client;
 
   MobileBootstrapState state = MobileBootstrapState.idle;
@@ -67,10 +69,14 @@ final class MobileBootstrapController extends ChangeNotifier {
       pageSize: config.defaultPageSize,
       canAccess: policy.destinations.contains(MobileDestination.customers),
     );
+    final canAccessContracts =
+        policy.destinations.contains(MobileDestination.contracts);
     contractsController = ContractsController(
       repository: ContractsRepository(client),
       pageSize: config.defaultPageSize,
-      canAccess: policy.destinations.contains(MobileDestination.contracts),
+      canAccess: canAccessContracts,
+      canEditContract:
+          canAccessContracts && session.can(contractEditCapability),
     );
     excelExportController = MobileExcelExportController(
       repository: MobileExcelExportRepository(client),
