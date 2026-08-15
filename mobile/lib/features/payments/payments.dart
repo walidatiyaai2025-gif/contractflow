@@ -42,7 +42,8 @@ final class SafeContractsPayment {
       id: _positiveInt(data['id'], 'payment.id'),
       contractId: _positiveInt(data['contract_id'], 'payment.contract_id'),
       contractNumber: _optionalText(data['contract_number']),
-      customerId: _optionalPositiveInt(data['customer_id'], 'payment.customer_id'),
+      customerId:
+          _optionalPositiveInt(data['customer_id'], 'payment.customer_id'),
       customerName: _optionalText(data['customer_name']),
       accountantUserId: _optionalPositiveInt(
         data['accountant_user_id'],
@@ -58,8 +59,8 @@ final class SafeContractsPayment {
       remainingAmount:
           _scalarText(data['remaining_amount'], 'payment.remaining_amount'),
       status: _requiredText(data['status'], 'payment.status'),
-      contractIsArchived:
-          _boolish(data['contract_is_archived'], 'payment.contract_is_archived'),
+      contractIsArchived: _boolish(
+          data['contract_is_archived'], 'payment.contract_is_archived'),
     );
   }
 }
@@ -128,7 +129,8 @@ final class PaymentsRepository {
     );
     final result = PaymentPage.fromEnvelope(envelope);
     if (result.sort != 'due_date' || result.order != 'asc') {
-      throw const FormatException('Payment paging metadata is not deterministic.');
+      throw const FormatException(
+          'Payment paging metadata is not deterministic.');
     }
     return result;
   }
@@ -138,7 +140,8 @@ final class PaymentsRepository {
     final envelope = await client.get('payments/$id');
     final payment = SafeContractsPayment.fromData(envelope.data);
     if (payment.id != id) {
-      throw const FormatException('Payment detail ID does not match the request.');
+      throw const FormatException(
+          'Payment detail ID does not match the request.');
     }
     return payment;
   }
@@ -188,7 +191,8 @@ String _scalarText(Object? value, String field) {
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
-    throw const FormatException('Optional payment text must be string or null.');
+    throw const FormatException(
+        'Optional payment text must be string or null.');
   }
   final text = value.trim();
   return text.isEmpty ? null : text;
