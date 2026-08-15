@@ -89,7 +89,7 @@ final class XlsxWorkbook
 
     private function sheetName(string $name, int $index): string
     {
-        $name = preg_replace('/[\\\/?*\[\]:]/', ' ', trim($name)) ?? '';
+        $name = preg_replace('~[\\\\/?*\[\]:]~', ' ', trim($name)) ?? '';
         $name = preg_replace('/\s+/', ' ', $name) ?? '';
         if ($name === '') {
             $name = 'Sheet ' . $index;
