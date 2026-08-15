@@ -6,6 +6,7 @@ namespace SafeContracts\ReferenceData;
 
 use InvalidArgumentException;
 use RuntimeException;
+use SafeContracts\Support\Input;
 
 final class PaymentMethodRepository
 {
@@ -48,16 +49,16 @@ final class PaymentMethodRepository
             throw new RuntimeException('SafeContracts payment methods require WordPress $wpdb.');
         }
 
-        $code = strtolower(trim((string) ($input['code'] ?? '')));
-        $name = trim((string) ($input['name'] ?? ''));
-        $displayOrder = max(0, (int) ($input['display_order'] ?? 0));
+        $code = strtolower(trim(Input::string($input['code'] ?? '', 'Payment method code')));
+        $name = trim(Input::string($input['name'] ?? '', 'Payment method name'));
+        $displayOrder = Input::int($input['display_order'] ?? 0, 'Payment method display order', 0, 100000);
         $isActive = ! empty($input['is_active']) ? 1 : 0;
 
         if ($code === '' || ! preg_match('/^[a-z0-9][a-z0-9_-]{1,49}$/', $code)) {
             throw new InvalidArgumentException('Payment method code must be 2-50 lowercase letters, numbers, underscores or hyphens.');
         }
 
-        if ($name === '' || strlen($name) > 120) {
+        if ($name === '' || strlen($name) > 120 || preg_match('/[\r\n\x00]/', $name)) {
             throw new InvalidArgumentException('Payment method name is required and must not exceed 120 characters.');
         }
 
