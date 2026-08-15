@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "id": "UAT-001",
+      "role": "safecontracts_system_admin",
+      "flow": "contract-lifecycle",
+      "preconditions": ["authenticated SafeContracts system administrator", "customer and payment method exist"],
+      "steps": ["create contract", "assign customer and accountant", "set dates and financial lines", "activate contract"],
+      "expected": ["net value remains exact", "assignment and status changes are audited", "contract is visible through protected REST and admin surfaces"],
+      "evidence": ["contract id", "audit event ids", "REST response"]
+    },
+    {
+      "id": "UAT-002",
+      "role": "safecontracts_accountant",
+      "flow": "assigned-scope",
+      "preconditions": ["accountant has assigned scope", "one assigned and one unassigned contract exist"],
+      "steps": ["open dashboard", "filter customer and contract", "attempt direct read of unassigned contract"],
+      "expected": ["assigned data is visible", "unassigned direct object access is forbidden", "client filters cannot widen server scope"],
+      "evidence": ["dashboard response", "403 response for unassigned object"]
+    },
+    {
+      "id": "UAT-003",
+      "role": "safecontracts_accountant",
+      "flow": "collection-settlement",
+      "preconditions": ["assigned payment has remaining balance", "payment method exists"],
+      "steps": ["record partial collection", "verify remaining balance", "record final collection"],
+      "expected": ["payment method is mandatory", "partial amount reconciles exactly", "final collection settles payment without negative balance"],
+      "evidence": ["collection ids", "payment balance before and after", "financial audit events"]
+    },
+    {
+      "id": "UAT-004",
+      "role": "safecontracts_accountant",
+      "flow": "followup-workflow",
+      "preconditions": ["assigned overdue payment exists"],
+      "steps": ["open follow-up queue", "record promise-to-pay", "record deferred or issue state"],
+      "expected": ["queue remains assigned-scope", "follow-up state is persisted", "follow-up action is audited"],
+      "evidence": ["follow-up id", "queue response", "audit event"]
+    },
+    {
+      "id": "UAT-005",
+      "role": "safecontracts_manager",
+      "flow": "report-export",
+      "preconditions": ["manager has report and export capabilities", "reportable data exists"],
+      "steps": ["apply dashboard filters", "export Excel", "open generated workbook"],
+      "expected": ["export respects server filters and scope", "workbook is valid XLSX", "export completion is audited"],
+      "evidence": ["filter set", "XLSX file hash", "export audit event"]
+    },
+    {
+      "id": "UAT-006",
+      "role": "safecontracts_viewer",
+      "flow": "read-only-boundary",
+      "preconditions": ["viewer has assigned scope only"],
+      "steps": ["open assigned reports", "attempt contract mutation", "attempt collection mutation"],
+      "expected": ["assigned read surfaces work", "contract mutation is forbidden", "collection mutation is forbidden"],
+      "evidence": ["read response", "mutation 403 responses"]
+    },
+    {
+      "id": "UAT-007",
+      "role": "safecontracts_accountant",
+      "flow": "mobile-notification-deeplink",
+      "preconditions": ["mobile session is authenticated", "push notifications feature is enabled", "sent notification belongs to current user"],
+      "steps": ["open notifications inbox", "mark notification read", "follow internal deep link"],
+      "expected": ["read state persists per user", "external or unknown deep links are rejected", "deep link cannot bypass current navigation capability policy"],
+      "evidence": ["inbox response", "read acknowledgement", "resolved in-app destination"]
+    },
+    {
+      "id": "UAT-008",
+      "role": "safecontracts_system_admin",
+      "flow": "upgrade-backup-restore",
+      "preconditions": ["pre-upgrade backup manifest generated", "isolated restore environment available"],
+      "steps": ["capture SafeContracts backup scope", "restore database copy", "run plugin migrations", "run Quality Gates and release-readiness verifier"],
+      "expected": ["restored SafeContracts rows are present", "migration reaches LATEST_VERSION idempotently", "no external secret material is embedded in application backup", "all release gates pass"],
+      "evidence": ["backup manifest", "pre/post row counts", "schema version", "Quality Gates run id"]
+    }
+  ]
+}

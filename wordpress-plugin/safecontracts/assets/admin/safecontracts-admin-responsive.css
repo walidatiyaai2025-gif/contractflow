@@ -3,6 +3,12 @@
   max-width: 1440px;
 }
 
+.safecontracts-admin-shell :where(a, button, input, select, textarea):focus-visible,
+.safecontracts-settings :where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+
 .safecontracts-filter-bar,
 .safecontracts-export-form,
 .safecontracts-field-row {
