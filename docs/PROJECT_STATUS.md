@@ -9,17 +9,17 @@
 | P0 | [Foundation](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP0) | 16 | 0 | 0 | 16 | 100.0% |
 | P1 | [Master Data](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP1) | 13 | 0 | 0 | 13 | 100.0% |
 | P2 | [Contracts](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP2) | 23 | 0 | 0 | 23 | 100.0% |
-| P3 | [Payments & Collections](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP3) | 24 | 0 | 1 | 23 | 95.8% |
-| P4 | [Follow-up & Audit](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP4) | 15 | 6 | 9 | 0 | 0.0% |
+| P3 | [Payments & Collections](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP3) | 24 | 0 | 0 | 24 | 100.0% |
+| P4 | [Follow-up & Audit](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP4) | 15 | 6 | 0 | 9 | 60.0% |
 | P5 | [Notifications & Firebase](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP5) | 26 | 26 | 0 | 0 | 0.0% |
 | P6 | [Admin UI & Reports](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP6) | 40 | 40 | 0 | 0 | 0.0% |
 | P7 | [Import](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP7) | 17 | 17 | 0 | 0 | 0.0% |
 | P8 | [REST API](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP8) | 28 | 28 | 0 | 0 | 0.0% |
 | P9 | [Mobile](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP9) | 50 | 50 | 0 | 0 | 0.0% |
 | P10 | [Hardening & UAT](https://github.com/walidatiyaai2025-gif/contractflow/issues?q=is%3Aissue+label%3Aphase%3AP10) | 32 | 32 | 0 | 0 | 0.0% |
-| **TOTAL** |  | **284** | **199** | **10** | **75** | **26.4%** |
+| **TOTAL** |  | **284** | **199** | **0** | **85** | **29.9%** |
 
-_Last automatic sync: 2026-08-15 11:07 UTC. GitHub Issues found: 85/284._
+_Last automatic sync: 2026-08-15 11:17 UTC. GitHub Issues found: 85/284._
 
 <!-- SAFECONTRACTS_STATUS_END -->
 
