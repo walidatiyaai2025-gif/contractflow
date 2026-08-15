@@ -46,11 +46,13 @@ final class MobileExcelExportScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     _FilterValue(
                       label: l10n.t('Customer'),
-                      value: filters.customerId?.toString() ?? l10n.t('All customers'),
+                      value: filters.customerId?.toString() ??
+                          l10n.t('All customers'),
                     ),
                     _FilterValue(
                       label: l10n.t('Contract'),
-                      value: filters.contractId?.toString() ?? l10n.t('All contracts'),
+                      value: filters.contractId?.toString() ??
+                          l10n.t('All contracts'),
                     ),
                     _FilterValue(
                       label: l10n.t('Status'),
@@ -76,7 +78,8 @@ final class MobileExcelExportScreen extends StatelessWidget {
                   ? null
                   : () => unawaited(controller.downloadCurrentFilters()),
               icon: const Icon(Icons.file_download_outlined),
-              label: Text(l10n.t(busy ? 'Generating Excel…' : 'Download Excel')),
+              label:
+                  Text(l10n.t(busy ? 'Generating Excel…' : 'Download Excel')),
             ),
             if (busy) ...[
               const SizedBox(height: 12),
@@ -86,7 +89,8 @@ final class MobileExcelExportScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _ExportMessage(
                 icon: Icons.lock_outline,
-                message: l10n.t('Excel export is not authorized for this session.'),
+                message:
+                    l10n.t('Excel export is not authorized for this session.'),
               ),
             ],
             if (controller.state == ExcelExportState.error &&
@@ -127,7 +131,8 @@ final class _FilterValue extends StatelessWidget {
           children: [
             SizedBox(
               width: 96,
-              child: Text(label, style: Theme.of(context).textTheme.labelMedium),
+              child:
+                  Text(label, style: Theme.of(context).textTheme.labelMedium),
             ),
             Expanded(child: Text(value)),
           ],
