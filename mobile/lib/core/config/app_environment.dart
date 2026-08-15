@@ -1,7 +1,10 @@
 enum AppEnvironmentName { local, staging, production }
 
 final class AppEnvironment {
-  AppEnvironment._({required this.name, required this.apiBaseUri});
+  AppEnvironment._({
+    required this.name,
+    required this.apiBaseUri,
+  });
 
   final AppEnvironmentName name;
   final Uri apiBaseUri;
