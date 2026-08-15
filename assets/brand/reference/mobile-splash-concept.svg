@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1600" viewBox="0 0 900 1600" role="img" aria-labelledby="title desc">
+<title id="title">SafeContracts mobile splash concept</title>
+<desc id="desc">Navy mobile screen with SafeContracts title, contract clipboard and green tracked checkmark.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#173F67"/><stop offset="1" stop-color="#102A43"/></linearGradient>
+  <filter id="shadow"><feDropShadow dx="0" dy="22" stdDeviation="20" flood-opacity=".22"/></filter>
+</defs>
+<rect width="900" height="1600" rx="96" fill="#0A1726"/>
+<rect x="34" y="34" width="832" height="1532" rx="72" fill="url(#bg)"/>
+<rect x="340" y="58" width="220" height="42" rx="21" fill="#08131F"/>
+<text x="450" y="285" text-anchor="middle" font-family="Arial, sans-serif" font-size="74" font-weight="700" fill="#FFFFFF">SafeContracts</text>
+<text x="450" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#D9E2EC">Contracts &amp; Receivables Tracking</text>
+<g filter="url(#shadow)">
+  <rect x="170" y="505" width="560" height="650" rx="44" fill="#2F6FB2" opacity=".65"/>
+  <rect x="205" y="470" width="490" height="650" rx="34" fill="#FFFFFF"/>
+  <rect x="325" y="425" width="250" height="105" rx="38" fill="#B8C4D1"/>
+  <circle cx="450" cy="448" r="32" fill="#F4F7FA" stroke="#8FA3B8" stroke-width="14"/>
+  <text x="450" y="625" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#102A43">CONTRACT #1024</text>
+  <line x1="275" y1="672" x2="625" y2="672" stroke="#D9E2EC" stroke-width="6"/>
+  <path d="M335 815 L420 900 L585 700" fill="none" stroke="#24B34B" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="450" y="1015" text-anchor="middle" font-family="Arial, sans-serif" font-size="64" font-weight="800" fill="#24B34B">TRACKED</text>
+</g>
+<circle cx="450" cy="1330" r="58" fill="none" stroke="#2F6FB2" stroke-width="18"/>
+<path d="M450 1272 A58 58 0 0 1 505 1312" fill="none" stroke="#24B34B" stroke-width="18" stroke-linecap="round"/>
+<text x="450" y="1470" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#B8C4D1">Visual direction reference • SafeContracts</text>
+</svg>
