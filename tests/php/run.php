@@ -34,8 +34,8 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
 
 sc_assert(get_option(Migrator::VERSION_OPTION) === Migrator::LATEST_VERSION, 'migration version stored after successful migration');
-sc_assert(Migrator::LATEST_VERSION === '1.2.0', 'reference-data authorization migration version registered');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 3, 'foundation and P1 master-data tables migrated once');
+sc_assert(Migrator::LATEST_VERSION === '1.3.0', 'contract data-model migration version registered');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 4, 'foundation, P1 master data and contract table migrated once');
 sc_assert(str_contains($GLOBALS['sc_test_dbdelta'][0], 'wp_safecontracts_meta'), 'foundation migration uses WordPress prefix');
 
 $customerSchema = $GLOBALS['sc_test_dbdelta'][1];
@@ -56,6 +56,17 @@ sc_assert(str_contains($paymentMethodSchema, 'wp_safecontracts_payment_methods')
 sc_assert(str_contains($paymentMethodSchema, 'UNIQUE KEY code (code)'), 'payment-method stable code is unique');
 sc_assert(str_contains($paymentMethodSchema, 'display_order int(11) unsigned NOT NULL DEFAULT 0'), 'payment methods support explicit ordering');
 sc_assert(str_contains($paymentMethodSchema, 'KEY active_order (is_active, display_order)'), 'payment methods support active ordered lookup');
+
+$contractSchema = $GLOBALS['sc_test_dbdelta'][3];
+sc_assert(str_contains($contractSchema, 'wp_safecontracts_contracts'), 'contract data table created');
+sc_assert(str_contains($contractSchema, 'contract_number varchar(100) NOT NULL'), 'contract number is required');
+sc_assert(str_contains($contractSchema, 'UNIQUE KEY contract_number (contract_number)'), 'contract number is unique');
+sc_assert(str_contains($contractSchema, 'customer_id bigint(20) unsigned NOT NULL'), 'contract belongs to a customer');
+sc_assert(str_contains($contractSchema, 'accountant_user_id bigint(20) unsigned NULL'), 'responsible Accountant relation is supported');
+sc_assert(str_contains($contractSchema, 'base_value decimal(20,4) NOT NULL DEFAULT 0.0000'), 'contract base value uses fixed-point precision');
+sc_assert(str_contains($contractSchema, 'is_archived tinyint(1) NOT NULL DEFAULT 0'), 'contract archive state is non-destructive');
+sc_assert(str_contains($contractSchema, 'KEY customer_status (customer_id, status, is_archived)'), 'contract customer/status filtering is indexed');
+sc_assert(str_contains($contractSchema, 'KEY accountant_status (accountant_user_id, status, is_archived)'), 'contract Accountant scope filtering is indexed');
 
 sc_assert(count($GLOBALS['sc_test_queries']) === 3, 'three default payment methods are seeded');
 $seedSql = implode("\n", $GLOBALS['sc_test_queries']);
@@ -93,7 +104,7 @@ sc_assert(isset($admin[Capabilities::MANAGE_REFERENCE_DATA]), 'native WordPress 
 // Boot after activation; repeated migrations and seeds must be idempotent.
 $seedCountBeforeBoot = count($GLOBALS['sc_test_queries']);
 do_action('plugins_loaded');
-sc_assert(count($GLOBALS['sc_test_dbdelta']) === 3, 'migrations are not replayed after stored version is current');
+sc_assert(count($GLOBALS['sc_test_dbdelta']) === 4, 'migrations are not replayed after stored version is current');
 sc_assert(count($GLOBALS['sc_test_queries']) === $seedCountBeforeBoot, 'default payment methods are not reseeded after current migration');
 sc_assert(isset($GLOBALS['sc_test_actions']['rest_api_init']), 'REST registration hook attached');
 sc_assert(isset($GLOBALS['sc_test_actions']['admin_menu']), 'reference-data admin menu hook attached');
