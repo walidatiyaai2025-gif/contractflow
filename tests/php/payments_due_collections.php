@@ -66,52 +66,61 @@ sc_dc_assert($paymentService->temporalStatus(7001, $today) === PaymentStatus::PA
 
 $collections = new CollectionService();
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS=>true, Capabilities::VIEW_ALL=>true, Capabilities::MANAGE_COLLECTIONS=>true];
-$GLOBALS['sc_test_result_queue'] = [[sc_dc_payment()], [['id'=>'2']]];
+$GLOBALS['sc_test_result_queue'] = [[sc_dc_payment()], [['id'=>'2']], [['total'=>'0.0000']]];
 $GLOBALS['wpdb']->insert_id = 8101;
 $mutationsBefore = count($GLOBALS['sc_test_queries']);
 $id = $collections->record(['payment_id'=>7001,'amount'=>'125.5','collection_date'=>'2026-08-15','payment_method_id'=>2,'reference'=>' REF-1 ','details'=>' First collection ']);
+$recordMutations = array_slice($GLOBALS['sc_test_queries'], $mutationsBefore);
+$recordSql = implode("\n", $recordMutations);
 sc_dc_assert($id === 8101, 'SC-P3-006 collection returns transaction ID');
-sc_dc_assert(count($GLOBALS['sc_test_queries']) === $mutationsBefore + 1, 'SC-P3-006 recording appends exactly one mutation and does not settle balance yet');
-$sql = (string) end($GLOBALS['sc_test_queries']);
-sc_dc_assert(str_contains($sql, 'INSERT INTO wp_safecontracts_payment_collections'), 'SC-P3-006 collection appends ledger row');
-sc_dc_assert(str_contains($sql, "'125.5000'"), 'SC-P3-006 collection amount uses fixed precision');
-sc_dc_assert(str_contains($sql, "'REF-1'") && str_contains($sql, "'First collection'"), 'SC-P3-006 collection text is normalized');
-sc_dc_assert(str_contains($sql, ', 2,'), 'SC-P3-007 active payment method ID is persisted');
+sc_dc_assert(count($recordMutations) === 4, 'SC-P3-006 collection now settles atomically with transaction, ledger insert and balance update');
+sc_dc_assert($recordMutations[0] === 'START TRANSACTION' && end($recordMutations) === 'COMMIT', 'SC-P3-006 settlement is transaction-bounded');
+sc_dc_assert(str_contains($recordSql, 'INSERT INTO wp_safecontracts_payment_collections'), 'SC-P3-006 collection appends ledger row');
+sc_dc_assert(str_contains($recordSql, "'125.5000'"), 'SC-P3-006 collection amount uses fixed precision');
+sc_dc_assert(str_contains($recordSql, "'REF-1'") && str_contains($recordSql, "'First collection'"), 'SC-P3-006 collection text is normalized');
+sc_dc_assert(str_contains($recordSql, ', 2,'), 'SC-P3-007 active payment method ID is persisted');
 sc_dc_assert(isset($GLOBALS['sc_test_fired_actions']['safecontracts_collection_recorded']), 'SC-P3-006 collection emits domain event');
 
 $before = count($GLOBALS['sc_test_queries']);
 sc_dc_expect(InvalidArgumentException::class, fn () => $collections->record(['payment_id'=>7001,'amount'=>'50','collection_date'=>'2026-08-15']), 'SC-P3-007 missing method is rejected');
-sc_dc_assert(count($GLOBALS['sc_test_queries']) === $before, 'SC-P3-007 missing method causes no mutation');
+sc_dc_assert(count($GLOBALS['sc_test_queries']) === $before, 'SC-P3-007 missing method is rejected before starting a transaction');
 
 $GLOBALS['sc_test_result_queue'] = [[sc_dc_payment()], []];
 $beforeInactive = count($GLOBALS['sc_test_queries']);
 sc_dc_expect(InvalidArgumentException::class, fn () => $collections->record(['payment_id'=>7001,'amount'=>'50','collection_date'=>'2026-08-15','payment_method_id'=>999]), 'SC-P3-007 inactive method is rejected');
-sc_dc_assert(count($GLOBALS['sc_test_queries']) === $beforeInactive, 'SC-P3-007 inactive method causes no mutation');
+$inactiveMutations = array_slice($GLOBALS['sc_test_queries'], $beforeInactive);
+sc_dc_assert($inactiveMutations === ['START TRANSACTION', 'ROLLBACK'], 'SC-P3-007 inactive method rolls back transaction without ledger mutation');
 
 $GLOBALS['sc_test_post_types'][901] = 'attachment';
-$GLOBALS['sc_test_result_queue'] = [[sc_dc_payment()], [['id'=>'1']]];
+$GLOBALS['sc_test_result_queue'] = [[sc_dc_payment()], [['id'=>'1']], [['total'=>'0.0000']]];
 $GLOBALS['wpdb']->insert_id = 8102;
+$beforeProofWrite = count($GLOBALS['sc_test_queries']);
 sc_dc_assert($collections->record(['payment_id'=>7001,'amount'=>'75','collection_date'=>'2026-08-15','payment_method_id'=>1,'proof_media_id'=>901]) === 8102, 'SC-P3-008 optional proof can be stored');
-sc_dc_assert(str_contains((string) end($GLOBALS['sc_test_queries']), '901'), 'SC-P3-008 proof stores WordPress Media ID');
+$proofSql = implode("\n", array_slice($GLOBALS['sc_test_queries'], $beforeProofWrite));
+sc_dc_assert(str_contains($proofSql, '901'), 'SC-P3-008 proof stores WordPress Media ID');
 
 $beforeProof = count($GLOBALS['sc_test_queries']);
 sc_dc_expect(InvalidArgumentException::class, fn () => $collections->record(['payment_id'=>7001,'amount'=>'25','collection_date'=>'2026-08-15','payment_method_id'=>1,'proof_media_id'=>999]), 'SC-P3-008 invalid supplied proof is rejected');
-sc_dc_assert(count($GLOBALS['sc_test_queries']) === $beforeProof, 'SC-P3-008 invalid proof causes no mutation');
+sc_dc_assert(count($GLOBALS['sc_test_queries']) === $beforeProof, 'SC-P3-008 invalid proof is rejected before transaction');
 
-$GLOBALS['sc_test_result_queue'] = [[sc_dc_payment()], [['id'=>'1']]];
+$GLOBALS['sc_test_result_queue'] = [[sc_dc_payment()], [['id'=>'1']], [['total'=>'0.0000']]];
 $GLOBALS['wpdb']->insert_id = 8103;
+$beforeNoProof = count($GLOBALS['sc_test_queries']);
 $collections->record(['payment_id'=>7001,'amount'=>'25','collection_date'=>'2026-08-15','payment_method_id'=>1]);
-sc_dc_assert(str_contains((string) end($GLOBALS['sc_test_queries']), 'NULL'), 'SC-P3-008 omitted proof remains nullable');
+$noProofSql = implode("\n", array_slice($GLOBALS['sc_test_queries'], $beforeNoProof));
+sc_dc_assert(str_contains($noProofSql, 'proof_media_id') && str_contains($noProofSql, 'NULL'), 'SC-P3-008 omitted proof remains nullable');
 
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS=>true, Capabilities::VIEW_ASSIGNED=>true, Capabilities::MANAGE_COLLECTIONS=>true];
 $GLOBALS['sc_test_result_queue'] = [[sc_dc_payment(['accountant_user_id'=>'99'])]];
 $beforeScope = count($GLOBALS['sc_test_queries']);
 sc_dc_expect(DomainException::class, fn () => $collections->record(['payment_id'=>7001,'amount'=>'25','collection_date'=>'2026-08-15','payment_method_id'=>1]), 'SC-P3-006 Accountant scope is enforced');
-sc_dc_assert(count($GLOBALS['sc_test_queries']) === $beforeScope, 'SC-P3-006 scope denial causes no mutation');
+sc_dc_assert(array_slice($GLOBALS['sc_test_queries'], $beforeScope) === ['START TRANSACTION', 'ROLLBACK'], 'SC-P3-006 scope denial rolls back before ledger mutation');
 
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS=>true, Capabilities::VIEW_ALL=>true, Capabilities::MANAGE_COLLECTIONS=>true];
 $GLOBALS['sc_test_result_queue'] = [[sc_dc_payment(['contract_is_archived'=>'1'])]];
+$beforeArchive = count($GLOBALS['sc_test_queries']);
 sc_dc_expect(DomainException::class, fn () => $collections->record(['payment_id'=>7001,'amount'=>'25','collection_date'=>'2026-08-15','payment_method_id'=>1]), 'SC-P3-006 archived contract blocks collection recording');
+sc_dc_assert(array_slice($GLOBALS['sc_test_queries'], $beforeArchive) === ['START TRANSACTION', 'ROLLBACK'], 'SC-P3-006 archive denial rolls back before ledger mutation');
 
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS=>true, Capabilities::VIEW_ALL=>true];
 $GLOBALS['sc_test_result_queue'] = [[sc_dc_payment()], [[
