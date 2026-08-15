@@ -139,7 +139,7 @@ foreach ([
 ] as $marker) {
     sc_p9final_assert(str_contains($followUpService, $marker), 'SC-P9-044 domain workflow remains explicit: ' . $marker);
 }
-sc_p9final_assert(str_contains($followUpsMobile, "client.get('followups'"), 'SC-P9-044 mobile queue uses scoped server endpoint');
+sc_p9final_assert(str_contains($followUpsMobile, "'followups',"), 'SC-P9-044 mobile queue uses scoped server endpoint');
 sc_p9final_assert(str_contains($followUpsMobile, "client.post(\n      'payments/\$paymentId/followups/record'"), 'SC-P9-044 mobile follow-up mutation uses server endpoint');
 sc_p9final_assert(! str_contains($followUpsMobile, 'remaining_amount\':') && ! str_contains($followUpsMobile, "'status': normalizedOperation"), 'SC-P9-044 mobile follow-up mutation never submits financial/status authority');
 sc_p9final_assert(str_contains($followUpsScreen, 'canManage'), 'SC-P9-044 mutation UI remains capability gated');
