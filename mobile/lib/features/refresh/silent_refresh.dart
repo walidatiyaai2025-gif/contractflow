@@ -6,7 +6,9 @@ import '../profile/profile.dart';
 
 extension DashboardSilentRefresh on DashboardController {
   Future<void> refreshSilently() async {
-    if (state == DashboardLoadState.loading || overview == null || lists == null) {
+    if (state == DashboardLoadState.loading ||
+        overview == null ||
+        lists == null) {
       return;
     }
     try {
@@ -49,7 +51,8 @@ extension DashboardSilentRefresh on DashboardController {
 extension CustomersSilentRefresh on CustomersController {
   Future<void> refreshSilently() async {
     final page = currentPage;
-    if (!canAccess || state == CustomersLoadState.loading || page == null) return;
+    if (!canAccess || state == CustomersLoadState.loading || page == null)
+      return;
     try {
       currentPage = await repository.loadPage(
         page: page.page,
@@ -69,7 +72,8 @@ extension CustomersSilentRefresh on CustomersController {
 extension ContractsSilentRefresh on ContractsController {
   Future<void> refreshSilently() async {
     final page = currentPage;
-    if (!canAccess || state == ContractsLoadState.loading || page == null) return;
+    if (!canAccess || state == ContractsLoadState.loading || page == null)
+      return;
     try {
       currentPage = await repository.loadPage(
         page: page.page,
