@@ -77,6 +77,17 @@ final class TenantRolePolicy
         return $roleCode === self::MEMBER || array_key_exists($roleCode, self::ROLE_CAPABILITIES);
     }
 
+    public static function isAssignable(string $roleCode): bool
+    {
+        return array_key_exists(self::normalize($roleCode), self::ROLE_CAPABILITIES);
+    }
+
+    /** @return list<string> */
+    public static function assignableRoles(): array
+    {
+        return array_keys(self::ROLE_CAPABILITIES);
+    }
+
     public static function allowsCapability(string $roleCode, bool $isOwner, string $capability): bool
     {
         $roleCode = self::normalize($roleCode);
