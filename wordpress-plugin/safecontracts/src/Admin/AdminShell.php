@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Support\Brand;
 
 final class AdminShell
 {
@@ -18,8 +19,8 @@ final class AdminShell
     public static function register(): void
     {
         add_menu_page(
-            __('SafeContracts', 'safecontracts'),
-            __('SafeContracts', 'safecontracts'),
+            __(Brand::NAME, 'safecontracts'),
+            __(Brand::NAME, 'safecontracts'),
             Capabilities::ACCESS,
             self::SLUG,
             [self::class, 'render'],
@@ -64,6 +65,11 @@ final class AdminShell
             [self::SETTINGS_STYLE_HANDLE],
             SAFECONTRACTS_VERSION
         );
+
+        wp_add_inline_style(
+            self::RESPONSIVE_STYLE_HANDLE,
+            '.safecontracts-admin-shell__brand-image{width:58px;height:58px;object-fit:cover;border-radius:18px;display:block;box-shadow:0 10px 24px rgba(19,53,88,.18)}'
+        );
     }
 
     public static function isSafeContractsPage(): bool
@@ -75,15 +81,15 @@ final class AdminShell
     public static function render(): void
     {
         if (! current_user_can(Capabilities::ACCESS)) {
-            wp_die(__('You do not have permission to access SafeContracts.', 'safecontracts'));
+            wp_die(__('You do not have permission to access Safe Contracts.', 'safecontracts'));
         }
         ?>
         <div class="wrap safecontracts-admin-shell" dir="auto">
             <header class="safecontracts-admin-shell__hero">
-                <div class="safecontracts-admin-shell__mark" aria-hidden="true">SC</div>
+                <img class="safecontracts-admin-shell__brand-image" src="<?php echo esc_attr(Brand::iconDataUri()); ?>" alt="" aria-hidden="true">
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Contract Operations', 'safecontracts'); ?></p>
-                    <h1><?php echo esc_html__('SafeContracts', 'safecontracts'); ?></h1>
+                    <h1><?php echo esc_html(Brand::NAME); ?></h1>
                     <p><?php echo esc_html__('Secure contract, receivable, collection, follow-up and notification operations from one workspace.', 'safecontracts'); ?></p>
                 </div>
             </header>
