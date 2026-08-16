@@ -16,11 +16,10 @@ on:
 permissions:
   contents: write
 
-environment: production
-
 jobs:
   publish-mobile-latest:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
