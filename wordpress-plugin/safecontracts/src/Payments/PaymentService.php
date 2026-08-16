@@ -148,6 +148,8 @@ final class PaymentService
             return $current;
         }
 
+        // Contractual due_date is authoritative for Due/Due Soon/Overdue.
+        // expected_payment_date is an operational promise/follow-up date only.
         return PaymentStatus::temporalForDueDate($payment['due_date'], $today, $dueSoonDays);
     }
 
