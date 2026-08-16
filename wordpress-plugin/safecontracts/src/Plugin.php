@@ -18,6 +18,7 @@ use SafeContracts\Admin\ImportsPage;
 use SafeContracts\Admin\LoginBranding;
 use SafeContracts\Admin\MobileConfigurationPage;
 use SafeContracts\Admin\NavigationCleanup;
+use SafeContracts\Admin\NotificationSchedulePage;
 use SafeContracts\Admin\NotificationSettingsPage;
 use SafeContracts\Admin\NotificationsPage;
 use SafeContracts\Admin\PaymentMethodsPage;
@@ -27,13 +28,16 @@ use SafeContracts\Admin\TranslationsPage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Audit\AuditRecorder;
 use SafeContracts\Audit\ContractArchiveAuditRecorder;
+use SafeContracts\Audit\NotificationScheduleAuditRecorder;
 use SafeContracts\Audit\SafeDeletionAuditRecorder;
 use SafeContracts\Auth\MobileBearerAuthentication;
 use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
+use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Rest\Router;
 use SafeContracts\Translations\AdminArabicDefaults;
+use SafeContracts\Translations\NotificationScheduleArabicDefaults;
 use SafeContracts\Translations\RuntimeLabels;
 use SafeContracts\Translations\TranslationCatalog;
 
@@ -59,17 +63,18 @@ final class Plugin
 
         $this->booted = true;
 
-        // SafeContracts translations are intentionally scoped to the plugin
-        // text domain. They never mutate WordPress site/user locale settings.
         TranslationCatalog::register();
         AdminArabicDefaults::register();
+        NotificationScheduleArabicDefaults::register();
         RuntimeLabels::register();
         MobileBearerAuthentication::register();
         FirebaseAccessTokenProvider::register();
+        NotificationScheduler::register();
         (new Migrator())->maybeMigrate();
         ContractHistoryRecorder::register();
         AuditRecorder::register();
         ContractArchiveAuditRecorder::register();
+        NotificationScheduleAuditRecorder::register();
         SafeDeletionAuditRecorder::register();
         LoginBranding::register();
         NavigationCleanup::register();
@@ -82,9 +87,10 @@ final class Plugin
         add_action('admin_menu', [CollectionsPage::class, 'register'], 13);
         add_action('admin_menu', [FollowUpsPage::class, 'register'], 14);
         add_action('admin_menu', [NotificationsPage::class, 'register'], 15);
-        add_action('admin_menu', [ReportsPage::class, 'register'], 16);
-        add_action('admin_menu', [UsersRolesPage::class, 'register'], 17);
-        add_action('admin_menu', [ImportsPage::class, 'register'], 18);
+        add_action('admin_menu', [NotificationSchedulePage::class, 'register'], 16);
+        add_action('admin_menu', [ReportsPage::class, 'register'], 17);
+        add_action('admin_menu', [UsersRolesPage::class, 'register'], 18);
+        add_action('admin_menu', [ImportsPage::class, 'register'], 19);
         add_action('admin_menu', [GeneralSettingsPage::class, 'register'], 30);
         add_action('admin_menu', [PaymentMethodsPage::class, 'register'], 31);
         add_action('admin_menu', [NotificationSettingsPage::class, 'register'], 32);
@@ -114,6 +120,8 @@ final class Plugin
         add_action('admin_post_' . PaymentMethodsPage::SAVE_ACTION, [PaymentMethodsPage::class, 'handleSave']);
         add_action('admin_post_' . PaymentMethodsPage::DELETE_ACTION, [PaymentMethodsPage::class, 'handleDelete']);
         add_action('admin_post_' . NotificationSettingsPage::SAVE_ACTION, [NotificationSettingsPage::class, 'handleSave']);
+        add_action('admin_post_' . NotificationSchedulePage::MANUAL_SEND_ACTION, [NotificationSchedulePage::class, 'handleManualSend']);
+        add_action('admin_post_' . NotificationSchedulePage::SAVE_TIME_ACTION, [NotificationSchedulePage::class, 'handleSaveTime']);
         add_action('admin_post_' . FirebaseSettingsPage::SAVE_ACTION, [FirebaseSettingsPage::class, 'handleSave']);
         add_action('admin_post_' . FirebaseSettingsPage::UPLOAD_ACTION, [FirebaseSettingsPage::class, 'handleUpload']);
         add_action('admin_post_' . FirebaseSettingsPage::DELETE_ACTION, [FirebaseSettingsPage::class, 'handleDelete']);

@@ -40,6 +40,24 @@ final class NotificationRuleRepository
         return NotificationRule::fromRow($rows[0]);
     }
 
+    /** @return array<string, mixed>|null */
+    public function findById(int $id): ?array
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'safecontracts_notification_rules';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                'SELECT ' . self::SELECT_FIELDS . " FROM {$table} WHERE id = %d LIMIT 1",
+                $id
+            ),
+            ARRAY_A
+        );
+        if (! is_array($rows) || $rows === []) {
+            return null;
+        }
+        return NotificationRule::fromRow($rows[0]);
+    }
+
     /** @param array<string, mixed> $rule */
     public function save(array $rule, int $actorId): void
     {
