@@ -32,7 +32,7 @@ final class CollectionRepository
         $wpdb->query('ROLLBACK');
     }
 
-    /** @return array{id:int, contract_id:int, original_amount:string, paid_amount:string, remaining_amount:string, status:string, accountant_user_id:?int, contract_is_archived:bool}|null */
+    /** @return array{id:int, contract_id:int, original_amount:string, paid_amount:string, remaining_amount:string, status:string, payment_is_archived:bool, accountant_user_id:?int, contract_is_archived:bool}|null */
     public function lockPayment(int $paymentId): ?array
     {
         global $wpdb;
@@ -41,7 +41,7 @@ final class CollectionRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT p.id, p.contract_id, p.original_amount, p.paid_amount, p.remaining_amount, p.status,
+                "SELECT p.id, p.contract_id, p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
                         c.accountant_user_id, c.is_archived AS contract_is_archived
                  FROM {$payments} p
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
@@ -65,6 +65,7 @@ final class CollectionRepository
             'paid_amount' => (string) ($row['paid_amount'] ?? '0.0000'),
             'remaining_amount' => (string) ($row['remaining_amount'] ?? '0.0000'),
             'status' => (string) ($row['status'] ?? PaymentStatus::UPCOMING),
+            'payment_is_archived' => (bool) ($row['is_archived'] ?? false),
             'accountant_user_id' => isset($row['accountant_user_id']) && $row['accountant_user_id'] !== null
                 ? (int) $row['accountant_user_id']
                 : null,
@@ -95,7 +96,7 @@ final class CollectionRepository
         $table = $wpdb->prefix . 'safecontracts_payment_collections';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT COALESCE(SUM(amount), 0.0000) AS total FROM {$table} WHERE payment_id = %d",
+                "SELECT COALESCE(SUM(amount), 0.0000) AS total FROM {$table} WHERE payment_id = %d AND is_archived = 0",
                 $paymentId
             ),
             ARRAY_A
@@ -165,7 +166,7 @@ final class CollectionRepository
                  status = %s,
                  updated_by = %d,
                  updated_at = UTC_TIMESTAMP()
-             WHERE id = %d",
+             WHERE id = %d AND is_archived = 0",
             $paidAmount,
             $remainingAmount,
             $status,
@@ -175,14 +176,7 @@ final class CollectionRepository
         $this->execute($wpdb, $sql, 'Unable to update payment settlement balances.');
     }
 
-    /**
-     * @return list<array{
-     *   id:int, payment_id:int, amount:string, collection_date:string,
-     *   payment_method_id:int, reference:?string, details:?string,
-     *   proof_media_id:?int, created_by:?int, updated_by:?int,
-     *   created_at:string, updated_at:string
-     * }>
-     */
+    /** @return list<array<string,mixed>> */
     public function forPayment(int $paymentId): array
     {
         global $wpdb;
@@ -193,7 +187,7 @@ final class CollectionRepository
                 "SELECT id, payment_id, amount, collection_date, payment_method_id, reference, details,
                         proof_media_id, created_by, updated_by, created_at, updated_at
                  FROM {$table}
-                 WHERE payment_id = %d
+                 WHERE payment_id = %d AND is_archived = 0
                  ORDER BY collection_date ASC, id ASC",
                 $paymentId
             ),
