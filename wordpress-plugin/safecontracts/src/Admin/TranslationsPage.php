@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\TranslationCatalog;
 
 final class TranslationsPage
@@ -63,7 +64,7 @@ final class TranslationsPage
         }
 
         $search = sanitize_text_field((string) ($_GET['translation_search'] ?? ''));
-        $catalog = TranslationCatalog::catalog();
+        $catalog = self::editorCatalog();
         $overrides = TranslationCatalog::overrides();
         if ($search !== '') {
             $needle = function_exists('mb_strtolower') ? mb_strtolower($search) : strtolower($search);
@@ -146,5 +147,18 @@ final class TranslationsPage
             </section>
         </div>
         <?php
+    }
+
+    /** @return array<string,array{en:string,ar:string,surfaces:array<int,string>}> */
+    private static function editorCatalog(): array
+    {
+        $catalog = TranslationCatalog::catalog();
+        foreach ($catalog as $source => &$row) {
+            if ($row['ar'] === $source) {
+                $row['ar'] = AdminArabicDefaults::default($source);
+            }
+        }
+        unset($row);
+        return $catalog;
     }
 }
