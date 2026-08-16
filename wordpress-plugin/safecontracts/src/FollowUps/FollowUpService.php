@@ -67,9 +67,6 @@ final class FollowUpService
             FollowUpState::DEFERRED,
             $this->normalizeOptionalNote($note),
             null,
-            $this->normalizeRequiredDate($until, 'deferred-until date'),
-            $this->normalizeOptionalNote($note),
-            null,
             $this->normalizeRequiredDate($until, 'deferred-until date')
         );
     }
