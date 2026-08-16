@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'core/api/api_client.dart';
 import 'core/api/io_api_transport.dart';
@@ -105,7 +106,9 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
     _bootstrap.signOutLocalState();
   }
 
-  ThemeData _theme() {
+  ThemeData _theme(String languageCode) {
+    final isArabic = languageCode.toLowerCase() == 'ar';
+    final arabicFontFamily = isArabic ? GoogleFonts.cairo().fontFamily : null;
     final scheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF173B65),
       brightness: Brightness.light,
@@ -114,9 +117,10 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
       borderRadius: BorderRadius.circular(16),
       borderSide: BorderSide(color: scheme.outlineVariant),
     );
-    return ThemeData(
+    final theme = ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
+      fontFamily: arabicFontFamily,
       scaffoldBackgroundColor: const Color(0xFFF6F8FB),
       appBarTheme: AppBarTheme(
         centerTitle: false,
@@ -128,6 +132,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
           color: scheme.onSurface,
           fontSize: 20,
           fontWeight: FontWeight.w700,
+          fontFamily: arabicFontFamily,
         ),
       ),
       cardTheme: CardThemeData(
@@ -157,7 +162,10 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          textStyle: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontFamily: arabicFontFamily,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -178,6 +186,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
             fontWeight: states.contains(WidgetState.selected)
                 ? FontWeight.w700
                 : FontWeight.w500,
+            fontFamily: arabicFontFamily,
           ),
         ),
       ),
@@ -185,6 +194,12 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: DividerThemeData(color: scheme.outlineVariant),
+    );
+
+    if (!isArabic) return theme;
+    return theme.copyWith(
+      textTheme: GoogleFonts.cairoTextTheme(theme.textTheme),
+      primaryTextTheme: GoogleFonts.cairoTextTheme(theme.primaryTextTheme),
     );
   }
 
@@ -212,7 +227,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        theme: _theme(),
+        theme: _theme(_localeController.languageCode),
         builder: (context, child) => SafeContractsDirectionScope(
           languageCode: _localeController.languageCode,
           child: child ?? const SizedBox.shrink(),
