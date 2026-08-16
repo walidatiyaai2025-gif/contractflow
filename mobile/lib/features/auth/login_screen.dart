@@ -8,15 +8,15 @@ import 'mobile_auth.dart';
 final class SafeContractsLoginScreen extends StatefulWidget {
   const SafeContractsLoginScreen({
     required this.controller,
-    required this.languageCode,
-    required this.onLanguageChanged,
     required this.onAuthenticated,
+    this.languageCode = 'en',
+    this.onLanguageChanged,
     super.key,
   });
 
   final MobileLoginController controller;
   final String languageCode;
-  final ValueChanged<String> onLanguageChanged;
+  final ValueChanged<String>? onLanguageChanged;
   final Future<void> Function() onAuthenticated;
 
   @override
@@ -53,6 +53,8 @@ final class _SafeContractsLoginScreenState
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     final scheme = Theme.of(context).colorScheme;
+    final isArabic = Directionality.of(context) == TextDirection.rtl;
+    final selectedLanguage = widget.languageCode == 'ar' ? 'ar' : 'en';
     return Scaffold(
       body: DecoratedBox(
         decoration: BoxDecoration(
@@ -87,10 +89,11 @@ final class _SafeContractsLoginScreenState
                               ButtonSegment<String>(value: 'en', label: Text('English')),
                               ButtonSegment<String>(value: 'ar', label: Text('العربية')),
                             ],
-                            selected: <String>{widget.languageCode},
-                            onSelectionChanged: submitting
+                            selected: <String>{selectedLanguage},
+                            onSelectionChanged: submitting || widget.onLanguageChanged == null
                                 ? null
-                                : (selection) => widget.onLanguageChanged(selection.first),
+                                : (selection) =>
+                                    widget.onLanguageChanged!(selection.first),
                             showSelectedIcon: false,
                             style: const ButtonStyle(
                               visualDensity: VisualDensity.compact,
@@ -200,11 +203,11 @@ final class _SafeContractsLoginScreenState
                                               .setRememberMe(value ?? false),
                                       contentPadding: EdgeInsets.zero,
                                       controlAffinity: ListTileControlAffinity.leading,
-                                      title: Text(l10n.t('Remember me')),
+                                      title: Text(isArabic ? 'تذكرني' : 'Remember me'),
                                       subtitle: Text(
-                                        l10n.t(
-                                          'Keep me signed in on this device. Your password is never stored.',
-                                        ),
+                                        isArabic
+                                            ? 'احتفظ بتسجيل الدخول على هذا الجهاز. لا يتم حفظ كلمة المرور.'
+                                            : 'Keep me signed in on this device. Your password is never stored.',
                                       ),
                                     ),
                                     if (widget.controller.errorMessage != null) ...[
