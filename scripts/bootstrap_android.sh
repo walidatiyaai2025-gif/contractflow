@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
 FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
-ALKENZY_ICON_SOURCE="$ROOT/mobile/assets/brand/alkenzy_adv.png"
+ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_adv.webp"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
 
 if ! command -v flutter >/dev/null 2>&1; then
@@ -46,10 +46,10 @@ import sys
 
 path = Path(sys.argv[1])
 data = path.read_bytes()
-if not data.startswith(b"\x89PNG\r\n\x1a\n"):
-    raise SystemExit("FAIL: supplied Alkenzy ADV icon is not a valid PNG")
+if len(data) < 12 or data[:4] != b"RIFF" or data[8:12] != b"WEBP":
+    raise SystemExit("FAIL: Android Alkenzy ADV launcher source is not a valid WebP")
 if len(data) < 1024:
-    raise SystemExit("FAIL: supplied Alkenzy ADV icon is unexpectedly small")
+    raise SystemExit("FAIL: Android Alkenzy ADV launcher source is unexpectedly small")
 PY
 
 cd "$MOBILE"
@@ -57,7 +57,8 @@ cd "$MOBILE"
 # Flutter owns the platform boilerplate version. Recreate it from the exact
 # Flutter stable toolchain used by CI, then restore the repository's release
 # signing, networking, Firebase, notification presentation, and production
-# runtime contracts. The launcher icon uses the exact supplied Alkenzy ADV PNG.
+# runtime contracts. The launcher uses a lossless Android-safe encoding of the
+# exact supplied Alkenzy ADV artwork; Flutter itself keeps the supplied PNG.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -88,7 +89,7 @@ if plugin not in text:
 path.write_text(text, encoding="utf-8")
 PY
 
-LAUNCHER_ICON="android/app/src/main/res/drawable/alkenzy_adv.png"
+LAUNCHER_ICON="android/app/src/main/res/drawable/alkenzy_adv.webp"
 mkdir -p "$(dirname "$LAUNCHER_ICON")"
 cp "$ALKENZY_ICON_SOURCE" "$LAUNCHER_ICON"
 
@@ -98,8 +99,8 @@ import sys
 
 path = Path(sys.argv[1])
 data = path.read_bytes()
-if not data.startswith(b"\x89PNG\r\n\x1a\n"):
-    raise SystemExit("FAIL: packaged Alkenzy ADV launcher icon is not the supplied PNG")
+if len(data) < 12 or data[:4] != b"RIFF" or data[8:12] != b"WEBP":
+    raise SystemExit("FAIL: packaged Alkenzy ADV launcher icon is not a valid WebP")
 PY
 
 MANIFEST="android/app/src/main/AndroidManifest.xml"
@@ -162,7 +163,7 @@ for permission in permissions:
 if 'android:label="Alkenzy ADV"' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Alkenzy ADV label")
 if 'android:icon="@drawable/alkenzy_adv"' not in text:
-    raise SystemExit("FAIL: Android release manifest is missing supplied Alkenzy ADV launcher icon")
+    raise SystemExit("FAIL: Android release manifest is missing Alkenzy ADV launcher icon")
 if 'safe_contracts_alerts' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Safe Contracts notification channel metadata")
 
@@ -197,7 +198,7 @@ grep -Fq 'android:label="Alkenzy ADV"' "$MANIFEST" || {
   exit 1
 }
 grep -Fq 'android:icon="@drawable/alkenzy_adv"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing supplied Alkenzy ADV launcher icon" >&2
+  echo "FAIL: Android release manifest is missing Alkenzy ADV launcher icon" >&2
   exit 1
 }
 grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
@@ -217,4 +218,4 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "Alkenzy ADV Android scaffold bootstrapped with the supplied launcher icon, app label, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
+echo "Alkenzy ADV Android scaffold bootstrapped with Android-safe launcher artwork, app label, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
