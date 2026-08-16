@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace SafeContracts\Notifications;
 
+use SafeContracts\Tenancy\NonCoreTenantScope;
+use SafeContracts\Tenancy\TenantMembershipRepository;
+
 final class EmailDeliveryService
 {
     public function __construct(
         private ?DeliveryLogRepository $deliveries = null,
-        private ?EmailSettings $settings = null
+        private ?EmailSettings $settings = null,
+        private ?TenantMembershipRepository $memberships = null
     ) {
         $this->deliveries ??= new DeliveryLogRepository();
         $this->settings ??= new EmailSettings();
+        $this->memberships ??= new TenantMembershipRepository();
     }
 
     /**
@@ -21,15 +26,21 @@ final class EmailDeliveryService
     public function deliver(array $plan, int $attemptNo = 0): array
     {
         $config = $this->settings->get();
-        $recipients = is_array($plan['recipient_ids'] ?? null) ? array_values(array_unique(array_map('intval', $plan['recipient_ids']))) : [];
+        $recipients = is_array($plan['recipient_ids'] ?? null)
+            ? array_values(array_unique(array_filter(array_map('intval', $plan['recipient_ids']), static fn (int $id): bool => $id > 0)))
+            : [];
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId !== null) {
+            // Re-check membership immediately before transport so a recipient
+            // removed after schedule creation cannot receive from a stale plan.
+            $recipients = $this->memberships->filterActiveUserIds($tenantId, $recipients);
+        }
+
         $sent = 0;
         $failed = 0;
         $attempted = 0;
 
         foreach ($recipients as $userId) {
-            if ($userId <= 0) {
-                continue;
-            }
             $attempted++;
             $user = function_exists('get_userdata') ? get_userdata($userId) : false;
             $rawEmail = is_object($user) ? (string) ($user->user_email ?? '') : '';
