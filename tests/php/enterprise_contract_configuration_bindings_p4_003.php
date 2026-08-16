@@ -74,6 +74,7 @@ function esc_p4_bind_binding(int $typeId = 31, ?int $templateId = 41, ?int $vers
 $root = dirname(__DIR__, 2);
 $migrationSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Database/Migrations/Migration0028EnterpriseContractConfigurationBindings.php');
 $migratorSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Database/Migrator.php');
+$repositorySource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/ContractTemplates/ContractConfigurationBindingRepository.php');
 $legacyContractMigration = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Database/Migrations/Migration0004Contracts.php');
 $contractStatusSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Contracts/ContractStatus.php');
 
@@ -89,6 +90,8 @@ esc_p4_bind_assert(str_contains($migratorSource, "'1.27.0' => Migration0028Enter
 esc_p4_bind_assert(Migrator::LATEST_VERSION === '1.27.0', 'P4-003 is latest schema version');
 esc_p4_bind_assert(! str_contains($legacyContractMigration, 'contract_type_id'), 'legacy contract foundation remains unchanged');
 esc_p4_bind_assert(! str_contains($contractStatusSource, 'template'), 'legacy ContractStatus remains independent of templates');
+esc_p4_bind_assert(str_contains($repositorySource, "c.status = 'draft' AND c.is_archived = 0"), 'binding persistence atomically rechecks editable draft state');
+esc_p4_bind_assert(str_contains($repositorySource, 'INSERT INTO {$table}') && str_contains($repositorySource, 'FROM {$contracts} c'), 'binding persistence uses INSERT SELECT against the owned contract row');
 
 $GLOBALS['sc_test_current_caps'] = [
     Capabilities::ACCESS => true,
@@ -121,7 +124,8 @@ $service->bind(71, 31, 41, 51);
 esc_p4_bind_assert(count($GLOBALS['sc_test_queries']) === 1, 'valid published template binding performs one mutation');
 $sql = (string) ($GLOBALS['sc_test_queries'][0] ?? '');
 esc_p4_bind_assert(str_contains($sql, 'INSERT INTO wp_safecontracts_contract_configuration_bindings'), 'binding writes only separate Enterprise table');
-esc_p4_bind_assert(str_contains($sql, 'VALUES (17, 71, 31, 41, 51'), 'binding ownership and references are server-validated');
+esc_p4_bind_assert(str_contains($sql, 'SELECT 17, c.id, 31, 41, 51'), 'binding ownership and references are server-validated in INSERT SELECT');
+esc_p4_bind_assert(str_contains($sql, "WHERE c.id = 71 AND c.tenant_id = 17 AND c.status = 'draft' AND c.is_archived = 0"), 'binding mutation atomically rejects a concurrent lifecycle/archive change');
 esc_p4_bind_assert(str_contains($sql, 'ON DUPLICATE KEY UPDATE'), 'draft binding replacement is atomic');
 
 $GLOBALS['sc_test_queries'] = [];
