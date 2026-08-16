@@ -5,6 +5,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
 ICON_SOURCE="$ROOT/mobile/android-release/enterprise-launcher.xml"
+ICON_FOREGROUND_SOURCE="$ROOT/mobile/android-release/enterprise-launcher-foreground.xml"
+ICON_BACKGROUND_SOURCE="$ROOT/mobile/android-release/enterprise-launcher-background.xml"
+ADAPTIVE_ICON_SOURCE="$ROOT/mobile/android-release/enterprise-launcher-adaptive.xml"
+SPLASH_SOURCE="$ROOT/mobile/android-release/enterprise-splash.xml"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
 
 FIREBASE_DEV="${ESC_FIREBASE_ANDROID_CONFIG_DEV:-}"
@@ -16,7 +20,14 @@ if ! command -v flutter >/dev/null 2>&1; then
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
+for required_source in \
+  "$TEMPLATE" \
+  "$ICON_SOURCE" \
+  "$ICON_FOREGROUND_SOURCE" \
+  "$ICON_BACKGROUND_SOURCE" \
+  "$ADAPTIVE_ICON_SOURCE" \
+  "$SPLASH_SOURCE" \
+  "$MAIN_ACTIVITY_TEMPLATE"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed ESC Android release source is missing: $required_source" >&2
     exit 1
@@ -121,8 +132,21 @@ mkdir -p "$(dirname "$MAIN_ACTIVITY_TARGET")"
 cp "$MAIN_ACTIVITY_TEMPLATE" "$MAIN_ACTIVITY_TARGET"
 
 ICON_TARGET="android/app/src/main/res/drawable/enterprise_safe_contracts_launcher.xml"
-mkdir -p "$(dirname "$ICON_TARGET")"
+ICON_FOREGROUND_TARGET="android/app/src/main/res/drawable/enterprise_safe_contracts_launcher_foreground.xml"
+ICON_BACKGROUND_TARGET="android/app/src/main/res/drawable/enterprise_safe_contracts_launcher_background.xml"
+SPLASH_TARGET="android/app/src/main/res/drawable/enterprise_safe_contracts_splash.xml"
+LEGACY_MIPMAP_TARGET="android/app/src/main/res/mipmap-anydpi/ic_launcher_enterprise.xml"
+ADAPTIVE_MIPMAP_TARGET="android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_enterprise.xml"
+mkdir -p \
+  "$(dirname "$ICON_TARGET")" \
+  "$(dirname "$LEGACY_MIPMAP_TARGET")" \
+  "$(dirname "$ADAPTIVE_MIPMAP_TARGET")"
 cp "$ICON_SOURCE" "$ICON_TARGET"
+cp "$ICON_FOREGROUND_SOURCE" "$ICON_FOREGROUND_TARGET"
+cp "$ICON_BACKGROUND_SOURCE" "$ICON_BACKGROUND_TARGET"
+cp "$SPLASH_SOURCE" "$SPLASH_TARGET"
+cp "$ICON_SOURCE" "$LEGACY_MIPMAP_TARGET"
+cp "$ADAPTIVE_ICON_SOURCE" "$ADAPTIVE_MIPMAP_TARGET"
 
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [[ ! -f "$MANIFEST" ]]; then
@@ -137,8 +161,8 @@ import sys
 path = Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
 text = re.sub(r'android:label="[^"]+"', 'android:label="@string/app_name"', text, count=1)
-text = re.sub(r'android:icon="@[^"]+"', 'android:icon="@drawable/enterprise_safe_contracts_launcher"', text, count=1)
-text = re.sub(r'android:roundIcon="@[^"]+"', 'android:roundIcon="@drawable/enterprise_safe_contracts_launcher"', text, count=1)
+text = re.sub(r'android:icon="@[^"]+"', 'android:icon="@mipmap/ic_launcher_enterprise"', text, count=1)
+text = re.sub(r'android:roundIcon="@[^"]+"', 'android:roundIcon="@mipmap/ic_launcher_enterprise"', text, count=1)
 
 permissions = ["android.permission.INTERNET", "android.permission.POST_NOTIFICATIONS"]
 for permission in permissions:
@@ -155,7 +179,7 @@ metadata = '''
             android:value="enterprise_safe_contracts_alerts" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@android:drawable/ic_dialog_info" />
+            android:resource="@drawable/enterprise_safe_contracts_launcher_foreground" />
 '''
 if "com.google.firebase.messaging.default_notification_channel_id" not in text:
     match = re.search(r'(?m)^([ \t]*)</application>', text)
@@ -181,6 +205,33 @@ if 'android:scheme="esc-safecontracts"' not in text:
 path.write_text(text, encoding="utf-8")
 PY
 
+# Replace Flutter's generic launch background with an explicit ESC splash resource.
+# Android 12+ uses the application's isolated adaptive launcher identity when its
+# platform splash theme does not override the animated icon.
+python3 - "android/app/src/main/res" <<'PY'
+from pathlib import Path
+import sys
+
+res_root = Path(sys.argv[1])
+style_files = sorted(res_root.glob("values*/styles.xml"))
+if not style_files:
+    raise SystemExit("FAIL: generated Android resources contain no styles.xml")
+
+replaced = 0
+for path in style_files:
+    text = path.read_text(encoding="utf-8")
+    if "@drawable/launch_background" in text:
+        text = text.replace(
+            "@drawable/launch_background",
+            "@drawable/enterprise_safe_contracts_splash",
+        )
+        path.write_text(text, encoding="utf-8")
+        replaced += 1
+
+if replaced == 0:
+    raise SystemExit("FAIL: generated LaunchTheme has no replaceable launch background")
+PY
+
 for required in \
   android/settings.gradle.kts \
   android/gradlew \
@@ -191,7 +242,12 @@ for required in \
   android/app/src/production/google-services.json \
   android/app/src/main/AndroidManifest.xml \
   "$MAIN_ACTIVITY_TARGET" \
-  "$ICON_TARGET"; do
+  "$ICON_TARGET" \
+  "$ICON_FOREGROUND_TARGET" \
+  "$ICON_BACKGROUND_TARGET" \
+  "$SPLASH_TARGET" \
+  "$LEGACY_MIPMAP_TARGET" \
+  "$ADAPTIVE_MIPMAP_TARGET"; do
   if [[ ! -e "$required" ]]; then
     echo "FAIL: generated ESC Android scaffold missing $required" >&2
     exit 1
@@ -202,9 +258,15 @@ grep -Fq 'applicationId = "com.safecontracts.enterprise"' android/app/build.grad
 grep -Fq 'applicationIdSuffix = ".dev"' android/app/build.gradle.kts
 grep -Fq 'applicationIdSuffix = ".staging"' android/app/build.gradle.kts
 grep -Fq 'android:label="@string/app_name"' "$MANIFEST"
+grep -Fq 'android:icon="@mipmap/ic_launcher_enterprise"' "$MANIFEST"
 grep -Fq 'enterprise_safe_contracts_alerts' "$MANIFEST"
 grep -Fq 'esc-safecontracts' "$MANIFEST"
 grep -Fq 'enterprise_safecontracts/notifications' "$MAIN_ACTIVITY_TARGET"
+grep -Fq '<adaptive-icon' "$ADAPTIVE_MIPMAP_TARGET"
+grep -R -Fq '@drawable/enterprise_safe_contracts_splash' android/app/src/main/res/values* || {
+  echo "FAIL: ESC LaunchTheme does not use the isolated splash resource" >&2
+  exit 1
+}
 grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SETTINGS"
 
-echo "Enterprise Safe Contracts Android scaffold bootstrapped with isolated package/flavors, Firebase apps, notifications, deep links and signing namespace."
+echo "Enterprise Safe Contracts Android scaffold bootstrapped with isolated package/flavors, Firebase apps, adaptive launcher/splash, notifications, deep links and signing namespace."
