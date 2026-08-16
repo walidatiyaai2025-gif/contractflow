@@ -71,8 +71,6 @@ esc_p2_rate_assert(EnterpriseRateLimitGuard::AUTH_WRITE_LIMIT === 120 && Enterpr
 esc_p2_rate_assert(EnterpriseRateLimitGuard::isSafeContractsRoute('/safecontracts/v1/contracts'), 'SafeContracts v1 route classification is explicit');
 esc_p2_rate_assert(! EnterpriseRateLimitGuard::isSafeContractsRoute('/wp/v2/users'), 'unrelated WordPress REST namespaces are excluded');
 
-// ESC-only boundary: with both Enterprise enforcement flags disabled, no limiter
-// storage is touched and the legacy Safe Contract request path remains unchanged.
 CoreTenantEnforcement::disable();
 NonCoreTenantEnforcement::disable();
 TenantContextStore::reset();
@@ -92,8 +90,6 @@ $GLOBALS['sc_test_read_queries'] = [];
 $healthResult = EnterpriseRateLimitGuard::enforce(null, null, new ESC_P2_Rate_Request([], '/safecontracts/v1/health', 'GET'));
 esc_p2_rate_assert($healthResult === null && $GLOBALS['sc_test_queries'] === [], 'health route remains outside throttling');
 
-// Login abuse uses privacy-safe independent IP and username digests. Neither raw
-// identity appears in persisted SQL and the response does not disclose bucket type.
 $_SERVER['REMOTE_ADDR'] = '203.0.113.5';
 $GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_read_queries'] = [];
@@ -119,8 +115,6 @@ esc_p2_rate_assert(($blocked->data['details']['retry_after'] ?? null) === 123, '
 esc_p2_rate_assert(! isset($blocked->data['details']['scope']), 'rate-limit response does not reveal which identity bucket was exceeded');
 esc_p2_rate_assert(str_contains(esc_p2_rate_last_write(), 'DELETE FROM wp_safecontracts_esc_rate_limits'), 'active throttling triggers bounded expired-bucket cleanup');
 
-// Authenticated identity is user + server-authoritative locked tenant. The request
-// header never enters the bucket material, so spoofing it cannot redirect accounting.
 $GLOBALS['sc_test_results'] = [['request_count' => '1', 'retry_after' => '59']];
 $GLOBALS['sc_test_queries'] = [];
 TenantContextStore::reset();
@@ -151,8 +145,6 @@ EnterpriseRateLimitGuard::enforce(null, null, $writeRequest);
 $tenant17WriteSql = esc_p2_rate_last_write();
 esc_p2_rate_assert($tenant17ReadSql !== $tenant17WriteSql, 'read and write traffic use separate bucket classes');
 
-// Persistence must update the current fixed window atomically and reset its count
-// inside the same upsert when the stored window has expired.
 esc_p2_rate_assert(str_contains($storeSource, 'ON DUPLICATE KEY UPDATE'), 'rate-limit counter uses one atomic upsert mutation');
 esc_p2_rate_assert(str_contains($storeSource, 'request_count = IF(window_expires_at <= UTC_TIMESTAMP(), 1, request_count + 1)'), 'atomic upsert resets expired window or increments active window');
 esc_p2_rate_assert(str_contains($storeSource, 'window_expires_at = IF(window_expires_at <= UTC_TIMESTAMP()'), 'expiry reset occurs atomically with the counter update');
@@ -169,7 +161,7 @@ esc_p2_rate_assert(str_contains($GLOBALS['sc_test_queries'][0] ?? '', 'wp_safeco
 esc_p2_rate_assert(str_contains($migrationSource, 'bucket_key char(64) NOT NULL'), 'rate-limit schema stores only fixed-size hashed bucket identity');
 esc_p2_rate_assert(str_contains($migrationSource, 'PRIMARY KEY (bucket_key)'), 'bucket identity is unique for atomic upsert semantics');
 esc_p2_rate_assert(str_contains($migrationSource, 'KEY expires_at (window_expires_at)'), 'expiry cleanup has an indexed predicate');
-esc_p2_rate_assert(str_contains($migratorSource, "LATEST_VERSION = '1.18.0'"), 'P2-007 schema is a versioned migration');
+esc_p2_rate_assert(str_contains($migratorSource, "'1.18.0' => Migration0019EnterpriseRateLimits::class"), 'P2-007 schema remains registered at version 1.18.0 after later migrations');
 esc_p2_rate_assert(str_contains($migratorSource, 'Migration0019EnterpriseRateLimits::class'), 'P2-007 migration is registered in the migrator');
 
 esc_p2_rate_assert(str_contains($pluginSource, 'EnterpriseRateLimitGuard::register();'), 'plugin boot wires the Enterprise rate-limit guard');
