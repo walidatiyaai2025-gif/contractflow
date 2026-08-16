@@ -54,6 +54,19 @@ esc_noncore_backfill_assert(! esc_noncore_backfill_query_contains('UPDATE wp_saf
 esc_noncore_backfill_assert(! esc_noncore_backfill_query_contains('UPDATE wp_safecontracts_device_tokens SET tenant_id'), 'derive mode never guesses device root ownership');
 esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('COMMIT'), 'mismatch-free deterministic derivation commits');
 
+// Suppression ownership must use the live scope_type/scope_id schema. Limit the
+// regression to suppression SQL so legitimate schedule alias `s.payment_id` does
+// not create a false positive.
+$suppressionQueries = array_values(array_filter(
+    array_map('strval', $GLOBALS['sc_test_queries']),
+    static fn (string $query): bool => str_contains($query, 'wp_safecontracts_notification_suppressions s')
+));
+esc_noncore_backfill_assert($suppressionQueries !== [], 'deterministic derivation emits suppression ownership SQL');
+$suppressionSql = implode("\n", $suppressionQueries);
+esc_noncore_backfill_assert(! str_contains($suppressionSql, 's.payment_id'), 'suppression backfill contains no nonexistent payment_id column');
+esc_noncore_backfill_assert(! str_contains($suppressionSql, 's.rule_id'), 'suppression backfill contains no nonexistent rule_id column');
+esc_noncore_backfill_assert(str_contains($suppressionSql, 's.scope_id'), 'suppression backfill uses live scope_id ownership relation');
+
 $GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_read_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [[['id' => '17']]];
@@ -99,8 +112,6 @@ esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('ROLLBACK'), 'mi
 
 $source = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Tenancy/NonCoreTenantOwnershipBackfill.php');
 esc_noncore_backfill_assert(! str_contains($source, 'e.run_id'), 'backfill contains no obsolete import-error run_id reference');
-esc_noncore_backfill_assert(! str_contains($source, 's.payment_id'), 'suppression backfill contains no nonexistent payment_id column');
-esc_noncore_backfill_assert(! str_contains($source, 's.rule_id'), 'suppression backfill contains no nonexistent rule_id column');
 
 $doc = (string) file_get_contents(dirname(__DIR__, 2) . '/docs/enterprise/NON_CORE_TENANT_OWNERSHIP.md');
 esc_noncore_backfill_assert(str_contains($doc, 'explicit reviewed mapping/recreation'), 'runbook requires explicit root decisions');
