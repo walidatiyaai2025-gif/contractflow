@@ -7,6 +7,7 @@ namespace SafeContracts\Admin;
 use SafeContracts\Contracts\ContractArchiveService;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Settings\GeneralSettings;
+use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
 final class DashboardPage
@@ -118,7 +119,7 @@ final class DashboardPage
                     <select name="status">
                         <option value=""><?php echo esc_html__('Any status', 'safecontracts'); ?></option>
                         <?php foreach (['active','draft','completed','cancelled','upcoming','due_soon','due','overdue','partially_paid','paid'] as $status) : ?>
-                            <option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(ucwords(str_replace('_', ' ', $status))); ?></option>
+                            <option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(self::statusLabel($status)); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </label>
@@ -140,7 +141,7 @@ final class DashboardPage
                 <div class="safecontracts-section-heading">
                     <div>
                         <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Quick management', 'safecontracts'); ?></p>
-                        <h2 id="safecontracts-dashboard-contracts-title"><?php echo esc_html__('Active contracts', 'safecontracts'); ?> / العقود النشطة</h2>
+                        <h2 id="safecontracts-dashboard-contracts-title"><?php echo esc_html__('Active contracts', 'safecontracts'); ?></h2>
                     </div>
                 </div>
                 <?php if ($dashboardContracts === []) : ?>
@@ -152,24 +153,24 @@ final class DashboardPage
                             <th><?php echo esc_html__('Customer', 'safecontracts'); ?></th>
                             <th><?php echo esc_html__('Status', 'safecontracts'); ?></th>
                             <th><?php echo esc_html__('Base value', 'safecontracts'); ?></th>
-                            <th><?php echo esc_html__('Actions', 'safecontracts'); ?> / الإجراءات</th>
+                            <th><?php echo esc_html__('Actions', 'safecontracts'); ?></th>
                         </tr></thead>
                         <tbody>
                         <?php foreach ($dashboardContracts as $contract) : ?>
                             <tr>
                                 <td><?php echo esc_html((string) $contract['contract_number']); ?></td>
                                 <td><?php echo esc_html((string) $contract['customer_name']); ?></td>
-                                <td><?php echo esc_html((string) $contract['status']); ?></td>
+                                <td><?php echo esc_html(self::statusLabel((string) $contract['status'])); ?></td>
                                 <td><?php echo esc_html(self::money($contract['base_value'], $currencyToken)); ?></td>
                                 <td>
                                     <div class="safecontracts-dashboard-table-actions">
-                                        <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => ContractsPage::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?> / فتح</a>
+                                        <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => ContractsPage::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a>
                                         <?php if (current_user_can(Capabilities::MANAGE_SYSTEM)) : ?>
                                             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Its financial, collection, history and audit records will be preserved.', 'safecontracts'); ?>">
                                                 <input type="hidden" name="action" value="<?php echo esc_attr(self::ARCHIVE_ACTION); ?>">
                                                 <input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contract['id']); ?>">
                                                 <?php wp_nonce_field(self::ARCHIVE_ACTION . '_' . (int) $contract['id']); ?>
-                                                <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?> / حذف</button>
+                                                <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
                                             </form>
                                         <?php endif; ?>
                                     </div>
@@ -178,7 +179,7 @@ final class DashboardPage
                         <?php endforeach; ?>
                         </tbody>
                     </table>
-                    <p class="description"><?php echo esc_html__('Delete is a safe archive action: the contract disappears from this dashboard list, while financial, collection, history and audit records are preserved.', 'safecontracts'); ?> / الحذف هنا أرشفة آمنة تحفظ السجل المالي والتاريخي.</p>
+                    <p class="description"><?php echo esc_html__('Delete is a safe archive action: the contract disappears from this dashboard list, while financial, collection, history and audit records are preserved.', 'safecontracts'); ?></p>
                 <?php endif; ?>
             </section>
         </section>
@@ -199,5 +200,10 @@ final class DashboardPage
         }
         $locale = function_exists('get_user_locale') ? strtolower((string) get_user_locale()) : 'en_us';
         return str_starts_with($locale, 'ar') ? $amount . ' ' . $currencyToken : $currencyToken . ' ' . $amount;
+    }
+
+    private static function statusLabel(string $status): string
+    {
+        return TranslationCatalog::text(ucwords(str_replace('_', ' ', $status)));
     }
 }
