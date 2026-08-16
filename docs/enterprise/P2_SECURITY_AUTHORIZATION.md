@@ -110,6 +110,22 @@ The database deactivation statement contains an atomic same-tenant active-owner 
 
 MySQL can report zero affected rows when an active non-owner already has the requested role. A zero-row role update is therefore reconciled by re-reading the same `tenant_id + user_id` key. If the requested non-owner active role is already stored, the operation succeeds idempotently and does not fall through to a duplicate INSERT. An owner or mismatched existing row still fails closed.
 
+## P2-005 — tenant membership admin UI
+
+P2-005 exposes the P2-004 domain service through a dedicated **Tenant Members** WordPress admin page without repurposing the platform-global **Users & Roles** screen.
+
+The page is Enterprise-only: its submenu is registered only while core tenant enforcement is enabled. The page and both mutation actions are classified as tenant-owned, so `AdminTenantContext` resolves and locks the selected tenant before direct admin authorization runs.
+
+All membership data shown by the page comes from `TenantMembershipAdminService::listForCurrentTenant()`. Add/reactivate and role changes call `assignRole()`; deactivation calls `deactivate()`. The UI contains no `$wpdb` access and does not reference the tenant-membership table directly.
+
+Only explicit assignable roles are rendered: `tenant_admin`, `manager`, `accountant`, and `viewer`. Legacy `member` remains readable in existing rows but is not an assignable option; a legacy role row requires deliberate remapping to a supported role before update/reactivation. No form field or handler in this UI can grant `is_owner=1`.
+
+Owner memberships are deliberately read-only in the generic Tenant Members interface. Owner rows expose neither role-edit nor deactivate controls. The deactivate handler also re-reads the current tenant membership list and rejects an owner target before calling the domain service, so a crafted POST cannot turn the hidden UI restriction into an owner-mutation path. Ownership transfer/removal remains a separate future workflow.
+
+Both mutations use WordPress nonces. Page rendering and handlers require `MANAGE_USERS`; because the request is tenant-owned, the P2-003 capability filter and P2-004 service actor boundary independently require the locked tenant role to allow membership administration.
+
+The platform-global WordPress **Users & Roles** screen remains conceptually and programmatically separate: it continues to manage WordPress SafeContracts roles/capabilities, while **Tenant Members** manages membership and role assignment inside the currently selected Enterprise tenant.
+
 ## Security regressions
 
 `tests/php/enterprise_tenant_authorization_p2_001.php` verifies:
@@ -160,3 +176,15 @@ MySQL can report zero affected rows when an active non-owner already has the req
 - repository source exposes no ownership-grant mutation.
 
 `tests/php/enterprise_tenant_membership_idempotency_p2_004.php` verifies that a zero-row UPDATE for an already-correct active role performs no INSERT and reconciles only against the same tenant+user key.
+
+`tests/php/enterprise_tenant_members_admin_ui_p2_005.php` verifies:
+
+- the Tenant Members page is a dedicated tenant-owned Enterprise-only screen;
+- list/add/reactivate/role-update/deactivate paths delegate to the P2-004 service;
+- the admin page contains no direct membership-table access;
+- UI options come only from `TenantRolePolicy::assignableRoles()` and do not expose legacy `member` or owner escalation;
+- owner rows are rendered read-only and the generic owner-deactivation path is rejected before service mutation;
+- assignment and deactivation both require nonces and `MANAGE_USERS`;
+- page and both actions are classified tenant-owned;
+- plugin menu/action hooks are registered;
+- the platform-global Users & Roles page remains separate from tenant membership policy/service.
