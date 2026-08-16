@@ -39,11 +39,12 @@ use SafeContracts\Database\Migrations\Migration0031EnterpriseTemplateFieldSets;
 use SafeContracts\Database\Migrations\Migration0032EnterpriseCustomFieldMetadata;
 use SafeContracts\Database\Migrations\Migration0033EnterpriseCustomFieldVisibilityRules;
 use SafeContracts\Database\Migrations\Migration0034EnterpriseCustomFieldCalculationRules;
+use SafeContracts\Database\Migrations\Migration0035EnterpriseWorkflowDefinitions;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.33.0';
+    public const LATEST_VERSION = '1.34.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -81,6 +82,7 @@ final class Migrator
         '1.31.0' => Migration0032EnterpriseCustomFieldMetadata::class,
         '1.32.0' => Migration0033EnterpriseCustomFieldVisibilityRules::class,
         '1.33.0' => Migration0034EnterpriseCustomFieldCalculationRules::class,
+        '1.34.0' => Migration0035EnterpriseWorkflowDefinitions::class,
     ];
 
     public function maybeMigrate(): void
