@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Notifications;
 
 use RuntimeException;
+use SafeContracts\Tenancy\NonCoreTenantScope;
 
 final class NotificationScheduleRepository
 {
@@ -17,6 +18,10 @@ final class NotificationScheduleRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $limit = max(1, min(10000, $limit));
+        $tenantId = NonCoreTenantScope::tenantId();
+        $tenantScope = $tenantId === null
+            ? ''
+            : " AND p.tenant_id = {$tenantId} AND c.tenant_id = {$tenantId} AND cu.tenant_id = {$tenantId}";
 
         $rows = $wpdb->get_results(
             "SELECT p.id, p.contract_id, p.reference, p.due_date, p.remaining_amount, p.status,
@@ -25,7 +30,7 @@ final class NotificationScheduleRepository
              INNER JOIN {$contracts} c ON c.id = p.contract_id
              INNER JOIN {$customers} cu ON cu.id = c.customer_id
              WHERE p.is_archived = 0 AND c.is_archived = 0 AND cu.is_active = 1
-               AND p.remaining_amount > 0 AND p.status <> 'paid'
+               AND p.remaining_amount > 0 AND p.status <> 'paid'{$tenantScope}
              ORDER BY p.due_date ASC, p.id ASC
              LIMIT {$limit}",
             ARRAY_A
@@ -41,13 +46,17 @@ final class NotificationScheduleRepository
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
+        $tenantId = NonCoreTenantScope::tenantId();
+        $tenantScope = $tenantId === null
+            ? ''
+            : " AND p.tenant_id = {$tenantId} AND c.tenant_id = {$tenantId} AND cu.tenant_id = {$tenantId}";
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT p.id, p.contract_id, p.reference, p.due_date, p.remaining_amount, p.status,
                     c.accountant_user_id, c.contract_number, cu.name AS customer_name
              FROM {$payments} p
              INNER JOIN {$contracts} c ON c.id = p.contract_id
              INNER JOIN {$customers} cu ON cu.id = c.customer_id
-             WHERE p.id = %d AND p.is_archived = 0 AND c.is_archived = 0 AND cu.is_active = 1 LIMIT 1",
+             WHERE p.id = %d AND p.is_archived = 0 AND c.is_archived = 0 AND cu.is_active = 1{$tenantScope} LIMIT 1",
             $paymentId
         ), ARRAY_A);
         return is_array($rows) && $rows !== [] ? $rows[0] : null;
@@ -59,6 +68,8 @@ final class NotificationScheduleRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_notification_schedule';
+        $ruleId = (int) ($plan['rule_id'] ?? 0);
+        $paymentId = (int) ($plan['payment_id'] ?? 0);
         $recipientIds = array_values(array_unique(array_map('intval', is_array($plan['recipient_ids'] ?? null) ? $plan['recipient_ids'] : [])));
         sort($recipientIds, SORT_NUMERIC);
         $json = wp_json_encode($recipientIds);
@@ -74,31 +85,70 @@ final class NotificationScheduleRepository
             $channels[] = 'email';
         }
         $channel = $channels !== [] ? implode('+', $channels) : 'none';
+        $tenantId = NonCoreTenantScope::tenantId();
 
-        $sql = $wpdb->prepare(
+        if ($tenantId === null) {
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table}
+                    (rule_id, payment_id, attempt_no, recipient_ids_json, template_code, channel, scheduled_date, scheduled_for, status, recipient_count, sent_count, failed_count, manual_attempts, created_at, updated_at)
+                 VALUES (%d, %d, %d, %s, %s, %s, %s, %s, 'pending', %d, 0, 0, 0, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+                 ON DUPLICATE KEY UPDATE
+                    recipient_ids_json = IF(status IN ('pending','failed','skipped'), VALUES(recipient_ids_json), recipient_ids_json),
+                    template_code = IF(status IN ('pending','failed','skipped'), VALUES(template_code), template_code),
+                    channel = IF(status IN ('pending','failed','skipped'), VALUES(channel), channel),
+                    scheduled_date = IF(status IN ('pending','failed','skipped'), VALUES(scheduled_date), scheduled_date),
+                    scheduled_for = IF(status IN ('pending','failed','skipped'), VALUES(scheduled_for), scheduled_for),
+                    recipient_count = IF(status IN ('pending','failed','skipped'), VALUES(recipient_count), recipient_count),
+                    updated_at = UTC_TIMESTAMP()",
+                $ruleId, $paymentId, $attemptNo, $json, (string) ($plan['template_code'] ?? ''), $channel, $scheduledDate, $scheduledUtc, $count
+            );
+            if ($wpdb->query($sql) === false) {
+                throw new RuntimeException('Unable to persist notification schedule occurrence.');
+            }
+            return;
+        }
+
+        if ($ruleId <= 0 || (new NotificationRuleRepository())->findById($ruleId) === null) {
+            throw new RuntimeException('Notification schedule rule does not belong to the active Enterprise tenant.');
+        }
+        if ($paymentId <= 0 || $this->payment($paymentId) === null) {
+            throw new RuntimeException('Notification schedule payment does not belong to the active Enterprise tenant.');
+        }
+
+        $existing = $wpdb->get_results($wpdb->prepare(
+            "SELECT id FROM {$table}
+             WHERE tenant_id = %d AND rule_id = %d AND payment_id = %d AND attempt_no = %d
+             LIMIT 1",
+            $tenantId, $ruleId, $paymentId, $attemptNo
+        ), ARRAY_A);
+        if (is_array($existing) && $existing !== []) {
+            $scheduleId = (int) ($existing[0]['id'] ?? 0);
+            $result = $wpdb->query($wpdb->prepare(
+                "UPDATE {$table} SET
+                    recipient_ids_json = IF(status IN ('pending','failed','skipped'), %s, recipient_ids_json),
+                    template_code = IF(status IN ('pending','failed','skipped'), %s, template_code),
+                    channel = IF(status IN ('pending','failed','skipped'), %s, channel),
+                    scheduled_date = IF(status IN ('pending','failed','skipped'), %s, scheduled_date),
+                    scheduled_for = IF(status IN ('pending','failed','skipped'), %s, scheduled_for),
+                    recipient_count = IF(status IN ('pending','failed','skipped'), %d, recipient_count),
+                    updated_at = UTC_TIMESTAMP()
+                 WHERE id = %d AND tenant_id = %d",
+                $json, (string) ($plan['template_code'] ?? ''), $channel, $scheduledDate, $scheduledUtc, $count, $scheduleId, $tenantId
+            ));
+            if ($result === false) {
+                throw new RuntimeException('Unable to update Enterprise notification schedule occurrence.');
+            }
+            return;
+        }
+
+        $insert = $wpdb->prepare(
             "INSERT INTO {$table}
-                (rule_id, payment_id, attempt_no, recipient_ids_json, template_code, channel, scheduled_date, scheduled_for, status, recipient_count, sent_count, failed_count, manual_attempts, created_at, updated_at)
-             VALUES (%d, %d, %d, %s, %s, %s, %s, %s, 'pending', %d, 0, 0, 0, UTC_TIMESTAMP(), UTC_TIMESTAMP())
-             ON DUPLICATE KEY UPDATE
-                recipient_ids_json = IF(status IN ('pending','failed','skipped'), VALUES(recipient_ids_json), recipient_ids_json),
-                template_code = IF(status IN ('pending','failed','skipped'), VALUES(template_code), template_code),
-                channel = IF(status IN ('pending','failed','skipped'), VALUES(channel), channel),
-                scheduled_date = IF(status IN ('pending','failed','skipped'), VALUES(scheduled_date), scheduled_date),
-                scheduled_for = IF(status IN ('pending','failed','skipped'), VALUES(scheduled_for), scheduled_for),
-                recipient_count = IF(status IN ('pending','failed','skipped'), VALUES(recipient_count), recipient_count),
-                updated_at = UTC_TIMESTAMP()",
-            (int) ($plan['rule_id'] ?? 0),
-            (int) ($plan['payment_id'] ?? 0),
-            $attemptNo,
-            $json,
-            (string) ($plan['template_code'] ?? ''),
-            $channel,
-            $scheduledDate,
-            $scheduledUtc,
-            $count
+                (tenant_id, rule_id, payment_id, attempt_no, recipient_ids_json, template_code, channel, scheduled_date, scheduled_for, status, recipient_count, sent_count, failed_count, manual_attempts, created_at, updated_at)
+             VALUES (%d, %d, %d, %d, %s, %s, %s, %s, %s, 'pending', %d, 0, 0, 0, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
+            $tenantId, $ruleId, $paymentId, $attemptNo, $json, (string) ($plan['template_code'] ?? ''), $channel, $scheduledDate, $scheduledUtc, $count
         );
-        if ($wpdb->query($sql) === false) {
-            throw new RuntimeException('Unable to persist notification schedule occurrence.');
+        if ($wpdb->query($insert) === false) {
+            throw new RuntimeException('Enterprise notification schedule insert failed; a legacy cross-tenant schedule collision may require reviewed schema hardening.');
         }
     }
 
@@ -114,6 +164,14 @@ final class NotificationScheduleRepository
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $where = ['p.is_archived = 0', 'c.is_archived = 0', 'cu.is_active = 1'];
         $args = [];
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId !== null) {
+            $where[] = 's.tenant_id = ' . $tenantId;
+            $where[] = 'r.tenant_id = ' . $tenantId;
+            $where[] = 'p.tenant_id = ' . $tenantId;
+            $where[] = 'c.tenant_id = ' . $tenantId;
+            $where[] = 'cu.tenant_id = ' . $tenantId;
+        }
         if ($dateFrom !== null && $dateFrom !== '') { $where[] = 's.scheduled_date >= %s'; $args[] = $dateFrom; }
         if ($dateTo !== null && $dateTo !== '') { $where[] = 's.scheduled_date <= %s'; $args[] = $dateTo; }
         if ($status !== '' && in_array($status, self::statuses(), true)) { $where[] = 's.status = %s'; $args[] = $status; }
@@ -140,7 +198,7 @@ final class NotificationScheduleRepository
         $table = $wpdb->prefix . 'safecontracts_notification_schedule';
         $limit = max(1, min(200, $limit));
         $rows = $wpdb->get_results(
-            "SELECT * FROM {$table} WHERE status = 'pending' AND scheduled_for <= UTC_TIMESTAMP() ORDER BY scheduled_for ASC, id ASC LIMIT {$limit}",
+            "SELECT * FROM {$table} WHERE status = 'pending' AND scheduled_for <= UTC_TIMESTAMP()" . NonCoreTenantScope::condition() . " ORDER BY scheduled_for ASC, id ASC LIMIT {$limit}",
             ARRAY_A
         );
         return array_map([$this, 'normalize'], is_array($rows) ? $rows : []);
@@ -152,7 +210,7 @@ final class NotificationScheduleRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_notification_schedule';
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d LIMIT 1", $id), ARRAY_A);
+        $rows = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d" . NonCoreTenantScope::condition() . ' LIMIT 1', $id), ARRAY_A);
         return is_array($rows) && $rows !== [] ? $this->normalize($rows[0]) : null;
     }
 
@@ -163,12 +221,12 @@ final class NotificationScheduleRepository
         $table = $wpdb->prefix . 'safecontracts_notification_schedule';
         if ($manual) {
             $sql = $wpdb->prepare(
-                "UPDATE {$table} SET status = 'processing', manual_attempts = manual_attempts + 1, last_attempt_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = %d AND status <> 'processing'",
+                "UPDATE {$table} SET status = 'processing', manual_attempts = manual_attempts + 1, last_attempt_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = %d AND status <> 'processing'" . NonCoreTenantScope::condition(),
                 $id
             );
         } else {
             $sql = $wpdb->prepare(
-                "UPDATE {$table} SET status = 'processing', last_attempt_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = %d AND status = 'pending' AND scheduled_for <= UTC_TIMESTAMP()",
+                "UPDATE {$table} SET status = 'processing', last_attempt_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = %d AND status = 'pending' AND scheduled_for <= UTC_TIMESTAMP()" . NonCoreTenantScope::condition(),
                 $id
             );
         }
@@ -185,7 +243,7 @@ final class NotificationScheduleRepository
         $table = $wpdb->prefix . 'safecontracts_notification_schedule';
         $sentAt = $status === 'sent' || $status === 'partial' ? 'UTC_TIMESTAMP()' : 'sent_at';
         $errorSql = $errorCode === null || $errorCode === '' ? 'NULL' : '%s';
-        $query = "UPDATE {$table} SET status = %s, sent_count = %d, failed_count = %d, sent_at = {$sentAt}, last_error_code = {$errorSql}, updated_at = UTC_TIMESTAMP() WHERE id = %d";
+        $query = "UPDATE {$table} SET status = %s, sent_count = %d, failed_count = %d, sent_at = {$sentAt}, last_error_code = {$errorSql}, updated_at = UTC_TIMESTAMP() WHERE id = %d" . NonCoreTenantScope::condition();
         $args = [$status, max(0, $sent), max(0, $failed)];
         if ($errorSql === '%s') { $args[] = $errorCode; }
         $args[] = $id;
