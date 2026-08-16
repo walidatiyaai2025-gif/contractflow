@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Translations\AdminArabicDefaults;
+use SafeContracts\Translations\RuntimeLabels;
 use SafeContracts\Translations\TranslationCatalog;
 
 final class TranslationsPage
@@ -154,8 +155,12 @@ final class TranslationsPage
     {
         $catalog = TranslationCatalog::catalog();
         foreach ($catalog as $source => &$row) {
+            if ($row['ar'] !== $source) {
+                continue;
+            }
+            $row['ar'] = AdminArabicDefaults::default($source);
             if ($row['ar'] === $source) {
-                $row['ar'] = AdminArabicDefaults::default($source);
+                $row['ar'] = RuntimeLabels::default($source);
             }
         }
         unset($row);
