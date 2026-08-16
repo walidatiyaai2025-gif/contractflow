@@ -29,6 +29,16 @@ require_once SAFECONTRACTS_DIR . 'src/Support/Autoloader.php';
 register_activation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Activator::class, 'activate']);
 register_deactivation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Deactivator::class, 'deactivate']);
 
+// Keep technical slugs/namespaces backward-compatible while normalizing every
+// Safe Contracts gettext surface shown by the plugin to the approved name.
+add_filter('gettext', static function (string $translation, string $text, string $domain): string {
+    if ($domain !== 'safecontracts') {
+        return $translation;
+    }
+
+    return str_replace('SafeContracts', 'Safe Contracts', $translation);
+}, 10, 3);
+
 add_action('plugins_loaded', static function (): void {
     \SafeContracts\Plugin::instance()->boot();
 });
