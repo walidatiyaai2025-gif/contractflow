@@ -11,9 +11,9 @@ final class AppEnvironment {
 
   factory AppEnvironment.fromCompileTime() {
     return AppEnvironment.fromValues(
-      name: const String.fromEnvironment('SC_ENV', defaultValue: 'local'),
+      name: const String.fromEnvironment('ESC_ENV', defaultValue: 'local'),
       apiBaseUrl: const String.fromEnvironment(
-        'SC_API_BASE_URL',
+        'ESC_API_BASE_URL',
         defaultValue: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
       ),
     );
@@ -29,33 +29,35 @@ final class AppEnvironment {
       'staging' => AppEnvironmentName.staging,
       'production' => AppEnvironmentName.production,
       _ => throw FormatException(
-          'Unsupported SafeContracts environment: $name',
+          'Unsupported Enterprise Safe Contracts environment: $name',
         ),
     };
 
     final uri = Uri.tryParse(apiBaseUrl.trim());
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      throw FormatException('SC_API_BASE_URL must be an absolute URL.');
+      throw FormatException('ESC_API_BASE_URL must be an absolute URL.');
     }
     if (uri.scheme != 'http' && uri.scheme != 'https') {
-      throw FormatException('SC_API_BASE_URL must use HTTP or HTTPS.');
+      throw FormatException('ESC_API_BASE_URL must use HTTP or HTTPS.');
     }
     if (environmentName == AppEnvironmentName.production &&
         uri.scheme != 'https') {
-      throw FormatException('Production SafeContracts API must use HTTPS.');
+      throw FormatException(
+        'Production Enterprise Safe Contracts API must use HTTPS.',
+      );
     }
     if (uri.userInfo.isNotEmpty) {
       throw FormatException(
-        'SC_API_BASE_URL must not contain embedded credentials.',
+        'ESC_API_BASE_URL must not contain embedded credentials.',
       );
     }
     if (uri.hasQuery || uri.fragment.isNotEmpty) {
       throw FormatException(
-        'SC_API_BASE_URL must not contain a query string or fragment.',
+        'ESC_API_BASE_URL must not contain a query string or fragment.',
       );
     }
     if (_containsTraversal(uri.pathSegments)) {
-      throw FormatException('SC_API_BASE_URL must not contain path traversal.');
+      throw FormatException('ESC_API_BASE_URL must not contain path traversal.');
     }
 
     final normalizedPath = uri.path.endsWith('/') ? uri.path : '${uri.path}/';
@@ -68,7 +70,7 @@ final class AppEnvironment {
   Uri endpoint(String relativePath) {
     final rawPath = relativePath.trim();
     if (rawPath.isEmpty || rawPath.contains('\\')) {
-      throw FormatException('SafeContracts API path is invalid.');
+      throw FormatException('Enterprise Safe Contracts API path is invalid.');
     }
 
     final parsed = Uri.tryParse(rawPath);
@@ -79,22 +81,28 @@ final class AppEnvironment {
         parsed.userInfo.isNotEmpty ||
         parsed.hasQuery ||
         parsed.fragment.isNotEmpty) {
-      throw FormatException('SafeContracts API path must be relative.');
+      throw FormatException(
+        'Enterprise Safe Contracts API path must be relative.',
+      );
     }
     if (_containsTraversal(parsed.pathSegments)) {
-      throw FormatException('SafeContracts API path must not traverse upward.');
+      throw FormatException(
+        'Enterprise Safe Contracts API path must not traverse upward.',
+      );
     }
 
     final cleanPath = parsed.path.replaceFirst(RegExp(r'^/+'), '');
     if (cleanPath.isEmpty) {
-      throw FormatException('SafeContracts API path is empty.');
+      throw FormatException('Enterprise Safe Contracts API path is empty.');
     }
     final endpoint = apiBaseUri.resolve(cleanPath);
     if (endpoint.scheme != apiBaseUri.scheme ||
         endpoint.host != apiBaseUri.host ||
         endpoint.port != apiBaseUri.port ||
         !endpoint.path.startsWith(apiBaseUri.path)) {
-      throw FormatException('SafeContracts API endpoint escaped its base URL.');
+      throw FormatException(
+        'Enterprise Safe Contracts API endpoint escaped its base URL.',
+      );
     }
     return endpoint;
   }
