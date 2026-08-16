@@ -54,7 +54,7 @@ esc_p3_party_assert(str_contains($schema, 'KEY tenant_status_name (tenant_id, st
 esc_p3_party_assert(str_contains($schema, 'KEY tenant_kind_name (tenant_id, party_kind, display_name, id)'), 'Party kind lookup index is tenant-first');
 esc_p3_party_assert(str_contains($schema, 'KEY tenant_registration (tenant_id, country_code, registration_number)'), 'registration lookup is tenant-first');
 esc_p3_party_assert(! str_contains($migrationSource, 'safecontracts_customers'), 'P3-001 migration does not rewrite legacy customers');
-esc_p3_party_assert(Migrator::LATEST_VERSION === '1.19.0', 'P3-001 advances the ESC schema to 1.19.0');
+esc_p3_party_assert(version_compare(Migrator::LATEST_VERSION, '1.19.0', '>='), 'P3-001 Party schema remains reachable after later Enterprise migrations');
 
 esc_p3_party_assert(PartyPolicy::kinds() === ['organization', 'individual', 'government', 'other'], 'Party kind policy models intrinsic identity only');
 esc_p3_party_assert(! PartyPolicy::isKind('customer') && ! PartyPolicy::isKind('supplier') && ! PartyPolicy::isKind('vendor'), 'business roles are not overloaded into party_kind');
