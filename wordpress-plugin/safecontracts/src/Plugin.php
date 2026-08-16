@@ -13,6 +13,7 @@ use SafeContracts\Admin\DashboardPage;
 use SafeContracts\Admin\FirebaseSettingsPage;
 use SafeContracts\Admin\FollowUpsPage;
 use SafeContracts\Admin\GeneralSettingsPage;
+use SafeContracts\Admin\ImportPeriodNotice;
 use SafeContracts\Admin\ImportsPage;
 use SafeContracts\Admin\LoginBranding;
 use SafeContracts\Admin\MobileConfigurationPage;
@@ -93,6 +94,7 @@ final class Plugin
         add_action('admin_enqueue_scripts', [AdminShell::class, 'enqueueAssets']);
         add_action('admin_enqueue_scripts', [AdminFeedback::class, 'enqueueAssets'], 20);
         add_action('admin_notices', [AdminFeedback::class, 'render']);
+        add_action('admin_notices', [ImportPeriodNotice::class, 'render'], 30);
 
         add_action('admin_post_' . CustomersPage::SAVE_ACTION, [CustomersPage::class, 'handleSave']);
         add_action('admin_post_' . CustomersPage::DELETE_ACTION, [CustomersPage::class, 'handleDelete']);
