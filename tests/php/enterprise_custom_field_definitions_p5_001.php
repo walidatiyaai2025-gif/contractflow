@@ -239,7 +239,8 @@ $updateSql = (string) (end($GLOBALS['sc_test_queries']) ?: '');
 esc_p5_field_assert(str_contains($updateSql, 'UPDATE wp_safecontracts_custom_field_definitions d SET label ='), 'update changes declarative/display configuration only');
 esc_p5_field_assert(str_contains($updateSql, 'd.id = 61 AND d.tenant_id = 17 AND d.contract_type_id = 31'), 'update is tenant+type scoped');
 esc_p5_field_assert(str_contains($updateSql, "ct.status = 'active'"), 'update atomically rechecks active Contract Type');
-esc_p5_field_assert(! str_contains($updateSql, 'field_code =') && ! str_contains($updateSql, 'data_type =') && ! str_contains($updateSql, 'contract_type_id ='), 'update SQL cannot change immutable identity/type binding');
+$updateSetClause = explode(' WHERE ', $updateSql, 2)[0] ?? $updateSql;
+esc_p5_field_assert(! str_contains($updateSetClause, 'field_code =') && ! str_contains($updateSetClause, 'data_type =') && ! str_contains($updateSetClause, 'contract_type_id ='), 'update SET cannot change immutable identity/type binding');
 
 $GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_read_queries'] = [];
