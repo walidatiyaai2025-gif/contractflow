@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Rest;
 
 use SafeContracts\Roles\AccessScope;
+use SafeContracts\Tenancy\TenantAuthorization;
 use WP_Error;
 
 final class Permission
@@ -36,7 +37,10 @@ final class Permission
         if ($access instanceof WP_Error) {
             return $access;
         }
-        if (current_user_can($capability)) {
+
+        // Tenant roles are a second, narrowing ceiling. They never manufacture
+        // a capability that WordPress did not already grant to this user.
+        if (current_user_can($capability) && TenantAuthorization::allowsCapability($capability)) {
             return true;
         }
 
