@@ -66,22 +66,23 @@ final class PartyRepository
         global $wpdb;
         $tenantId = $this->tenantId();
         $table = $wpdb->prefix . 'safecontracts_parties';
+        $partyCode = $this->nullableSql($wpdb, $data['party_code']);
+        $legalName = $this->nullableSql($wpdb, $data['legal_name']);
+        $countryCode = $this->nullableSql($wpdb, $data['country_code']);
+        $registrationNumber = $this->nullableSql($wpdb, $data['registration_number']);
+        $taxNumber = $this->nullableSql($wpdb, $data['tax_number']);
+        $email = $this->nullableSql($wpdb, $data['email']);
+        $phone = $this->nullableSql($wpdb, $data['phone']);
+        $metadata = $this->nullableSql($wpdb, $data['metadata_json']);
+
         $sql = $wpdb->prepare(
             "INSERT INTO {$table} (tenant_id, uuid, party_code, display_name, legal_name, party_kind, country_code, registration_number, tax_number, email, phone, status, metadata_json, created_by, updated_by, created_at, updated_at)
-             VALUES (%d, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
+             VALUES (%d, %s, {$partyCode}, %s, {$legalName}, %s, {$countryCode}, {$registrationNumber}, {$taxNumber}, {$email}, {$phone}, %s, {$metadata}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
             $tenantId,
             $uuid,
-            $this->nullable($data['party_code']),
             $data['display_name'],
-            $this->nullable($data['legal_name']),
             $data['party_kind'],
-            $this->nullable($data['country_code']),
-            $this->nullable($data['registration_number']),
-            $this->nullable($data['tax_number']),
-            $this->nullable($data['email']),
-            $this->nullable($data['phone']),
             $data['status'],
-            $this->nullable($data['metadata_json']),
             $actorId,
             $actorId
         );
@@ -97,19 +98,20 @@ final class PartyRepository
         global $wpdb;
         $tenantId = $this->tenantId();
         $table = $wpdb->prefix . 'safecontracts_parties';
+        $partyCode = $this->nullableSql($wpdb, $data['party_code']);
+        $legalName = $this->nullableSql($wpdb, $data['legal_name']);
+        $countryCode = $this->nullableSql($wpdb, $data['country_code']);
+        $registrationNumber = $this->nullableSql($wpdb, $data['registration_number']);
+        $taxNumber = $this->nullableSql($wpdb, $data['tax_number']);
+        $email = $this->nullableSql($wpdb, $data['email']);
+        $phone = $this->nullableSql($wpdb, $data['phone']);
+        $metadata = $this->nullableSql($wpdb, $data['metadata_json']);
+
         $sql = $wpdb->prepare(
-            "UPDATE {$table} SET party_code = %s, display_name = %s, legal_name = %s, party_kind = %s, country_code = %s, registration_number = %s, tax_number = %s, email = %s, phone = %s, status = %s, metadata_json = %s, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d AND tenant_id = %d",
-            $this->nullable($data['party_code']),
+            "UPDATE {$table} SET party_code = {$partyCode}, display_name = %s, legal_name = {$legalName}, party_kind = %s, country_code = {$countryCode}, registration_number = {$registrationNumber}, tax_number = {$taxNumber}, email = {$email}, phone = {$phone}, status = %s, metadata_json = {$metadata}, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d AND tenant_id = %d",
             $data['display_name'],
-            $this->nullable($data['legal_name']),
             $data['party_kind'],
-            $this->nullable($data['country_code']),
-            $this->nullable($data['registration_number']),
-            $this->nullable($data['tax_number']),
-            $this->nullable($data['email']),
-            $this->nullable($data['phone']),
             $data['status'],
-            $this->nullable($data['metadata_json']),
             $actorId,
             $partyId,
             $tenantId
@@ -128,8 +130,9 @@ final class PartyRepository
         return TenantContextStore::context()->requireTenantId();
     }
 
-    private function nullable(mixed $value): string
+    private function nullableSql(object $wpdb, mixed $value): string
     {
-        return trim((string) $value) === '' ? '' : (string) $value;
+        $value = trim((string) $value);
+        return $value === '' ? 'NULL' : $wpdb->prepare('%s', $value);
     }
 }
