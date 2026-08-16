@@ -7,6 +7,7 @@ namespace SafeContracts\Admin;
 use SafeContracts\Contracts\ContractArchiveService;
 use SafeContracts\Contracts\ContractService;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
 final class ContractsPage
@@ -115,7 +116,7 @@ final class ContractsPage
                         <tr>
                             <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><?php echo ! empty($contract['is_archived']) ? ' · ' . esc_html__('Archived', 'safecontracts') : ''; ?></td>
                             <td><?php echo esc_html((string) $contract['customer_name']); ?></td>
-                            <td><?php echo esc_html((string) $contract['status']); ?></td>
+                            <td><?php echo esc_html(self::statusLabel((string) $contract['status'])); ?></td>
                             <td><?php echo esc_html(number_format((float) $contract['base_value'], 2)); ?></td>
                             <td>
                                 <div class="safecontracts-dashboard-table-actions">
@@ -125,7 +126,7 @@ final class ContractsPage
                                             <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
                                             <input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contract['id']); ?>">
                                             <?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $contract['id']); ?>
-                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?> / حذف</button>
+                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
                                         </form>
                                     <?php endif; ?>
                                 </div>
@@ -155,5 +156,10 @@ final class ContractsPage
             </div>
         </div>
         <?php
+    }
+
+    private static function statusLabel(string $status): string
+    {
+        return TranslationCatalog::text(ucwords(str_replace('_', ' ', $status)));
     }
 }
