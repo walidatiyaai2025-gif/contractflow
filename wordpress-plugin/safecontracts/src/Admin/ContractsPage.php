@@ -8,6 +8,7 @@ use SafeContracts\Contracts\ContractArchiveService;
 use SafeContracts\Contracts\ContractService;
 use SafeContracts\Contracts\ContractStatus;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Roles\RoleRegistrar;
 use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
@@ -97,6 +98,16 @@ final class ContractsPage
         $filters = DashboardFilters::normalize($_GET);
         $contracts = $read->contracts($filters);
         $customers = $read->customerOptions();
+        $accountants = self::accountantOptions();
+        $accountantLabels = [];
+        foreach ($accountants as $accountant) {
+            $accountantLabels[$accountant['id']] = $accountant['label'];
+        }
+        $canAssignContracts = current_user_can(Capabilities::ASSIGN_CONTRACTS);
+        $unassignedCount = count(array_filter(
+            $contracts,
+            static fn (array $contract): bool => empty($contract['accountant_user_id']) && empty($contract['is_archived'])
+        ));
         $selected = null;
         $reconciliation = null;
         $selectedId = max(0, (int) ($_GET['contract_id'] ?? 0));
@@ -116,13 +127,18 @@ final class ContractsPage
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Contract operations', 'safecontracts'); ?></p><h1><?php echo esc_html__('Contracts', 'safecontracts'); ?></h1></div></div>
             <?php AdminPeriodFilter::render(self::SLUG, $filters, $selectedId > 0 ? ['contract_id' => $selectedId] : []); ?>
             <p class="description"><?php echo esc_html__('Contract period filtering uses the contract start date, falling back to the record creation date when no start date exists.', 'safecontracts'); ?></p>
+            <?php if ($canAssignContracts && $unassignedCount > 0) : ?>
+                <div class="notice notice-warning inline"><p><?php echo esc_html(sprintf(_n('%d active contract has no responsible accountant. Assigned-scope users will not see it on mobile until it is assigned.', '%d active contracts have no responsible accountant. Assigned-scope users will not see them on mobile until they are assigned.', $unassignedCount, 'safecontracts'), $unassignedCount)); ?></p></div>
+            <?php endif; ?>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($contracts as $contract) : ?>
+                        <?php $accountantId = (int) ($contract['accountant_user_id'] ?? 0); ?>
                         <tr>
                             <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><?php echo ! empty($contract['is_archived']) ? ' · ' . esc_html__('Archived', 'safecontracts') : ''; ?></td>
                             <td><?php echo esc_html((string) $contract['customer_name']); ?></td>
+                            <td><?php echo $accountantId > 0 ? esc_html($accountantLabels[$accountantId] ?? ('#' . $accountantId)) : '<strong>' . esc_html__('Unassigned', 'safecontracts') . '</strong>'; ?></td>
                             <td><?php echo esc_html(self::statusLabel((string) $contract['status'])); ?></td>
                             <td><?php echo esc_html(number_format((float) $contract['base_value'], 2)); ?></td>
                             <td>
@@ -142,7 +158,7 @@ final class ContractsPage
                     <?php endforeach; ?>
                     </tbody></table>
                 </section>
-                <?php if (current_user_can(Capabilities::CREATE_CONTRACTS) || ($selected && (current_user_can(Capabilities::EDIT_CONTRACTS) || current_user_can(Capabilities::ASSIGN_CONTRACTS)))) : ?>
+                <?php if ((! $selected && current_user_can(Capabilities::CREATE_CONTRACTS)) || ($selected && (current_user_can(Capabilities::EDIT_CONTRACTS) || $canAssignContracts))) : ?>
                 <section class="safecontracts-admin-card">
                     <h2><?php echo $selected ? esc_html__('Contract details', 'safecontracts') : esc_html__('Create contract', 'safecontracts'); ?></h2>
                     <?php if ($selected && ! empty($selected['is_archived'])) : ?><p class="notice notice-warning inline"><?php echo esc_html__('Archived contracts are read-only.', 'safecontracts'); ?></p><?php endif; ?>
@@ -152,7 +168,15 @@ final class ContractsPage
                         <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>"><input type="hidden" name="contract_id" value="<?php echo esc_attr((string) ($selected['id'] ?? 0)); ?>"><?php wp_nonce_field(self::SAVE_ACTION); ?>
                         <p><label><?php echo esc_html__('Contract number', 'safecontracts'); ?><input class="widefat" name="contract_number" required value="<?php echo esc_attr((string) ($selected['contract_number'] ?? '')); ?>"></label></p>
                         <p><label><?php echo esc_html__('Customer', 'safecontracts'); ?><select class="widefat" name="customer_id" required><?php foreach ($customers as $customer) : ?><option value="<?php echo esc_attr((string) $customer['id']); ?>" <?php selected((int) ($selected['customer_id'] ?? 0), $customer['id']); ?>><?php echo esc_html($customer['name']); ?></option><?php endforeach; ?></select></label></p>
-                        <p><label><?php echo esc_html__('Accountant user ID', 'safecontracts'); ?><input class="widefat" type="number" min="1" name="accountant_user_id" value="<?php echo esc_attr((string) ($selected['accountant_user_id'] ?? '')); ?>"></label></p>
+                        <?php if ($canAssignContracts) : ?>
+                            <p><label><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?><select class="widefat" name="accountant_user_id" required><option value=""><?php echo esc_html__('Select responsible accountant', 'safecontracts'); ?></option><?php foreach ($accountants as $accountant) : ?><option value="<?php echo esc_attr((string) $accountant['id']); ?>" <?php selected((int) ($selected['accountant_user_id'] ?? 0), $accountant['id']); ?>><?php echo esc_html($accountant['label']); ?></option><?php endforeach; ?></select></label></p>
+                            <?php if ($accountants === []) : ?><p class="notice notice-warning inline"><?php echo esc_html__('No SafeContracts Accountant users are available. Assign the Accountant role to a user before saving this contract.', 'safecontracts'); ?></p><?php endif; ?>
+                        <?php else : ?>
+                            <?php $currentUser = wp_get_current_user(); ?>
+                            <input type="hidden" name="accountant_user_id" value="<?php echo esc_attr((string) get_current_user_id()); ?>">
+                            <p><strong><?php echo esc_html__('Responsible accountant:', 'safecontracts'); ?></strong> <?php echo esc_html((string) ($currentUser->display_name ?: $currentUser->user_login)); ?></p>
+                        <?php endif; ?>
+                        <p class="description"><?php echo esc_html__('Assigned-scope mobile data and assigned-accountant notification rules use this responsible accountant.', 'safecontracts'); ?></p>
                         <?php if ($selected) : ?>
                             <p class="safecontracts-field-row"><label><?php echo esc_html__('Start date', 'safecontracts'); ?><input type="date" name="start_date" value="<?php echo esc_attr((string) ($selected['start_date'] ?? '')); ?>"></label><label><?php echo esc_html__('End date', 'safecontracts'); ?><input type="date" name="end_date" value="<?php echo esc_attr((string) ($selected['end_date'] ?? '')); ?>"></label></p>
                             <?php if (current_user_can(Capabilities::EDIT_CONTRACTS)) : ?>
@@ -170,6 +194,41 @@ final class ContractsPage
             </div>
         </div>
         <?php
+    }
+
+    /** @return list<array{id:int,label:string}> */
+    private static function accountantOptions(): array
+    {
+        $users = get_users([
+            'role' => RoleRegistrar::ACCOUNTANT,
+            'orderby' => 'display_name',
+            'order' => 'ASC',
+        ]);
+        if (! is_array($users)) {
+            return [];
+        }
+
+        $options = [];
+        foreach ($users as $user) {
+            if (! is_object($user) || ! isset($user->ID)) {
+                continue;
+            }
+            $id = (int) $user->ID;
+            if ($id <= 0) {
+                continue;
+            }
+            $name = trim((string) ($user->display_name ?? ''));
+            if ($name === '') {
+                $name = trim((string) ($user->user_login ?? ''));
+            }
+            $email = trim((string) ($user->user_email ?? ''));
+            $label = $name !== '' ? $name : ('#' . $id);
+            if ($email !== '') {
+                $label .= ' <' . $email . '>';
+            }
+            $options[] = ['id' => $id, 'label' => $label];
+        }
+        return $options;
     }
 
     private static function statusLabel(string $status): string
