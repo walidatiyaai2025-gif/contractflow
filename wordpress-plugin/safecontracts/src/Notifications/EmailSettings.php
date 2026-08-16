@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Notifications;
 
 use InvalidArgumentException;
+use SafeContracts\Tenancy\NonCoreTenantScope;
 
 final class EmailSettings
 {
@@ -17,10 +18,12 @@ final class EmailSettings
     {
         $siteName = function_exists('get_bloginfo') ? trim((string) get_bloginfo('name')) : 'Safe Contracts';
         $adminEmail = trim((string) get_option('admin_email', ''));
+        $tenantId = NonCoreTenantScope::tenantId();
+        $suffix = $tenantId === null ? '' : '_tenant_' . $tenantId;
         return [
-            'enabled' => (bool) get_option(self::ENABLED_OPTION, false),
-            'from_name' => trim((string) get_option(self::FROM_NAME_OPTION, $siteName !== '' ? $siteName : 'Safe Contracts')),
-            'from_address' => trim((string) get_option(self::FROM_ADDRESS_OPTION, $adminEmail)),
+            'enabled' => (bool) get_option(self::ENABLED_OPTION . $suffix, false),
+            'from_name' => trim((string) get_option(self::FROM_NAME_OPTION . $suffix, $siteName !== '' ? $siteName : 'Safe Contracts')),
+            'from_address' => trim((string) get_option(self::FROM_ADDRESS_OPTION . $suffix, $adminEmail)),
         ];
     }
 
@@ -36,9 +39,12 @@ final class EmailSettings
         if (! self::validEmail($fromAddress)) {
             throw new InvalidArgumentException('Notification email sender address is invalid.');
         }
-        update_option(self::ENABLED_OPTION, $enabled ? '1' : '0', false);
-        update_option(self::FROM_NAME_OPTION, $fromName, false);
-        update_option(self::FROM_ADDRESS_OPTION, $fromAddress, false);
+
+        $tenantId = NonCoreTenantScope::tenantId();
+        $suffix = $tenantId === null ? '' : '_tenant_' . $tenantId;
+        update_option(self::ENABLED_OPTION . $suffix, $enabled ? '1' : '0', false);
+        update_option(self::FROM_NAME_OPTION . $suffix, $fromName, false);
+        update_option(self::FROM_ADDRESS_OPTION . $suffix, $fromAddress, false);
         return ['enabled' => $enabled, 'from_name' => $fromName, 'from_address' => $fromAddress];
     }
 
