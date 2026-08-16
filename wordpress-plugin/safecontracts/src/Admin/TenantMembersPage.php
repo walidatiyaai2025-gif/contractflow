@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use InvalidArgumentException;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Tenancy\CoreTenantEnforcement;
 use SafeContracts\Tenancy\TenantMembershipAdminService;
 use SafeContracts\Tenancy\TenantRolePolicy;
 use Throwable;
@@ -18,6 +19,10 @@ final class TenantMembersPage
 
     public static function register(): void
     {
+        if (! CoreTenantEnforcement::isEnabled()) {
+            return;
+        }
+
         add_submenu_page(
             AdminShell::SLUG,
             __('Tenant Members', 'safecontracts'),
