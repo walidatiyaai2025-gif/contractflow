@@ -82,6 +82,7 @@ final class DashboardPage
             static fn (array $contract): bool => empty($contract['is_archived'])
         ));
         $dashboardContracts = array_slice($dashboardContracts, 0, 25);
+        $collectorAttachments = $read->collectorAttachments($filters, 12);
         ?>
         <section class="safecontracts-dashboard" aria-labelledby="safecontracts-dashboard-title">
             <div class="safecontracts-section-heading">
@@ -94,6 +95,9 @@ final class DashboardPage
                 <?php endif; ?>
             </div>
 
+            <?php if (! empty($filters['date_range_error'])) : ?>
+                <div class="notice notice-error inline"><p><?php echo esc_html__('Invalid period. Use valid dates and make sure the end date is not earlier than the start date.', 'safecontracts'); ?></p></div>
+            <?php endif; ?>
             <form class="safecontracts-filter-bar" method="get">
                 <input type="hidden" name="page" value="<?php echo esc_attr(AdminShell::SLUG); ?>">
                 <label><?php echo esc_html__('Customer', 'safecontracts'); ?>
@@ -123,8 +127,7 @@ final class DashboardPage
                         <?php endforeach; ?>
                     </select>
                 </label>
-                <label><?php echo esc_html__('Due from', 'safecontracts'); ?><input type="date" name="due_from" value="<?php echo esc_attr((string) ($filters['due_from'] ?? '')); ?>"></label>
-                <label><?php echo esc_html__('Due to', 'safecontracts'); ?><input type="date" name="due_to" value="<?php echo esc_attr((string) ($filters['due_to'] ?? '')); ?>"></label>
+                <?php AdminPeriodFilter::renderFields($filters); ?>
                 <button class="button button-primary" type="submit"><?php echo esc_html__('Apply filters', 'safecontracts'); ?></button>
             </form>
 
@@ -135,7 +138,7 @@ final class DashboardPage
                 <?php self::kpi(__('Overdue exposure', 'safecontracts'), self::money($kpis['overdue_exposure'], $currencyToken), true); ?>
                 <?php self::kpi(__('Collected', 'safecontracts'), self::money($kpis['collected_total'], $currencyToken)); ?>
             </div>
-            <p class="description"><?php echo esc_html__('Dashboard values use the configured SafeContracts currency and are calculated from server-side scoped contract/payment data. Contractual due dates remain authoritative for overdue exposure.', 'safecontracts'); ?></p>
+            <p class="description"><?php echo esc_html__('Dashboard payment KPIs use contractual due dates for the selected period. Contract lists use start date (or creation date when start date is empty), and collector attachments use collection date.', 'safecontracts'); ?></p>
 
             <section class="safecontracts-admin-card safecontracts-table-card safecontracts-dashboard-contracts" aria-labelledby="safecontracts-dashboard-contracts-title">
                 <div class="safecontracts-section-heading">
@@ -181,6 +184,25 @@ final class DashboardPage
                     </table>
                     <p class="description"><?php echo esc_html__('Delete is a safe archive action: the contract disappears from this dashboard list, while financial, collection, history and audit records are preserved.', 'safecontracts'); ?></p>
                 <?php endif; ?>
+            </section>
+
+            <section class="safecontracts-admin-card safecontracts-table-card" aria-labelledby="safecontracts-dashboard-collector-attachments-title">
+                <div class="safecontracts-section-heading">
+                    <div>
+                        <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Collection evidence', 'safecontracts'); ?></p>
+                        <h2 id="safecontracts-dashboard-collector-attachments-title"><?php echo esc_html__('Collector attachments', 'safecontracts'); ?></h2>
+                    </div>
+                </div>
+                <?php if ($collectorAttachments === []) : ?>
+                    <p><?php echo esc_html__('No collector attachments match the current dashboard scope and period.', 'safecontracts'); ?></p>
+                <?php else : ?>
+                    <div class="safecontracts-collector-proof-grid">
+                        <?php foreach ($collectorAttachments as $collection) : ?>
+                            <article class="safecontracts-admin-card"><?php CollectorAttachmentView::render($collection); ?></article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                <p class="description"><?php echo esc_html__('Attachments are resolved through WordPress Media and inherit the same customer/contract/accountant scope as the collection ledger. Raw filesystem paths are never exposed.', 'safecontracts'); ?></p>
             </section>
         </section>
         <?php
