@@ -31,7 +31,7 @@ void main() {
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('Payment Lifecycle Overview'), findsOneWidget);
     expect(find.text('Remaining'), findsOneWidget);
-    expect(find.text('125.0000'), findsOneWidget);
+    expect(find.text('125.00'), findsOneWidget);
 
     await tester.tap(find.text('Payment filters'));
     await tester.pumpAndSettle();
