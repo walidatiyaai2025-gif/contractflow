@@ -27,7 +27,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('SafeContracts'), findsOneWidget);
+    expect(find.text('SafeContracts | Dashboard'), findsOneWidget);
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('All customers'), findsOneWidget);
     expect(find.text('All contracts'), findsOneWidget);
