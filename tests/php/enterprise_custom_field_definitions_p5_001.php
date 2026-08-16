@@ -91,7 +91,7 @@ esc_p5_field_assert(str_contains($schema, 'uuid char(36) NOT NULL'), 'definition
 esc_p5_field_assert(str_contains($schema, 'contract_type_id bigint(20) unsigned NOT NULL'), 'definition belongs to Contract Type');
 esc_p5_field_assert(str_contains($schema, 'UNIQUE KEY tenant_type_code (tenant_id, contract_type_id, field_code)'), 'field code uniqueness is tenant+type local');
 esc_p5_field_assert(str_contains($schema, 'KEY tenant_type_status_sort (tenant_id, contract_type_id, status, sort_order, id)'), 'field listing index is tenant-first');
-esc_p5_field_assert(Migrator::LATEST_VERSION === '1.28.0', 'P5-001 is latest schema version');
+esc_p5_field_assert(version_compare(Migrator::LATEST_VERSION, '1.28.0', '>='), 'P5-001 schema remains reachable after later migrations');
 esc_p5_field_assert(str_contains($migratorSource, "'1.28.0' => Migration0029EnterpriseCustomFieldDefinitions::class"), 'P5-001 migration is registered at 1.28.0');
 esc_p5_field_assert(! str_contains($schema, 'custom_field_values'), 'P5-001 does not create contract value storage');
 
