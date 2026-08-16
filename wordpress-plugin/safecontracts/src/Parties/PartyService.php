@@ -42,14 +42,14 @@ final class PartyService
     }
 
     /** @return list<array<string,mixed>> */
-    public function list(string $search = '', int $limit = 50, int $offset = 0): array
+    public function search(string $search = '', int $limit = 50, int $offset = 0): array
     {
         $this->requireReadPermission();
         $search = trim(strip_tags($search));
         if (strlen($search) > 191) {
             throw new InvalidArgumentException('Party search must not exceed 191 characters.');
         }
-        return $this->repository->list($search, $limit, $offset);
+        return $this->repository->search($search, $limit, $offset);
     }
 
     public function save(array $input): int
