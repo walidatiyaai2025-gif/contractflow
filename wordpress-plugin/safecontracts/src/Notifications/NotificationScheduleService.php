@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace SafeContracts\Notifications;
 
-use DateTimeImmutable;
-use DateTimeZone;
 use Throwable;
 
 final class NotificationScheduleService
@@ -14,12 +12,14 @@ final class NotificationScheduleService
         private ?NotificationScheduleRepository $schedule = null,
         private ?NotificationRuleRepository $rules = null,
         private ?NotificationEngine $engine = null,
-        private ?NotificationScheduleSettings $settings = null
+        private ?NotificationScheduleSettings $settings = null,
+        private ?NotificationDeliveryService $delivery = null
     ) {
         $this->schedule ??= new NotificationScheduleRepository();
         $this->rules ??= new NotificationRuleRepository();
         $this->engine ??= new NotificationEngine();
         $this->settings ??= new NotificationScheduleSettings();
+        $this->delivery ??= new NotificationDeliveryService();
     }
 
     public function sync(int $paymentLimit = 5000): int
@@ -93,12 +93,12 @@ final class NotificationScheduleService
                 return true;
             }
 
-            $result = (new PushDeliveryService(new FirebasePushTransport()))->deliver($plan, $attemptNo);
+            $result = $this->delivery->deliver($plan, $attemptNo);
             $sent = (int) ($result['sent'] ?? 0);
             $failed = (int) ($result['failed'] ?? 0);
             $attempted = (int) ($result['attempted'] ?? 0);
             $status = $sent > 0 && $failed === 0 ? 'sent' : ($sent > 0 ? 'partial' : 'failed');
-            $error = $attempted === 0 ? 'no_active_devices' : ($failed > 0 ? 'delivery_failed' : null);
+            $error = $attempted === 0 ? 'no_delivery_targets' : ($failed > 0 ? 'delivery_failed' : null);
             $this->schedule->complete($scheduleId, $status, $sent, $failed, $error);
             $this->recordDispatch($scheduleId, $row, $status, $actorId, $manual, $sent, $failed, $error);
             return true;
