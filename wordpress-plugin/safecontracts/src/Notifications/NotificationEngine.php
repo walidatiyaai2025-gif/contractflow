@@ -93,6 +93,7 @@ final class NotificationEngine
                     'payment_id' => $paymentId,
                     'rule_code' => (string) ($rule['code'] ?? ''),
                     'attempt_no' => $attemptNo,
+                    'icon_key' => $rendered['icon_key'],
                 ],
             ],
         ];
