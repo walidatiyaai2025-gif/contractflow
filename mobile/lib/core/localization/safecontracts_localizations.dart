@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../features/config/mobile_config.dart';
+import 'runtime_translation_overrides.dart';
 
 final class SafeContractsLocalizations {
   const SafeContractsLocalizations(this.locale);
@@ -23,8 +24,22 @@ final class SafeContractsLocalizations {
 
   bool get isArabic => locale.languageCode.toLowerCase() == 'ar';
 
-  String t(String english) =>
-      isArabic ? (_arabic[english] ?? english) : english;
+  String t(String english) {
+    final runtime = SafeContractsRuntimeTranslations.lookup(
+      isArabic ? 'ar' : 'en',
+      english,
+    );
+    if (runtime != null) return runtime;
+    return isArabic ? (_arabic[english] ?? english) : english;
+  }
+
+  String template(String english, Map<String, Object> replacements) {
+    var value = t(english);
+    for (final entry in replacements.entries) {
+      value = value.replaceAll('{${entry.key}}', entry.value.toString());
+    }
+    return value;
+  }
 
   String status(String value) {
     final normalized = value.trim().toLowerCase();
@@ -61,28 +76,39 @@ final class SafeContractsLocalizations {
     return isArabic ? '$value $token' : '$token $value';
   }
 
-  String pageShown(int page, int count) =>
-      isArabic ? 'الصفحة $page • معروض $count' : 'Page $page • $count shown';
+  String pageShown(int page, int count) => template(
+        'Page {page} • {count} shown',
+        <String, Object>{'page': page, 'count': count},
+      );
 
-  String pageNumber(int page) => isArabic ? 'الصفحة $page' : 'Page $page';
+  String pageNumber(int page) =>
+      template('Page {page}', <String, Object>{'page': page});
 
-  String paymentNumber(int id) => isArabic ? 'دفعة #$id' : 'Payment #$id';
+  String paymentNumber(int id) =>
+      template('Payment #{id}', <String, Object>{'id': id});
 
-  String customerNumber(int id) => isArabic ? 'عميل #$id' : 'Customer #$id';
+  String customerNumber(int id) =>
+      template('Customer #{id}', <String, Object>{'id': id});
 
-  String contractNumber(int id) => isArabic ? 'عقد #$id' : 'Contract #$id';
+  String contractNumber(int id) =>
+      template('Contract #{id}', <String, Object>{'id': id});
 
-  String collectionRecorded(int id) =>
-      isArabic ? 'تم تسجيل التحصيل #$id.' : 'Collection #$id recorded.';
+  String collectionRecorded(int id) => template(
+        'Collection #{id} recorded.',
+        <String, Object>{'id': id},
+      );
 
-  String followUpRecorded(int id) =>
-      isArabic ? 'تم تسجيل المتابعة #$id.' : 'Follow-up #$id recorded.';
+  String followUpRecorded(int id) => template(
+        'Follow-up #{id} recorded.',
+        <String, Object>{'id': id},
+      );
 
-  String loadingCustomer(int id) =>
-      isArabic ? 'جارٍ تحميل العميل #$id…' : 'Loading customer #$id…';
+  String loadingCustomer(int id) => template(
+        'Loading customer #{id}…',
+        <String, Object>{'id': id},
+      );
 
-  String rawMessage(String message) =>
-      isArabic ? (_arabic[message] ?? message) : message;
+  String rawMessage(String message) => t(message);
 }
 
 extension SafeContractsLocalizationContext on BuildContext {
@@ -134,6 +160,9 @@ const Map<String, String> _arabic = <String, String>{
   'Enter your password.': 'أدخل كلمة المرور.',
   'Signing in…': 'جارٍ تسجيل الدخول…',
   'Sign in': 'تسجيل الدخول',
+  'Remember me': 'تذكرني',
+  'Keep me signed in on this device. Your password is never stored.':
+      'احتفظ بتسجيل الدخول على هذا الجهاز. لا يتم حفظ كلمة المرور.',
   'Loading': 'جارٍ التحميل',
   'Retry': 'إعادة المحاولة',
   'Refresh': 'تحديث',
@@ -148,6 +177,14 @@ const Map<String, String> _arabic = <String, String>{
   'Next': 'التالي',
   'Previous page': 'الصفحة السابقة',
   'Next page': 'الصفحة التالية',
+  'Page {page} • {count} shown': 'الصفحة {page} • معروض {count}',
+  'Page {page}': 'الصفحة {page}',
+  'Payment #{id}': 'دفعة #{id}',
+  'Customer #{id}': 'عميل #{id}',
+  'Contract #{id}': 'عقد #{id}',
+  'Collection #{id} recorded.': 'تم تسجيل التحصيل #{id}.',
+  'Follow-up #{id} recorded.': 'تم تسجيل المتابعة #{id}.',
+  'Loading customer #{id}…': 'جارٍ تحميل العميل #{id}…',
   'Dashboard filters': 'فلاتر لوحة التحكم',
   'Dashboard is not loaded yet.': 'لم يتم تحميل لوحة التحكم بعد.',
   'Unable to load dashboard.': 'تعذر تحميل لوحة التحكم.',
