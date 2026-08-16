@@ -24,12 +24,7 @@ final class FirebasePushTransport implements PushTransport
             return ['success' => false, 'status_code' => 0, 'error_code' => 'firebase_auth_unavailable'];
         }
 
-        $accessToken = apply_filters(
-            'safecontracts_firebase_access_token',
-            '',
-            $credentialReference,
-            $projectId
-        );
+        $accessToken = apply_filters('safecontracts_firebase_access_token', '', $credentialReference, $projectId);
         if (! is_string($accessToken) || trim($accessToken) === '') {
             return ['success' => false, 'status_code' => 0, 'error_code' => 'firebase_auth_unavailable'];
         }
@@ -62,21 +57,25 @@ final class FirebasePushTransport implements PushTransport
         ];
     }
 
-    /**
-     * FCM HTTP v1 defines message.data as a JSON object/map. PHP encodes an
-     * empty array as [], which is not a valid map, so omit data entirely when
-     * there are no custom entries.
-     *
-     * @param array<string,mixed> $payload
-     * @return array{message:array<string,mixed>}
-     */
+    /** @param array<string,mixed> $payload @return array{message:array<string,mixed>} */
     private function buildRequest(string $token, array $payload): array
     {
+        $iconKey = sanitize_key((string) ($payload['icon_key'] ?? 'safe_contracts'));
         $message = [
             'token' => $token,
             'notification' => [
                 'title' => (string) ($payload['title'] ?? ''),
                 'body' => (string) ($payload['body'] ?? ''),
+            ],
+            'android' => [
+                'priority' => 'high',
+                'notification' => [
+                    'channel_id' => 'safe_contracts_alerts',
+                    'sound' => 'default',
+                    'notification_priority' => 'PRIORITY_HIGH',
+                    'visibility' => 'PUBLIC',
+                    'tag' => $iconKey !== '' ? 'safe_contracts_' . $iconKey : 'safe_contracts_alert',
+                ],
             ],
         ];
 
@@ -105,10 +104,7 @@ final class FirebasePushTransport implements PushTransport
         if (is_array($decoded)) {
             $error = is_array($decoded['error'] ?? null) ? $decoded['error'] : [];
             $details = is_array($error['details'] ?? null) ? $error['details'] : [];
-            $invalidRegistrationToken = $this->isInvalidRegistrationToken(
-                (string) ($error['message'] ?? ''),
-                $details
-            );
+            $invalidRegistrationToken = $this->isInvalidRegistrationToken((string) ($error['message'] ?? ''), $details);
 
             foreach ($details as $detail) {
                 if (! is_array($detail)) {
@@ -118,9 +114,7 @@ final class FirebasePushTransport implements PushTransport
                 $mapped = match ($fcmCode) {
                     'UNREGISTERED' => 'firebase_token_not_found',
                     'SENDER_ID_MISMATCH' => 'firebase_sender_id_mismatch',
-                    'INVALID_ARGUMENT' => $invalidRegistrationToken
-                        ? 'firebase_token_not_found'
-                        : 'firebase_invalid_argument',
+                    'INVALID_ARGUMENT' => $invalidRegistrationToken ? 'firebase_token_not_found' : 'firebase_invalid_argument',
                     'QUOTA_EXCEEDED' => 'firebase_quota_exceeded',
                     'UNAVAILABLE' => 'firebase_unavailable',
                     'INTERNAL' => 'firebase_internal',
@@ -136,9 +130,7 @@ final class FirebasePushTransport implements PushTransport
             $mappedStatus = match ($status) {
                 'PERMISSION_DENIED' => 'firebase_permission_denied',
                 'UNAUTHENTICATED' => 'firebase_auth_failed',
-                'INVALID_ARGUMENT' => $invalidRegistrationToken
-                    ? 'firebase_token_not_found'
-                    : 'firebase_invalid_argument',
+                'INVALID_ARGUMENT' => $invalidRegistrationToken ? 'firebase_token_not_found' : 'firebase_invalid_argument',
                 'RESOURCE_EXHAUSTED' => 'firebase_quota_exceeded',
                 'UNAVAILABLE' => 'firebase_unavailable',
                 'INTERNAL' => 'firebase_internal',
@@ -166,8 +158,7 @@ final class FirebasePushTransport implements PushTransport
     private function isInvalidRegistrationToken(string $message, array $details): bool
     {
         $message = strtolower(trim($message));
-        if (str_contains($message, 'registration token')
-            && (str_contains($message, 'invalid') || str_contains($message, 'not a valid fcm'))) {
+        if (str_contains($message, 'registration token') && (str_contains($message, 'invalid') || str_contains($message, 'not a valid fcm'))) {
             return true;
         }
 
