@@ -66,8 +66,90 @@ final class SafeContractsShell extends StatefulWidget {
   State<SafeContractsShell> createState() => _SafeContractsShellState();
 }
 
-final class _SafeContractsShellState extends State<SafeContractsShell> {
+final class _SafeContractsShellState extends State<SafeContractsShell>
+    with WidgetsBindingObserver {
+  static const Duration _liveRefreshInterval = Duration(seconds: 12);
+
   MobileDestination _selected = MobileDestination.dashboard;
+  Timer? _liveRefreshTimer;
+  bool _liveRefreshInFlight = false;
+  bool _foreground = true;
+  int _liveRefreshRevision = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _liveRefreshTimer = Timer.periodic(
+      _liveRefreshInterval,
+      (_) => unawaited(_refreshActiveSurface()),
+    );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(_refreshActiveSurface()),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) {
+      unawaited(_refreshActiveSurface());
+    }
+  }
+
+  @override
+  void dispose() {
+    _liveRefreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _refreshActiveSurface() async {
+    if (!mounted || !_foreground || _liveRefreshInFlight) return;
+    _liveRefreshInFlight = true;
+    try {
+      switch (_selected) {
+        case MobileDestination.dashboard:
+          await widget.dashboardController.refresh();
+          break;
+        case MobileDestination.customers:
+          await widget.customersController.refresh();
+          break;
+        case MobileDestination.contracts:
+          await widget.contractsController.refresh();
+          break;
+        case MobileDestination.notifications:
+          await widget.notificationsController.refresh();
+          break;
+        case MobileDestination.profile:
+          await widget.profileController.load();
+          break;
+        case MobileDestination.payments:
+        case MobileDestination.followUps:
+          if (mounted) {
+            setState(() => _liveRefreshRevision++);
+          }
+          break;
+        case MobileDestination.export:
+          await widget.dashboardController.refresh();
+          break;
+        case MobileDestination.collections:
+          break;
+      }
+    } on Object {
+      // Individual controllers/screens own their bounded error state. Live
+      // refresh must never tear down an otherwise usable authenticated shell.
+    } finally {
+      _liveRefreshInFlight = false;
+    }
+  }
+
+  void _selectDestination(MobileDestination destination) {
+    if (_selected != destination) {
+      setState(() => _selected = destination);
+    }
+    unawaited(_refreshActiveSurface());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,9 +174,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
       drawer: NavigationDrawer(
         selectedIndex: widget.policy.destinations.indexOf(_selected),
         onDestinationSelected: (index) {
-          setState(() {
-            _selected = widget.policy.destinations[index];
-          });
+          final destination = widget.policy.destinations[index];
+          _selectDestination(destination);
           Navigator.of(context).pop();
         },
         children: [
@@ -152,6 +233,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           canManagePayments:
               widget.session.can('safecontracts_manage_payments'),
           canEnterCollection: widget.policy.canEnterCollection,
+          refreshRevision: _liveRefreshRevision,
         ),
       MobileDestination.followUps => FollowUpsScreen(
           repository: FollowUpsRepository(apiClient),
@@ -159,6 +241,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           filters: widget.dashboardController.filters,
           currency: widget.config.currency,
           canManage: widget.policy.canManageFollowUps,
+          refreshRevision: _liveRefreshRevision,
         ),
       MobileDestination.notifications => NotificationsScreen(
           controller: widget.notificationsController,
@@ -216,7 +299,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
     if (!widget.policy.destinations.contains(destination)) {
       return;
     }
-    setState(() => _selected = destination);
+    _selectDestination(destination);
     switch (link.destination) {
       case SafeContractsDeepLinkDestination.contracts:
         _openContract(link.resourceId);
