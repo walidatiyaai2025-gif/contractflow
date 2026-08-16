@@ -129,7 +129,7 @@ $before = count($GLOBALS['sc_test_read_queries']);
 $found = (new PaymentService())->find(81);
 $paymentFindQuery = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
 sc_p6v4_assert($found['id'] === 81 && $found['accountant_user_id'] === 42, 'SC-P6-028 scoped payment detail returns assigned payment');
-sc_p6v4_assert(str_contains($paymentFindQuery, 'WHERE p.id = 81 LIMIT 1'), 'SC-P6-028 payment detail uses direct bounded ID lookup');
+sc_p6v4_assert(str_contains($paymentFindQuery, 'WHERE p.id = 81 AND p.is_archived = 0 LIMIT 1'), 'SC-P6-028 payment detail uses direct bounded active-ID lookup');
 $outside = $paymentRow;
 $outside['accountant_user_id'] = '77';
 $GLOBALS['sc_test_result_queue'] = [[$outside]];
