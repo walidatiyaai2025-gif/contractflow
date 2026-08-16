@@ -10,7 +10,8 @@ import 'package:safecontracts_mobile/features/session/session_controller.dart';
 import 'fake_api_transport.dart';
 
 void main() {
-  test('ESC tenant selection adds the reserved server-validated header', () async {
+  test('ESC tenant selection adds the reserved server-validated header',
+      () async {
     final selection = EnterpriseTenantSelection()..select(17);
     final transport = FakeApiTransport((uri) => _ok(<String, Object?>{}));
     final client = _client(
@@ -21,7 +22,8 @@ void main() {
     await client.get('session');
 
     expect(
-      transport.requests.single.headers[SafeContractsApiClient.enterpriseTenantHeader],
+      transport.requests.single
+          .headers[SafeContractsApiClient.enterpriseTenantHeader],
       '17',
     );
     selection.clear();
@@ -59,7 +61,8 @@ void main() {
     expect(session.tenant?.isOwner, isTrue);
   });
 
-  test('generic headers provider cannot spoof the reserved tenant header', () async {
+  test('generic headers provider cannot spoof the reserved tenant header',
+      () async {
     final transport = FakeApiTransport((uri) => _ok(<String, Object?>{}));
     final client = _client(
       transport,
