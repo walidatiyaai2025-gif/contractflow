@@ -22,16 +22,17 @@ final class FollowUpService
     }
 
     /** @return list<array<string, mixed>> */
-    public function queue(int $limit = 100): array
+    public function queue(int $limit = 100, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts follow-up.');
         $limit = max(1, min(500, $limit));
+        [$dateFrom, $dateTo] = $this->normalizePeriod($dateFrom, $dateTo);
 
         if (current_user_can(Capabilities::VIEW_ALL)) {
-            return $this->repository->queue(null, $limit);
+            return $this->repository->queue(null, $limit, $dateFrom, $dateTo);
         }
         if (current_user_can(Capabilities::VIEW_ASSIGNED)) {
-            return $this->repository->queue(get_current_user_id(), $limit);
+            return $this->repository->queue(get_current_user_id(), $limit, $dateFrom, $dateTo);
         }
 
         throw new DomainException('Follow-up queue is outside the current user data scope.');
@@ -66,6 +67,9 @@ final class FollowUpService
             FollowUpState::DEFERRED,
             $this->normalizeOptionalNote($note),
             null,
+            $this->normalizeRequiredDate($until, 'deferred-until date'),
+            $this->normalizeOptionalNote($note),
+            null,
             $this->normalizeRequiredDate($until, 'deferred-until date')
         );
     }
@@ -76,12 +80,13 @@ final class FollowUpService
     }
 
     /** @return list<array<string, mixed>> */
-    public function history(int $paymentId, int $limit = 100): array
+    public function history(int $paymentId, int $limit = 100, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts follow-up history.');
         $payment = $this->requirePayment($paymentId);
         $this->assertScope($payment['accountant_user_id']);
-        return $this->repository->history($paymentId, max(1, min(500, $limit)));
+        [$dateFrom, $dateTo] = $this->normalizePeriod($dateFrom, $dateTo);
+        return $this->repository->history($paymentId, max(1, min(500, $limit)), $dateFrom, $dateTo);
     }
 
     private function record(
@@ -167,6 +172,17 @@ final class FollowUpService
             throw new InvalidArgumentException("Follow-up {$field} must use YYYY-MM-DD and be a valid calendar date.");
         }
         return $date;
+    }
+
+    /** @return array{0:?string,1:?string} */
+    private function normalizePeriod(?string $dateFrom, ?string $dateTo): array
+    {
+        $dateFrom = $dateFrom === null || trim($dateFrom) === '' ? null : $this->normalizeRequiredDate($dateFrom, 'period start');
+        $dateTo = $dateTo === null || trim($dateTo) === '' ? null : $this->normalizeRequiredDate($dateTo, 'period end');
+        if ($dateFrom !== null && $dateTo !== null && $dateTo < $dateFrom) {
+            throw new InvalidArgumentException('Follow-up period end must not be earlier than period start.');
+        }
+        return [$dateFrom, $dateTo];
     }
 
     private function requireCapability(string $capability, string $message): void
