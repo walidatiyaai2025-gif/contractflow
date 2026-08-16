@@ -288,10 +288,18 @@ const Map<String, String> _arabic = <String, String>{
   'Contract ID': 'رقم العقد',
   'Customer & assignment': 'العميل والتكليف',
   'Assigned accountant user ID': 'رقم مستخدم المحاسب المكلّف',
+  'Responsible accountant': 'المحاسب المسؤول',
+  'No eligible SafeContracts Accountant users are available.':
+      'لا يوجد مستخدمون مؤهلون بدور محاسب SafeContracts.',
+  'Assign responsible accountant': 'تعيين المحاسب المسؤول',
+  'Responsible accountant updated.': 'تم تحديث المحاسب المسؤول.',
+  'Contract assignment is not authorized for this session.':
+      'تعيين المحاسب للعقد غير مسموح به في هذه الجلسة.',
+  'Select a valid responsible accountant.': 'اختر محاسباً مسؤولاً صالحاً.',
   'Financial values': 'القيم المالية',
   'Base value': 'القيمة الأساسية',
-  'Status and financial values are displayed exactly as returned by the SafeContracts server. The mobile app does not recalculate them.':
-      'يتم عرض الحالة والقيم المالية كما يعيدها خادم SafeContracts دون إعادة حساب داخل تطبيق الموبايل.',
+  'Financial values are formatted to two decimal places for display. Status and amounts remain server-authoritative; the mobile app does not recalculate them.':
+      'يتم تنسيق القيم المالية إلى منزلتين عشريتين للعرض. تظل الحالة والمبالغ معتمدة من الخادم، ولا يعيد تطبيق الموبايل حسابها.',
   'This contract is read-only for the current session.':
       'هذا العقد للقراءة فقط في الجلسة الحالية.',
   'Contract details are unavailable.': 'تفاصيل العقد غير متاحة.',
@@ -301,6 +309,10 @@ const Map<String, String> _arabic = <String, String>{
   'Save supported fields': 'حفظ الحقول المدعومة',
   'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.':
       'الحالة والتكليف والقيم المالية غير قابلة للتعديل هنا. تظل الصلاحيات والتحقق وسجل التدقيق على الخادم هي المرجع.',
+  'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.':
+      'الحالة والقيم المالية غير قابلة للتعديل هنا. تعيين المحاسب المسؤول خاضع لصلاحيات الخادم وسجل التدقيق.',
+  'Contract fields are read-only for this session. Responsible accountant assignment remains server-authorized and audited.':
+      'حقول العقد للقراءة فقط في هذه الجلسة. يظل تعيين المحاسب المسؤول خاضعاً لصلاحيات الخادم وسجل التدقيق.',
   'Contract editing is not authorized for this session.':
       'تعديل العقود غير مسموح به في هذه الجلسة.',
   'Contract number must contain 1 to 100 characters.':
@@ -345,8 +357,8 @@ const Map<String, String> _arabic = <String, String>{
   'The server validates scope, payment balance, settlement status and audit history. Mobile performs input-shape checks only.':
       'يتحقق الخادم من الصلاحيات ورصيد الدفعة وحالة التسوية وسجل التدقيق. تطبيق الموبايل يتحقق من شكل الإدخال فقط.',
   'No active payment methods are available.': 'لا توجد طرق دفع نشطة متاحة.',
-  'Enter a positive amount with up to 4 decimal places.':
-      'أدخل مبلغاً موجباً بحد أقصى 4 منازل عشرية.',
+  'Enter a positive amount with up to 2 decimal places.':
+      'أدخل مبلغاً موجباً بحد أقصى منزلتين عشريتين.',
   'Collection date must be valid YYYY-MM-DD.':
       'يجب أن يكون تاريخ التحصيل صحيحاً بصيغة YYYY-MM-DD.',
   'Choose an active payment method.': 'اختر طريقة دفع نشطة.',
