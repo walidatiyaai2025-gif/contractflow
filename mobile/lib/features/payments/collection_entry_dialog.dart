@@ -73,7 +73,7 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
     final amount = _amount.text.trim();
     if (!_validPositiveMoney(amount)) {
       setState(() {
-        _error = 'Enter a positive amount with up to 4 decimal places.';
+        _error = 'Enter a positive amount with up to 2 decimal places.';
       });
       return;
     }
@@ -263,7 +263,7 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
 bool _validPositiveMoney(String value) {
   final normalized = value.trim();
   if (normalized.isEmpty || normalized.length > 32) return false;
-  if (!RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(normalized)) return false;
+  if (!RegExp(r'^\d+(?:\.\d{1,2})?$').hasMatch(normalized)) return false;
   final digits =
       normalized.replaceAll('.', '').replaceFirst(RegExp(r'^0+'), '');
   return digits.isNotEmpty;
