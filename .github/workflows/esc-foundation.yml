@@ -1,0 +1,21 @@
+name: ESC Foundation Gate
+
+on:
+  push:
+    branches: [enterprise-safecontracts]
+  pull_request:
+    branches: [enterprise-safecontracts]
+
+permissions:
+  contents: read
+
+jobs:
+  esc-foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate Enterprise Safe Contracts foundation
+        run: python3 scripts/validate-esc-foundation.py

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "product": "Enterprise Safe Contracts",
+  "product_code": "esc",
+  "public_url": "https://esc.50sols.com/",
+  "allowed_lifecycles": ["Development", "Internal Preview", "Beta", "Public", "Deprecated"],
+  "features": [
+    {"code":"multi_tenancy","title":"Multi-Tenant Organizations","category":"Platform","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"Enterprise Foundation"},
+    {"code":"contract_types","title":"Contract Types & Templates","category":"Contracts","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"dynamic_fields","title":"Dynamic Contract Fields","category":"Contracts","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"workflow_engine","title":"Configurable Workflows","category":"Automation","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"approval_engine","title":"Approval Engine","category":"Governance","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"obligations","title":"Obligations & Milestones","category":"Lifecycle","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"enterprise_financials","title":"Enterprise Financial Tracking","category":"Financial","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"document_management","title":"Document Management","category":"Documents","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"notifications_escalation","title":"Notifications & Escalation","category":"Automation","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"reporting_dashboards","title":"Reporting & Dashboards","category":"Analytics","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"white_label","title":"White Label & Localization","category":"Experience","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
+    {"code":"public_landing","title":"ESC Public Landing Experience","category":"Web","lifecycle":"Development","tenant_aware":false,"admin":false,"mobile":false,"public_marketing":false,"plan":"Platform"},
+    {"code":"android_coexistence","title":"Independent ESC Android Application","category":"Mobile","lifecycle":"Development","tenant_aware":false,"admin":false,"mobile":true,"public_marketing":false,"plan":"Platform"}
+  ]
+}
