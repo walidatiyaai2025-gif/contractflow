@@ -41,32 +41,45 @@ final class ReportsPage
         }
         $filters = DashboardFilters::normalize($_GET);
         $read = new AdminReadRepository();
-        $summary = $read->reportSummary($filters);
+        $summary = empty($filters['date_range_error'])
+            ? $read->reportSummary($filters)
+            : [
+                'contract_count' => '0',
+                'scheduled_total' => '0.0000',
+                'remaining_total' => '0.0000',
+                'overdue_exposure' => '0.0000',
+                'collected_total' => '0.0000',
+                'collection_transactions' => '0',
+                'collection_ledger_total' => '0.0000',
+                'followup_events' => '0',
+                'followed_up_payments' => '0',
+            ];
         $customers = $read->customerOptions();
         $contracts = $read->contractOptions($filters['customer_id']);
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Server-side reporting', 'safecontracts'); ?></p><h1><?php echo esc_html__('Reports', 'safecontracts'); ?></h1></div></div>
             <section class="safecontracts-admin-card">
+                <?php if (! empty($filters['date_range_error'])) : ?><div class="notice notice-error inline"><p><?php echo esc_html__('Invalid period. Use valid dates and make sure the end date is not earlier than the start date.', 'safecontracts'); ?></p></div><?php endif; ?>
                 <form class="safecontracts-filter-bar" method="get">
                     <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
                     <label><?php echo esc_html__('Customer', 'safecontracts'); ?><select name="customer_id"><option value="0"><?php echo esc_html__('All customers', 'safecontracts'); ?></option><?php foreach ($customers as $customer) : ?><option value="<?php echo esc_attr((string) $customer['id']); ?>" <?php selected($filters['customer_id'], $customer['id']); ?>><?php echo esc_html($customer['name']); ?></option><?php endforeach; ?></select></label>
                     <label><?php echo esc_html__('Contract', 'safecontracts'); ?><select name="contract_id"><option value="0"><?php echo esc_html__('All contracts', 'safecontracts'); ?></option><?php foreach ($contracts as $contract) : ?><option value="<?php echo esc_attr((string) $contract['id']); ?>" <?php selected($filters['contract_id'], $contract['id']); ?>><?php echo esc_html($contract['contract_number']); ?></option><?php endforeach; ?></select></label>
                     <?php if (current_user_can(Capabilities::VIEW_ALL)) : ?><label><?php echo esc_html__('Accountant ID', 'safecontracts'); ?><input type="number" min="0" name="accountant_user_id" value="<?php echo esc_attr((string) $filters['accountant_user_id']); ?>"></label><?php endif; ?>
                     <label><?php echo esc_html__('Status', 'safecontracts'); ?><select name="status"><option value=""><?php echo esc_html__('Any status', 'safecontracts'); ?></option><?php foreach (['active','draft','completed','cancelled','upcoming','due_soon','due','overdue','partially_paid','paid'] as $status) : ?><option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(self::statusLabel($status)); ?></option><?php endforeach; ?></select></label>
-                    <label><?php echo esc_html__('Due from', 'safecontracts'); ?><input type="date" name="due_from" value="<?php echo esc_attr((string) ($filters['due_from'] ?? '')); ?>"></label>
-                    <label><?php echo esc_html__('Due to', 'safecontracts'); ?><input type="date" name="due_to" value="<?php echo esc_attr((string) ($filters['due_to'] ?? '')); ?>"></label>
+                    <?php AdminPeriodFilter::renderFields($filters); ?>
                     <button class="button button-primary" type="submit"><?php echo esc_html__('Run report', 'safecontracts'); ?></button>
                 </form>
-                <?php if (current_user_can(Capabilities::EXPORT_REPORTS)) : ?>
+                <?php if (current_user_can(Capabilities::EXPORT_REPORTS) && empty($filters['date_range_error'])) : ?>
                 <form class="safecontracts-export-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="<?php echo esc_attr(self::EXPORT_ACTION); ?>">
-                    <?php foreach ($filters as $key => $value) : ?><input type="hidden" name="<?php echo esc_attr((string) $key); ?>" value="<?php echo esc_attr((string) ($value ?? '')); ?>"><?php endforeach; ?>
+                    <?php foreach (['customer_id','contract_id','accountant_user_id','status','date_from','date_to'] as $key) : ?><input type="hidden" name="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr((string) ($filters[$key] ?? '')); ?>"><?php endforeach; ?>
                     <?php wp_nonce_field(self::EXPORT_ACTION); ?>
                     <button class="button" type="submit"><?php echo esc_html__('Export current filters to Excel', 'safecontracts'); ?></button>
-                    <span class="description"><?php echo esc_html__('XLSX is generated server-side from your authorized report scope.', 'safecontracts'); ?></span>
+                    <span class="description"><?php echo esc_html__('XLSX is generated server-side from your authorized report scope and selected period.', 'safecontracts'); ?></span>
                 </form>
                 <?php endif; ?>
+                <p class="description"><?php echo esc_html__('Period semantics are server-side and explicit: receivable KPIs/payments use contractual due date; collections use collection date; follow-up metrics use follow-up event date; contracts use start date with creation-date fallback; customers use record creation date.', 'safecontracts'); ?></p>
             </section>
             <div class="safecontracts-kpi-grid">
                 <?php self::metric(__('Contracts', 'safecontracts'), (string) $summary['contract_count']); ?>
@@ -80,7 +93,7 @@ final class ReportsPage
             </div>
             <section class="safecontracts-admin-card safecontracts-admin-card--security">
                 <h2><?php echo esc_html__('Scoped report boundary', 'safecontracts'); ?></h2>
-                <p><?php echo esc_html__('All totals and XLSX sheets are computed server-side using the same authorized customer, contract, accountant, payment-status and contractual due-date filters. Export completion is written through the SafeContracts audit hook.', 'safecontracts'); ?></p>
+                <p><?php echo esc_html__('All totals and XLSX sheets are computed server-side using the same authorized customer, contract, accountant, status and period filters. Export completion is written through the Safe Contracts audit hook.', 'safecontracts'); ?></p>
             </section>
         </div>
         <?php
