@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SafeContracts\Roles;
 
+use SafeContracts\Tenancy\TenantAuthorization;
+
 final class AccessScope
 {
     public const ALL = 'all';
@@ -25,6 +27,8 @@ final class AccessScope
 
     public static function canAccess(): bool
     {
-        return current_user_can(Capabilities::ACCESS) && self::current() !== self::NONE;
+        return current_user_can(Capabilities::ACCESS)
+            && self::current() !== self::NONE
+            && TenantAuthorization::currentUserHasActiveMembership();
     }
 }
