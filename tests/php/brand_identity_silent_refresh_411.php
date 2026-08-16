@@ -40,10 +40,19 @@ $checks = [
         'safecontracts_login_logo_title',
     ],
     'scripts/bootstrap_android.sh' => [
-        'android:label="Safe Contracts"',
-        '@drawable/safe_contracts_brand',
-        'mobile/assets/brand/safe_contracts_identity.jpg',
-        'Safe Contracts packaged brand source is not a usable JPEG',
+        '@string/app_name',
+        'enterprise_safe_contracts_launcher',
+        'ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION',
+        'com.safecontracts.enterprise',
+    ],
+    'mobile/android-release/MainActivity.kt' => [
+        'package com.safecontracts.enterprise',
+        'enterprise_safecontracts/notifications',
+        'enterprise_safe_contracts_alerts',
+    ],
+    'mobile/lib/features/notifications/notification_presenter.dart' => [
+        "'enterprise_safecontracts/notifications'",
+        "message.data['icon_key'] ?? 'contract_due'",
     ],
     'mobile/lib/core/branding/safe_contracts_brand.dart' => [
         "static const name = 'Safe Contracts';",
@@ -78,7 +87,7 @@ foreach ($checks as $relative => $markers) {
     $content = (string) file_get_contents($path);
     foreach ($markers as $marker) {
         if (! str_contains($content, $marker)) {
-            fwrite(STDERR, "FAIL: {$relative} missing #411 marker {$marker}\n");
+            fwrite(STDERR, "FAIL: {$relative} missing #411/ESC identity marker {$marker}\n");
             exit(1);
         }
         $count++;
@@ -137,4 +146,4 @@ foreach ($forbiddenAutomaticCalls as $forbidden) {
     $count++;
 }
 
-printf("Safe Contracts #411 brand + silent refresh validation passed (%d checks).\n", $count);
+printf("Safe Contracts #411 + ESC Android identity/silent refresh validation passed (%d checks).\n", $count);

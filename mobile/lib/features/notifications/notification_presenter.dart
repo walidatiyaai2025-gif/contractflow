@@ -7,7 +7,7 @@ final class MobileNotificationPresenter {
   MobileNotificationPresenter._();
 
   static const MethodChannel _channel = MethodChannel(
-    'safecontracts/notifications',
+    'enterprise_safecontracts/notifications',
   );
   static StreamSubscription<RemoteMessage>? _subscription;
 
@@ -29,7 +29,7 @@ final class MobileNotificationPresenter {
     final body = (notification?.body ?? '').trim();
     if (title.isEmpty || body.isEmpty) return;
 
-    final iconKey = (message.data['icon_key'] ?? 'safe_contracts').trim();
+    final iconKey = (message.data['icon_key'] ?? 'contract_due').trim();
     final stableId = message.messageId?.hashCode ??
         DateTime.now().millisecondsSinceEpoch.remainder(0x7fffffff);
     try {
