@@ -4,16 +4,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/core/branding/safe_contracts_brand.dart';
 
 void main() {
-  test('Safe Contracts uses the supplied packaged identity', () {
-    expect(SafeContractsBrand.name, 'Safe Contracts');
+  test('Alkenzy ADV uses the supplied packaged identity', () {
+    expect(SafeContractsBrand.name, 'Alkenzy ADV');
     expect(
       SafeContractsBrand.assetPath,
-      'assets/brand/safe_contracts_identity.jpg',
+      'assets/brand/alkenzy_adv.png',
     );
 
     final bytes = File(SafeContractsBrand.assetPath).readAsBytesSync();
-    expect(bytes.length, greaterThan(1024));
-    expect(bytes.take(3), <int>[0xff, 0xd8, 0xff]);
+    expect(bytes.length, greaterThan(4096));
+    expect(
+      bytes.take(8),
+      <int>[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+    );
   });
 
   test('automatic app-shell refresh uses silent refresh paths', () {
