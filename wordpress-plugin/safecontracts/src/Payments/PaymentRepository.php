@@ -125,6 +125,41 @@ final class PaymentRepository
         return (int) $wpdb->insert_id;
     }
 
+    public function updateDetails(
+        int $paymentId,
+        int $sequenceNo,
+        ?string $reference,
+        string $dueDate,
+        ?string $expectedPaymentDate,
+        string $originalAmount,
+        string $remainingAmount,
+        int $actorId
+    ): void {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $referenceSql = $reference === null ? 'NULL' : '%s';
+        $expectedSql = $expectedPaymentDate === null ? 'NULL' : '%s';
+        $query = "UPDATE {$table}
+            SET sequence_no = %d, reference = {$referenceSql}, due_date = %s,
+                expected_payment_date = {$expectedSql}, original_amount = %s,
+                remaining_amount = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
+            WHERE id = %d AND is_archived = 0";
+        $args = [$sequenceNo];
+        if ($reference !== null) {
+            $args[] = $reference;
+        }
+        $args[] = $dueDate;
+        if ($expectedPaymentDate !== null) {
+            $args[] = $expectedPaymentDate;
+        }
+        $args[] = $originalAmount;
+        $args[] = $remainingAmount;
+        $args[] = $actorId;
+        $args[] = $paymentId;
+        $this->executeMutation($wpdb, $wpdb->prepare($query, ...$args), 'Unable to update payment details.');
+    }
+
     public function updateStatus(int $paymentId, string $status, int $actorId): void
     {
         global $wpdb;
