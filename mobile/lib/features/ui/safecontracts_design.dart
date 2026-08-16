@@ -60,15 +60,11 @@ final class SafeContractsSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(SafeContractsVisual.radius);
     return Container(
       margin: margin,
-      padding: padding,
       decoration: BoxDecoration(
-        color: SafeContractsVisual.surface,
-        borderRadius: BorderRadius.circular(SafeContractsVisual.radius),
-        border: Border.all(
-          color: SafeContractsVisual.outline.withValues(alpha: 0.78),
-        ),
+        borderRadius: radius,
         boxShadow: const [
           BoxShadow(
             color: Color(0x1F5E5142),
@@ -77,7 +73,17 @@ final class SafeContractsSurface extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
+      child: Material(
+        color: SafeContractsVisual.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(
+            color: SafeContractsVisual.outline.withValues(alpha: 0.78),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(padding: padding, child: child),
+      ),
     );
   }
 }
