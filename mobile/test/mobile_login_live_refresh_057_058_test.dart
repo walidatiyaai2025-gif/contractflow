@@ -68,8 +68,11 @@ void main() {
     expect(shell, contains('_selectDestination'));
     expect(shell, contains('refreshRevision: _liveRefreshRevision'));
 
-    expect(silent, isNot(contains('DashboardLoadState.loading')));
-    expect(silent, isNot(contains('CustomersLoadState.loading =')));
+    expect(silent, isNot(contains('state = DashboardLoadState.loading')));
+    expect(silent, isNot(contains('state = CustomersLoadState.loading')));
+    expect(silent, isNot(contains('state = ContractsLoadState.loading')));
+    expect(silent, isNot(contains('state = NotificationsLoadState.loading')));
+    expect(silent, isNot(contains('state = ProfileDeviceLoadState.loading')));
     expect(silent, contains('keep the last good snapshot'));
     expect(silent, contains('background transport noise'));
   });
