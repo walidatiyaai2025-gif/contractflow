@@ -49,7 +49,8 @@ jobs:
             documents.svg \
             analytics.svg \
             security.svg \
-            logo-mark.svg; do
+            logo-mark.svg \
+            safe-contracts-identity.jpg; do
             test -s "$THEME/assets/images/$asset"
           done
           test -s "$THEME/inc/brand.php"
@@ -93,6 +94,20 @@ jobs:
           grep -Fq "inc/brand.php" "$THEME/functions.php"
           grep -Fq "inc/admin-settings.php" "$THEME/functions.php"
           grep -Fq "inc/button-links.php" "$THEME/functions.php"
+      - name: Verify controlled APK download CTA
+        shell: bash
+        run: |
+          set -euo pipefail
+          THEME="wordpress-theme/safecontracts-onepage"
+          test -s "$THEME/inc/apk-download.php"
+          grep -Fq "inc/apk-download.php" "$THEME/functions.php"
+          grep -Fq "safecontracts_apk_download" "$THEME/inc/apk-download.php"
+          grep -Fq "https://github.com/walidatiyaai2025-gif/contractflow/releases/download/mobile-latest/SafeContracts-Mobile.apk" "$THEME/inc/apk-download.php"
+          grep -Fq "'enabled'  => false" "$THEME/inc/apk-download.php"
+          grep -Fq "github.com" "$THEME/inc/apk-download.php"
+          grep -Fq "/walidatiyaai2025-gif/contractflow/releases/" "$THEME/inc/apk-download.php"
+          grep -Fq "safecontracts_apk_download_url()" "$THEME/header.php"
+          grep -Fq "safecontracts_apk_download_label()" "$THEME/header.php"
       - name: Verify Safe Contracts backend identity
         shell: bash
         run: |
@@ -111,7 +126,7 @@ jobs:
           grep -Fq "#adminmenu" "$THEME/assets/css/admin.css"
           grep -Fq "body.login" "$THEME/assets/css/login.css"
           grep -Fq "Theme Name: Safe Contracts One Page" "$THEME/style.css"
-          grep -Fq "Version: 0.4.0" "$THEME/style.css"
+          grep -Fq "Version: 0.5.0" "$THEME/style.css"
       - name: Build deterministic installable theme ZIP
         shell: bash
         run: |
@@ -131,6 +146,8 @@ jobs:
             "languages=ar,en" \
             "backend_editor=Appearance > SafeContracts Home" \
             "editable_button_links=true" \
+            "apk_download_toggle=true" \
+            "apk_release_channel=github-mobile-latest" \
             "admin_identity=Safe Contracts" \
             "login_identity=Safe Contracts" \
             > dist/THEME-CANDIDATE.txt
