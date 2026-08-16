@@ -157,12 +157,12 @@ void main() {
     expect(registration.status.value.errorCode, isNull);
     expect(transport.requests, hasLength(3));
 
-    final firstRegistration = jsonDecode(transport.requests[0].body!)
-        as Map<String, Object?>;
+    final firstRegistration =
+        jsonDecode(transport.requests[0].body!) as Map<String, Object?>;
     final revoke =
         jsonDecode(transport.requests[1].body!) as Map<String, Object?>;
-    final secondRegistration = jsonDecode(transport.requests[2].body!)
-        as Map<String, Object?>;
+    final secondRegistration =
+        jsonDecode(transport.requests[2].body!) as Map<String, Object?>;
     expect(firstRegistration['token'], oldToken);
     expect(revoke['token'], oldToken);
     expect(secondRegistration['token'], freshToken);
