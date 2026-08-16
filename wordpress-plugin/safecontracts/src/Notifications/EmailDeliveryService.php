@@ -8,10 +8,14 @@ final class EmailDeliveryService
 {
     public function __construct(
         private ?DeliveryLogRepository $deliveries = null,
-        private ?EmailSettings $settings = null
+        private ?EmailSettings $settings = null,
+        private ?SmtpSettings $smtpSettings = null,
+        private ?DirectSmtpTransport $smtpTransport = null
     ) {
         $this->deliveries ??= new DeliveryLogRepository();
         $this->settings ??= new EmailSettings();
+        $this->smtpSettings ??= new SmtpSettings();
+        $this->smtpTransport ??= new DirectSmtpTransport();
     }
 
     /**
@@ -21,6 +25,7 @@ final class EmailDeliveryService
     public function deliver(array $plan, int $attemptNo = 0): array
     {
         $config = $this->settings->get();
+        $smtp = $this->smtpSettings->get();
         $recipients = is_array($plan['recipient_ids'] ?? null) ? array_values(array_unique(array_map('intval', $plan['recipient_ids']))) : [];
         $sent = 0;
         $failed = 0;
@@ -42,19 +47,16 @@ final class EmailDeliveryService
             } elseif (! EmailSettings::validEmail($email)) {
                 $error = 'recipient_email_unavailable';
             } else {
-                $headers = [];
-                if (EmailSettings::validEmail($config['from_address'])) {
-                    $headers[] = 'From: ' . $config['from_name'] . ' <' . $config['from_address'] . '>';
-                }
-                $success = function_exists('wp_mail') && (bool) wp_mail(
+                $delivery = $this->smtpTransport->send(
                     $email,
                     (string) ($plan['email_subject'] ?? $plan['payload']['title'] ?? ''),
                     (string) ($plan['email_body'] ?? $plan['payload']['body'] ?? ''),
-                    $headers
+                    $smtp,
+                    (string) $config['from_name'],
+                    (string) $config['from_address']
                 );
-                if (! $success) {
-                    $error = 'wp_mail_failed';
-                }
+                $success = ! empty($delivery['success']);
+                $error = isset($delivery['error_code']) && is_string($delivery['error_code']) ? $delivery['error_code'] : null;
             }
 
             $success ? $sent++ : $failed++;
