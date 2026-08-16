@@ -15,6 +15,7 @@ final class FollowUpsScreen extends StatefulWidget {
     required this.filters,
     required this.currency,
     required this.canManage,
+    this.refreshRevision = 0,
     super.key,
   });
 
@@ -23,6 +24,7 @@ final class FollowUpsScreen extends StatefulWidget {
   final DashboardFilters filters;
   final MobileCurrencyConfig currency;
   final bool canManage;
+  final int refreshRevision;
 
   @override
   State<FollowUpsScreen> createState() => _FollowUpsScreenState();
@@ -46,15 +48,20 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
     if (oldWidget.filters != widget.filters ||
         oldWidget.pageSize != widget.pageSize) {
       unawaited(_load(1));
+    } else if (oldWidget.refreshRevision != widget.refreshRevision) {
+      unawaited(_load(_pageNumber, background: true));
     }
   }
 
-  Future<void> _load(int page) async {
-    setState(() {
-      _loading = true;
-      _error = null;
-      _pageNumber = page;
-    });
+  Future<void> _load(int page, {bool background = false}) async {
+    final keepVisible = background && _page != null;
+    if (!keepVisible) {
+      setState(() {
+        _loading = true;
+        _error = null;
+        _pageNumber = page;
+      });
+    }
     try {
       final result = await widget.repository.loadQueue(
         page: page,
@@ -64,10 +71,13 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
       if (!mounted) return;
       setState(() {
         _page = result;
+        _pageNumber = page;
+        _error = null;
         _loading = false;
       });
     } on Object catch (error) {
       if (!mounted) return;
+      if (keepVisible) return;
       setState(() {
         _error = error.toString();
         _loading = false;
