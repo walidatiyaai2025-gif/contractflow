@@ -66,10 +66,12 @@ final class AdminShell
             SAFECONTRACTS_VERSION
         );
 
-        wp_add_inline_style(
-            self::RESPONSIVE_STYLE_HANDLE,
-            '.safecontracts-admin-shell__brand-image{width:58px;height:58px;object-fit:cover;border-radius:18px;display:block;box-shadow:0 10px 24px rgba(19,53,88,.18)}'
-        );
+        if (function_exists('wp_add_inline_style')) {
+            wp_add_inline_style(
+                self::RESPONSIVE_STYLE_HANDLE,
+                '.safecontracts-admin-shell__brand-image{width:58px;height:58px;object-fit:cover;border-radius:18px;display:block;box-shadow:0 10px 24px rgba(19,53,88,.18)}'
+            );
+        }
     }
 
     public static function isSafeContractsPage(): bool
