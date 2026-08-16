@@ -23,11 +23,16 @@ final class NotificationsPage
         if (! current_user_can(Capabilities::MANAGE_NOTIFICATIONS)) {
             wp_die(__('You do not have permission to manage notifications.', 'safecontracts'));
         }
+        $filters = DashboardFilters::normalize($_GET);
         $rules = (new NotificationRuleService())->all();
-        $deliveries = (new DeliveryLogRepository())->recent(100);
+        $deliveries = empty($filters['date_range_error'])
+            ? (new DeliveryLogRepository())->recent(100, $filters['date_from'], $filters['date_to'])
+            : [];
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Notification operations', 'safecontracts'); ?></p><h1><?php echo esc_html__('Notifications', 'safecontracts'); ?></h1></div></div>
+            <?php AdminPeriodFilter::render(self::SLUG, $filters); ?>
+            <p class="description"><?php echo esc_html__('The period filter applies to notification delivery-log creation time. Rule definitions remain configuration and are intentionally not date-filtered.', 'safecontracts'); ?></p>
             <section class="safecontracts-admin-card safecontracts-table-card">
                 <h2><?php echo esc_html__('Rules', 'safecontracts'); ?></h2>
                 <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Rule', 'safecontracts'); ?></th><th><?php echo esc_html__('Trigger', 'safecontracts'); ?></th><th><?php echo esc_html__('Recipients', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th></tr></thead><tbody>
