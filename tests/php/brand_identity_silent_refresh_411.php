@@ -35,18 +35,14 @@ $checks = [
         'safecontracts_login_logo_title',
     ],
     'scripts/bootstrap_android.sh' => [
-        'android:label="Safe Contracts"',
-        '@drawable/alkenzy_launcher',
-        'mobile/android-release/alkenzy_launcher.xml',
-        'Alkenzy launcher icon is not a valid Android vector resource',
-    ],
-    'mobile/android-release/alkenzy_launcher.xml' => [
-        '#FFFFE173',
-        '#FF7BC1CD',
+        'android:label="Alkenzy ADV"',
+        '@drawable/alkenzy_adv',
+        'mobile/assets/brand/alkenzy_adv.png',
+        'exact supplied Alkenzy ADV PNG',
     ],
     'mobile/lib/core/branding/safe_contracts_brand.dart' => [
-        "static const name = 'Safe Contracts';",
-        "static const assetPath = 'assets/brand/safe_contracts_identity.jpg';",
+        "static const name = 'Alkenzy ADV';",
+        "static const assetPath = 'assets/brand/alkenzy_adv.png';",
         'SafeContractsBrandMark',
         'Image.asset(',
     ],
@@ -84,23 +80,30 @@ foreach ($checks as $relative => $markers) {
     }
 }
 
-$brandAssets = [
-    $root . '/mobile/assets/brand/safe_contracts_identity.jpg',
+$legacyWebBrandAssets = [
     $root . '/wordpress-plugin/safecontracts/assets/brand/safe-contracts-identity.jpg',
     $root . '/wordpress-theme/safecontracts-onepage/assets/images/safe-contracts-identity.jpg',
 ];
 $brandHashes = [];
-foreach ($brandAssets as $brandAsset) {
+foreach ($legacyWebBrandAssets as $brandAsset) {
     $bytes = @file_get_contents($brandAsset);
     if (! is_string($bytes) || strlen($bytes) < 1024 || ! str_starts_with($bytes, "\xFF\xD8\xFF")) {
-        fwrite(STDERR, "FAIL: packaged Safe Contracts identity is not a valid JPEG: {$brandAsset}\n");
+        fwrite(STDERR, "FAIL: packaged Safe Contracts web identity is not a valid JPEG: {$brandAsset}\n");
         exit(1);
     }
     $brandHashes[] = hash('sha256', $bytes);
     $count++;
 }
 if (count(array_unique($brandHashes)) !== 1) {
-    fwrite(STDERR, "FAIL: mobile/plugin/theme Safe Contracts identity assets diverged\n");
+    fwrite(STDERR, "FAIL: plugin/theme Safe Contracts identity assets diverged\n");
+    exit(1);
+}
+$count++;
+
+$mobileBrand = $root . '/mobile/assets/brand/alkenzy_adv.png';
+$mobileBytes = @file_get_contents($mobileBrand);
+if (! is_string($mobileBytes) || strlen($mobileBytes) < 1024 || ! str_starts_with($mobileBytes, "\x89PNG\r\n\x1a\n")) {
+    fwrite(STDERR, "FAIL: packaged Alkenzy ADV mobile identity is not a valid PNG\n");
     exit(1);
 }
 $count++;
@@ -136,4 +139,4 @@ foreach ($forbiddenAutomaticCalls as $forbidden) {
     $count++;
 }
 
-printf("Safe Contracts #411 brand + silent refresh validation passed (%d checks).\n", $count);
+printf("Safe Contracts #411 web brand + Alkenzy ADV mobile identity + silent refresh validation passed (%d checks).\n", $count);
