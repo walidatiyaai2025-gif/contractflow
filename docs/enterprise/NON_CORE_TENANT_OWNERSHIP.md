@@ -9,23 +9,26 @@ This document defines the executable ownership boundary for ESC data that is not
 - ESC device tokens/registrations;
 - notification deliveries and schedule rows;
 - notification suppressions;
+- notification read-state user metadata;
+- notification dispatch-time and email enable/from-name/from-address business settings;
 - import runs and import errors;
+- tenant-qualified import private-storage keys and paths;
 - business-tenant audit rows when browsed/exported independently.
 
 ### Platform-global in this phase
 - payment-method/reference catalog;
-- Firebase application/project identity and service-account material for the deployed ESC environment;
+- Firebase application/project identity, project-keyed OAuth access-token cache, and service-account material for the deployed ESC environment;
 - audit events whose subject is intentionally global, including payment-method, role and system events plus the current global WordPress user-role-change event.
 
-Platform-global rows must not receive a fake business tenant merely to make a migration count reach zero. Platform-global audit rows remain distinguishable from tenant audit rows and must never be silently reassigned during migration.
+Platform-global rows must not receive a fake business tenant merely to make a migration count reach zero. Platform-global audit rows remain distinguishable from tenant audit rows and must never be silently reassigned during migration. Firebase deployment identity is global because it belongs to the ESC environment, not to a business tenant; FCM registration tokens and notification routing/read-state/configuration remain tenant-owned business data.
 
 ## Rollout sequence
 
-**expand → explicit/derived backfill → verify → runtime enforce → harden**
+**expand → explicit/derived backfill → verify → runtime enforce → adversarial validate → harden**
 
 Migration `1.17.0` is expand-only. It adds nullable `tenant_id` plus `esc_tenant_record (tenant_id, id)` to rules, templates, device tokens, deliveries, schedules, suppressions, import runs/errors and audit. It does not assign legacy ownership, change uniqueness or enable runtime enforcement.
 
-The stages are intentionally ordered. Runtime enforcement begins only after ownership verification is green, while the schema is still reversible/nullable. That stage proves tenant predicates, context locking, queue iteration, import boundaries, notification fan-out and audit behavior under real/adversarial execution before irreversible NOT NULL/scoped-unique DDL is applied. Schema hardening is the final persistence constraint after runtime isolation is green.
+The stages are intentionally ordered. Runtime enforcement begins only after ownership verification is green, while the schema is still reversible/nullable. The adversarial-validation stage then proves tenant predicates, known-ID isolation, stale/foreign membership rejection, queue iteration, import boundaries, notification fan-out, settings/read-state key separation and audit behavior under real/adversarial execution. Schema hardening is the final persistence constraint only after those runtime gates are green.
 
 ## Backfill
 
@@ -72,19 +75,22 @@ php scripts/enterprise_noncore_tenant_backfill.php \
 
 ## Runtime enforcement contract
 
-Runtime non-core enforcement may be enabled only after ownership verification is green. It must be exercised before schema hardening so application-level isolation is proven independently of database NOT NULL/scoped-unique constraints.
+Runtime non-core enforcement may be enabled only after ownership verification is green. It must be exercised and pass adversarial validation before schema hardening so application-level isolation is proven independently of database NOT NULL/scoped-unique constraints.
 
 When enabled:
 
 - tenant-owned repositories require a locked authorized `TenantContext`;
 - known IDs never bypass tenant predicates;
 - device register/disable/fanout operates inside the current tenant only;
+- recipient resolution and the final push/email transport hop re-check active membership in the current active tenant so stale schedules cannot notify removed/foreign users;
 - scheduler/cron execution enumerates tenants explicitly and locks/resets context per tenant;
 - every background job carries or establishes one explicit tenant context and fails closed if it cannot;
 - imports and tenant audit reads/writes are tenant-bound;
-- cache keys and generated/import/export/storage keys for tenant-owned data include tenant identity;
+- import error insertion verifies that the parent run belongs to the active tenant;
+- notification read-state, dispatch-time, email settings, scheduler state and other tenant-owned option/meta keys include tenant identity;
+- generated/import/export/storage keys for tenant-owned data include tenant identity;
 - cross-tenant parent/child relations are rejected even if a caller supplies a known numeric ID;
-- platform-global catalog/audit operations use an explicit global path rather than impersonating a business tenant.
+- platform-global catalog/audit/Firebase operations use an explicit global path rather than impersonating a business tenant.
 
 Firebase deployment credentials remain environment-global and separate from business-tenant data. FCM registration tokens and notification routing records are tenant-owned business data even though the Firebase project itself is environment-global.
 
@@ -94,7 +100,7 @@ For scheduler/cron and other asynchronous execution:
 
 1. enumerate eligible tenant IDs from the tenant registry, never from unscoped business rows;
 2. lock exactly one tenant into `TenantContext` before tenant-owned reads/writes;
-3. use tenant-qualified lock, dedupe, cache and cursor keys;
+3. use tenant-qualified lock, dedupe, cache, setting and cursor keys;
 4. process only that tenant's notification schedules, imports and other queued work;
 5. clear/reset tenant context in `finally`-equivalent cleanup before moving to the next tenant;
 6. record tenant identity in operational/audit evidence;
@@ -104,7 +110,7 @@ A background worker must never execute one unscoped query over all tenants and t
 
 ## Explicit schema hardening
 
-Hardening is not part of the automatic WordPress migrator. Run it only after ownership verification **and runtime isolation/adversarial validation** are green and under a normal database backup/change window.
+Hardening is not part of the automatic WordPress migrator. Run it only after ownership verification, runtime enforcement **and adversarial validation** are green and under a normal database backup/change window.
 
 ```bash
 php scripts/enterprise_noncore_tenant_schema_harden.php \
@@ -112,7 +118,7 @@ php scripts/enterprise_noncore_tenant_schema_harden.php \
   --status
 ```
 
-Preflight verifies no duplicates exist inside the same tenant for the actual schema keys:
+Preflight verifies no duplicates exist inside the same tenant for the actual schema keys and refuses readiness unless runtime enforcement is enabled:
 
 - notification rule `code`;
 - notification template `code`;
@@ -121,7 +127,7 @@ Preflight verifies no duplicates exist inside the same tenant for the actual sch
 - suppression `(scope_type, scope_id)`;
 - import-run `storage_key`.
 
-Apply only after preflight is green:
+Apply only after runtime/adversarial gates and preflight are green:
 
 ```bash
 php scripts/enterprise_noncore_tenant_schema_harden.php \
@@ -148,10 +154,14 @@ P1-006 is not complete from migration DDL alone. Evidence must show all of the f
 - deterministic parent/child ownership verification is green;
 - adversarial known-ID requests cannot read/write another tenant's notification/import/audit rows;
 - registering/disabling a device token in tenant A cannot mutate tenant B;
+- role/explicit/assigned-accountant recipients are filtered to active membership in the current tenant;
+- stale membership is revalidated again at the final push/email transport boundary;
 - notification fan-out consumes only current-tenant registrations and schedules;
-- imports cannot attach rows or errors to another tenant's run;
-- scheduler/background execution cannot continue without a locked tenant context;
+- notification read-state and business settings cannot collide across tenants;
+- imports cannot attach rows or errors to another tenant's run and new import storage keys/paths are tenant-qualified;
+- scheduler/background execution cannot continue without a locked tenant context and cannot leak context/options into the next tenant;
 - tenant audit views preserve tenant context and platform-global audit rows stay explicitly global;
+- Firebase project/service-account/OAuth cache remains explicitly environment-global rather than being given a fake tenant;
 - schema-hardening preflight is green before DDL and post-DDL verification is green afterward;
 - full backend regression remains green.
 
