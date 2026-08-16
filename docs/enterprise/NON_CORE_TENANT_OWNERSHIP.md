@@ -17,13 +17,15 @@ This document defines the executable ownership boundary for ESC data that is not
 - Firebase application/project identity and service-account material for the deployed ESC environment;
 - audit events whose subject is intentionally global, including payment-method, role and system events plus the current global WordPress user-role-change event.
 
-Platform-global rows must not receive a fake business tenant merely to make a migration count reach zero.
+Platform-global rows must not receive a fake business tenant merely to make a migration count reach zero. Platform-global audit rows remain distinguishable from tenant audit rows and must never be silently reassigned during migration.
 
 ## Rollout sequence
 
-**expand → explicit/derived backfill → verify → harden → runtime enforce**
+**expand → explicit/derived backfill → verify → runtime enforce → harden**
 
 Migration `1.17.0` is expand-only. It adds nullable `tenant_id` plus `esc_tenant_record (tenant_id, id)` to rules, templates, device tokens, deliveries, schedules, suppressions, import runs/errors and audit. It does not assign legacy ownership, change uniqueness or enable runtime enforcement.
+
+The stages are intentionally ordered. Runtime enforcement begins only after ownership verification is green, while the schema is still reversible/nullable. That stage proves tenant predicates, context locking, queue iteration, import boundaries, notification fan-out and audit behavior under real/adversarial execution before irreversible NOT NULL/scoped-unique DDL is applied. Schema hardening is the final persistence constraint after runtime isolation is green.
 
 ## Backfill
 
@@ -36,7 +38,7 @@ Deterministic ownership is derived only from authoritative live relationships:
 - suppression with `scope_type=contract` → `scope_id` → contract tenant;
 - deterministic audit parents: customer, contract, payment, collection, `import_run`, notification schedule.
 
-Rules, templates, devices, direct deliveries without an owned parent, import runs, unresolved suppressions and unresolved tenant-required audit rows are roots and must be mapped/recreated explicitly. Never copy all legacy rules/templates/tokens/imports into every tenant.
+Rules, templates, devices, direct deliveries without an owned parent, import runs, unresolved suppressions and unresolved tenant-required audit rows are roots and require **explicit reviewed mapping/recreation**. Do **not** copy every legacy notification rule/template/token/import into every tenant. Never clone ambiguous notification configuration as a guessed fan-out merely to eliminate nullable rows.
 
 Deterministic derivation:
 
@@ -66,11 +68,43 @@ php scripts/enterprise_noncore_tenant_backfill.php \
   --verify
 ```
 
-`ready=true` requires all tenant-required non-core rows to be owned and all deterministic relationships to be tenant-consistent. Intentionally global audit rows are reported separately and do not block readiness.
+`ready=true` requires all tenant-required non-core rows to be owned and all deterministic relationships to be tenant-consistent. Intentionally global audit rows are reported separately and do not block readiness. Runtime enforcement must remain disabled while unresolved tenant-required roots or cross-tenant mismatches exist.
+
+## Runtime enforcement contract
+
+Runtime non-core enforcement may be enabled only after ownership verification is green. It must be exercised before schema hardening so application-level isolation is proven independently of database NOT NULL/scoped-unique constraints.
+
+When enabled:
+
+- tenant-owned repositories require a locked authorized `TenantContext`;
+- known IDs never bypass tenant predicates;
+- device register/disable/fanout operates inside the current tenant only;
+- scheduler/cron execution enumerates tenants explicitly and locks/resets context per tenant;
+- every background job carries or establishes one explicit tenant context and fails closed if it cannot;
+- imports and tenant audit reads/writes are tenant-bound;
+- cache keys and generated/import/export/storage keys for tenant-owned data include tenant identity;
+- cross-tenant parent/child relations are rejected even if a caller supplies a known numeric ID;
+- platform-global catalog/audit operations use an explicit global path rather than impersonating a business tenant.
+
+Firebase deployment credentials remain environment-global and separate from business-tenant data. FCM registration tokens and notification routing records are tenant-owned business data even though the Firebase project itself is environment-global.
+
+### Background isolation requirements
+
+For scheduler/cron and other asynchronous execution:
+
+1. enumerate eligible tenant IDs from the tenant registry, never from unscoped business rows;
+2. lock exactly one tenant into `TenantContext` before tenant-owned reads/writes;
+3. use tenant-qualified lock, dedupe, cache and cursor keys;
+4. process only that tenant's notification schedules, imports and other queued work;
+5. clear/reset tenant context in `finally`-equivalent cleanup before moving to the next tenant;
+6. record tenant identity in operational/audit evidence;
+7. fail closed when tenant identity is absent, invalid or changes during a unit of work.
+
+A background worker must never execute one unscoped query over all tenants and then filter rows in application memory.
 
 ## Explicit schema hardening
 
-Hardening is not part of the automatic WordPress migrator. Run it only after ownership verification is green and under a normal database backup/change window.
+Hardening is not part of the automatic WordPress migrator. Run it only after ownership verification **and runtime isolation/adversarial validation** are green and under a normal database backup/change window.
 
 ```bash
 php scripts/enterprise_noncore_tenant_schema_harden.php \
@@ -104,23 +138,22 @@ The hardener:
 - removes legacy global unique indexes only after scoped replacements exist;
 - verifies structure before persisting the hardening marker.
 
-The device scoped unique is mandatory before runtime enforcement: one physical token can then be represented independently under more than one tenant instead of one tenant registration overwriting another.
+Before hardening, runtime enforcement must already prevent cross-tenant device-token overwrite/read/fan-out at the repository/service layer. After hardening, the scoped unique `(tenant_id, token_hash)` constraint additionally allows one physical token value to be represented independently under different tenants and prevents same-tenant duplicates at the database layer.
 
-## Runtime enforcement contract
+## Verification evidence
 
-Runtime non-core enforcement may be enabled only after both ownership verification and schema hardening are green.
+P1-006 is not complete from migration DDL alone. Evidence must show all of the following:
 
-When enabled:
-
-- tenant-owned repositories require a locked authorized `TenantContext`;
-- known IDs never bypass tenant predicates;
-- device register/disable/fanout operates inside the current tenant only;
-- scheduler/cron enumerates active tenants explicitly and locks/resets context per tenant;
-- background work fails closed without tenant context;
-- imports and tenant audit reads/writes are tenant-bound;
-- cache keys and generated/import/export/storage keys for tenant-owned data include tenant identity.
-
-Firebase deployment credentials remain environment-global and separate from business-tenant data.
+- unresolved tenant-required root count is zero;
+- deterministic parent/child ownership verification is green;
+- adversarial known-ID requests cannot read/write another tenant's notification/import/audit rows;
+- registering/disabling a device token in tenant A cannot mutate tenant B;
+- notification fan-out consumes only current-tenant registrations and schedules;
+- imports cannot attach rows or errors to another tenant's run;
+- scheduler/background execution cannot continue without a locked tenant context;
+- tenant audit views preserve tenant context and platform-global audit rows stay explicitly global;
+- schema-hardening preflight is green before DDL and post-DDL verification is green afterward;
+- full backend regression remains green.
 
 ## Safe Contract separation
 
