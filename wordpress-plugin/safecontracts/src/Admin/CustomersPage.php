@@ -77,7 +77,8 @@ final class CustomersPage
             wp_die(__('You do not have permission to access customers.', 'safecontracts'));
         }
         $read = new AdminReadRepository();
-        $customers = $read->customers($_GET);
+        $filters = DashboardFilters::normalize($_GET);
+        $customers = $read->customers($filters);
         $editing = null;
         $editId = max(0, (int) ($_GET['customer_id'] ?? 0));
         if ($editId > 0 && current_user_can(Capabilities::MANAGE_REFERENCE_DATA)) {
@@ -87,6 +88,8 @@ final class CustomersPage
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Master data', 'safecontracts'); ?></p><h1><?php echo esc_html__('Customers', 'safecontracts'); ?></h1></div></div>
+            <?php AdminPeriodFilter::render(self::SLUG, $filters, $editId > 0 ? ['customer_id' => $editId] : []); ?>
+            <p class="description"><?php echo esc_html__('The displayed period uses the customer record creation date.', 'safecontracts'); ?></p>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Contact', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
