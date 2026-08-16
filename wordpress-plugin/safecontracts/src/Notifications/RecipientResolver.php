@@ -4,12 +4,22 @@ declare(strict_types=1);
 
 namespace SafeContracts\Notifications;
 
+use SafeContracts\Tenancy\NonCoreTenantScope;
+use SafeContracts\Tenancy\TenantMembershipRepository;
+
 final class RecipientResolver
 {
+    public function __construct(private ?TenantMembershipRepository $memberships = null)
+    {
+        $this->memberships ??= new TenantMembershipRepository();
+    }
+
     /**
      * Resolve notification recipient user IDs entirely server-side.
      * Missing assigned Accountant never broadens to all Accountants.
-     * Explicit user IDs are validated against existing WordPress users.
+     * Explicit user IDs are validated against existing WordPress users and, when
+     * an ESC tenant context exists, every candidate must have an active membership
+     * in that same active tenant before fan-out.
      *
      * @param array<string, mixed> $rule
      * @return list<int>
@@ -47,8 +57,14 @@ final class RecipientResolver
             $ids[$assignedAccountantUserId] = $assignedAccountantUserId;
         }
 
-        ksort($ids, SORT_NUMERIC);
-        return array_values($ids);
+        $recipientIds = array_values($ids);
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId !== null) {
+            $recipientIds = $this->memberships->filterActiveUserIds($tenantId, $recipientIds);
+        }
+
+        sort($recipientIds, SORT_NUMERIC);
+        return $recipientIds;
     }
 
     private function userExists(int $userId): bool
