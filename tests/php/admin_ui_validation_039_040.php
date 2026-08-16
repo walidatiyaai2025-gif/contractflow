@@ -35,7 +35,7 @@ $exportService = file_get_contents((string) (new ReflectionClass(ReportExportSer
 $workbookSource = file_get_contents((string) (new ReflectionClass(XlsxWorkbook::class))->getFileName()) ?: '';
 sc_p6final_assert(str_contains($reportsPage, 'Capabilities::VIEW_REPORTS') && str_contains($reportsPage, 'Capabilities::EXPORT_REPORTS'), 'SC-P6-039 report view and export capabilities remain separate');
 sc_p6final_assert(str_contains($reportsPage, 'check_admin_referer(self::EXPORT_ACTION)'), 'SC-P6-039 admin XLSX export remains nonce-protected');
-sc_p6final_assert(str_contains($reportsPage, 'if (current_user_can(Capabilities::EXPORT_REPORTS))'), 'SC-P6-039 users without export capability do not receive the export form');
+sc_p6final_assert(str_contains($reportsPage, 'current_user_can(Capabilities::EXPORT_REPORTS)') && str_contains($reportsPage, "empty(\$filters['date_range_error'])"), 'SC-P6-039 users without export capability or with an invalid period do not receive the export form');
 sc_p6final_assert(str_contains($exportService, 'DashboardFilters::normalize($input)') && str_contains($exportService, 'Capabilities::EXPORT_REPORTS'), 'SC-P6-039 export service independently normalizes filters and enforces export capability');
 sc_p6final_assert(str_contains($exportService, "do_action('safecontracts_export_completed'") && str_contains($exportService, "'row_counts'"), 'SC-P6-039 export emits bounded audit evidence');
 sc_p6final_assert(! str_contains($exportService, 'password') && ! str_contains($exportService, 'access_token') && ! str_contains($exportService, 'private_key'), 'SC-P6-039 export implementation contains no credential fields');
