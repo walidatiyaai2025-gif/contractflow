@@ -50,7 +50,7 @@ function safecontracts_sanitize_apk_download_url( $url ) {
 	$host   = strtolower( (string) ( $parsed['host'] ?? '' ) );
 	$path   = (string) ( $parsed['path'] ?? '' );
 	$prefix = '/walidatiyaai2025-gif/contractflow/releases/';
-	if ( 'https' !== $scheme || 'github.com' !== $host || ! str_starts_with( $path, $prefix ) ) {
+	if ( 'https' !== $scheme || 'github.com' !== $host || 0 !== strpos( $path, $prefix ) ) {
 		return '';
 	}
 
