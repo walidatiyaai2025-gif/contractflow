@@ -35,18 +35,14 @@ $checks = [
         'safecontracts_login_logo_title',
     ],
     'scripts/bootstrap_android.sh' => [
-        'android:label="Safe Contracts"',
+        'android:label="Alkenzy ADV"',
         '@drawable/alkenzy_launcher',
-        'mobile/android-release/alkenzy_launcher.xml',
-        'Alkenzy launcher icon is not a valid Android vector resource',
-    ],
-    'mobile/android-release/alkenzy_launcher.xml' => [
-        '#FFFFE173',
-        '#FF7BC1CD',
+        'mobile/android-release/alkenzy_launcher.png',
+        'Alkenzy launcher icon is not a valid PNG resource',
     ],
     'mobile/lib/core/branding/safe_contracts_brand.dart' => [
-        "static const name = 'Safe Contracts';",
-        "static const assetPath = 'assets/brand/safe_contracts_identity.jpg';",
+        "static const name = 'Alkenzy ADV';",
+        "static const assetPath = 'assets/brand/alkenzy_adv.png';",
         'SafeContractsBrandMark',
         'Image.asset(',
     ],
@@ -104,6 +100,17 @@ if (count(array_unique($brandHashes)) !== 1) {
     exit(1);
 }
 $count++;
+
+$mobileAlkenzy = @file_get_contents($root . '/mobile/assets/brand/alkenzy_adv.png');
+if (! is_string($mobileAlkenzy) || strlen($mobileAlkenzy) < 4096 || ! str_starts_with($mobileAlkenzy, "\x89PNG\r\n\x1a\n")) {
+    fwrite(STDERR, "FAIL: packaged Alkenzy ADV mobile identity is not a valid PNG\n");
+    exit(1);
+}
+if (hash('sha256', $mobileAlkenzy) !== 'e703241650eeb984791c4715b4243bf96ba5b273b78eb2e25cd3640c188c57c9') {
+    fwrite(STDERR, "FAIL: packaged Alkenzy ADV mobile identity does not match the approved supplied-logo rendition\n");
+    exit(1);
+}
+$count += 2;
 
 require_once $root . '/wordpress-plugin/safecontracts/src/Support/Brand.php';
 $brandUri = \SafeContracts\Support\Brand::iconDataUri();
