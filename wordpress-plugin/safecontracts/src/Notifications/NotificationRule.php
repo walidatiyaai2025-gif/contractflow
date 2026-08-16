@@ -62,8 +62,7 @@ final class NotificationRule
 
     public static function normalizeDaysBefore(mixed $value): int
     {
-        $days = self::normalizeBoundedInt($value, 1, 365, 'Notification days-before value');
-        return $days;
+        return self::normalizeBoundedInt($value, 1, 365, 'Notification days-before value');
     }
 
     public static function normalizeDaysAfter(mixed $value): int
@@ -102,6 +101,23 @@ final class NotificationRule
         return $roles;
     }
 
+    /** @return list<int> */
+    public static function normalizeRecipientUserIds(mixed $value): array
+    {
+        if (! is_array($value)) {
+            throw new InvalidArgumentException('Notification recipient users must be an array.');
+        }
+        $ids = [];
+        foreach ($value as $userId) {
+            if (filter_var($userId, FILTER_VALIDATE_INT) === false || (int) $userId <= 0) {
+                throw new InvalidArgumentException('Notification recipient user IDs must be positive integers.');
+            }
+            $ids[(int) $userId] = (int) $userId;
+        }
+        ksort($ids, SORT_NUMERIC);
+        return array_values($ids);
+    }
+
     public static function normalizeBool(mixed $value): bool
     {
         if (is_bool($value)) {
@@ -121,10 +137,17 @@ final class NotificationRule
     {
         $trigger = self::normalizeTrigger($input['trigger_type'] ?? self::TRIGGER_BEFORE_DUE);
         $roles = self::normalizeRecipientRoles($input['recipient_roles'] ?? []);
+        $userIds = self::normalizeRecipientUserIds($input['recipient_user_ids'] ?? []);
         $escalationRoles = self::normalizeRecipientRoles($input['escalation_roles'] ?? []);
         $assigned = self::normalizeBool($input['target_assigned_accountant'] ?? false);
-        if ($roles === [] && ! $assigned) {
-            throw new InvalidArgumentException('Notification rule must target at least one role or the assigned Accountant.');
+        if ($roles === [] && $userIds === [] && ! $assigned) {
+            throw new InvalidArgumentException('Notification rule must target at least one role, selected user or the assigned Accountant.');
+        }
+
+        $pushEnabled = self::normalizeBool($input['push_enabled'] ?? true);
+        $emailEnabled = self::normalizeBool($input['email_enabled'] ?? false);
+        if (! $pushEnabled && ! $emailEnabled) {
+            throw new InvalidArgumentException('Notification rule must enable Push, Email or both.');
         }
 
         $daysBefore = 0;
@@ -152,8 +175,11 @@ final class NotificationRule
             'repeat_interval_days' => $repeatInterval,
             'max_repeats' => $maxRepeats,
             'recipient_roles' => $roles,
+            'recipient_user_ids' => $userIds,
             'escalation_roles' => $escalationRoles,
             'target_assigned_accountant' => $assigned,
+            'push_enabled' => $pushEnabled,
+            'email_enabled' => $emailEnabled,
             'template_code' => $templateCode,
             'is_active' => self::normalizeBool($input['is_active'] ?? true),
         ];
@@ -190,10 +216,8 @@ final class NotificationRule
 
         $repeatInterval = self::normalizeRepeatInterval($rule['repeat_interval_days'] ?? 0);
         $maxRepeats = self::normalizeMaxRepeats($rule['max_repeats'] ?? 0);
-        if ($attemptNo > 0) {
-            if ($repeatInterval === 0 || $maxRepeats === 0 || $attemptNo > $maxRepeats) {
-                return false;
-            }
+        if ($attemptNo > 0 && ($repeatInterval === 0 || $maxRepeats === 0 || $attemptNo > $maxRepeats)) {
+            return false;
         }
 
         $target = self::targetDate($rule, $payment['due_date'] ?? '', $attemptNo);
@@ -236,6 +260,7 @@ final class NotificationRule
     public static function fromRow(array $row): array
     {
         $roles = self::decodeRoles($row['recipient_roles_json'] ?? '[]');
+        $recipientUserIds = self::decodeIds($row['recipient_user_ids_json'] ?? '[]');
         $escalationRoles = self::decodeRoles($row['escalation_roles_json'] ?? '[]');
         $trigger = (string) ($row['trigger_type'] ?? self::TRIGGER_BEFORE_DUE);
 
@@ -249,8 +274,11 @@ final class NotificationRule
             'repeat_interval_days' => (int) ($row['repeat_interval_days'] ?? 0),
             'max_repeats' => (int) ($row['max_repeats'] ?? 0),
             'recipient_roles' => $roles,
+            'recipient_user_ids' => $recipientUserIds,
             'escalation_roles' => $escalationRoles,
             'target_assigned_accountant' => (bool) ($row['target_assigned_accountant'] ?? false),
+            'push_enabled' => ! array_key_exists('push_enabled', $row) || (bool) $row['push_enabled'],
+            'email_enabled' => (bool) ($row['email_enabled'] ?? false),
             'template_code' => (string) ($row['template_code'] ?? self::defaultTemplateForTrigger($trigger)),
             'is_active' => (bool) ($row['is_active'] ?? false),
             'created_by' => isset($row['created_by']) ? (int) $row['created_by'] : null,
@@ -299,5 +327,23 @@ final class NotificationRule
             return [];
         }
         return array_values(array_map('strval', $decoded));
+    }
+
+    /** @return list<int> */
+    private static function decodeIds(mixed $value): array
+    {
+        $decoded = json_decode((string) $value, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($decoded as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+        ksort($ids, SORT_NUMERIC);
+        return array_values($ids);
     }
 }

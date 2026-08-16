@@ -24,7 +24,7 @@ final class NotificationScheduleRepository
              FROM {$payments} p
              INNER JOIN {$contracts} c ON c.id = p.contract_id
              INNER JOIN {$customers} cu ON cu.id = c.customer_id
-             WHERE p.is_archived = 0 AND c.is_archived = 0
+             WHERE p.is_archived = 0 AND c.is_archived = 0 AND cu.is_active = 1
                AND p.remaining_amount > 0 AND p.status <> 'paid'
              ORDER BY p.due_date ASC, p.id ASC
              LIMIT {$limit}",
@@ -47,7 +47,7 @@ final class NotificationScheduleRepository
              FROM {$payments} p
              INNER JOIN {$contracts} c ON c.id = p.contract_id
              INNER JOIN {$customers} cu ON cu.id = c.customer_id
-             WHERE p.id = %d AND p.is_archived = 0 AND c.is_archived = 0 LIMIT 1",
+             WHERE p.id = %d AND p.is_archived = 0 AND c.is_archived = 0 AND cu.is_active = 1 LIMIT 1",
             $paymentId
         ), ARRAY_A);
         return is_array($rows) && $rows !== [] ? $rows[0] : null;
@@ -66,14 +66,23 @@ final class NotificationScheduleRepository
             $json = '[]';
         }
         $count = count($recipientIds);
+        $channels = [];
+        if (! empty($plan['push_enabled'])) {
+            $channels[] = 'push';
+        }
+        if (! empty($plan['email_enabled'])) {
+            $channels[] = 'email';
+        }
+        $channel = $channels !== [] ? implode('+', $channels) : 'none';
 
         $sql = $wpdb->prepare(
             "INSERT INTO {$table}
                 (rule_id, payment_id, attempt_no, recipient_ids_json, template_code, channel, scheduled_date, scheduled_for, status, recipient_count, sent_count, failed_count, manual_attempts, created_at, updated_at)
-             VALUES (%d, %d, %d, %s, %s, 'push', %s, %s, 'pending', %d, 0, 0, 0, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+             VALUES (%d, %d, %d, %s, %s, %s, %s, %s, 'pending', %d, 0, 0, 0, UTC_TIMESTAMP(), UTC_TIMESTAMP())
              ON DUPLICATE KEY UPDATE
                 recipient_ids_json = IF(status IN ('pending','failed','skipped'), VALUES(recipient_ids_json), recipient_ids_json),
                 template_code = IF(status IN ('pending','failed','skipped'), VALUES(template_code), template_code),
+                channel = IF(status IN ('pending','failed','skipped'), VALUES(channel), channel),
                 scheduled_date = IF(status IN ('pending','failed','skipped'), VALUES(scheduled_date), scheduled_date),
                 scheduled_for = IF(status IN ('pending','failed','skipped'), VALUES(scheduled_for), scheduled_for),
                 recipient_count = IF(status IN ('pending','failed','skipped'), VALUES(recipient_count), recipient_count),
@@ -83,6 +92,7 @@ final class NotificationScheduleRepository
             $attemptNo,
             $json,
             (string) ($plan['template_code'] ?? ''),
+            $channel,
             $scheduledDate,
             $scheduledUtc,
             $count
@@ -102,7 +112,7 @@ final class NotificationScheduleRepository
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
-        $where = ['1 = 1'];
+        $where = ['p.is_archived = 0', 'c.is_archived = 0', 'cu.is_active = 1'];
         $args = [];
         if ($dateFrom !== null && $dateFrom !== '') { $where[] = 's.scheduled_date >= %s'; $args[] = $dateFrom; }
         if ($dateTo !== null && $dateTo !== '') { $where[] = 's.scheduled_date <= %s'; $args[] = $dateTo; }
@@ -204,6 +214,7 @@ final class NotificationScheduleRepository
             'sent_count' => (int) ($row['sent_count'] ?? 0),
             'failed_count' => (int) ($row['failed_count'] ?? 0),
             'manual_attempts' => (int) ($row['manual_attempts'] ?? 0),
+            'channel' => (string) ($row['channel'] ?? 'push'),
         ]);
     }
 

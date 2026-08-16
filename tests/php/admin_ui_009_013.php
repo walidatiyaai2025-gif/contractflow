@@ -88,10 +88,12 @@ $reportsSource = file_get_contents((string) (new ReflectionClass(ReportsPage::cl
 sc_p6ops_assert(str_contains($reportsSource, 'AdminReadRepository') && str_contains($reportsSource, 'server-side'), 'SC-P6-012 report screen keeps the scoped read-model/server-side reporting boundary as later export features are added');
 sc_p6ops_assert(! str_contains($reportsSource, '$wpdb'), 'SC-P6-012 report page contains no presentation-layer SQL');
 
-// SC-P6-013 — users/roles screen is WordPress-native and read-only.
+// SC-P6-013 — users/roles remains WordPress-native but now supports controlled Safe Contracts role/capability administration.
 $usersSource = file_get_contents((string) (new ReflectionClass(UsersRolesPage::class))->getFileName()) ?: '';
 sc_p6ops_assert(str_contains($usersSource, 'get_role') && str_contains($usersSource, 'get_users') && str_contains($usersSource, 'Capabilities::all'), 'SC-P6-013 users/roles screen reads effective WordPress role grants');
-sc_p6ops_assert(str_contains($usersSource, 'read-only') && ! str_contains($usersSource, 'user_pass'), 'SC-P6-013 users/roles screen is read-only and does not expose password fields');
+sc_p6ops_assert(str_contains($usersSource, 'SAVE_CAPABILITIES_ACTION') && str_contains($usersSource, 'ASSIGN_ROLE_ACTION') && str_contains($usersSource, 'check_admin_referer'), 'SC-P6-013 role and membership changes are explicit nonce-protected admin actions');
+sc_p6ops_assert(str_contains($usersSource, 'Capabilities::MANAGE_USERS') && str_contains($usersSource, 'add_cap') && str_contains($usersSource, 'remove_cap'), 'SC-P6-013 only manage-users actors can edit Safe Contracts capability grants');
+sc_p6ops_assert(str_contains($usersSource, 'add_role') && str_contains($usersSource, 'remove_role') && ! str_contains($usersSource, 'user_pass'), 'SC-P6-013 Safe Contracts role membership is editable without exposing password fields');
 sc_p6ops_assert(! str_contains($usersSource, '$wpdb'), 'SC-P6-013 users/roles page contains no direct SQL');
 
 // Registration capabilities match each screen's security boundary.

@@ -12,28 +12,34 @@ final class DeliveryLogRepository
         ?int $ruleId,
         int $paymentId,
         int $userId,
-        int $deviceTokenId,
+        ?int $deviceTokenId,
         string $templateCode,
         string $scheduledFor,
         int $attemptNo,
         string $status,
         ?int $responseCode,
-        ?string $errorCode
+        ?string $errorCode,
+        string $channel = 'push'
     ): void {
         global $wpdb;
         if (! in_array($status, ['sent', 'failed'], true)) {
             throw new InvalidArgumentException('Notification delivery status is invalid.');
         }
+        $channel = strtolower(trim($channel));
+        if (! in_array($channel, ['push', 'email'], true)) {
+            throw new InvalidArgumentException('Notification delivery channel is invalid.');
+        }
         $errorCode = $this->normalizeErrorCode($errorCode);
         $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
         $wpdb->query($wpdb->prepare(
             "INSERT INTO {$table}
-                (rule_id, payment_id, user_id, device_token_id, template_code, scheduled_for, attempt_no, status, response_code, error_code, created_at)
-             VALUES (%d, %d, %d, %d, %s, %s, %d, %s, %d, %s, %s)",
+                (rule_id, payment_id, user_id, device_token_id, channel, template_code, scheduled_for, attempt_no, status, response_code, error_code, created_at)
+             VALUES (%d, %d, %d, NULLIF(%d, 0), %s, %s, %s, %d, %s, %d, %s, %s)",
             $ruleId ?? 0,
             $paymentId,
             $userId,
-            $deviceTokenId,
+            $deviceTokenId ?? 0,
+            $channel,
             NotificationRule::normalizeCode($templateCode),
             $scheduledFor,
             $attemptNo,
@@ -61,7 +67,7 @@ final class DeliveryLogRepository
             $args[] = $dateTo;
         }
         $args[] = $limit;
-        $sql = "SELECT id, rule_id, payment_id, user_id, device_token_id, template_code,
+        $sql = "SELECT id, rule_id, payment_id, user_id, device_token_id, channel, template_code,
                        scheduled_for, attempt_no, status, response_code, error_code, created_at
                 FROM {$table}
                 WHERE " . implode(' AND ', $where) . '
@@ -71,12 +77,7 @@ final class DeliveryLogRepository
         return is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
     }
 
-    /**
-     * Return only delivery data needed by the authenticated user's mobile inbox.
-     * Device tokens, transport responses and delivery errors stay server-internal.
-     *
-     * @return list<array<string,mixed>>
-     */
+    /** @return list<array<string,mixed>> */
     public function recentForUser(int $userId, int $limit = 51, int $offset = 0): array
     {
         global $wpdb;
@@ -88,7 +89,7 @@ final class DeliveryLogRepository
         $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, payment_id, user_id, template_code, scheduled_for, created_at
+                "SELECT id, payment_id, user_id, channel, template_code, scheduled_for, created_at
                  FROM {$table}
                  WHERE user_id = %d AND status = 'sent'
                  ORDER BY created_at DESC, id DESC
@@ -122,13 +123,7 @@ final class DeliveryLogRepository
         return is_array($rows) && $rows !== [];
     }
 
-    /**
-     * Summarize the latest known device-level delivery attempts by recipient.
-     * A recipient is treated as sent when at least one of their devices received
-     * the notification; otherwise the recipient is failed when attempts exist.
-     *
-     * @return array<int,array{status:string,error_code:?string,attempts:int}>
-     */
+    /** @return array<int,array{status:string,error_code:?string,attempts:int}> */
     public function outcomesForOccurrence(int $ruleId, int $paymentId, string $scheduledDate, int $attemptNo): array
     {
         global $wpdb;

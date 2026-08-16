@@ -35,6 +35,7 @@ $root = dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/';
 $page = (string) file_get_contents($root . 'Admin/NotificationSchedulePage.php');
 $repo = (string) file_get_contents($root . 'Notifications/NotificationScheduleRepository.php');
 $service = (string) file_get_contents($root . 'Notifications/NotificationScheduleService.php');
+$deliveryCoordinator = (string) file_get_contents($root . 'Notifications/NotificationDeliveryService.php');
 $scheduler = (string) file_get_contents($root . 'Notifications/NotificationScheduler.php');
 $delivery = (string) file_get_contents($root . 'Notifications/DeliveryLogRepository.php');
 $audit = (string) file_get_contents($root . 'Audit/NotificationScheduleAuditRecorder.php');
@@ -52,8 +53,8 @@ sc_416_assert(str_contains($repo, "['pending','processing','sent','partial','fai
 sc_416_assert(str_contains($delivery, 'GROUP BY user_id') && str_contains($delivery, "MAX(CASE WHEN status = 'sent' THEN 1 ELSE 0 END)"), 'Issue #416 derives actual recipient outcomes from transport delivery log');
 
 sc_416_assert(str_contains($service, 'NotificationRule::targetDate') && str_contains($service, '$this->engine->plan('), 'Issue #416 schedule materialization and dispatch reuse canonical notification rule engine');
-sc_416_assert(str_contains($service, 'new PushDeliveryService(new FirebasePushTransport())'), 'Issue #416 real dispatch uses existing Firebase push pipeline');
-sc_416_assert(str_contains($service, "'suppressed_or_rule_mismatch'") && str_contains($service, "'no_active_devices'"), 'Issue #416 records suppression and no-device failures instead of reporting false success');
+sc_416_assert(str_contains($service, '$this->delivery->deliver(') && str_contains($deliveryCoordinator, 'PushDeliveryService') && str_contains($deliveryCoordinator, 'EmailDeliveryService'), 'Issue #416 real dispatch uses the unified delivery pipeline while retaining Firebase Push');
+sc_416_assert(str_contains($service, "'suppressed_or_rule_mismatch'") && str_contains($service, "'no_delivery_targets'"), 'Issue #416 records suppression and absence of configured delivery targets instead of false success');
 sc_416_assert(str_contains($scheduler, "'interval' => 300") && str_contains($scheduler, 'wp_schedule_event') && str_contains($scheduler, 'dispatchDue()'), 'Issue #416 scheduler runs on a five-minute WP-Cron cadence');
 sc_416_assert(str_contains($audit, "'notification_manual_dispatch'") && str_contains($audit, "'notification_automatic_dispatch'"), 'Issue #416 audits manual and automatic dispatches');
 sc_416_assert(str_contains($plugin, 'NotificationSchedulePage::MANUAL_SEND_ACTION') && str_contains($plugin, 'NotificationScheduler::register()'), 'Issue #416 plugin boot wires admin actions and scheduler');

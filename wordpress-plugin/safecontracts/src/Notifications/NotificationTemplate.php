@@ -8,6 +8,8 @@ use InvalidArgumentException;
 
 final class NotificationTemplate
 {
+    private const ICON_KEYS = ['contract_due', 'payment', 'warning', 'success', 'safe_contracts'];
+
     /** @return list<string> */
     public static function allowedPlaceholders(): array
     {
@@ -21,23 +23,44 @@ final class NotificationTemplate
         ];
     }
 
-    /** @return array{code:string,title_template:string,body_template:string,is_active:bool} */
+    /** @return list<string> */
+    public static function allowedIconKeys(): array
+    {
+        return self::ICON_KEYS;
+    }
+
+    /** @return array<string,mixed> */
     public static function normalizeInput(array $input): array
     {
+        $title = self::normalizeText($input['title_template'] ?? '', 191, 'Notification template title');
+        $body = self::normalizeText($input['body_template'] ?? '', 4000, 'Notification template body');
+        $emailSubject = self::normalizeText($input['email_subject_template'] ?? $title, 191, 'Notification email subject');
+        $emailBody = self::normalizeText($input['email_body_template'] ?? $body, 12000, 'Notification email body');
+        $icon = sanitize_key((string) ($input['icon_key'] ?? 'contract_due'));
+        if (! in_array($icon, self::ICON_KEYS, true)) {
+            throw new InvalidArgumentException('Notification icon selection is invalid.');
+        }
+
         return [
             'code' => NotificationRule::normalizeCode($input['code'] ?? ''),
-            'title_template' => self::normalizeText($input['title_template'] ?? '', 191, 'Notification template title'),
-            'body_template' => self::normalizeText($input['body_template'] ?? '', 4000, 'Notification template body'),
+            'title_template' => $title,
+            'body_template' => $body,
+            'email_subject_template' => $emailSubject,
+            'email_body_template' => $emailBody,
+            'icon_key' => $icon,
             'is_active' => NotificationRule::normalizeBool($input['is_active'] ?? true),
         ];
     }
 
-    /** @return array{title:string,body:string} */
+    /** @return array{title:string,body:string,email_subject:string,email_body:string,icon_key:string} */
     public static function render(array $template, array $context): array
     {
         return [
             'title' => self::renderText((string) ($template['title_template'] ?? ''), $context),
             'body' => self::renderText((string) ($template['body_template'] ?? ''), $context),
+            'email_subject' => self::renderText((string) ($template['email_subject_template'] ?? $template['title_template'] ?? ''), $context),
+            'email_body' => self::renderText((string) ($template['email_body_template'] ?? $template['body_template'] ?? ''), $context),
+            'icon_key' => self::normalizeIconFromRow($template['icon_key'] ?? 'contract_due'),
         ];
     }
 
@@ -49,6 +72,9 @@ final class NotificationTemplate
             'code' => (string) ($row['code'] ?? ''),
             'title_template' => (string) ($row['title_template'] ?? ''),
             'body_template' => (string) ($row['body_template'] ?? ''),
+            'email_subject_template' => (string) ($row['email_subject_template'] ?? $row['title_template'] ?? ''),
+            'email_body_template' => (string) ($row['email_body_template'] ?? $row['body_template'] ?? ''),
+            'icon_key' => self::normalizeIconFromRow($row['icon_key'] ?? 'contract_due'),
             'is_active' => (bool) ($row['is_active'] ?? false),
             'created_by' => isset($row['created_by']) ? (int) $row['created_by'] : null,
             'updated_by' => isset($row['updated_by']) ? (int) $row['updated_by'] : null,
@@ -97,5 +123,11 @@ final class NotificationTemplate
                 throw new InvalidArgumentException('Notification template contains an unsupported placeholder.');
             }
         }
+    }
+
+    private static function normalizeIconFromRow(mixed $value): string
+    {
+        $icon = sanitize_key((string) $value);
+        return in_array($icon, self::ICON_KEYS, true) ? $icon : 'contract_due';
     }
 }

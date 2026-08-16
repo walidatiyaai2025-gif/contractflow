@@ -6,13 +6,14 @@ MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
 FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
 BRAND_SOURCE="$ROOT/mobile/assets/brand/safe_contracts_identity.jpg"
+MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$BRAND_SOURCE"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$BRAND_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
@@ -43,7 +44,8 @@ cd "$MOBILE"
 
 # Flutter owns the platform boilerplate version. Recreate it from the exact
 # Flutter stable toolchain used by CI, then restore the repository's release
-# signing, networking, Firebase, and Safe Contracts identity contracts.
+# signing, networking, Firebase, notification presentation, and Safe Contracts
+# identity contracts.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -53,6 +55,9 @@ flutter create \
 
 cp "$TEMPLATE" android/app/build.gradle.kts
 cp "$FIREBASE_CONFIG" android/app/google-services.json
+MAIN_ACTIVITY_TARGET="android/app/src/main/kotlin/com/safecontracts/safecontracts_mobile/MainActivity.kt"
+mkdir -p "$(dirname "$MAIN_ACTIVITY_TARGET")"
+cp "$MAIN_ACTIVITY_TEMPLATE" "$MAIN_ACTIVITY_TARGET"
 
 SETTINGS="android/settings.gradle.kts"
 python3 - "$SETTINGS" <<'PY'
@@ -124,6 +129,20 @@ for permission in permissions:
     permission_line = f'{indent}<uses-permission android:name="{permission}" />\n'
     text = text[: application.start()] + permission_line + text[application.start() :]
 
+metadata = '''
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="safe_contracts_alerts" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@android:drawable/ic_dialog_info" />
+'''
+if 'com.google.firebase.messaging.default_notification_channel_id' not in text:
+    match = re.search(r'(?m)^([ \t]*)</application>', text)
+    if match is None:
+        raise SystemExit("FAIL: AndroidManifest.xml does not contain </application>")
+    text = text[:match.start()] + metadata + text[match.start():]
+
 for permission in permissions:
     if permission not in text:
         raise SystemExit(f"FAIL: Android release manifest is missing {permission}")
@@ -131,6 +150,8 @@ if 'android:label="Safe Contracts"' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Safe Contracts label")
 if 'android:icon="@drawable/safe_contracts_brand"' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Safe Contracts launcher icon")
+if 'safe_contracts_alerts' not in text:
+    raise SystemExit("FAIL: Android release manifest is missing Safe Contracts notification channel metadata")
 
 path.write_text(text, encoding="utf-8")
 PY
@@ -142,6 +163,7 @@ for required in \
   android/app/build.gradle.kts \
   android/app/google-services.json \
   android/app/src/main/AndroidManifest.xml \
+  "$MAIN_ACTIVITY_TARGET" \
   "$BRAND_ICON"; do
   if [[ ! -e "$required" ]]; then
     echo "FAIL: generated Android scaffold missing $required" >&2
@@ -165,6 +187,14 @@ grep -Fq 'android:icon="@drawable/safe_contracts_brand"' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing Safe Contracts launcher icon" >&2
   exit 1
 }
+grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing high-importance notification channel metadata" >&2
+  exit 1
+}
+grep -Fq 'safecontracts/notifications' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity is missing foreground notification bridge" >&2
+  exit 1
+}
 grep -Fq 'id("com.google.gms.google-services")' android/app/build.gradle.kts || {
   echo "FAIL: Android app does not apply Google Services Gradle plugin" >&2
   exit 1
@@ -174,4 +204,4 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "Safe Contracts Android scaffold bootstrapped with branded launcher icon, release signing, INTERNET, notifications, and Firebase contracts."
+echo "Safe Contracts Android scaffold bootstrapped with branded launcher icon, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."

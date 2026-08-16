@@ -6,6 +6,8 @@ namespace SafeContracts\Notifications;
 
 final class NotificationTemplateRepository
 {
+    private const SELECT_FIELDS = 'id, code, title_template, body_template, email_subject_template, email_body_template, icon_key, is_active, created_by, updated_by, created_at, updated_at';
+
     /** @return list<array<string, mixed>> */
     public function all(bool $activeOnly = false): array
     {
@@ -13,8 +15,7 @@ final class NotificationTemplateRepository
         $table = $wpdb->prefix . 'safecontracts_notification_templates';
         $where = $activeOnly ? ' WHERE is_active = 1' : '';
         $rows = $wpdb->get_results(
-            "SELECT id, code, title_template, body_template, is_active, created_by, updated_by, created_at, updated_at
-             FROM {$table}{$where} ORDER BY is_active DESC, code ASC",
+            'SELECT ' . self::SELECT_FIELDS . " FROM {$table}{$where} ORDER BY is_active DESC, code ASC",
             ARRAY_A
         );
         return array_map(
@@ -30,8 +31,7 @@ final class NotificationTemplateRepository
         $table = $wpdb->prefix . 'safecontracts_notification_templates';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, code, title_template, body_template, is_active, created_by, updated_by, created_at, updated_at
-                 FROM {$table} WHERE code = %s AND is_active = 1 LIMIT 1",
+                'SELECT ' . self::SELECT_FIELDS . " FROM {$table} WHERE code = %s AND is_active = 1 LIMIT 1",
                 NotificationRule::normalizeCode($code)
             ),
             ARRAY_A
@@ -42,7 +42,25 @@ final class NotificationTemplateRepository
         return NotificationTemplate::fromRow($rows[0]);
     }
 
-    /** @param array{code:string,title_template:string,body_template:string,is_active:bool} $template */
+    /** @return array<string, mixed>|null */
+    public function findByCode(string $code): ?array
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'safecontracts_notification_templates';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                'SELECT ' . self::SELECT_FIELDS . " FROM {$table} WHERE code = %s LIMIT 1",
+                NotificationRule::normalizeCode($code)
+            ),
+            ARRAY_A
+        );
+        if (! is_array($rows) || $rows === []) {
+            return null;
+        }
+        return NotificationTemplate::fromRow($rows[0]);
+    }
+
+    /** @param array<string,mixed> $template */
     public function save(array $template, int $actorId): void
     {
         global $wpdb;
@@ -50,17 +68,23 @@ final class NotificationTemplateRepository
         $now = gmdate('Y-m-d H:i:s');
         $wpdb->query($wpdb->prepare(
             "INSERT INTO {$table}
-                (code, title_template, body_template, is_active, created_by, updated_by, created_at, updated_at)
-             VALUES (%s, %s, %s, %d, %d, %d, %s, %s)
+                (code, title_template, body_template, email_subject_template, email_body_template, icon_key, is_active, created_by, updated_by, created_at, updated_at)
+             VALUES (%s, %s, %s, %s, %s, %s, %d, %d, %d, %s, %s)
              ON DUPLICATE KEY UPDATE
                 title_template = VALUES(title_template),
                 body_template = VALUES(body_template),
+                email_subject_template = VALUES(email_subject_template),
+                email_body_template = VALUES(email_body_template),
+                icon_key = VALUES(icon_key),
                 is_active = VALUES(is_active),
                 updated_by = VALUES(updated_by),
                 updated_at = VALUES(updated_at)",
             $template['code'],
             $template['title_template'],
             $template['body_template'],
+            $template['email_subject_template'],
+            $template['email_body_template'],
+            $template['icon_key'],
             $template['is_active'] ? 1 : 0,
             $actorId,
             $actorId,

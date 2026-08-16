@@ -12,18 +12,15 @@ final class NotificationEngine
 {
     public function __construct(
         private ?RecipientResolver $recipients = null,
-        private ?NotificationTemplateService $templates = null
+        private ?NotificationTemplateService $templates = null,
+        private ?NotificationSuppressionRepository $suppressions = null
     ) {
         $this->recipients ??= new RecipientResolver();
         $this->templates ??= new NotificationTemplateService();
+        $this->suppressions ??= new NotificationSuppressionRepository();
     }
 
-    /**
-     * @param array<string,mixed> $rule
-     * @param array<string,mixed> $payment
-     * @param array<string,scalar|null> $context
-     * @return array{rule_id:int,payment_id:int,recipient_ids:list<int>,template_code:string,scheduled_for:string,payload:array{title:string,body:string,data:array<string,scalar|null>}}|null
-     */
+    /** @return array<string,mixed>|null */
     public function plan(
         array $rule,
         array $payment,
@@ -32,8 +29,13 @@ final class NotificationEngine
         array $context = []
     ): ?array {
         $paymentId = (int) ($payment['id'] ?? 0);
+        $contractId = (int) ($payment['contract_id'] ?? 0);
         if ($this->isSettled($payment)) {
             do_action('safecontracts_notification_suppressed', (int) ($rule['id'] ?? 0), $paymentId, 'settled');
+            return null;
+        }
+        if ($paymentId > 0 && $contractId > 0 && $this->suppressions->isSuppressed($paymentId, $contractId)) {
+            do_action('safecontracts_notification_suppressed', (int) ($rule['id'] ?? 0), $paymentId, 'administrative_suppression');
             return null;
         }
         if (! NotificationRule::matchesPayment($rule, $payment, $today, $attemptNo)) {
@@ -49,6 +51,7 @@ final class NotificationEngine
         if ($attemptNo > 0 && $attemptNo === $maxRepeats && $escalationRoles !== []) {
             $escalated = $this->recipients->resolve([
                 'recipient_roles' => $escalationRoles,
+                'recipient_user_ids' => [],
                 'target_assigned_accountant' => false,
             ], null);
             $recipientIds = array_values(array_unique(array_merge($recipientIds, $escalated)));
@@ -73,16 +76,24 @@ final class NotificationEngine
         $plan = [
             'rule_id' => (int) ($rule['id'] ?? 0),
             'payment_id' => $paymentId,
+            'contract_id' => $contractId,
             'recipient_ids' => $recipientIds,
             'template_code' => $templateCode,
             'scheduled_for' => $today->format('Y-m-d'),
+            'push_enabled' => ! array_key_exists('push_enabled', $rule) || ! empty($rule['push_enabled']),
+            'email_enabled' => ! empty($rule['email_enabled']),
+            'email_subject' => $rendered['email_subject'],
+            'email_body' => $rendered['email_body'],
+            'icon_key' => $rendered['icon_key'],
             'payload' => [
                 'title' => $rendered['title'],
                 'body' => $rendered['body'],
+                'icon_key' => $rendered['icon_key'],
                 'data' => [
                     'payment_id' => $paymentId,
                     'rule_code' => (string) ($rule['code'] ?? ''),
                     'attempt_no' => $attemptNo,
+                    'icon_key' => $rendered['icon_key'],
                 ],
             ],
         ];

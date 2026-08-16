@@ -76,12 +76,13 @@ $reportsSource = file_get_contents((string) (new ReflectionClass(ReportsPage::cl
 sc_p6v5_assert(str_contains($reportsSource, 'DashboardFilters::normalize') && str_contains($reportsSource, 'ReportExportService'), 'SC-P6-032 reports normalize filters and delegate XLSX generation server-side');
 sc_p6v5_assert(str_contains($reportsSource, 'Capabilities::VIEW_REPORTS') && str_contains($reportsSource, 'check_admin_referer') && ! str_contains($reportsSource, '$wpdb'), 'SC-P6-032 report view/export retains capability, nonce and repository boundaries');
 
-// SC-P6-033 — Users/roles screen: WordPress-native, capability-gated and strictly read-only.
+// SC-P6-033 — Users/roles screen: WordPress-native, capability-gated and explicit writes limited to Safe Contracts roles/capabilities.
 $usersSource = file_get_contents((string) (new ReflectionClass(UsersRolesPage::class))->getFileName()) ?: '';
-sc_p6v5_assert(substr_count($usersSource, 'Capabilities::MANAGE_USERS') >= 2, 'SC-P6-033 users/roles registration and render require manage-users capability');
-sc_p6v5_assert(str_contains($usersSource, 'get_role') && str_contains($usersSource, 'get_users') && str_contains($usersSource, 'Capabilities::all'), 'SC-P6-033 displayed permissions come from WordPress grants and SafeContracts capability registry');
-sc_p6v5_assert(str_contains($usersSource, 'read-only') && ! str_contains($usersSource, 'SAVE_ACTION') && ! str_contains($usersSource, 'admin_post_'), 'SC-P6-033 directory introduces no write path');
-sc_p6v5_assert(! str_contains($usersSource, 'user_pass') && str_contains($usersSource, 'esc_html') && ! str_contains($usersSource, '$wpdb'), 'SC-P6-033 directory avoids password data, escapes output and uses no direct SQL');
+sc_p6v5_assert(substr_count($usersSource, 'Capabilities::MANAGE_USERS') >= 2, 'SC-P6-033 users/roles registration and mutation handlers require manage-users capability');
+sc_p6v5_assert(str_contains($usersSource, 'get_role') && str_contains($usersSource, 'get_users') && str_contains($usersSource, 'Capabilities::all'), 'SC-P6-033 displayed permissions come from WordPress grants and Safe Contracts capability registry');
+sc_p6v5_assert(str_contains($usersSource, 'SAVE_CAPABILITIES_ACTION') && str_contains($usersSource, 'ASSIGN_ROLE_ACTION') && substr_count($usersSource, 'check_admin_referer') >= 2, 'SC-P6-033 explicit role writes are nonce-protected');
+sc_p6v5_assert(str_contains($usersSource, 'add_cap') && str_contains($usersSource, 'remove_cap') && str_contains($usersSource, 'add_role') && str_contains($usersSource, 'remove_role'), 'SC-P6-033 Safe Contracts grants and role membership are editable through WordPress-native APIs');
+sc_p6v5_assert(! str_contains($usersSource, 'user_pass') && str_contains($usersSource, 'esc_html') && ! str_contains($usersSource, '$wpdb'), 'SC-P6-033 role administration avoids password data, escapes output and uses no direct SQL');
 
 // Registration stays under the SafeContracts shell with intended capability boundaries.
 CollectionsPage::register();

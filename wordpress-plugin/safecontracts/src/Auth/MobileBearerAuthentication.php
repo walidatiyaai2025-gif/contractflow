@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SafeContracts\Auth;
 
+use SafeContracts\Presence\PresenceService;
+
 final class MobileBearerAuthentication
 {
     public static function register(): void
@@ -23,7 +25,11 @@ final class MobileBearerAuthentication
             return 0;
         }
 
-        return (new MobileSessionStore())->resolve($token);
+        $resolved = (new MobileSessionStore())->resolve($token);
+        if ($resolved > 0) {
+            PresenceService::touchMobile($resolved);
+        }
+        return $resolved;
     }
 
     public static function bearerToken(): ?string
