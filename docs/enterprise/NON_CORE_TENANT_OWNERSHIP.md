@@ -5,54 +5,40 @@ This document defines the executable ownership boundary for ESC data that is not
 ## Ownership classes
 
 ### Tenant-owned
-The following records can be queried, mutated, delivered, exported or processed independently and therefore require direct tenant ownership:
-
-- notification rules;
-- notification templates;
-- device tokens/registrations used for ESC notifications;
-- notification deliveries;
-- notification schedule rows;
+- notification rules and templates;
+- ESC device tokens/registrations;
+- notification deliveries and schedule rows;
 - notification suppressions;
-- import runs;
-- import errors;
+- import runs and import errors;
 - business-tenant audit rows when browsed/exported independently.
 
 ### Platform-global in this phase
-
 - payment-method/reference catalog;
 - Firebase application/project identity and service-account material for the deployed ESC environment;
-- platform-global audit events whose subject is intentionally global, including payment-method, role and system administration events, plus the current global WordPress user-role change event.
+- audit events whose subject is intentionally global, including payment-method, role and system events plus the current global WordPress user-role-change event.
 
-Environment credentials identify the ESC deployment, not a business tenant. They must not be duplicated mechanically per tenant. Likewise, platform-global audit rows must not be assigned a fake business tenant just to make a migration count reach zero.
+Platform-global rows must not receive a fake business tenant merely to make a migration count reach zero.
 
-## Migration sequence
-
-Non-core tenancy follows the same staged safety model as core ownership:
+## Rollout sequence
 
 **expand → explicit/derived backfill → verify → harden → runtime enforce**
 
-Migration `1.17.0` performs **expand only**. It adds nullable `tenant_id` and an `esc_tenant_record (tenant_id, id)` lookup index to the tenant-owned tables listed above. It does not assign existing rows, change uniqueness, make ownership non-null, alter delivery behavior or activate runtime enforcement.
+Migration `1.17.0` is expand-only. It adds nullable `tenant_id` plus `esc_tenant_record (tenant_id, id)` to rules, templates, device tokens, deliveries, schedules, suppressions, import runs/errors and audit. It does not assign legacy ownership, change uniqueness or enable runtime enforcement.
 
-## Backfill rules
+## Backfill
 
-Ownership must be derived only where the relationship is deterministic:
+Deterministic ownership is derived only from authoritative live relationships:
 
-- notification delivery and schedule rows derive ownership from their payment tenant;
-- import errors derive from their import run;
-- payment suppressions derive from payment ownership and unresolved rule suppressions may derive from an already-owned rule;
-- audit rows with deterministic parent IDs may derive from customer, contract, payment, collection, import-run or notification-schedule ownership.
+- schedule → `payment_id` → payment tenant;
+- delivery → `payment_id`, then already-owned `rule_id` when needed;
+- import error → `import_run_id` → import-run tenant;
+- suppression with `scope_type=payment` → `scope_id` → payment tenant;
+- suppression with `scope_type=contract` → `scope_id` → contract tenant;
+- deterministic audit parents: customer, contract, payment, collection, `import_run`, notification schedule.
 
-The following roots cannot be guessed from legacy data and need explicit reviewed mapping/recreation:
+Rules, templates, devices, direct deliveries without an owned parent, import runs, unresolved suppressions and unresolved tenant-required audit rows are roots and must be mapped/recreated explicitly. Never copy all legacy rules/templates/tokens/imports into every tenant.
 
-- notification rules/templates;
-- device tokens;
-- import runs;
-- unresolved suppressions;
-- tenant-required audit rows that cannot be tied deterministically to an owned parent.
-
-Do **not** copy every legacy notification rule/template/token/import into every tenant. A default tenant may be used only after an operator has reviewed and declared that the selected legacy root data belongs to that tenant.
-
-### Deterministic derivation
+Deterministic derivation:
 
 ```bash
 php scripts/enterprise_noncore_tenant_backfill.php \
@@ -60,25 +46,19 @@ php scripts/enterprise_noncore_tenant_backfill.php \
   --derive
 ```
 
-This operation is transactional and never assigns notification-rule, template, device-token or import-run roots.
-
-### Explicit root mapping
+Explicit reviewed roots:
 
 ```bash
 php scripts/enterprise_noncore_tenant_backfill.php \
   --wp-root=/path/to/wordpress \
   --tenant-id=17 \
-  --roots=rules,templates,devices,imports \
+  --roots=rules,templates,devices,deliveries,imports,suppressions,audit \
   --verify
 ```
 
-Available root groups are `rules`, `templates`, `devices`, `imports`, `suppressions` and `audit`. The command updates only unowned rows in the named groups, then derives children from authoritative parents. Existing ownership is never overwritten.
+Existing ownership is never overwritten. Parent/child cross-tenant mismatch causes rollback. Partial explicit mappings may commit with `ready=false` until all tenant-required roots are reviewed.
 
-The `audit` root group applies only to audit events classified as tenant-required. It deliberately excludes platform-global audit classes. Partial reviewed mappings may commit with `ready=false`; that is expected until every tenant-owned root has been mapped.
-
-If any cross-tenant parent/child mismatch exists after a derivation or reviewed root assignment, the transaction is rolled back.
-
-### Verification
+Verification only:
 
 ```bash
 php scripts/enterprise_noncore_tenant_backfill.php \
@@ -86,13 +66,11 @@ php scripts/enterprise_noncore_tenant_backfill.php \
   --verify
 ```
 
-The report separates tenant-owned rows still missing ownership, cross-tenant parent/child mismatches and intentionally unowned platform-global audit rows. `ready=true` means tenant-required non-core ownership is complete and internally consistent; platform-global audit rows do not block readiness.
+`ready=true` requires all tenant-required non-core rows to be owned and all deterministic relationships to be tenant-consistent. Intentionally global audit rows are reported separately and do not block readiness.
 
 ## Explicit schema hardening
 
-Non-core hardening is **not** an automatic WordPress migration. Run it only after the ownership verifier is green and within a normal database backup/change window.
-
-Check status/preflight:
+Hardening is not part of the automatic WordPress migrator. Run it only after ownership verification is green and under a normal database backup/change window.
 
 ```bash
 php scripts/enterprise_noncore_tenant_schema_harden.php \
@@ -100,14 +78,14 @@ php scripts/enterprise_noncore_tenant_schema_harden.php \
   --status
 ```
 
-Preflight blocks hardening if there are duplicate values inside the same tenant for:
+Preflight verifies no duplicates exist inside the same tenant for the actual schema keys:
 
-- notification rule code;
-- notification template code;
-- device token hash;
-- delivery idempotency key;
-- schedule rule/payment/attempt tuple;
-- suppression uniqueness tuple.
+- notification rule `code`;
+- notification template `code`;
+- device `token_hash`;
+- schedule `(rule_id, payment_id, attempt_no)`;
+- suppression `(scope_type, scope_id)`;
+- import-run `storage_key`.
 
 Apply only after preflight is green:
 
@@ -117,33 +95,33 @@ php scripts/enterprise_noncore_tenant_schema_harden.php \
   --apply
 ```
 
-The hardener then:
+The hardener:
 
 - makes `tenant_id` NOT NULL for rules, templates, devices, deliveries, schedules, suppressions, import runs and import errors;
-- intentionally leaves audit `tenant_id` nullable so defined platform-global audit events remain representable;
-- replaces global unique indexes with tenant-scoped unique indexes for rule/template code, device token hash, delivery idempotency key, schedule attempts and suppressions;
-- adds tenant-first indexes for device lookup, delivery history, due schedules, import status/errors and audit browsing;
+- leaves audit `tenant_id` nullable so defined platform-global audit rows remain representable;
+- replaces global unique indexes with tenant-scoped uniqueness for rule/template code, device token hash, schedule attempts, suppression scope and import storage key;
+- adds tenant-first indexes using live fields such as device `is_active`, schedule `scheduled_for`, suppression `scope_type/scope_id`, and import-error `import_run_id`;
 - removes legacy global unique indexes only after scoped replacements exist;
-- verifies the resulting structure before persisting the non-core hardened marker.
+- verifies structure before persisting the hardening marker.
 
-This ordering is required before runtime notification/device enforcement because a single physical device token must be representable independently in more than one tenant without moving or overwriting another tenant's registration.
+The device scoped unique is mandatory before runtime enforcement: one physical token can then be represented independently under more than one tenant instead of one tenant registration overwriting another.
 
-## Runtime requirements after enforcement
+## Runtime enforcement contract
 
-- every non-core tenant-owned repository requires one locked authorized TenantContext;
+Runtime non-core enforcement may be enabled only after both ownership verification and schema hardening are green.
+
+When enabled:
+
+- tenant-owned repositories require a locked authorized `TenantContext`;
 - known IDs never bypass tenant predicates;
-- notification fanout selects devices only from the current tenant;
-- a WordPress user may have device registrations in multiple tenants without cross-tenant delivery;
-- scheduler/cron execution enumerates tenants explicitly and locks one tenant before reading rules, payments, schedules or deliveries;
-- background work fails closed when tenant context is missing or stale;
-- import run/error reads, mapping and execution are tenant-bound;
-- private import storage keys include tenant identity;
-- audit reads/exports use direct tenant ownership rather than text matching context JSON;
-- cache keys for tenant-owned data include tenant identity;
-- generated/export/storage object keys cannot collide across tenants.
+- device register/disable/fanout operates inside the current tenant only;
+- scheduler/cron enumerates active tenants explicitly and locks/resets context per tenant;
+- background work fails closed without tenant context;
+- imports and tenant audit reads/writes are tenant-bound;
+- cache keys and generated/import/export/storage keys for tenant-owned data include tenant identity.
 
-Runtime non-core enforcement must not be enabled until both the ownership verifier and schema hardener are green.
+Firebase deployment credentials remain environment-global and separate from business-tenant data.
 
 ## Safe Contract separation
 
-All non-core tenancy work is ESC-only on `enterprise-safecontracts`. Safe Contract `main` remains unchanged unless the product owner explicitly requests a separately reviewed transfer.
+All work here is ESC-only on `enterprise-safecontracts`. Safe Contract `main` remains unchanged unless a separately reviewed transfer is explicitly requested.
