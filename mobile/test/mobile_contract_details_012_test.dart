@@ -101,7 +101,7 @@ void main() {
 
     expect(find.text('SC-70'), findsWidgets);
     expect(find.text('server_detail_status'), findsWidgets);
-    expect(find.text('1000.5000'), findsOneWidget);
+    expect(find.text('1000.50'), findsOneWidget);
     expect(find.text('Alpha Customer'), findsOneWidget);
     expect(find.text('Edit contract'), findsOneWidget);
 
