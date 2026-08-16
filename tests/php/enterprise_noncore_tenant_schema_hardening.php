@@ -186,7 +186,7 @@ esc_noncore_schema_assert(str_contains($source, 'NonCoreTenantEnforcement::isEna
 esc_noncore_schema_assert(! str_contains($source, 'idempotency_key'), 'hardener does not invent a delivery idempotency column');
 esc_noncore_schema_assert(! str_contains($source, 'scheduled_for_utc'), 'hardener contains no obsolete scheduled_for_utc field');
 esc_noncore_schema_assert(! str_contains($source, 'enabled, id'), 'hardener contains no obsolete device enabled field');
-esc_noncore_schema_assert(! str_contains($source, 'run_id, row_number'), 'hardener contains no obsolete import error run_id field');
+esc_noncore_schema_assert(preg_match('/\brun_id\s*,\s*row_number\b/', $source) !== 1, 'hardener contains no obsolete import error run_id field');
 
 $verification = $hardener->verify($database);
 esc_noncore_schema_assert($verification['ready'] === true, 'post-DDL non-core verification is green');
