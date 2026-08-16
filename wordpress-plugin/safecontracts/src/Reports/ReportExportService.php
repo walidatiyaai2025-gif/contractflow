@@ -29,19 +29,25 @@ final class ReportExportService
         }
 
         $filters = DashboardFilters::normalize($input);
+        if (! empty($filters['date_range_error'])) {
+            throw new \InvalidArgumentException('Report period is invalid.');
+        }
         $summary = $this->read->reportSummary($filters);
         $customers = $this->read->customers($filters);
         $contracts = $this->read->contracts($filters);
         $payments = $this->read->payments($filters);
         $collections = $this->read->collections($filters);
-        $followUps = $this->filterFollowUps($this->followUps->queue(500), $filters);
+        $followUps = $this->filterFollowUps(
+            $this->followUps->queue(500, $filters['date_from'], $filters['date_to']),
+            $filters
+        );
 
         $sheets = [
             'Summary' => $this->summaryRows($summary, $filters),
-            'Customers' => $this->rows($customers, ['id','internal_code','name','contact_name','email','phone','is_active']),
-            'Contracts' => $this->rows($contracts, ['id','contract_number','customer_id','customer_name','accountant_user_id','status','start_date','end_date','base_value','is_archived']),
+            'Customers' => $this->rows($customers, ['id','internal_code','name','contact_name','email','phone','is_active','created_at']),
+            'Contracts' => $this->rows($contracts, ['id','contract_number','customer_id','customer_name','accountant_user_id','status','start_date','end_date','base_value','is_archived','created_at']),
             'Payments' => $this->rows($payments, ['id','contract_id','contract_number','customer_id','customer_name','accountant_user_id','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status']),
-            'Collections' => $this->rows($collections, ['id','payment_id','contract_id','contract_number','customer_id','customer_name','accountant_user_id','collection_date','amount','payment_method_name','reference','created_by','created_at']),
+            'Collections' => $this->rows($collections, ['id','payment_id','contract_id','contract_number','customer_id','customer_name','accountant_user_id','collection_date','amount','payment_method_name','reference','proof_media_id','created_by','created_at']),
             'Follow-up Queue' => $this->rows($followUps, ['payment_id','contract_id','customer_id','accountant_user_id','contract_status','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','followup_state']),
         ];
 
@@ -84,9 +90,10 @@ final class ReportExportService
         }
         $rows[] = ['', ''];
         $rows[] = ['Filter', 'Value'];
-        foreach (['customer_id','contract_id','accountant_user_id','status','due_from','due_to'] as $key) {
+        foreach (['customer_id','contract_id','accountant_user_id','status','date_from','date_to'] as $key) {
             $rows[] = [$key, $filters[$key] ?? ''];
         }
+        $rows[] = ['period_semantics', 'payments=due_date; collections=collection_date; followup_metrics=event_created_at; followup_queue=due_date; contracts=start_or_created; customers=created_at'];
         return $rows;
     }
 
@@ -128,13 +135,6 @@ final class ReportExportService
                 if ($rowStatus !== $status) {
                     return false;
                 }
-            }
-            $due = (string) ($row['due_date'] ?? '');
-            if (($filters['due_from'] ?? null) !== null && $due < (string) $filters['due_from']) {
-                return false;
-            }
-            if (($filters['due_to'] ?? null) !== null && $due > (string) $filters['due_to']) {
-                return false;
             }
             return true;
         }));
