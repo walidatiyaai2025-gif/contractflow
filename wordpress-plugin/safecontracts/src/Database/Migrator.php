@@ -27,11 +27,12 @@ use SafeContracts\Database\Migrations\Migration0019EnterpriseRateLimits;
 use SafeContracts\Database\Migrations\Migration0020EnterpriseParties;
 use SafeContracts\Database\Migrations\Migration0021EnterprisePartyRoles;
 use SafeContracts\Database\Migrations\Migration0022EnterprisePartyRelationships;
+use SafeContracts\Database\Migrations\Migration0023EnterpriseOrgUnits;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.21.0';
+    public const LATEST_VERSION = '1.22.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -57,6 +58,7 @@ final class Migrator
         '1.19.0' => Migration0020EnterpriseParties::class,
         '1.20.0' => Migration0021EnterprisePartyRoles::class,
         '1.21.0' => Migration0022EnterprisePartyRelationships::class,
+        '1.22.0' => Migration0023EnterpriseOrgUnits::class,
     ];
 
     public function maybeMigrate(): void
