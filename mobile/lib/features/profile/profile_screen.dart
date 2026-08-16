@@ -223,10 +223,10 @@ final class _ProfileScreenState extends State<ProfileScreen> {
                 ],
                 const SizedBox(height: 12),
                 FilledButton.tonalIcon(
-                  onPressed: status.backendState ==
-                          MobilePushBackendState.registering
-                      ? null
-                      : () => unawaited(_retryPushRegistration()),
+                  onPressed:
+                      status.backendState == MobilePushBackendState.registering
+                          ? null
+                          : () => unawaited(_retryPushRegistration()),
                   icon: const Icon(Icons.refresh),
                   label: Text(l10n.t('Retry device registration')),
                 ),
