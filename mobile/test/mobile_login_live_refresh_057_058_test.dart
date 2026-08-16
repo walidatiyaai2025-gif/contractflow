@@ -44,9 +44,9 @@ void main() {
     );
   });
 
-  test('authenticated shell refreshes the active surface while foregrounded',
-      () {
+  test('authenticated shell silently refreshes active foreground surface', () {
     final shell = source('lib/features/navigation/app_shell.dart');
+    final silent = source('lib/features/refresh/silent_refresh.dart');
 
     expect(shell, contains('with WidgetsBindingObserver'));
     expect(shell, contains('Duration(seconds: 12)'));
@@ -54,15 +54,24 @@ void main() {
     expect(shell, contains('didChangeAppLifecycleState'));
     expect(shell, contains('AppLifecycleState.resumed'));
     expect(shell, contains('bool _liveRefreshInFlight = false;'));
-    expect(shell,
-        contains('if (!mounted || !_foreground || _liveRefreshInFlight)'));
-    expect(shell, contains('widget.dashboardController.refresh()'));
-    expect(shell, contains('widget.customersController.refresh()'));
-    expect(shell, contains('widget.contractsController.refresh()'));
-    expect(shell, contains('widget.notificationsController.refresh()'));
-    expect(shell, contains('widget.profileController.load()'));
+    expect(
+      shell,
+      contains('if (!mounted || !_foreground || _liveRefreshInFlight)'),
+    );
+    expect(shell, contains('widget.dashboardController.refreshSilently()'));
+    expect(shell, contains('widget.customersController.refreshSilently()'));
+    expect(shell, contains('widget.contractsController.refreshSilently()'));
+    expect(shell, contains('widget.notificationsController.refreshSilently()'));
+    expect(shell, contains('widget.profileController.refreshSilently()'));
+    expect(shell, contains('shellSnapshotChanged'));
+    expect(shell, contains('setState(() {})'));
     expect(shell, contains('_selectDestination'));
     expect(shell, contains('refreshRevision: _liveRefreshRevision'));
+
+    expect(silent, isNot(contains('DashboardLoadState.loading')));
+    expect(silent, isNot(contains('CustomersLoadState.loading =')));
+    expect(silent, contains('keep the last good snapshot'));
+    expect(silent, contains('background transport noise'));
   });
 
   test('payments and follow-up preserve visible data during live refresh', () {
@@ -71,11 +80,15 @@ void main() {
 
     for (final screen in <String>[payments, followUps]) {
       expect(screen, contains('final int refreshRevision;'));
-      expect(screen,
-          contains('oldWidget.refreshRevision != widget.refreshRevision'));
+      expect(
+        screen,
+        contains('oldWidget.refreshRevision != widget.refreshRevision'),
+      );
       expect(screen, contains('background: true'));
       expect(
-          screen, contains('final keepVisible = background && _page != null;'));
+        screen,
+        contains('final keepVisible = background && _page != null;'),
+      );
       expect(screen, contains('if (!keepVisible)'));
       expect(screen, contains('if (keepVisible) return;'));
     }
