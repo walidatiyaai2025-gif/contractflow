@@ -7,6 +7,7 @@ namespace SafeContracts\Import;
 use RuntimeException;
 use SafeContracts\Admin\AdminPeriodFilter;
 use SafeContracts\Admin\ImportsPage;
+use SafeContracts\Tenancy\NonCoreTenantScope;
 
 final class ImportRunRepository
 {
@@ -14,17 +15,20 @@ final class ImportRunRepository
     {
         global $wpdb;
         $table = $wpdb->prefix . 'safecontracts_import_runs';
-        $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (original_filename, storage_key, file_sha256, file_size, status, duplicate_strategy, created_by, created_at, updated_at)
-             VALUES (%s, %s, %s, %d, %s, %s, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
-            $filename,
-            $storageKey,
-            $sha256,
-            $size,
-            'uploaded',
-            'fail',
-            $actorId
-        );
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId === null) {
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (original_filename, storage_key, file_sha256, file_size, status, duplicate_strategy, created_by, created_at, updated_at)
+                 VALUES (%s, %s, %s, %d, %s, %s, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
+                $filename, $storageKey, $sha256, $size, 'uploaded', 'fail', $actorId
+            );
+        } else {
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (tenant_id, original_filename, storage_key, file_sha256, file_size, status, duplicate_strategy, created_by, created_at, updated_at)
+                 VALUES (%d, %s, %s, %s, %d, %s, %s, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
+                $tenantId, $filename, $storageKey, $sha256, $size, 'uploaded', 'fail', $actorId
+            );
+        }
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to create SafeContracts import run.');
         }
@@ -42,11 +46,8 @@ final class ImportRunRepository
         $table = $wpdb->prefix . 'safecontracts_import_runs';
         $json = $this->json($mapping);
         $sql = $wpdb->prepare(
-            "UPDATE {$table} SET selected_sheet = %s, mapping_json = %s, status = %s, updated_at = UTC_TIMESTAMP() WHERE id = %d",
-            $sheet,
-            $json,
-            'mapped',
-            $runId
+            "UPDATE {$table} SET selected_sheet = %s, mapping_json = %s, status = %s, updated_at = UTC_TIMESTAMP() WHERE id = %d" . NonCoreTenantScope::condition(),
+            $sheet, $json, 'mapped', $runId
         );
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to save SafeContracts import mapping.');
@@ -70,15 +71,8 @@ final class ImportRunRepository
         ];
         $strategy = $duplicateStrategy ?? 'fail';
         $sql = $wpdb->prepare(
-            "UPDATE {$table} SET status = %s, duplicate_strategy = %s, total_rows = %d, valid_rows = %d, imported_rows = %d, skipped_rows = %d, error_rows = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d",
-            $status,
-            $strategy,
-            $values['total_rows'],
-            $values['valid_rows'],
-            $values['imported_rows'],
-            $values['skipped_rows'],
-            $values['error_rows'],
-            $runId
+            "UPDATE {$table} SET status = %s, duplicate_strategy = %s, total_rows = %d, valid_rows = %d, imported_rows = %d, skipped_rows = %d, error_rows = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d" . NonCoreTenantScope::condition(),
+            $status, $strategy, $values['total_rows'], $values['valid_rows'], $values['imported_rows'], $values['skipped_rows'], $values['error_rows'], $runId
         );
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to update SafeContracts import run.');
@@ -90,7 +84,7 @@ final class ImportRunRepository
         global $wpdb;
         $table = $wpdb->prefix . 'safecontracts_import_runs';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, original_filename, storage_key, file_sha256, file_size, status, selected_sheet, discovery_json, mapping_json, duplicate_strategy, total_rows, valid_rows, imported_rows, skipped_rows, error_rows, created_by, created_at, updated_at FROM {$table} WHERE id = %d LIMIT 1",
+            "SELECT id, original_filename, storage_key, file_sha256, file_size, status, selected_sheet, discovery_json, mapping_json, duplicate_strategy, total_rows, valid_rows, imported_rows, skipped_rows, error_rows, created_by, created_at, updated_at FROM {$table} WHERE id = %d" . NonCoreTenantScope::condition() . ' LIMIT 1',
             $runId
         ), ARRAY_A);
         if (! is_array($rows) || $rows === []) {
@@ -105,9 +99,6 @@ final class ImportRunRepository
         global $wpdb;
         $limit = max(1, min(100, $limit));
 
-        // ImportsPage predates the shared admin-read repository. Keep its
-        // existing call surface backwards compatible while allowing the admin
-        // page to use the same strict period query contract as other data pages.
         if ($dateFrom === null && $dateTo === null && (string) ($_GET['page'] ?? '') === ImportsPage::SLUG) {
             $period = AdminPeriodFilter::normalize($_GET);
             if (! empty($period['date_range_error'])) {
@@ -120,6 +111,10 @@ final class ImportRunRepository
         $table = $wpdb->prefix . 'safecontracts_import_runs';
         $where = ['1 = 1'];
         $args = [];
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId !== null) {
+            $where[] = 'tenant_id = ' . $tenantId;
+        }
         if ($dateFrom !== null) {
             $where[] = 'DATE(created_at) >= %s';
             $args[] = $dateFrom;
@@ -143,8 +138,11 @@ final class ImportRunRepository
         if ($runId <= 0) {
             throw new RuntimeException('Import run ID must be positive when clearing row errors.');
         }
+        if ($this->find($runId) === null) {
+            return;
+        }
         $table = $wpdb->prefix . 'safecontracts_import_errors';
-        if ($wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE import_run_id = %d", $runId)) === false) {
+        if ($wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE import_run_id = %d" . NonCoreTenantScope::condition(), $runId)) === false) {
             throw new RuntimeException('Unable to clear SafeContracts import row errors.');
         }
     }
@@ -152,6 +150,9 @@ final class ImportRunRepository
     public function addError(int $runId, int $rowNumber, ?string $field, string $code, string $message): void
     {
         global $wpdb;
+        if ($this->find($runId) === null) {
+            throw new RuntimeException('Import run does not belong to the active Enterprise tenant.');
+        }
         $table = $wpdb->prefix . 'safecontracts_import_errors';
         $fieldName = $field === null ? null : substr(trim(strip_tags($field)), 0, 100);
         if ($fieldName === '') {
@@ -159,23 +160,29 @@ final class ImportRunRepository
         }
         $code = substr(preg_replace('/[^a-z0-9_.-]/', '_', strtolower($code)) ?? 'invalid', 0, 80);
         $message = substr(trim(strip_tags($message)), 0, 1000);
+        $tenantId = NonCoreTenantScope::tenantId();
 
-        if ($fieldName === null) {
+        if ($tenantId === null) {
+            if ($fieldName === null) {
+                $sql = $wpdb->prepare(
+                    "INSERT INTO {$table} (import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, NULL, %s, %s, UTC_TIMESTAMP())",
+                    $runId, max(0, $rowNumber), $code, $message
+                );
+            } else {
+                $sql = $wpdb->prepare(
+                    "INSERT INTO {$table} (import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, %s, %s, %s, UTC_TIMESTAMP())",
+                    $runId, max(0, $rowNumber), $fieldName, $code, $message
+                );
+            }
+        } elseif ($fieldName === null) {
             $sql = $wpdb->prepare(
-                "INSERT INTO {$table} (import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, NULL, %s, %s, UTC_TIMESTAMP())",
-                $runId,
-                max(0, $rowNumber),
-                $code,
-                $message
+                "INSERT INTO {$table} (tenant_id, import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, %d, NULL, %s, %s, UTC_TIMESTAMP())",
+                $tenantId, $runId, max(0, $rowNumber), $code, $message
             );
         } else {
             $sql = $wpdb->prepare(
-                "INSERT INTO {$table} (import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, %s, %s, %s, UTC_TIMESTAMP())",
-                $runId,
-                max(0, $rowNumber),
-                $fieldName,
-                $code,
-                $message
+                "INSERT INTO {$table} (tenant_id, import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, %d, %s, %s, %s, UTC_TIMESTAMP())",
+                $tenantId, $runId, max(0, $rowNumber), $fieldName, $code, $message
             );
         }
         if ($wpdb->query($sql) === false) {
@@ -186,9 +193,12 @@ final class ImportRunRepository
     public function errorCount(int $runId): int
     {
         global $wpdb;
+        if ($this->find($runId) === null) {
+            return 0;
+        }
         $table = $wpdb->prefix . 'safecontracts_import_errors';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT COUNT(*) AS error_count FROM {$table} WHERE import_run_id = %d",
+            "SELECT COUNT(*) AS error_count FROM {$table} WHERE import_run_id = %d" . NonCoreTenantScope::condition(),
             $runId
         ), ARRAY_A);
         if (! is_array($rows) || ! isset($rows[0]) || ! is_array($rows[0])) {
@@ -201,10 +211,13 @@ final class ImportRunRepository
     public function errors(int $runId, int $limit = 500): array
     {
         global $wpdb;
+        if ($this->find($runId) === null) {
+            return [];
+        }
         $limit = max(1, min(1000, $limit));
         $table = $wpdb->prefix . 'safecontracts_import_errors';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, import_run_id, row_number, field_name, error_code, message, created_at FROM {$table} WHERE import_run_id = %d ORDER BY row_number ASC, id ASC LIMIT {$limit}",
+            "SELECT id, import_run_id, row_number, field_name, error_code, message, created_at FROM {$table} WHERE import_run_id = %d" . NonCoreTenantScope::condition() . " ORDER BY row_number ASC, id ASC LIMIT {$limit}",
             $runId
         ), ARRAY_A);
         return is_array($rows) ? array_values($rows) : [];
@@ -218,7 +231,7 @@ final class ImportRunRepository
         }
         $table = $wpdb->prefix . 'safecontracts_import_runs';
         $json = $this->json($value);
-        $sql = $wpdb->prepare("UPDATE {$table} SET {$column} = %s, status = %s, updated_at = UTC_TIMESTAMP() WHERE id = %d", $json, $status, $runId);
+        $sql = $wpdb->prepare("UPDATE {$table} SET {$column} = %s, status = %s, updated_at = UTC_TIMESTAMP() WHERE id = %d" . NonCoreTenantScope::condition(), $json, $status, $runId);
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to update SafeContracts import metadata.');
         }
