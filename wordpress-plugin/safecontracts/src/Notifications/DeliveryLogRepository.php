@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SafeContracts\Notifications;
 
 use InvalidArgumentException;
+use RuntimeException;
+use SafeContracts\Tenancy\NonCoreTenantScope;
 
 final class DeliveryLogRepository
 {
@@ -31,23 +33,51 @@ final class DeliveryLogRepository
         }
         $errorCode = $this->normalizeErrorCode($errorCode);
         $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
-        $wpdb->query($wpdb->prepare(
-            "INSERT INTO {$table}
-                (rule_id, payment_id, user_id, device_token_id, channel, template_code, scheduled_for, attempt_no, status, response_code, error_code, created_at)
-             VALUES (%d, %d, %d, NULLIF(%d, 0), %s, %s, %s, %d, %s, %d, %s, %s)",
-            $ruleId ?? 0,
-            $paymentId,
-            $userId,
-            $deviceTokenId ?? 0,
-            $channel,
-            NotificationRule::normalizeCode($templateCode),
-            $scheduledFor,
-            $attemptNo,
-            $status,
-            $responseCode ?? 0,
-            $errorCode ?? '',
-            gmdate('Y-m-d H:i:s')
-        ));
+        $tenantId = NonCoreTenantScope::tenantId();
+
+        if ($tenantId !== null) {
+            $this->assertTenantParents($tenantId, $ruleId, $paymentId, $deviceTokenId);
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table}
+                    (tenant_id, rule_id, payment_id, user_id, device_token_id, channel, template_code, scheduled_for, attempt_no, status, response_code, error_code, created_at)
+                 VALUES (%d, %d, %d, %d, NULLIF(%d, 0), %s, %s, %s, %d, %s, %d, %s, %s)",
+                $tenantId,
+                $ruleId ?? 0,
+                $paymentId,
+                $userId,
+                $deviceTokenId ?? 0,
+                $channel,
+                NotificationRule::normalizeCode($templateCode),
+                $scheduledFor,
+                $attemptNo,
+                $status,
+                $responseCode ?? 0,
+                $errorCode ?? '',
+                gmdate('Y-m-d H:i:s')
+            );
+        } else {
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table}
+                    (rule_id, payment_id, user_id, device_token_id, channel, template_code, scheduled_for, attempt_no, status, response_code, error_code, created_at)
+                 VALUES (%d, %d, %d, NULLIF(%d, 0), %s, %s, %s, %d, %s, %d, %s, %s)",
+                $ruleId ?? 0,
+                $paymentId,
+                $userId,
+                $deviceTokenId ?? 0,
+                $channel,
+                NotificationRule::normalizeCode($templateCode),
+                $scheduledFor,
+                $attemptNo,
+                $status,
+                $responseCode ?? 0,
+                $errorCode ?? '',
+                gmdate('Y-m-d H:i:s')
+            );
+        }
+
+        if ($wpdb->query($sql) === false) {
+            throw new RuntimeException('Unable to persist notification delivery log.');
+        }
     }
 
     /** @return list<array<string,mixed>> */
@@ -58,6 +88,10 @@ final class DeliveryLogRepository
         $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
         $where = ['1 = 1'];
         $args = [];
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId !== null) {
+            $where[] = 'tenant_id = ' . $tenantId;
+        }
         if ($dateFrom !== null) {
             $where[] = 'DATE(created_at) >= %s';
             $args[] = $dateFrom;
@@ -91,7 +125,7 @@ final class DeliveryLogRepository
             $wpdb->prepare(
                 "SELECT id, payment_id, user_id, channel, template_code, scheduled_for, created_at
                  FROM {$table}
-                 WHERE user_id = %d AND status = 'sent'
+                 WHERE user_id = %d AND status = 'sent'" . NonCoreTenantScope::condition() . "
                  ORDER BY created_at DESC, id DESC
                  LIMIT %d OFFSET %d",
                 $userId,
@@ -113,7 +147,7 @@ final class DeliveryLogRepository
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id FROM {$table}
-                 WHERE id = %d AND user_id = %d AND status = 'sent'
+                 WHERE id = %d AND user_id = %d AND status = 'sent'" . NonCoreTenantScope::condition() . "
                  LIMIT 1",
                 $notificationId,
                 $userId
@@ -135,7 +169,7 @@ final class DeliveryLogRepository
                         COUNT(*) AS attempts,
                         MAX(NULLIF(error_code, '')) AS error_code
                  FROM {$table}
-                 WHERE rule_id = %d AND payment_id = %d AND scheduled_for = %s AND attempt_no = %d
+                 WHERE rule_id = %d AND payment_id = %d AND scheduled_for = %s AND attempt_no = %d" . NonCoreTenantScope::condition() . "
                  GROUP BY user_id ORDER BY user_id ASC",
                 $ruleId,
                 $paymentId,
@@ -157,6 +191,30 @@ final class DeliveryLogRepository
             ];
         }
         return $result;
+    }
+
+    private function assertTenantParents(int $tenantId, ?int $ruleId, int $paymentId, ?int $deviceTokenId): void
+    {
+        global $wpdb;
+        $checks = [
+            [$wpdb->prefix . 'safecontracts_scheduled_payments', $paymentId, 'payment'],
+        ];
+        if ($ruleId !== null && $ruleId > 0) {
+            $checks[] = [$wpdb->prefix . 'safecontracts_notification_rules', $ruleId, 'rule'];
+        }
+        if ($deviceTokenId !== null && $deviceTokenId > 0) {
+            $checks[] = [$wpdb->prefix . 'safecontracts_device_tokens', $deviceTokenId, 'device token'];
+        }
+        foreach ($checks as [$table, $id, $label]) {
+            $rows = $wpdb->get_results($wpdb->prepare(
+                "SELECT id FROM {$table} WHERE id = %d AND tenant_id = %d LIMIT 1",
+                $id,
+                $tenantId
+            ), ARRAY_A);
+            if (! is_array($rows) || $rows === []) {
+                throw new RuntimeException('Notification ' . $label . ' does not belong to the active Enterprise tenant.');
+            }
+        }
     }
 
     private function normalizeErrorCode(?string $value): ?string
