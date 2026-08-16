@@ -95,10 +95,10 @@ def validate_sources() -> int:
         (
             'namespace = "com.safecontracts.safecontracts_mobile"',
             'applicationId = "com.safecontracts.safecontracts_mobile"',
-            "SC_ANDROID_KEYSTORE_PATH",
-            "SC_ANDROID_KEYSTORE_PASSWORD",
-            "SC_ANDROID_KEY_ALIAS",
-            "SC_ANDROID_KEY_PASSWORD",
+            'System.getenv("SC_ANDROID_KEYSTORE_PATH")',
+            'System.getenv("SC_ANDROID_KEYSTORE_PASSWORD")',
+            'System.getenv("SC_ANDROID_KEY_ALIAS")',
+            'System.getenv("SC_ANDROID_KEY_PASSWORD")',
         ),
         "ESC Gradle overlay",
     )
