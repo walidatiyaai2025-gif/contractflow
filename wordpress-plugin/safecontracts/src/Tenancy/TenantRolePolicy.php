@@ -14,17 +14,13 @@ final class TenantRolePolicy
     public const VIEWER = 'viewer';
     public const MEMBER = 'member';
 
-    /** @var list<string> */
-    private const PLATFORM_GLOBAL_CAPABILITIES = [
-        Capabilities::MANAGE_SYSTEM,
-        Capabilities::MANAGE_REFERENCE_DATA,
-    ];
-
     /** @var array<string,list<string>> */
     private const ROLE_CAPABILITIES = [
         self::TENANT_ADMIN => [
             Capabilities::ACCESS,
+            Capabilities::MANAGE_SYSTEM,
             Capabilities::MANAGE_USERS,
+            Capabilities::MANAGE_REFERENCE_DATA,
             Capabilities::VIEW_ALL,
             Capabilities::VIEW_ASSIGNED,
             Capabilities::CREATE_CONTRACTS,
@@ -70,6 +66,21 @@ final class TenantRolePolicy
         ],
     ];
 
+    /** @var array<string,list<string>> */
+    private const ROLE_OPERATIONS = [
+        self::TENANT_ADMIN => [
+            TenantOperationAuthorization::MANAGE_CUSTOMERS,
+            TenantOperationAuthorization::DELETE_CUSTOMERS,
+            TenantOperationAuthorization::DELETE_CONTRACTS,
+            TenantOperationAuthorization::FIREBASE_TEST_PUSH,
+        ],
+        self::MANAGER => [
+            TenantOperationAuthorization::MANAGE_CUSTOMERS,
+        ],
+        self::ACCOUNTANT => [],
+        self::VIEWER => [],
+    ];
+
     public static function normalize(string $roleCode): string
     {
         return strtolower(trim($roleCode));
@@ -83,10 +94,6 @@ final class TenantRolePolicy
 
     public static function allowsCapability(string $roleCode, bool $isOwner, string $capability): bool
     {
-        if (in_array($capability, self::PLATFORM_GLOBAL_CAPABILITIES, true)) {
-            return true;
-        }
-
         $roleCode = self::normalize($roleCode);
         if (! self::isRecognized($roleCode)) {
             return false;
@@ -106,6 +113,22 @@ final class TenantRolePolicy
         }
 
         return in_array($capability, self::ROLE_CAPABILITIES[$roleCode] ?? [], true);
+    }
+
+    public static function allowsOperation(string $roleCode, bool $isOwner, string $operation): bool
+    {
+        $roleCode = self::normalize($roleCode);
+        if (! self::isRecognized($roleCode)) {
+            return false;
+        }
+        if ($roleCode === self::MEMBER) {
+            return true;
+        }
+        if ($isOwner) {
+            return true;
+        }
+
+        return in_array($operation, self::ROLE_OPERATIONS[$roleCode] ?? [], true);
     }
 
     public static function scopeCeiling(string $roleCode, bool $isOwner): string
