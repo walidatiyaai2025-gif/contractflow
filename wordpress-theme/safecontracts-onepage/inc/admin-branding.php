@@ -139,7 +139,7 @@ function safecontracts_enqueue_login_branding() {
 	);
 	wp_add_inline_style(
 		'safecontracts-brand',
-		'body.login h1 a{background-image:url("' . esc_url_raw( safecontracts_brand_icon_data_uri() ) . '") !important;}'
+		'body.login h1 a{background-image:url("' . safecontracts_brand_icon_data_uri() . '") !important;}'
 	);
 }
 add_action( 'login_enqueue_scripts', 'safecontracts_enqueue_login_branding' );
