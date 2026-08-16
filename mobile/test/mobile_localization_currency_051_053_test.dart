@@ -72,17 +72,22 @@ void main() {
     },
   );
 
-  test('SC-MOBILE-053 dashboard KPI cards use responsive adjacent grid', () {
-    final source =
-        File('lib/features/dashboard/dashboard_screen.dart').readAsStringSync();
+  test(
+    'SC-MOBILE-053 dashboard uses lifecycle visual hierarchy with real data',
+    () {
+      final source = File('lib/features/dashboard/dashboard_screen.dart')
+          .readAsStringSync();
 
-    expect(source, contains('GridView.builder'));
-    expect(source, contains('constraints.maxWidth >= 1100'));
-    expect(source, contains('constraints.maxWidth >= 700'));
-    expect(source, contains('? 5'));
-    expect(source, contains('? 3'));
-    expect(source, contains(': 2'));
-    expect(source, contains('NeverScrollableScrollPhysics'));
-    expect(source, contains('l10n.money'));
-  });
+      expect(source, contains('FilterChip'));
+      expect(source, contains('_PaymentLifecycleOverview'));
+      expect(source, contains('_LifecycleRingPainter'));
+      expect(source, contains('CustomPaint'));
+      expect(source, contains('_PaymentPipeline'));
+      expect(source, contains('SingleChildScrollView'));
+      expect(source, contains('_RecentActivity'));
+      expect(source, contains('l10n.money'));
+      expect(source, contains('DashboardKpis'));
+      expect(source, contains('DashboardRecord'));
+    },
+  );
 }

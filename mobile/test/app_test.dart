@@ -27,12 +27,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('SafeContracts'), findsOneWidget);
+    expect(find.text('SafeContracts | Dashboard'), findsOneWidget);
     expect(find.text('Dashboard'), findsOneWidget);
-    expect(find.text('All customers'), findsOneWidget);
-    expect(find.text('All contracts'), findsOneWidget);
+    expect(find.text('Payment Lifecycle Overview'), findsOneWidget);
     expect(find.text('Remaining'), findsOneWidget);
     expect(find.text('125.0000'), findsOneWidget);
+
+    await tester.tap(find.text('Payment filters'));
+    await tester.pumpAndSettle();
+    expect(find.text('All customers'), findsOneWidget);
+    expect(find.text('All contracts'), findsOneWidget);
   });
 }
 
