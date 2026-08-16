@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Collections\CollectionService;
+use SafeContracts\Deletion\SafeDeletionService;
 use SafeContracts\ReferenceData\PaymentMethodRepository;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Support\Input;
@@ -14,6 +15,7 @@ final class CollectionsPage
 {
     public const SLUG = 'safecontracts-collections';
     public const SAVE_ACTION = 'safecontracts_record_collection_admin';
+    public const DELETE_ACTION = 'safecontracts_delete_collection_admin';
 
     public static function register(): void
     {
@@ -53,6 +55,24 @@ final class CollectionsPage
         exit;
     }
 
+    public static function handleDelete(): void
+    {
+        if (! current_user_can(Capabilities::MANAGE_COLLECTIONS)) {
+            wp_die(__('You do not have permission to delete collections.', 'safecontracts'));
+        }
+        $collectionId = max(0, (int) ($_POST['collection_id'] ?? 0));
+        check_admin_referer(self::DELETE_ACTION . '_' . $collectionId);
+        $status = 'deleted';
+        try {
+            (new SafeDeletionService())->archiveCollection($collectionId);
+        } catch (Throwable $error) {
+            unset($error);
+            $status = 'delete_failed';
+        }
+        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'safecontracts_status' => $status], admin_url('admin.php')));
+        exit;
+    }
+
     public static function render(): void
     {
         if (! current_user_can(Capabilities::ACCESS)) {
@@ -78,9 +98,25 @@ final class CollectionsPage
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <h2><?php echo esc_html__('Collection ledger', 'safecontracts'); ?></h2>
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Date', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer / Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Method', 'safecontracts'); ?></th><th><?php echo esc_html__('Amount', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Date', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer / Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Method', 'safecontracts'); ?></th><th><?php echo esc_html__('Amount', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($collections as $collection) : ?>
-                        <tr><td><?php echo esc_html((string) $collection['collection_date']); ?></td><td><?php echo esc_html((string) $collection['customer_name'] . ' / ' . (string) $collection['contract_number']); ?></td><td><?php echo esc_html((string) ($collection['payment_reference'] ?: '#' . $collection['sequence_no'])); ?></td><td><?php echo esc_html((string) $collection['payment_method_name']); ?></td><td><?php echo esc_html(number_format((float) $collection['amount'], 2)); ?></td></tr>
+                        <tr>
+                            <td><?php echo esc_html((string) $collection['collection_date']); ?></td>
+                            <td><?php echo esc_html((string) $collection['customer_name'] . ' / ' . (string) $collection['contract_number']); ?></td>
+                            <td><?php echo esc_html((string) ($collection['payment_reference'] ?: '#' . $collection['sequence_no'])); ?></td>
+                            <td><?php echo esc_html((string) $collection['payment_method_name']); ?></td>
+                            <td><?php echo esc_html(number_format((float) $collection['amount'], 2)); ?></td>
+                            <td>
+                                <?php if (current_user_can(Capabilities::MANAGE_COLLECTIONS)) : ?>
+                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete/reverse this collection? The payment paid amount, remaining amount and status will be recalculated from the remaining active collection ledger.', 'safecontracts'); ?>">
+                                        <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
+                                        <input type="hidden" name="collection_id" value="<?php echo esc_attr((string) $collection['id']); ?>">
+                                        <?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $collection['id']); ?>
+                                        <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?> / حذف</button>
+                                    </form>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                     </tbody></table>
                 </section>

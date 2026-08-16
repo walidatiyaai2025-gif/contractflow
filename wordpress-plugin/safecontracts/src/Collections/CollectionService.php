@@ -66,6 +66,9 @@ final class CollectionService
                 throw new InvalidArgumentException('Collection payment was not found.');
             }
             $this->assertScope($payment['accountant_user_id']);
+            if (! empty($payment['payment_is_archived'])) {
+                throw new DomainException('Collections cannot be recorded against archived payments.');
+            }
             if ($payment['contract_is_archived']) {
                 throw new DomainException('Collections cannot be recorded against archived contracts.');
             }
@@ -149,6 +152,9 @@ final class CollectionService
         $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts collections.');
         $payment = $this->requirePayment($paymentId);
         $this->assertScope($payment['accountant_user_id']);
+        if ($payment['is_archived']) {
+            throw new DomainException('Archived payments do not expose an active collection ledger.');
+        }
 
         return $this->repository->forPayment($paymentId);
     }
@@ -166,6 +172,9 @@ final class CollectionService
         $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts collection reconciliation.');
         $payment = $this->requirePayment($paymentId);
         $this->assertScope($payment['accountant_user_id']);
+        if ($payment['is_archived']) {
+            throw new DomainException('Archived payments are outside the active collection ledger.');
+        }
 
         $original = ContractMoney::normalizeNonNegative($payment['original_amount']);
         $ledger = ContractMoney::normalizeNonNegative($this->repository->collectedTotal($paymentId));
@@ -197,7 +206,7 @@ final class CollectionService
         ];
     }
 
-    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, accountant_user_id:?int, contract_is_archived:bool} */
+    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool} */
     private function requirePayment(int $paymentId): array
     {
         if ($paymentId <= 0) {

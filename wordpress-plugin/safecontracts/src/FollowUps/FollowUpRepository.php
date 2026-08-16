@@ -27,6 +27,7 @@ final class FollowUpRepository
                 FROM {$payments} p
                 INNER JOIN {$contracts} c ON c.id = p.contract_id
                 WHERE c.is_archived = 0
+                  AND p.is_archived = 0
                   AND p.remaining_amount > 0
                   AND p.status <> 'paid'{$scope}
                 ORDER BY p.due_date ASC, p.id ASC

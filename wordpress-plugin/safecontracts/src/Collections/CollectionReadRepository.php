@@ -33,7 +33,7 @@ final class CollectionReadRepository
                  INNER JOIN {$payments} p ON p.id = cl.payment_id
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
                  INNER JOIN {$methods} pm ON pm.id = cl.payment_method_id
-                 WHERE cl.id = %d
+                 WHERE cl.id = %d AND cl.is_archived = 0 AND p.is_archived = 0
                  LIMIT 1",
                 $collectionId
             ),

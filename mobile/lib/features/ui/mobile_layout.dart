@@ -41,7 +41,7 @@ final class SafeContractsDirectionScope extends StatelessWidget {
 final class SafeContractsAdaptiveBody extends StatelessWidget {
   const SafeContractsAdaptiveBody({
     required this.child,
-    this.maxWidth = 960,
+    this.maxWidth = 1040,
     super.key,
   }) : assert(maxWidth > 0);
 
@@ -54,9 +54,14 @@ final class SafeContractsAdaptiveBody extends StatelessWidget {
       builder: (context, constraints) {
         final breakpoint = safeContractsBreakpoint(constraints.maxWidth);
         final horizontalPadding = switch (breakpoint) {
-          SafeContractsBreakpoint.narrow => 16.0,
-          SafeContractsBreakpoint.medium => 24.0,
-          SafeContractsBreakpoint.wide => 32.0,
+          SafeContractsBreakpoint.narrow => 18.0,
+          SafeContractsBreakpoint.medium => 26.0,
+          SafeContractsBreakpoint.wide => 36.0,
+        };
+        final verticalPadding = switch (breakpoint) {
+          SafeContractsBreakpoint.narrow => 18.0,
+          SafeContractsBreakpoint.medium => 22.0,
+          SafeContractsBreakpoint.wide => 28.0,
         };
         return Align(
           alignment: Alignment.topCenter,
@@ -65,7 +70,7 @@ final class SafeContractsAdaptiveBody extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,
-                vertical: 16,
+                vertical: verticalPadding,
               ),
               child: child,
             ),

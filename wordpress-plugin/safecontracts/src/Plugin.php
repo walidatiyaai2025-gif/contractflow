@@ -25,6 +25,7 @@ use SafeContracts\Admin\ReportsPage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Audit\AuditRecorder;
 use SafeContracts\Audit\ContractArchiveAuditRecorder;
+use SafeContracts\Audit\SafeDeletionAuditRecorder;
 use SafeContracts\Auth\MobileBearerAuthentication;
 use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
@@ -59,6 +60,7 @@ final class Plugin
         ContractHistoryRecorder::register();
         AuditRecorder::register();
         ContractArchiveAuditRecorder::register();
+        SafeDeletionAuditRecorder::register();
         LoginBranding::register();
         NavigationCleanup::register();
 
@@ -83,10 +85,14 @@ final class Plugin
         add_action('admin_notices', [AdminFeedback::class, 'render']);
 
         add_action('admin_post_' . CustomersPage::SAVE_ACTION, [CustomersPage::class, 'handleSave']);
+        add_action('admin_post_' . CustomersPage::DELETE_ACTION, [CustomersPage::class, 'handleDelete']);
         add_action('admin_post_' . ContractsPage::SAVE_ACTION, [ContractsPage::class, 'handleSave']);
+        add_action('admin_post_' . ContractsPage::DELETE_ACTION, [ContractsPage::class, 'handleDelete']);
         add_action('admin_post_' . DashboardPage::ARCHIVE_ACTION, [DashboardPage::class, 'handleArchive']);
         add_action('admin_post_' . PaymentsPage::SAVE_ACTION, [PaymentsPage::class, 'handleSave']);
+        add_action('admin_post_' . PaymentsPage::DELETE_ACTION, [PaymentsPage::class, 'handleDelete']);
         add_action('admin_post_' . CollectionsPage::SAVE_ACTION, [CollectionsPage::class, 'handleSave']);
+        add_action('admin_post_' . CollectionsPage::DELETE_ACTION, [CollectionsPage::class, 'handleDelete']);
         add_action('admin_post_' . FollowUpsPage::SAVE_ACTION, [FollowUpsPage::class, 'handleSave']);
         add_action('admin_post_' . ReportsPage::EXPORT_ACTION, [ReportsPage::class, 'handleExport']);
         add_action('admin_post_' . ImportsPage::UPLOAD_ACTION, [ImportsPage::class, 'handleUpload']);
@@ -94,6 +100,7 @@ final class Plugin
         add_action('admin_post_' . ImportsPage::EXECUTE_ACTION, [ImportsPage::class, 'handleExecute']);
         add_action('admin_post_' . GeneralSettingsPage::SAVE_ACTION, [GeneralSettingsPage::class, 'handleSave']);
         add_action('admin_post_' . PaymentMethodsPage::SAVE_ACTION, [PaymentMethodsPage::class, 'handleSave']);
+        add_action('admin_post_' . PaymentMethodsPage::DELETE_ACTION, [PaymentMethodsPage::class, 'handleDelete']);
         add_action('admin_post_' . NotificationSettingsPage::SAVE_ACTION, [NotificationSettingsPage::class, 'handleSave']);
         add_action('admin_post_' . FirebaseSettingsPage::SAVE_ACTION, [FirebaseSettingsPage::class, 'handleSave']);
         add_action('admin_post_' . FirebaseSettingsPage::UPLOAD_ACTION, [FirebaseSettingsPage::class, 'handleUpload']);

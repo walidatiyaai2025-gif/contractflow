@@ -71,8 +71,8 @@ final class AdminFeedback
         return match ($status) {
             'saved' => ['success', $ar ? 'تم الحفظ' : 'Saved', $ar ? 'تم حفظ البيانات بنجاح.' : 'Your changes were saved successfully.'],
             'invalid' => ['error', $ar ? 'راجع البيانات' : 'Check the form', $ar ? 'تعذر الحفظ. راجع الحقول المطلوبة وصحة القيم ثم حاول مرة أخرى.' : 'The record could not be saved. Check required fields and entered values, then try again.'],
-            'archived', 'deleted' => ['success', $ar ? 'تم الحذف' : 'Deleted', $ar ? 'تم حذف العنصر من الداشبورد مع الاحتفاظ بالسجل التاريخي بأمان.' : 'The item was removed from the dashboard while its historical record was preserved safely.'],
-            'archive_failed', 'delete_failed' => ['error', $ar ? 'تعذر الحذف' : 'Delete failed', $ar ? 'لم يتم الحذف. تأكد من الصلاحيات وحالة العنصر ثم حاول مرة أخرى.' : 'The item could not be deleted. Check permissions and record state, then try again.'],
+            'archived', 'deleted' => ['success', $ar ? 'تم الحذف الآمن' : 'Safely deleted', $ar ? 'تمت إزالة العنصر من العمليات النشطة مع الحفاظ على السجل التاريخي والمالي وسجل التدقيق عند الحاجة.' : 'The item was removed from active operations while required historical, financial and audit evidence was preserved.'],
+            'archive_failed', 'delete_failed' => ['error', $ar ? 'تعذر الحذف' : 'Delete failed', $ar ? 'لم يتم الحذف. قد يكون العنصر محمياً بسجلات مرتبطة أو لا تسمح الصلاحيات الحالية بهذه العملية.' : 'The item could not be deleted. It may be protected by linked records or the current permissions may not allow this operation.'],
             'uploaded' => ['success', $ar ? 'تم الرفع' : 'Uploaded', $ar ? 'تم رفع الملف بنجاح.' : 'The file was uploaded successfully.'],
             'upload_failed' => ['error', $ar ? 'فشل الرفع' : 'Upload failed', $ar ? 'تعذر رفع الملف. راجع الملف والبيانات ثم حاول مرة أخرى.' : 'The file could not be uploaded. Check the file and input, then try again.'],
             'executed' => ['success', $ar ? 'تم التنفيذ' : 'Completed', $ar ? 'تم تنفيذ العملية بنجاح.' : 'The operation completed successfully.'],
@@ -88,7 +88,7 @@ final class AdminFeedback
             'validationTitle' => $ar ? 'راجع البيانات' : 'Check the form',
             'validationMessage' => $ar ? 'يرجى استكمال الحقول المطلوبة والتأكد من صحة القيم قبل المتابعة.' : 'Complete required fields and correct invalid values before continuing.',
             'fieldPrefix' => $ar ? 'أول حقل يحتاج مراجعة:' : 'First field to review:',
-            'deleteConfirm' => $ar ? 'هل أنت متأكد من الحذف؟ سيتم إخفاء العقد من الداشبورد مع الاحتفاظ بسجله المالي والتاريخي.' : 'Delete this contract from the dashboard? Its financial and audit history will be preserved.',
+            'deleteConfirm' => $ar ? 'هل أنت متأكد من الحذف؟ سيتم إخراج السجل من العمليات النشطة مع الحفاظ على السجل التاريخي والمالي عند الحاجة.' : 'Delete this record from active SafeContracts operations? Required historical and financial evidence will be preserved.',
             'closeLabel' => $ar ? 'إغلاق الرسالة' : 'Close message',
         ];
     }

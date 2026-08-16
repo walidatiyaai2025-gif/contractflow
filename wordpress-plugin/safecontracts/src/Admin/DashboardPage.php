@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use SafeContracts\Contracts\ContractArchiveService;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Settings\GeneralSettings;
 use Throwable;
 
 final class DashboardPage
@@ -60,6 +61,15 @@ final class DashboardPage
         $filters = DashboardFilters::normalize($_GET);
         $read = new AdminReadRepository();
         $kpis = $read->kpis($filters);
+        $settings = (new GeneralSettings())->read();
+        $currencyToken = trim((string) ($settings['currency_symbol'] ?? ''));
+        if ($currencyToken === '') {
+            $currencyToken = trim((string) ($settings['currency_code'] ?? ''));
+        }
+        $currencyLabel = trim(implode(' ', array_filter([
+            (string) ($settings['currency_symbol'] ?? ''),
+            (string) ($settings['currency_code'] ?? ''),
+        ], static fn (string $value): bool => trim($value) !== '')));
         $customers = $read->customerOptions();
         $contracts = $read->contractOptions($filters['customer_id']);
         $tableFilters = $filters;
@@ -78,6 +88,9 @@ final class DashboardPage
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Operational overview', 'safecontracts'); ?></p>
                     <h2 id="safecontracts-dashboard-title"><?php echo esc_html__('Dashboard', 'safecontracts'); ?></h2>
                 </div>
+                <?php if ($currencyLabel !== '') : ?>
+                    <span class="safecontracts-currency-badge"><?php echo esc_html__('Currency', 'safecontracts'); ?>: <?php echo esc_html($currencyLabel); ?></span>
+                <?php endif; ?>
             </div>
 
             <form class="safecontracts-filter-bar" method="get">
@@ -116,12 +129,12 @@ final class DashboardPage
 
             <div class="safecontracts-kpi-grid">
                 <?php self::kpi(__('Contracts', 'safecontracts'), (string) $kpis['contract_count']); ?>
-                <?php self::kpi(__('Scheduled', 'safecontracts'), self::money($kpis['scheduled_total'])); ?>
-                <?php self::kpi(__('Remaining', 'safecontracts'), self::money($kpis['remaining_total'])); ?>
-                <?php self::kpi(__('Overdue exposure', 'safecontracts'), self::money($kpis['overdue_exposure']), true); ?>
-                <?php self::kpi(__('Collected', 'safecontracts'), self::money($kpis['collected_total'])); ?>
+                <?php self::kpi(__('Scheduled', 'safecontracts'), self::money($kpis['scheduled_total'], $currencyToken)); ?>
+                <?php self::kpi(__('Remaining', 'safecontracts'), self::money($kpis['remaining_total'], $currencyToken)); ?>
+                <?php self::kpi(__('Overdue exposure', 'safecontracts'), self::money($kpis['overdue_exposure'], $currencyToken), true); ?>
+                <?php self::kpi(__('Collected', 'safecontracts'), self::money($kpis['collected_total'], $currencyToken)); ?>
             </div>
-            <p class="description"><?php echo esc_html__('Dashboard values are calculated from server-side scoped contract/payment data. Contractual due dates remain authoritative for overdue exposure. Server-side authorization and assignment scope remain authoritative for every metric and filter.', 'safecontracts'); ?></p>
+            <p class="description"><?php echo esc_html__('Dashboard values use the configured SafeContracts currency and are calculated from server-side scoped contract/payment data. Contractual due dates remain authoritative for overdue exposure.', 'safecontracts'); ?></p>
 
             <section class="safecontracts-admin-card safecontracts-table-card safecontracts-dashboard-contracts" aria-labelledby="safecontracts-dashboard-contracts-title">
                 <div class="safecontracts-section-heading">
@@ -147,12 +160,12 @@ final class DashboardPage
                                 <td><?php echo esc_html((string) $contract['contract_number']); ?></td>
                                 <td><?php echo esc_html((string) $contract['customer_name']); ?></td>
                                 <td><?php echo esc_html((string) $contract['status']); ?></td>
-                                <td><?php echo esc_html(number_format((float) $contract['base_value'], 2)); ?></td>
+                                <td><?php echo esc_html(self::money($contract['base_value'], $currencyToken)); ?></td>
                                 <td>
                                     <div class="safecontracts-dashboard-table-actions">
                                         <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => ContractsPage::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?> / فتح</a>
                                         <?php if (current_user_can(Capabilities::MANAGE_SYSTEM)) : ?>
-                                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form>
+                                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Its financial, collection, history and audit records will be preserved.', 'safecontracts'); ?>">
                                                 <input type="hidden" name="action" value="<?php echo esc_attr(self::ARCHIVE_ACTION); ?>">
                                                 <input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contract['id']); ?>">
                                                 <?php wp_nonce_field(self::ARCHIVE_ACTION . '_' . (int) $contract['id']); ?>
@@ -177,8 +190,14 @@ final class DashboardPage
         ?><article class="safecontracts-kpi<?php echo $alert ? ' safecontracts-kpi--alert' : ''; ?>"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html($value); ?></strong></article><?php
     }
 
-    private static function money(mixed $value): string
+    private static function money(mixed $value, string $currencyToken = ''): string
     {
-        return number_format((float) $value, 2, '.', ',');
+        $amount = number_format((float) $value, 2, '.', ',');
+        $currencyToken = trim($currencyToken);
+        if ($currencyToken === '') {
+            return $amount;
+        }
+        $locale = function_exists('get_user_locale') ? strtolower((string) get_user_locale()) : 'en_us';
+        return str_starts_with($locale, 'ar') ? $amount . ' ' . $currencyToken : $currencyToken . ' ' . $amount;
     }
 }

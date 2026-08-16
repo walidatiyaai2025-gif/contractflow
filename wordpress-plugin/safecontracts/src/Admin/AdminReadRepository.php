@@ -16,6 +16,7 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $where = $this->where($filters, 'c', 'p');
+        $where[] = 'c.is_archived = 0';
         $today = function_exists('wp_date') ? wp_date('Y-m-d') : gmdate('Y-m-d');
         $sql = "SELECT
                 COUNT(DISTINCT c.id) AS contract_count,
@@ -24,7 +25,7 @@ final class AdminReadRepository
                 COALESCE(SUM(CASE WHEN p.due_date < '" . addslashes($today) . "' AND p.remaining_amount > 0 THEN p.remaining_amount ELSE 0 END), 0) AS overdue_exposure,
                 COALESCE(SUM(p.paid_amount), 0) AS collected_total
             FROM {$contracts} c
-            LEFT JOIN {$payments} p ON p.contract_id = c.id
+            LEFT JOIN {$payments} p ON p.contract_id = c.id AND p.is_archived = 0
             WHERE " . implode(' AND ', $where);
         return $this->firstRow($wpdb->get_results($sql, ARRAY_A), [
             'contract_count' => '0',
@@ -42,14 +43,14 @@ final class AdminReadRepository
         $normalized = DashboardFilters::normalize($filters);
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
-        $where = ['cu.is_active IN (0, 1)'];
+        $where = ['cu.is_active = 1'];
         if ($normalized['customer_id'] > 0) {
             $where[] = 'cu.id = ' . $normalized['customer_id'];
         }
         if (! current_user_can(Capabilities::VIEW_ALL)) {
             $this->requireAssignedScope();
             $userId = get_current_user_id();
-            $where[] = "EXISTS (SELECT 1 FROM {$contracts} sc_scope WHERE sc_scope.customer_id = cu.id AND sc_scope.accountant_user_id = {$userId})";
+            $where[] = "EXISTS (SELECT 1 FROM {$contracts} sc_scope WHERE sc_scope.customer_id = cu.id AND sc_scope.accountant_user_id = {$userId} AND sc_scope.is_archived = 0)";
         }
         $sql = "SELECT cu.id, cu.internal_code, cu.name, cu.contact_name, cu.email, cu.phone, cu.notes, cu.is_active
                 FROM {$customers} cu WHERE " . implode(' AND ', $where) . ' ORDER BY cu.name ASC LIMIT 500';
@@ -82,8 +83,10 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $where = $this->where($normalized, 'c', 'p');
+        $where[] = 'c.is_archived = 0';
+        $where[] = 'p.is_archived = 0';
         $sql = "SELECT p.id, p.contract_id, p.sequence_no, p.reference, p.due_date, p.expected_payment_date,
-                       p.original_amount, p.paid_amount, p.remaining_amount, p.status,
+                       p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
                        c.contract_number, c.accountant_user_id, c.is_archived AS contract_is_archived,
                        cu.id AS customer_id, cu.name AS customer_name
                 FROM {$payments} p
@@ -105,8 +108,11 @@ final class AdminReadRepository
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $methods = $wpdb->prefix . 'safecontracts_payment_methods';
         $where = $this->where($normalized, 'c', 'p');
+        $where[] = 'c.is_archived = 0';
+        $where[] = 'p.is_archived = 0';
+        $where[] = 'cl.is_archived = 0';
         $sql = "SELECT cl.id, cl.payment_id, cl.amount, cl.collection_date, cl.payment_method_id,
-                       cl.reference, cl.details, cl.proof_media_id, cl.created_by, cl.created_at,
+                       cl.reference, cl.details, cl.proof_media_id, cl.created_by, cl.created_at, cl.is_archived,
                        p.reference AS payment_reference, p.sequence_no, p.due_date, p.status AS payment_status,
                        p.remaining_amount, c.id AS contract_id, c.contract_number, c.accountant_user_id,
                        cu.id AS customer_id, cu.name AS customer_name, pm.name AS payment_method_name
@@ -136,6 +142,8 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $followups = $wpdb->prefix . 'safecontracts_payment_followups';
         $where = $this->where($normalized, 'c', 'p');
+        $where[] = 'c.is_archived = 0';
+        $where[] = 'p.is_archived = 0';
         $whereSql = implode(' AND ', $where);
 
         $collectionSql = "SELECT COUNT(cl.id) AS collection_transactions,
@@ -143,7 +151,7 @@ final class AdminReadRepository
                           FROM {$collections} cl
                           INNER JOIN {$payments} p ON p.id = cl.payment_id
                           INNER JOIN {$contracts} c ON c.id = p.contract_id
-                          WHERE {$whereSql}";
+                          WHERE {$whereSql} AND cl.is_archived = 0";
         $collectionTotals = $this->firstRow($wpdb->get_results($collectionSql, ARRAY_A), [
             'collection_transactions' => '0',
             'collection_ledger_total' => '0.0000',
@@ -177,7 +185,10 @@ final class AdminReadRepository
     public function contractOptions(int $customerId = 0): array
     {
         $filters = $customerId > 0 ? ['customer_id' => $customerId] : [];
-        $rows = $this->contracts($filters);
+        $rows = array_values(array_filter(
+            $this->contracts($filters),
+            static fn (array $row): bool => empty($row['is_archived'])
+        ));
         return array_values(array_map(static fn (array $row): array => [
             'id' => (int) ($row['id'] ?? 0),
             'contract_number' => (string) ($row['contract_number'] ?? ''),

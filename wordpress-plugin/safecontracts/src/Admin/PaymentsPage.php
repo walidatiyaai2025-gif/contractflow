@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Contracts\ContractMoney;
+use SafeContracts\Deletion\SafeDeletionService;
 use SafeContracts\Payments\PaymentService;
 use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
@@ -14,6 +15,7 @@ final class PaymentsPage
 {
     public const SLUG = 'safecontracts-payments';
     public const SAVE_ACTION = 'safecontracts_save_payment_admin';
+    public const DELETE_ACTION = 'safecontracts_delete_payment_admin';
 
     public static function register(): void
     {
@@ -50,6 +52,24 @@ final class PaymentsPage
         exit;
     }
 
+    public static function handleDelete(): void
+    {
+        if (! current_user_can(Capabilities::MANAGE_PAYMENTS)) {
+            wp_die(__('You do not have permission to delete payments.', 'safecontracts'));
+        }
+        $paymentId = max(0, (int) ($_POST['payment_id'] ?? 0));
+        check_admin_referer(self::DELETE_ACTION . '_' . $paymentId);
+        $status = 'deleted';
+        try {
+            (new SafeDeletionService())->archivePayment($paymentId);
+        } catch (Throwable $error) {
+            unset($error);
+            $status = 'delete_failed';
+        }
+        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'safecontracts_status' => $status], admin_url('admin.php')));
+        exit;
+    }
+
     public static function render(): void
     {
         if (! current_user_can(Capabilities::ACCESS)) {
@@ -64,6 +84,9 @@ final class PaymentsPage
         if ($selectedId > 0) {
             try {
                 $selected = (new PaymentService())->find($selectedId);
+                if (! empty($selected['is_archived'])) {
+                    $selected = null;
+                }
             } catch (Throwable $error) {
                 unset($error);
             }
@@ -78,9 +101,28 @@ final class PaymentsPage
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Receivables', 'safecontracts'); ?></p><h1><?php echo esc_html__('Payments', 'safecontracts'); ?></h1></div></div>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Due date', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Reference', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Remaining', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Due date', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Reference', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Remaining', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($payments as $payment) : ?>
-                        <tr><td><?php echo esc_html((string) $payment['due_date']); ?></td><td><?php echo esc_html((string) $payment['contract_number']); ?></td><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => (int) $payment['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) ($payment['reference'] ?: '#' . $payment['sequence_no'])); ?></a></td><td><?php echo esc_html((string) $payment['status']); ?></td><td><?php echo esc_html(number_format((float) $payment['remaining_amount'], 2)); ?></td></tr>
+                        <tr>
+                            <td><?php echo esc_html((string) $payment['due_date']); ?></td>
+                            <td><?php echo esc_html((string) $payment['contract_number']); ?></td>
+                            <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => (int) $payment['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) ($payment['reference'] ?: '#' . $payment['sequence_no'])); ?></a></td>
+                            <td><?php echo esc_html((string) $payment['status']); ?></td>
+                            <td><?php echo esc_html(number_format((float) $payment['remaining_amount'], 2)); ?></td>
+                            <td>
+                                <div class="safecontracts-dashboard-table-actions">
+                                    <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => (int) $payment['id']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a>
+                                    <?php if (current_user_can(Capabilities::MANAGE_PAYMENTS)) : ?>
+                                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this scheduled payment? Payments with collection history are protected and must have their collections reversed first.', 'safecontracts'); ?>">
+                                            <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
+                                            <input type="hidden" name="payment_id" value="<?php echo esc_attr((string) $payment['id']); ?>">
+                                            <?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $payment['id']); ?>
+                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?> / حذف</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                     </tbody></table>
                 </section>

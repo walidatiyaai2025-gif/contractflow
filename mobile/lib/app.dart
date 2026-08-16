@@ -83,9 +83,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
 
   Future<void> _startPushIfNeeded() async {
     final config = _bootstrap.configController?.config;
-    if (config == null || !config.features.pushNotifications) {
-      return;
-    }
+    if (config == null || !config.features.pushNotifications) return;
     await _pushRegistration.start();
     if (_pushRegistration.status.value.backendRegistered) {
       await _bootstrap.profileController?.load();
@@ -104,6 +102,89 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
       await _tokenStore.clear();
     }
     _bootstrap.signOutLocalState();
+  }
+
+  ThemeData _theme() {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF173B65),
+      brightness: Brightness.light,
+    );
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: scheme.outlineVariant),
+    );
+    return ThemeData(
+      colorScheme: scheme,
+      useMaterial3: true,
+      scaffoldBackgroundColor: const Color(0xFFF6F8FB),
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        elevation: 0,
+        scrolledUnderElevation: 1,
+        backgroundColor: const Color(0xFFF6F8FB),
+        foregroundColor: scheme.onSurface,
+        titleTextStyle: TextStyle(
+          color: scheme.onSurface,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        margin: EdgeInsets.zero,
+        elevation: 0,
+        color: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side:
+              BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.62)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: scheme.surfaceContainerLowest,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: border,
+        enabledBorder: border,
+        focusedBorder: border.copyWith(
+          borderSide: BorderSide(color: scheme.primary, width: 1.7),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 50),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 72,
+        backgroundColor: scheme.surface,
+        indicatorColor: scheme.primaryContainer,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      dividerTheme: DividerThemeData(color: scheme.outlineVariant),
+    );
   }
 
   @override
@@ -130,10 +211,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF173B65)),
-          useMaterial3: true,
-        ),
+        theme: _theme(),
         builder: (context, child) => SafeContractsDirectionScope(
           languageCode: _localeController.languageCode,
           child: child ?? const SizedBox.shrink(),
@@ -226,6 +304,8 @@ final class _BootstrapView extends StatelessWidget {
             SessionState.unauthenticated) {
           return SafeContractsLoginScreen(
             controller: loginController,
+            languageCode: languageCode,
+            onLanguageChanged: onLanguageChanged,
             onAuthenticated: onAuthenticated,
           );
         }
@@ -233,38 +313,47 @@ final class _BootstrapView extends StatelessWidget {
         return Scaffold(
           body: SafeArea(
             child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.fact_check_outlined, size: 56),
-                    const SizedBox(height: 16),
-                    Text(
-                      'SafeContracts',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text('${l10n.t('Environment')}: ${environment.name.name}'),
-                    const SizedBox(height: 16),
-                    if (controller.state == MobileBootstrapState.idle ||
-                        controller.state == MobileBootstrapState.loading)
-                      const CircularProgressIndicator()
-                    else ...[
+              child: Card(
+                margin: const EdgeInsets.all(24),
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.shield_outlined, size: 56),
+                      const SizedBox(height: 16),
                       Text(
-                        l10n.rawMessage(
-                          controller.message ??
-                              'SafeContracts mobile is unavailable.',
+                        'SafeContracts',
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                          '${l10n.t('Environment')}: ${environment.name.name}'),
+                      const SizedBox(height: 18),
+                      if (controller.state == MobileBootstrapState.idle ||
+                          controller.state == MobileBootstrapState.loading)
+                        const CircularProgressIndicator()
+                      else ...[
+                        Text(
+                          l10n.rawMessage(
+                            controller.message ??
+                                'SafeContracts mobile is unavailable.',
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () => unawaited(controller.bootstrap()),
-                        child: Text(l10n.t('Retry session')),
-                      ),
+                        const SizedBox(height: 14),
+                        FilledButton(
+                          onPressed: () => unawaited(controller.bootstrap()),
+                          child: Text(l10n.t('Retry session')),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),

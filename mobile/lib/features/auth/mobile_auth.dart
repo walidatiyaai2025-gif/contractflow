@@ -17,6 +17,7 @@ final class MobileAuthRepository {
   Future<void> login({
     required String username,
     required String password,
+    bool rememberMe = true,
   }) async {
     final normalizedUsername = username.trim();
     if (normalizedUsername.isEmpty || normalizedUsername.length > 254) {
@@ -46,7 +47,7 @@ final class MobileAuthRepository {
     if (expiresAt is! String || DateTime.tryParse(expiresAt) == null) {
       throw const FormatException('SafeContracts login expiry is invalid.');
     }
-    await tokenStore.write(token);
+    await tokenStore.write(token, persistent: rememberMe);
   }
 
   Future<void> logout() async {
@@ -67,6 +68,13 @@ final class MobileLoginController extends ChangeNotifier {
   final MobileAuthRepository repository;
   MobileLoginState state = MobileLoginState.idle;
   String? errorMessage;
+  bool rememberMe = true;
+
+  void setRememberMe(bool value) {
+    if (rememberMe == value) return;
+    rememberMe = value;
+    notifyListeners();
+  }
 
   Future<bool> submit({
     required String username,
@@ -76,7 +84,11 @@ final class MobileLoginController extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
     try {
-      await repository.login(username: username, password: password);
+      await repository.login(
+        username: username,
+        password: password,
+        rememberMe: rememberMe,
+      );
       state = MobileLoginState.authenticated;
       notifyListeners();
       return true;
