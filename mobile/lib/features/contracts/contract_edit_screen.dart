@@ -358,7 +358,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                 children: [
                   TextField(
                     controller: _number,
-                    enabled: !busy,
+                    enabled: !busy && _editController.canEdit,
                     maxLength: 100,
                     decoration: InputDecoration(
                       labelText: l10n.t('Contract number'),
@@ -368,7 +368,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     value: _updateDates,
-                    onChanged: busy
+                    onChanged: busy || !_editController.canEdit
                         ? null
                         : (value) =>
                             setState(() => _updateDates = value ?? false),
@@ -377,7 +377,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                   if (_updateDates) ...[
                     TextField(
                       controller: _start,
-                      enabled: !busy,
+                      enabled: !busy && _editController.canEdit,
                       decoration: InputDecoration(
                         labelText: l10n.t('Start date YYYY-MM-DD'),
                         border: const OutlineInputBorder(),
@@ -386,7 +386,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _end,
-                      enabled: !busy,
+                      enabled: !busy && _editController.canEdit,
                       decoration: InputDecoration(
                         labelText: l10n.t('End date YYYY-MM-DD'),
                         border: const OutlineInputBorder(),
@@ -451,23 +451,28 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                     const SizedBox(height: 16),
                     Text(l10n.rawMessage(_editController.message!)),
                   ],
-                  const SizedBox(height: 24),
-                  FilledButton.icon(
-                    onPressed: busy ? null : () => unawaited(_save()),
-                    icon: saving
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(l10n.t('Save supported fields')),
-                  ),
+                  if (_editController.canEdit) ...[
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: busy ? null : () => unawaited(_save()),
+                      icon: saving
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_outlined),
+                      label: Text(l10n.t('Save supported fields')),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Text(
                     l10n.t(
-                      _editController.canAssignAccountant
-                          ? 'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.'
-                          : 'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.',
+                      !_editController.canEdit &&
+                              _editController.canAssignAccountant
+                          ? 'Contract fields are read-only for this session. Responsible accountant assignment remains server-authorized and audited.'
+                          : _editController.canAssignAccountant
+                              ? 'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.'
+                              : 'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.',
                     ),
                   ),
                 ],

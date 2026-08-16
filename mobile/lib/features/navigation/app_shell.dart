@@ -348,15 +348,15 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 
   void _openContract(int contractId) {
+    final canOpenContractEditor = widget.contractsController.canEditContract ||
+        widget.session.can('safecontracts_assign_contracts');
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => ContractDetailsScreen(
           controller: widget.contractsController,
           contractId: contractId,
           currency: widget.config.currency,
-          onEditContract: widget.contractsController.canEditContract
-              ? _openContractEdit
-              : null,
+          onEditContract: canOpenContractEditor ? _openContractEdit : null,
         ),
       ),
     );
