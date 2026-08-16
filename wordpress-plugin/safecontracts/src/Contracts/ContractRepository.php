@@ -200,9 +200,6 @@ final class ContractRepository
     {
         global $wpdb;
         $this->assertWpdb($wpdb);
-        if (! $this->customerIsActive($customerId)) {
-            throw new RuntimeException('Contract customer is outside the current Enterprise tenant.');
-        }
         $table = $wpdb->prefix . 'safecontracts_contracts';
         $tenant = $this->tenantCondition();
         $this->executeMutation($wpdb, $wpdb->prepare("UPDATE {$table} SET customer_id = %d, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d{$tenant}", $customerId, $actorId, $contractId), 'Unable to assign contract customer.');
