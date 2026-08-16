@@ -138,9 +138,6 @@ final class ImportRunRepository
         if ($runId <= 0) {
             throw new RuntimeException('Import run ID must be positive when clearing row errors.');
         }
-        if ($this->find($runId) === null) {
-            return;
-        }
         $table = $wpdb->prefix . 'safecontracts_import_errors';
         if ($wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE import_run_id = %d" . NonCoreTenantScope::condition(), $runId)) === false) {
             throw new RuntimeException('Unable to clear SafeContracts import row errors.');
@@ -193,9 +190,6 @@ final class ImportRunRepository
     public function errorCount(int $runId): int
     {
         global $wpdb;
-        if ($this->find($runId) === null) {
-            return 0;
-        }
         $table = $wpdb->prefix . 'safecontracts_import_errors';
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT COUNT(*) AS error_count FROM {$table} WHERE import_run_id = %d" . NonCoreTenantScope::condition(),
@@ -211,9 +205,6 @@ final class ImportRunRepository
     public function errors(int $runId, int $limit = 500): array
     {
         global $wpdb;
-        if ($this->find($runId) === null) {
-            return [];
-        }
         $limit = max(1, min(1000, $limit));
         $table = $wpdb->prefix . 'safecontracts_import_errors';
         $rows = $wpdb->get_results($wpdb->prepare(
