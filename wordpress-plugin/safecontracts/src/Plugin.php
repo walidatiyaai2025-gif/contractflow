@@ -33,6 +33,7 @@ use SafeContracts\Database\Migrator;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Rest\Router;
 use SafeContracts\Translations\AdminArabicDefaults;
+use SafeContracts\Translations\RuntimeLabels;
 use SafeContracts\Translations\TranslationCatalog;
 
 final class Plugin
@@ -61,6 +62,7 @@ final class Plugin
         // text domain. They never mutate WordPress site/user locale settings.
         TranslationCatalog::register();
         AdminArabicDefaults::register();
+        RuntimeLabels::register();
         MobileBearerAuthentication::register();
         FirebaseAccessTokenProvider::register();
         (new Migrator())->maybeMigrate();
