@@ -31,13 +31,16 @@ final class CoreTenantRestGuard
             return $response;
         }
 
-        $access = Permission::access();
-        if ($access instanceof WP_Error) {
-            return $access;
+        // Resolve and lock tenant context first. Permission::access() is now
+        // tenant-membership aware and must evaluate against the selected tenant,
+        // not against WordPress capabilities in isolation.
+        $tenantId = TenantRequestContext::resolve($request, true);
+        if ($tenantId instanceof WP_Error) {
+            return $tenantId;
         }
 
-        $tenantId = TenantRequestContext::resolve($request, true);
-        return $tenantId instanceof WP_Error ? $tenantId : $response;
+        $access = Permission::access();
+        return $access instanceof WP_Error ? $access : $response;
     }
 
     public static function isCoreBusinessRoute(string $route): bool
