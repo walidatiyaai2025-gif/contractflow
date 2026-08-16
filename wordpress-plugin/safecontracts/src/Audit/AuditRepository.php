@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace SafeContracts\Audit;
 
 use RuntimeException;
-use SafeContracts\Tenancy\TenantContextStore;
+use SafeContracts\Tenancy\NonCoreTenantScope;
 
 final class AuditRepository
 {
+    /** @var list<string> */
+    private const PLATFORM_GLOBAL_ENTITY_TYPES = ['payment_method', 'role', 'system'];
+
     public function append(
         string $entityType,
         ?int $entityId,
@@ -22,7 +25,8 @@ final class AuditRepository
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_audit_log';
 
-        $tenantId = TenantContextStore::context()->tenantId();
+        $platformGlobal = $this->isPlatformGlobal($entityType, $eventType);
+        $tenantId = $platformGlobal ? null : NonCoreTenantScope::tenantId();
         if ($tenantId !== null) {
             $context ??= [];
             $context['tenant_id'] = $tenantId;
@@ -37,10 +41,18 @@ final class AuditRepository
         $afterSql = $afterJson === null ? 'NULL' : '%s';
         $contextSql = $contextJson === null ? 'NULL' : '%s';
 
-        $statement = "INSERT INTO {$table}
-            (entity_type, entity_id, event_type, actor_user_id, before_json, after_json, context_json, created_at)
-            VALUES (%s, {$entityIdSql}, %s, {$actorSql}, {$beforeSql}, {$afterSql}, {$contextSql}, UTC_TIMESTAMP())";
-        $args = [$entityType];
+        if ($tenantId === null) {
+            $statement = "INSERT INTO {$table}
+                (entity_type, entity_id, event_type, actor_user_id, before_json, after_json, context_json, created_at)
+                VALUES (%s, {$entityIdSql}, %s, {$actorSql}, {$beforeSql}, {$afterSql}, {$contextSql}, UTC_TIMESTAMP())";
+            $args = [$entityType];
+        } else {
+            $statement = "INSERT INTO {$table}
+                (tenant_id, entity_type, entity_id, event_type, actor_user_id, before_json, after_json, context_json, created_at)
+                VALUES (%d, %s, {$entityIdSql}, %s, {$actorSql}, {$beforeSql}, {$afterSql}, {$contextSql}, UTC_TIMESTAMP())";
+            $args = [$tenantId, $entityType];
+        }
+
         if ($entityId !== null) {
             $args[] = $entityId;
         }
@@ -70,15 +82,24 @@ final class AuditRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_audit_log';
+        $tenantId = NonCoreTenantScope::tenantId();
+        $scope = '';
+        if ($tenantId !== null) {
+            // Tenant users can browse their tenant-owned audit rows plus the
+            // explicitly defined platform-global audit events. Rows owned by a
+            // different tenant never satisfy this predicate even with a known ID.
+            $scope = " AND (tenant_id = {$tenantId} OR (tenant_id IS NULL AND (entity_type IN ('payment_method','role','system') OR event_type = 'user_role_changed')))";
+        }
+
         if ($entityId === null) {
             $sql = $wpdb->prepare(
-                "SELECT * FROM {$table} WHERE entity_type = %s ORDER BY created_at DESC, id DESC LIMIT %d",
+                "SELECT * FROM {$table} WHERE entity_type = %s{$scope} ORDER BY created_at DESC, id DESC LIMIT %d",
                 $entityType,
                 $limit
             );
         } else {
             $sql = $wpdb->prepare(
-                "SELECT * FROM {$table} WHERE entity_type = %s AND entity_id = %d ORDER BY created_at DESC, id DESC LIMIT %d",
+                "SELECT * FROM {$table} WHERE entity_type = %s AND entity_id = %d{$scope} ORDER BY created_at DESC, id DESC LIMIT %d",
                 $entityType,
                 $entityId,
                 $limit
@@ -86,6 +107,12 @@ final class AuditRepository
         }
         $rows = $wpdb->get_results($sql, ARRAY_A);
         return is_array($rows) ? $rows : [];
+    }
+
+    private function isPlatformGlobal(string $entityType, string $eventType): bool
+    {
+        return in_array($entityType, self::PLATFORM_GLOBAL_ENTITY_TYPES, true)
+            || $eventType === 'user_role_changed';
     }
 
     private function encode(?array $value): ?string
