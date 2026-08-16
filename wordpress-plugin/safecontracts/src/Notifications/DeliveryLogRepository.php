@@ -122,6 +122,48 @@ final class DeliveryLogRepository
         return is_array($rows) && $rows !== [];
     }
 
+    /**
+     * Summarize the latest known device-level delivery attempts by recipient.
+     * A recipient is treated as sent when at least one of their devices received
+     * the notification; otherwise the recipient is failed when attempts exist.
+     *
+     * @return array<int,array{status:string,error_code:?string,attempts:int}>
+     */
+    public function outcomesForOccurrence(int $ruleId, int $paymentId, string $scheduledDate, int $attemptNo): array
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT user_id,
+                        MAX(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) AS any_sent,
+                        COUNT(*) AS attempts,
+                        MAX(NULLIF(error_code, '')) AS error_code
+                 FROM {$table}
+                 WHERE rule_id = %d AND payment_id = %d AND scheduled_for = %s AND attempt_no = %d
+                 GROUP BY user_id ORDER BY user_id ASC",
+                $ruleId,
+                $paymentId,
+                $scheduledDate,
+                $attemptNo
+            ),
+            ARRAY_A
+        );
+        $result = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            $userId = (int) ($row['user_id'] ?? 0);
+            if ($userId <= 0) {
+                continue;
+            }
+            $result[$userId] = [
+                'status' => ! empty($row['any_sent']) ? 'sent' : 'failed',
+                'error_code' => isset($row['error_code']) && trim((string) $row['error_code']) !== '' ? (string) $row['error_code'] : null,
+                'attempts' => max(0, (int) ($row['attempts'] ?? 0)),
+            ];
+        }
+        return $result;
+    }
+
     private function normalizeErrorCode(?string $value): ?string
     {
         if ($value === null || trim($value) === '') {
