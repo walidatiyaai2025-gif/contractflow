@@ -114,11 +114,13 @@ final class NonCoreTenantSchemaHardener
             'suppression_scopes' => $this->duplicateCount($wpdb, 'safecontracts_notification_suppressions', 'tenant_id, scope_type, scope_id'),
             'import_storage_keys' => $this->duplicateCount($wpdb, 'safecontracts_import_runs', 'tenant_id, storage_key', "storage_key <> ''"),
         ];
+        $runtimeEnforcement = NonCoreTenantEnforcement::isEnabled();
 
         return [
-            'ready' => (bool) ($ownership['ready'] ?? false) && array_sum($duplicates) === 0,
+            'ready' => (bool) ($ownership['ready'] ?? false) && array_sum($duplicates) === 0 && $runtimeEnforcement,
             'ownership' => $ownership,
             'duplicates' => $duplicates,
+            'runtime_enforcement' => $runtimeEnforcement,
             'hardened' => $this->isHardened(),
         ];
     }
@@ -129,6 +131,9 @@ final class NonCoreTenantSchemaHardener
         global $wpdb;
         $this->assertWpdb($wpdb);
         $preflight = $this->preflight();
+        if (! ($preflight['runtime_enforcement'] ?? false)) {
+            throw new RuntimeException('Enterprise non-core runtime tenant enforcement must be enabled and validated before schema hardening.');
+        }
         if (! $preflight['ready']) {
             throw new RuntimeException('Enterprise non-core tenant schema is not ready to harden. Ownership and tenant-scoped uniqueness preflight must be green.');
         }
