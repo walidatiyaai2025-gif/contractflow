@@ -28,6 +28,7 @@ use SafeContracts\Admin\NotificationsPage;
 use SafeContracts\Admin\PaymentMethodsPage;
 use SafeContracts\Admin\PaymentsPage;
 use SafeContracts\Admin\ReportsPage;
+use SafeContracts\Admin\TenantMembersPage;
 use SafeContracts\Admin\TranslationsPage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Audit\AuditRecorder;
@@ -110,6 +111,7 @@ final class Plugin
         add_action('admin_menu', [NotificationSchedulePage::class, 'register'], 17);
         add_action('admin_menu', [ReportsPage::class, 'register'], 18);
         add_action('admin_menu', [ActiveUsersPage::class, 'register'], 19);
+        add_action('admin_menu', [TenantMembersPage::class, 'register'], 20);
         add_action('admin_menu', [UsersRolesPage::class, 'register'], 20);
         add_action('admin_menu', [ArchivePage::class, 'register'], 21);
         add_action('admin_menu', [ImportsPage::class, 'register'], 22);
@@ -149,6 +151,8 @@ final class Plugin
         add_action('admin_post_' . NotificationCenterPage::SUPPRESSION_ACTION, [NotificationCenterPage::class, 'handleSuppression']);
         add_action('admin_post_' . NotificationSchedulePage::MANUAL_SEND_ACTION, [NotificationSchedulePage::class, 'handleManualSend']);
         add_action('admin_post_' . NotificationSchedulePage::SAVE_TIME_ACTION, [NotificationSchedulePage::class, 'handleSaveTime']);
+        add_action('admin_post_' . TenantMembersPage::ASSIGN_ACTION, [TenantMembersPage::class, 'handleAssign']);
+        add_action('admin_post_' . TenantMembersPage::DEACTIVATE_ACTION, [TenantMembersPage::class, 'handleDeactivate']);
         add_action('admin_post_' . UsersRolesPage::SAVE_CAPABILITIES_ACTION, [UsersRolesPage::class, 'handleSaveCapabilities']);
         add_action('admin_post_' . UsersRolesPage::ASSIGN_ROLE_ACTION, [UsersRolesPage::class, 'handleAssignRole']);
         add_action('admin_post_' . FirebaseSettingsPage::SAVE_ACTION, [FirebaseSettingsPage::class, 'handleSave']);
