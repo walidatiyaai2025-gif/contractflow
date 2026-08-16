@@ -87,7 +87,7 @@ esc_p4_bind_assert(str_contains($schema, 'UNIQUE KEY tenant_contract (tenant_id,
 esc_p4_bind_assert(str_contains($schema, 'KEY tenant_type (tenant_id, contract_type_id, contract_id)'), 'type lookup index is tenant-first');
 esc_p4_bind_assert(str_contains($schema, 'KEY tenant_template_version (tenant_id, template_id, template_version_id, contract_id)'), 'template version index is tenant-first');
 esc_p4_bind_assert(str_contains($migratorSource, "'1.27.0' => Migration0028EnterpriseContractConfigurationBindings::class"), 'P4-003 migration registered at 1.27.0');
-esc_p4_bind_assert(Migrator::LATEST_VERSION === '1.27.0', 'P4-003 is latest schema version');
+esc_p4_bind_assert(version_compare(Migrator::LATEST_VERSION, '1.27.0', '>='), 'P4-003 schema remains reachable after later migrations');
 esc_p4_bind_assert(! str_contains($legacyContractMigration, 'contract_type_id'), 'legacy contract foundation remains unchanged');
 esc_p4_bind_assert(! str_contains($contractStatusSource, 'template'), 'legacy ContractStatus remains independent of templates');
 esc_p4_bind_assert(str_contains($repositorySource, "c.status = 'draft' AND c.is_archived = 0"), 'binding persistence atomically rechecks editable draft state');
