@@ -66,21 +66,6 @@ final class TenantRolePolicy
         ],
     ];
 
-    /** @var array<string,list<string>> */
-    private const ROLE_OPERATIONS = [
-        self::TENANT_ADMIN => [
-            TenantOperationAuthorization::MANAGE_CUSTOMERS,
-            TenantOperationAuthorization::DELETE_CUSTOMERS,
-            TenantOperationAuthorization::DELETE_CONTRACTS,
-            TenantOperationAuthorization::FIREBASE_TEST_PUSH,
-        ],
-        self::MANAGER => [
-            TenantOperationAuthorization::MANAGE_CUSTOMERS,
-        ],
-        self::ACCOUNTANT => [],
-        self::VIEWER => [],
-    ];
-
     public static function normalize(string $roleCode): string
     {
         return strtolower(trim($roleCode));
@@ -113,22 +98,6 @@ final class TenantRolePolicy
         }
 
         return in_array($capability, self::ROLE_CAPABILITIES[$roleCode] ?? [], true);
-    }
-
-    public static function allowsOperation(string $roleCode, bool $isOwner, string $operation): bool
-    {
-        $roleCode = self::normalize($roleCode);
-        if (! self::isRecognized($roleCode)) {
-            return false;
-        }
-        if ($roleCode === self::MEMBER) {
-            return true;
-        }
-        if ($isOwner) {
-            return true;
-        }
-
-        return in_array($operation, self::ROLE_OPERATIONS[$roleCode] ?? [], true);
     }
 
     public static function scopeCeiling(string $roleCode, bool $isOwner): string
