@@ -417,7 +417,7 @@ $GLOBALS['sc_test_result_queue'] = [
     esc_p5_calc_rule($fractionExpression, 'integer'), [],
 ];
 $fractional = $service->evaluate(71, 61);
-esc_p5_calc_assert(($fractional['status'] ?? '') === 'fractional_result' && ($fractional['result'] ?? 'x') === null, 'integer target rejects fractional calculated result');
+esc_p5_calc_assert(($fractional['status'] ?? '') === 'fractional_result' && array_key_exists('result', $fractional) && $fractional['result'] === null, 'integer target rejects fractional calculated result');
 
 $scaleExpression = ['kind' => 'multiply', 'children' => [
     ['kind' => 'constant', 'value' => '0.0000001'], ['kind' => 'constant', 'value' => '0.0000001'],
