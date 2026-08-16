@@ -7,6 +7,7 @@ namespace SafeContracts\Rest;
 use InvalidArgumentException;
 use RuntimeException;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Tenancy\CoreTenantEnforcement;
 use SafeContracts\Tenancy\TenantMembershipAdminService;
 use SafeContracts\Tenancy\TenantRolePolicy;
 use Throwable;
@@ -19,6 +20,10 @@ final class TenantMembersController
 {
     public static function register(): void
     {
+        if (! CoreTenantEnforcement::isEnabled()) {
+            return;
+        }
+
         register_rest_route(Router::NAMESPACE, '/tenant-members', [
             [
                 'methods' => WP_REST_Server::READABLE,
