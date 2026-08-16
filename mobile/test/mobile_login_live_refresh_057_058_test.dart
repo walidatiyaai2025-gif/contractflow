@@ -14,6 +14,11 @@ void main() {
 
     expect(login, contains('bool _bootstrapping = false;'));
     expect(login, contains('setState(() => _bootstrapping = true);'));
+    expect(login, contains('await widget.controller.submit('));
+    expect(
+      login.indexOf('setState(() => _bootstrapping = true);'),
+      lessThan(login.indexOf('await widget.controller.submit(')),
+    );
     expect(login, contains('await widget.onAuthenticated();'));
     expect(login, contains('if (_bootstrapping)'));
     expect(login, contains('_BlockingBootstrapSplash'));
