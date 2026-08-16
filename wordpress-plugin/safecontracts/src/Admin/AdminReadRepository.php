@@ -16,6 +16,7 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $where = $this->where($filters, 'c', 'p');
+        $where[] = 'c.is_archived = 0';
         $today = function_exists('wp_date') ? wp_date('Y-m-d') : gmdate('Y-m-d');
         $sql = "SELECT
                 COUNT(DISTINCT c.id) AS contract_count,
@@ -82,6 +83,7 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $where = $this->where($normalized, 'c', 'p');
+        $where[] = 'c.is_archived = 0';
         $where[] = 'p.is_archived = 0';
         $sql = "SELECT p.id, p.contract_id, p.sequence_no, p.reference, p.due_date, p.expected_payment_date,
                        p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
@@ -106,6 +108,7 @@ final class AdminReadRepository
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $methods = $wpdb->prefix . 'safecontracts_payment_methods';
         $where = $this->where($normalized, 'c', 'p');
+        $where[] = 'c.is_archived = 0';
         $where[] = 'p.is_archived = 0';
         $where[] = 'cl.is_archived = 0';
         $sql = "SELECT cl.id, cl.payment_id, cl.amount, cl.collection_date, cl.payment_method_id,
@@ -139,6 +142,7 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $followups = $wpdb->prefix . 'safecontracts_payment_followups';
         $where = $this->where($normalized, 'c', 'p');
+        $where[] = 'c.is_archived = 0';
         $where[] = 'p.is_archived = 0';
         $whereSql = implode(' AND ', $where);
 
