@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace SafeContracts\Tenancy;
 
-use RuntimeException;
-
 final class NonCoreTenantEnforcement
 {
     public const OPTION = 'safecontracts_esc_noncore_tenant_enforcement';
@@ -17,12 +15,10 @@ final class NonCoreTenantEnforcement
 
     public static function enable(): void
     {
+        // Runtime enforcement deliberately precedes destructive/non-null schema
+        // hardening. Ownership must be verified first so ESC can prove tenant
+        // isolation while the expand migration is still reversible.
         (new NonCoreTenantOwnershipBackfill())->assertReadyForEnforcement();
-        $hardener = new NonCoreTenantSchemaHardener();
-        $verification = $hardener->verify();
-        if (! $hardener->isHardened() || ! ($verification['ready'] ?? false)) {
-            throw new RuntimeException('Non-core Enterprise tenant schema must be hardened and verified before runtime enforcement can be enabled.');
-        }
         update_option(self::OPTION, '1', false);
     }
 
