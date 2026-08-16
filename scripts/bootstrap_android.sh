@@ -5,21 +5,36 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
 FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
+ALKENZY_APP_ASSET="$ROOT/mobile/assets/brand/alkenzy_adv.png"
 ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.png"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
-ALKENZY_ICON_SHA256="e703241650eeb984791c4715b4243bf96ba5b273b78eb2e25cd3640c188c57c9"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
   fi
 done
+
+cmp -s "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" || {
+  echo "FAIL: in-app and launcher Alkenzy identities must use the same supplied logo bytes" >&2
+  exit 1
+}
+
+python3 - "$ALKENZY_ICON_SOURCE" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+content = path.read_bytes()
+if len(content) < 4096 or not content.startswith(b"\x89PNG\r\n\x1a\n"):
+    raise SystemExit("FAIL: Alkenzy launcher icon is not a valid PNG resource")
+PY
 
 python3 - "$FIREBASE_CONFIG" <<'PY'
 import json
@@ -81,22 +96,10 @@ LAUNCHER_ICON="android/app/src/main/res/drawable/alkenzy_launcher.png"
 mkdir -p "$(dirname "$LAUNCHER_ICON")"
 cp "$ALKENZY_ICON_SOURCE" "$LAUNCHER_ICON"
 
-python3 - "$LAUNCHER_ICON" "$ALKENZY_ICON_SHA256" <<'PY'
-from hashlib import sha256
-from pathlib import Path
-import sys
-
-path = Path(sys.argv[1])
-expected = sys.argv[2]
-content = path.read_bytes()
-if not content.startswith(b"\x89PNG\r\n\x1a\n"):
-    raise SystemExit("FAIL: Alkenzy launcher icon is not a valid PNG resource")
-actual = sha256(content).hexdigest()
-if actual != expected:
-    raise SystemExit(
-        f"FAIL: Alkenzy launcher icon bytes changed (expected {expected}, got {actual})"
-    )
-PY
+cmp -s "$ALKENZY_ICON_SOURCE" "$LAUNCHER_ICON" || {
+  echo "FAIL: generated Android launcher does not match the supplied Alkenzy logo" >&2
+  exit 1
+}
 
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [[ ! -f "$MANIFEST" ]]; then
