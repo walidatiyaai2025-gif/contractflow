@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\TranslationCatalog;
 
 final class AdminFeedback
 {
@@ -54,7 +55,7 @@ final class AdminFeedback
                     <strong><?php echo esc_html($title); ?></strong>
                     <p><?php echo esc_html($message); ?></p>
                 </div>
-                <button type="button" class="safecontracts-toast__close" data-safecontracts-toast-close aria-label="<?php echo esc_attr(self::isArabic() ? 'إغلاق الرسالة' : 'Close message'); ?>">×</button>
+                <button type="button" class="safecontracts-toast__close" data-safecontracts-toast-close aria-label="<?php echo esc_attr(TranslationCatalog::text('Close message')); ?>">×</button>
             </div>
         </div>
         <?php
@@ -67,15 +68,16 @@ final class AdminFeedback
             return null;
         }
 
-        $ar = self::isArabic();
         return match ($status) {
-            'saved' => ['success', $ar ? 'تم الحفظ' : 'Saved', $ar ? 'تم حفظ البيانات بنجاح.' : 'Your changes were saved successfully.'],
-            'invalid' => ['error', $ar ? 'راجع البيانات' : 'Check the form', $ar ? 'تعذر الحفظ. راجع الحقول المطلوبة وصحة القيم ثم حاول مرة أخرى.' : 'The record could not be saved. Check required fields and entered values, then try again.'],
-            'archived', 'deleted' => ['success', $ar ? 'تم الحذف الآمن' : 'Safely deleted', $ar ? 'تمت إزالة العنصر من العمليات النشطة مع الحفاظ على السجل التاريخي والمالي وسجل التدقيق عند الحاجة.' : 'The item was removed from active operations while required historical, financial and audit evidence was preserved.'],
-            'archive_failed', 'delete_failed' => ['error', $ar ? 'تعذر الحذف' : 'Delete failed', $ar ? 'لم يتم الحذف. قد يكون العنصر محمياً بسجلات مرتبطة أو لا تسمح الصلاحيات الحالية بهذه العملية.' : 'The item could not be deleted. It may be protected by linked records or the current permissions may not allow this operation.'],
-            'uploaded' => ['success', $ar ? 'تم الرفع' : 'Uploaded', $ar ? 'تم رفع الملف بنجاح.' : 'The file was uploaded successfully.'],
-            'upload_failed' => ['error', $ar ? 'فشل الرفع' : 'Upload failed', $ar ? 'تعذر رفع الملف. راجع الملف والبيانات ثم حاول مرة أخرى.' : 'The file could not be uploaded. Check the file and input, then try again.'],
-            'executed' => ['success', $ar ? 'تم التنفيذ' : 'Completed', $ar ? 'تم تنفيذ العملية بنجاح.' : 'The operation completed successfully.'],
+            'saved' => ['success', TranslationCatalog::text('Saved'), TranslationCatalog::text('Your changes were saved successfully.')],
+            'invalid' => ['error', TranslationCatalog::text('Check the form'), TranslationCatalog::text('The record could not be saved. Check required fields and entered values, then try again.')],
+            'archived', 'deleted' => ['success', TranslationCatalog::text('Safely deleted'), TranslationCatalog::text('The item was removed from active operations while required historical, financial and audit evidence was preserved.')],
+            'archive_failed', 'delete_failed' => ['error', TranslationCatalog::text('Delete failed'), TranslationCatalog::text('The item could not be deleted. It may be protected by linked records or the current permissions may not allow this operation.')],
+            'uploaded' => ['success', TranslationCatalog::text('Uploaded'), TranslationCatalog::text('The file was uploaded successfully.')],
+            'upload_failed' => ['error', TranslationCatalog::text('Upload failed'), TranslationCatalog::text('The file could not be uploaded. Check the file and input, then try again.')],
+            'executed' => ['success', TranslationCatalog::text('Completed'), TranslationCatalog::text('The operation completed successfully.')],
+            'translations_saved' => ['success', TranslationCatalog::text('Saved'), TranslationCatalog::text('Translations saved.')],
+            'translations_reset' => ['success', TranslationCatalog::text('Saved'), TranslationCatalog::text('Translations reset.')],
             default => null,
         };
     }
@@ -83,19 +85,12 @@ final class AdminFeedback
     /** @return array<string,string> */
     private static function clientMessages(): array
     {
-        $ar = self::isArabic();
         return [
-            'validationTitle' => $ar ? 'راجع البيانات' : 'Check the form',
-            'validationMessage' => $ar ? 'يرجى استكمال الحقول المطلوبة والتأكد من صحة القيم قبل المتابعة.' : 'Complete required fields and correct invalid values before continuing.',
-            'fieldPrefix' => $ar ? 'أول حقل يحتاج مراجعة:' : 'First field to review:',
-            'deleteConfirm' => $ar ? 'هل أنت متأكد من الحذف؟ سيتم إخراج السجل من العمليات النشطة مع الحفاظ على السجل التاريخي والمالي عند الحاجة.' : 'Delete this record from active SafeContracts operations? Required historical and financial evidence will be preserved.',
-            'closeLabel' => $ar ? 'إغلاق الرسالة' : 'Close message',
+            'validationTitle' => TranslationCatalog::text('Check the form'),
+            'validationMessage' => TranslationCatalog::text('Complete required fields and correct invalid values before continuing.'),
+            'fieldPrefix' => TranslationCatalog::text('First field to review:'),
+            'deleteConfirm' => TranslationCatalog::text('Delete this record from active SafeContracts operations? Required historical and financial evidence will be preserved.'),
+            'closeLabel' => TranslationCatalog::text('Close message'),
         ];
-    }
-
-    private static function isArabic(): bool
-    {
-        $locale = function_exists('get_user_locale') ? (string) get_user_locale() : (function_exists('get_locale') ? (string) get_locale() : 'en_US');
-        return str_starts_with(strtolower($locale), 'ar');
     }
 }
