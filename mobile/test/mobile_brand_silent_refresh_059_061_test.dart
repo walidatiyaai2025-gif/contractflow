@@ -13,7 +13,10 @@ void main() {
 
     final bytes = File(SafeContractsBrand.assetPath).readAsBytesSync();
     expect(bytes.length, greaterThan(1024));
-    expect(bytes.take(8), <int>[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    expect(
+      bytes.take(8),
+      <int>[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+    );
   });
 
   test('automatic app-shell refresh uses silent refresh paths', () {
