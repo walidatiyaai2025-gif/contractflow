@@ -7,6 +7,8 @@ require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontract
 
 use SafeContracts\Notifications\DeviceTokenService;
 use SafeContracts\Notifications\DirectNotificationService;
+use SafeContracts\Notifications\EmailSettings;
+use SafeContracts\Notifications\NotificationScheduleSettings;
 use SafeContracts\Notifications\RecipientResolver;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Tenancy\NonCoreTenantEnforcement;
@@ -121,6 +123,42 @@ foreach ([
 ] as $marker) {
     esc_recipient_assert(str_contains($emailSource, $marker), 'email final-hop membership marker is present: ' . $marker);
 }
+
+// Tenant-owned notification business settings cannot be toggled by another
+// tenant through shared WordPress option names.
+$emailSettings = new EmailSettings();
+$emailSettings->save([
+    'enabled' => true,
+    'from_name' => 'Tenant 17 Notifications',
+    'from_address' => 'esc-17@example.com',
+]);
+esc_recipient_assert(
+    ($GLOBALS['sc_test_options'][EmailSettings::ENABLED_OPTION . '_tenant_17'] ?? null) === '1',
+    'notification email enabled flag is tenant-keyed'
+);
+esc_recipient_assert(
+    ($GLOBALS['sc_test_options'][EmailSettings::FROM_NAME_OPTION . '_tenant_17'] ?? null) === 'Tenant 17 Notifications',
+    'notification email sender name is tenant-keyed'
+);
+esc_recipient_assert(
+    ($GLOBALS['sc_test_options'][EmailSettings::FROM_ADDRESS_OPTION . '_tenant_17'] ?? null) === 'esc-17@example.com',
+    'notification email sender address is tenant-keyed'
+);
+esc_recipient_assert(
+    ! array_key_exists(EmailSettings::ENABLED_OPTION, $GLOBALS['sc_test_options']),
+    'tenant email settings do not mutate the legacy/global enabled option'
+);
+
+$scheduleSettings = new NotificationScheduleSettings();
+$scheduleSettings->saveDispatchTime('08:45');
+esc_recipient_assert(
+    ($GLOBALS['sc_test_options'][NotificationScheduleSettings::DISPATCH_TIME_OPTION . '_tenant_17'] ?? null) === '08:45',
+    'notification dispatch time is tenant-keyed'
+);
+esc_recipient_assert(
+    ! array_key_exists(NotificationScheduleSettings::DISPATCH_TIME_OPTION, $GLOBALS['sc_test_options']),
+    'tenant dispatch settings do not mutate the legacy/global option'
+);
 
 // Tenant-owned operational keys/storage/read-state are namespaced. Firebase OAuth
 // token cache is intentionally environment-global and keyed by Firebase project.
