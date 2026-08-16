@@ -75,7 +75,8 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                   return _PagingControls(controller: controller);
                 }
                 final notification = page.notifications[index];
-                final read = controller.isRead(notification.id);
+                final read =
+                    notification.isRead || controller.isRead(notification.id);
                 return ListTile(
                   leading: Icon(
                     read

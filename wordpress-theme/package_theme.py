@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Build and verify a deterministic installable SafeContracts theme ZIP."""
+"""Build and verify a deterministic installable Safe Contracts theme ZIP."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 from pathlib import Path, PurePosixPath
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
@@ -55,7 +54,9 @@ def check(archive_path: Path) -> None:
         "safecontracts-onepage/header.php",
         "safecontracts-onepage/footer.php",
         "safecontracts-onepage/theme.json",
+        "safecontracts-onepage/inc/brand.php",
         "safecontracts-onepage/assets/css/theme.css",
+        "safecontracts-onepage/assets/css/brand.css",
         "safecontracts-onepage/assets/js/theme.js",
         "safecontracts-onepage/assets/images/hero-devices.svg",
         "safecontracts-onepage/assets/images/handshake.svg",

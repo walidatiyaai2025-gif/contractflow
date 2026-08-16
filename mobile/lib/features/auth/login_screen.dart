@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import 'mobile_auth.dart';
 
@@ -122,30 +123,13 @@ final class _SafeContractsLoginScreenState
                           ),
                         ),
                         const SizedBox(height: 22),
-                        Container(
-                          width: 74,
-                          height: 74,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: scheme.primary,
-                            borderRadius: BorderRadius.circular(22),
-                            boxShadow: <BoxShadow>[
-                              BoxShadow(
-                                color: scheme.primary.withValues(alpha: 0.22),
-                                blurRadius: 28,
-                                offset: const Offset(0, 12),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.shield_outlined,
-                            size: 38,
-                            color: scheme.onPrimary,
-                          ),
+                        const SafeContractsBrandMark(
+                          size: 82,
+                          borderRadius: 24,
                         ),
                         const SizedBox(height: 18),
                         Text(
-                          l10n.t('SafeContracts'),
+                          SafeContractsBrand.name,
                           style: Theme.of(context)
                               .textTheme
                               .headlineMedium
@@ -338,23 +322,13 @@ final class _BlockingBootstrapSplash extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 82,
-                      height: 82,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: scheme.primary,
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                      child: Icon(
-                        Icons.shield_outlined,
-                        size: 42,
-                        color: scheme.onPrimary,
-                      ),
+                    const SafeContractsBrandMark(
+                      size: 88,
+                      borderRadius: 26,
                     ),
                     const SizedBox(height: 22),
                     Text(
-                      'SafeContracts',
+                      SafeContractsBrand.name,
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w800,

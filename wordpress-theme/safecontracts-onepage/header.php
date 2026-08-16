@@ -30,12 +30,12 @@ $login_url = safecontracts_button_link( 'header_login' );
 <a class="sc-skip-link" href="#main-content"><?php echo esc_html( 'ar' === $lang ? 'انتقل إلى المحتوى' : 'Skip to content' ); ?></a>
 <header class="sc-site-header" data-site-header>
 	<div class="sc-container sc-header-inner">
-		<a class="sc-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="SafeContracts">
+		<a class="sc-brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( safecontracts_brand_name() ); ?>">
 			<span class="sc-brand-mark" aria-hidden="true">
-				<svg viewBox="0 0 48 48"><path d="M24 4 40 10v10c0 10.8-6.1 18.6-16 23-9.9-4.4-16-12.2-16-23V10z"/><path d="m16 23 5 5 11-12"/></svg>
+				<img src="<?php echo esc_attr( safecontracts_brand_icon_data_uri() ); ?>" alt="">
 			</span>
 			<span class="sc-brand-copy">
-				<strong>SafeContracts</strong>
+				<strong><?php echo esc_html( safecontracts_brand_name() ); ?></strong>
 				<small><?php echo esc_html( $copy['brand_tagline'] ); ?></small>
 			</span>
 		</a>

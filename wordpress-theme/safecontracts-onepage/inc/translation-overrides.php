@@ -1,9 +1,9 @@
 <?php
 /**
- * Share SafeContracts dashboard translation overrides with the public theme.
+ * Share Safe Contracts dashboard translation overrides with the public theme.
  *
  * The public ?lang=ar|en switch remains theme-local. This file only overlays
- * SafeContracts copy; it never changes WordPress locale or user preferences.
+ * Safe Contracts copy; it never changes WordPress locale or user preferences.
  *
  * @package SafeContracts_OnePage
  */
@@ -13,19 +13,39 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Normalize the visible brand spelling throughout public copy while leaving
+ * internal SafeContracts slugs, options, APIs and PHP identifiers untouched.
+ *
+ * @param mixed $value Copy value/tree.
+ * @return mixed
+ */
+function safecontracts_theme_normalize_brand_copy( $value ) {
+	if ( is_string( $value ) ) {
+		return str_replace( 'SafeContracts', 'Safe Contracts', $value );
+	}
+	if ( ! is_array( $value ) ) {
+		return $value;
+	}
+	foreach ( $value as $key => $item ) {
+		$value[ $key ] = safecontracts_theme_normalize_brand_copy( $item );
+	}
+	return $value;
+}
+
+/**
  * Overlay source-keyed translations onto an already localized theme copy tree.
  *
- * @param mixed               $english  English source tree.
- * @param mixed               $current  Current localized tree.
+ * @param mixed                $english   English source tree.
+ * @param mixed                $current   Current localized tree.
  * @param array<string,string> $overrides Source => translated text.
  * @return mixed
  */
 function safecontracts_theme_translation_overlay_tree( $english, $current, $overrides ) {
 	if ( is_string( $english ) ) {
 		if ( isset( $overrides[ $english ] ) && is_string( $overrides[ $english ] ) && '' !== trim( $overrides[ $english ] ) ) {
-			return $overrides[ $english ];
+			return safecontracts_theme_normalize_brand_copy( $overrides[ $english ] );
 		}
-		return $current;
+		return safecontracts_theme_normalize_brand_copy( $current );
 	}
 
 	if ( ! is_array( $english ) ) {
@@ -34,10 +54,10 @@ function safecontracts_theme_translation_overlay_tree( $english, $current, $over
 
 	$current = is_array( $current ) ? $current : array();
 	foreach ( $english as $key => $english_value ) {
-		$current_value  = array_key_exists( $key, $current ) ? $current[ $key ] : null;
+		$current_value   = array_key_exists( $key, $current ) ? $current[ $key ] : null;
 		$current[ $key ] = safecontracts_theme_translation_overlay_tree( $english_value, $current_value, $overrides );
 	}
-	return $current;
+	return safecontracts_theme_normalize_brand_copy( $current );
 }
 
 /**
@@ -50,12 +70,12 @@ function safecontracts_theme_translation_overlay_tree( $english, $current, $over
 function safecontracts_theme_translation_option_overlay( $saved ) {
 	$catalog = safecontracts_copy_catalog();
 	if ( ! is_array( $catalog ) || ! isset( $catalog['en'], $catalog['ar'] ) ) {
-		return $saved;
+		return safecontracts_theme_normalize_brand_copy( $saved );
 	}
 
 	$translation_overrides = get_option( 'safecontracts_translation_overrides', array() );
 	if ( ! is_array( $translation_overrides ) ) {
-		return $saved;
+		return safecontracts_theme_normalize_brand_copy( $saved );
 	}
 	$saved = is_array( $saved ) ? $saved : array();
 
@@ -71,6 +91,6 @@ function safecontracts_theme_translation_option_overlay( $saved ) {
 		$saved[ $lang ]     = safecontracts_theme_translation_overlay_tree( $catalog['en'], $current, $overrides );
 	}
 
-	return $saved;
+	return safecontracts_theme_normalize_brand_copy( $saved );
 }
 add_filter( 'option_safecontracts_home_content', 'safecontracts_theme_translation_option_overlay', 20 );

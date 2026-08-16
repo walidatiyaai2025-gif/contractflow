@@ -1,6 +1,6 @@
 <?php
 /**
- * Theme bootstrap for SafeContracts One Page.
+ * Theme bootstrap for Safe Contracts One Page.
  *
  * @package SafeContracts_OnePage
  */
@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once get_theme_file_path( '/inc/brand.php' );
+require_once get_theme_file_path( '/inc/brand-text.php' );
 require_once get_theme_file_path( '/inc/i18n.php' );
 require_once get_theme_file_path( '/inc/admin-settings.php' );
 require_once get_theme_file_path( '/inc/translation-overrides.php' );
@@ -39,6 +41,7 @@ function safecontracts_enqueue_assets() {
 	$version = wp_get_theme()->get( 'Version' );
 	wp_enqueue_style( 'safecontracts-style', get_stylesheet_uri(), array(), $version );
 	wp_enqueue_style( 'safecontracts-theme', get_theme_file_uri( '/assets/css/theme.css' ), array( 'safecontracts-style' ), $version );
+	wp_enqueue_style( 'safecontracts-brand', get_theme_file_uri( '/assets/css/brand.css' ), array( 'safecontracts-theme' ), $version );
 	wp_enqueue_script( 'safecontracts-theme', get_theme_file_uri( '/assets/js/theme.js' ), array(), $version, true );
 }
 add_action( 'wp_enqueue_scripts', 'safecontracts_enqueue_assets' );
@@ -79,7 +82,7 @@ function safecontracts_customize_register( $wp_customize ) {
 	$wp_customize->add_section(
 		'safecontracts_public_cta',
 		array(
-			'title'    => __( 'SafeContracts Public Page', 'safecontracts-onepage' ),
+			'title'    => __( 'Safe Contracts Public Page', 'safecontracts-onepage' ),
 			'priority' => 30,
 		)
 	);

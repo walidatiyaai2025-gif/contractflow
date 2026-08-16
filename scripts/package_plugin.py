@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and validate a deterministic installable SafeContracts WordPress plugin ZIP."""
+"""Build and validate a deterministic installable Safe Contracts WordPress plugin ZIP."""
 
 from __future__ import annotations
 
@@ -52,13 +52,19 @@ def source_files() -> list[Path]:
     files.sort(key=lambda path: path.relative_to(SOURCE).as_posix())
     if not files:
         fail("plugin source contains no packageable files")
-    required = {"safecontracts.php", "readme.txt", "src/Plugin.php", "src/Support/Autoloader.php"}
+    required = {
+        "safecontracts.php",
+        "readme.txt",
+        "src/Plugin.php",
+        "src/Support/Autoloader.php",
+        "src/Support/Brand.php",
+    }
     present = {path.relative_to(SOURCE).as_posix() for path in files}
     missing = sorted(required - present)
     if missing:
         fail("plugin source is missing required files: " + ", ".join(missing))
     entry = (SOURCE / "safecontracts.php").read_text(encoding="utf-8")
-    for marker in ("Plugin Name: SafeContracts", "Requires PHP: 8.1", "SAFECONTRACTS_VERSION"):
+    for marker in ("Plugin Name: Safe Contracts", "Requires PHP: 8.1", "SAFECONTRACTS_VERSION"):
         if marker not in entry:
             fail(f"plugin entry file is missing marker: {marker}")
     return files
@@ -114,6 +120,7 @@ def validate(path: Path) -> int:
         "safecontracts/readme.txt",
         "safecontracts/src/Plugin.php",
         "safecontracts/src/Support/Autoloader.php",
+        "safecontracts/src/Support/Brand.php",
     }
     missing = sorted(required - set(names))
     if missing:
@@ -134,7 +141,7 @@ def main() -> int:
             build(Path(args.output).expanduser().resolve())
         else:
             checks = validate(Path(args.zip).expanduser().resolve())
-            print(f"SafeContracts plugin package validation passed ({checks} checks).")
+            print(f"Safe Contracts plugin package validation passed ({checks} checks).")
         return 0
     except PackageError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)

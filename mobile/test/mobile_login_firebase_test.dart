@@ -108,7 +108,10 @@ void main() {
 
     await tester.enterText(find.byType(EditableText).first, 'admin');
     await tester.enterText(find.byType(EditableText).last, 'secret');
-    await tester.tap(find.text('Sign in'));
+    final signIn = find.text('Sign in');
+    await tester.ensureVisible(signIn);
+    await tester.pumpAndSettle();
+    await tester.tap(signIn);
     await tester.pumpAndSettle();
 
     expect(find.text('Dashboard'), findsOneWidget);

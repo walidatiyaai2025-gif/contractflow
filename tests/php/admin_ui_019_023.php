@@ -125,7 +125,7 @@ sc_p6export_assert(isset($GLOBALS['sc_test_enqueued_styles'][AdminShell::RESPONS
 sc_p6export_assert(($GLOBALS['sc_test_enqueued_styles'][AdminShell::RESPONSIVE_STYLE_HANDLE]['deps'][0] ?? '') === AdminShell::SETTINGS_STYLE_HANDLE, 'SC-P6-020 responsive stylesheet layers after existing identity/styles');
 unset($_GET['page']);
 
-// SC-P6-021 — admin shell stays capability-gated, scoped and SafeContracts-branded.
+// SC-P6-021 — admin shell stays capability-gated, scoped and Safe Contracts-branded.
 $GLOBALS['sc_test_current_caps'] = [];
 sc_p6export_expect(RuntimeException::class, fn () => AdminShell::render(), 'SC-P6-021 admin shell denies users without ACCESS capability');
 AdminShell::register();
@@ -135,12 +135,12 @@ sc_p6export_assert(AdminShell::isSafeContractsPage(), 'SC-P6-021 SafeContracts c
 $_GET['page'] = 'plugins.php';
 sc_p6export_assert(! AdminShell::isSafeContractsPage(), 'SC-P6-021 SafeContracts assets do not load on unrelated WordPress pages');
 $adminShellSource = file_get_contents((string) (new ReflectionClass(AdminShell::class))->getFileName()) ?: '';
-sc_p6export_assert(str_contains($adminShellSource, 'SafeContracts') && ! str_contains($adminShellSource, 'Ethereum'), 'SC-P6-021 shell preserves locked SafeContracts identity');
+sc_p6export_assert(str_contains($adminShellSource, 'SafeContracts') && ! str_contains($adminShellSource, 'Ethereum'), 'SC-P6-021 shell preserves locked SafeContracts internal identity');
 unset($_GET['page']);
 
 // SC-P6-022 — login branding changes presentation only, not authentication/session behavior.
 sc_p6export_assert(LoginBranding::headerUrl('https://wordpress.org/') === 'https://example.test/', 'SC-P6-022 login logo URL resolves to site home');
-sc_p6export_assert(str_contains(LoginBranding::headerText('WordPress'), 'SafeContracts'), 'SC-P6-022 login header text uses SafeContracts identity');
+sc_p6export_assert(str_contains(LoginBranding::headerText('WordPress'), 'Safe Contracts'), 'SC-P6-022 login header text uses Safe Contracts identity');
 sc_p6export_assert(isset($GLOBALS['sc_test_actions']['login_enqueue_scripts']) && isset($GLOBALS['sc_test_filters']['login_headerurl']) && isset($GLOBALS['sc_test_filters']['login_headertext']), 'SC-P6-022 branding hooks are registered');
 $loginSource = file_get_contents((string) (new ReflectionClass(LoginBranding::class))->getFileName()) ?: '';
 foreach (['authenticate', 'wp_authenticate', 'set_auth_cookie', 'clear_auth_cookie'] as $authHook) {
@@ -162,4 +162,4 @@ $navSource = file_get_contents((string) (new ReflectionClass(NavigationCleanup::
 sc_p6export_assert(str_contains($navSource, 'current_user_can') && str_contains($navSource, 'MANAGE_SYSTEM'), 'SC-P6-023 navigation cleanup is capability-driven rather than role-name driven');
 sc_p6export_assert(! str_contains($navSource, 'wp_die') && ! str_contains($navSource, 'permission_callback'), 'SC-P6-023 menu cleanup does not pretend to be an authorization boundary');
 
-printf("SafeContracts P6 Excel/RTL/validation SC-P6-019..023 passed (%d assertions).\n", $tests);
+printf("Safe Contracts P6 Excel/RTL/validation SC-P6-019..023 passed (%d assertions).\n", $tests);

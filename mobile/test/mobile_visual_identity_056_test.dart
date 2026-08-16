@@ -10,6 +10,8 @@ void main() {
         File('lib/features/ui/mobile_layout.dart').readAsStringSync();
     final shell =
         File('lib/features/navigation/app_shell.dart').readAsStringSync();
+    final brand =
+        File('lib/core/branding/safe_contracts_brand.dart').readAsStringSync();
 
     expect(design, contains('SafeContractsBackdrop'));
     expect(design, contains('_TopographicPainter'));
@@ -22,7 +24,9 @@ void main() {
     expect(layout, contains('SafeContractsBackdrop'));
     expect(shell, contains('_SafeContractsBottomNavigation'));
     expect(shell, contains('SafeContractsBackdrop'));
-    expect(shell, contains("text: 'SafeContracts'"));
+    expect(shell, contains('SafeContractsBrand.name'));
+    expect(shell, contains('SafeContractsBrandMark'));
+    expect(brand, contains("static const name = 'Safe Contracts';"));
     expect(shell, contains('MobileDestination.dashboard'));
     expect(shell, contains('MobileDestination.contracts'));
     expect(shell, contains('MobileDestination.payments'));

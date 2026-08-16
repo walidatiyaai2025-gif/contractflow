@@ -52,6 +52,10 @@ jobs:
             logo-mark.svg; do
             test -s "$THEME/assets/images/$asset"
           done
+          test -s "$THEME/inc/brand.php"
+          test -s "$THEME/assets/css/brand.css"
+          grep -Fq "return 'Safe Contracts';" "$THEME/inc/brand.php"
+          grep -Fq 'data:image/jpeg;base64,' "$THEME/inc/brand.php"
       - name: Verify bilingual one-page contract
         shell: bash
         run: |
@@ -86,9 +90,10 @@ jobs:
           grep -Fq "safecontracts_button_link( 'hero_primary' )" "$THEME/front-page.php"
           grep -Fq "safecontracts_button_link( 'hero_secondary' )" "$THEME/front-page.php"
           grep -Fq "safecontracts_button_link( 'final_cta' )" "$THEME/front-page.php"
+          grep -Fq "inc/brand.php" "$THEME/functions.php"
           grep -Fq "inc/admin-settings.php" "$THEME/functions.php"
           grep -Fq "inc/button-links.php" "$THEME/functions.php"
-      - name: Verify SafeContracts backend identity
+      - name: Verify Safe Contracts backend identity
         shell: bash
         run: |
           set -euo pipefail
@@ -96,14 +101,17 @@ jobs:
           test -s "$THEME/inc/admin-branding.php"
           test -s "$THEME/assets/css/admin.css"
           test -s "$THEME/assets/css/login.css"
+          test -s "$THEME/assets/css/brand.css"
           grep -Fq "inc/admin-branding.php" "$THEME/functions.php"
           grep -Fq "admin_enqueue_scripts" "$THEME/inc/admin-branding.php"
           grep -Fq "login_enqueue_scripts" "$THEME/inc/admin-branding.php"
           grep -Fq "safecontracts_dashboard_overview" "$THEME/inc/admin-branding.php"
+          grep -Fq "safecontracts_brand_icon_data_uri" "$THEME/inc/admin-branding.php"
           grep -Fq "safecontracts-admin-ui" "$THEME/assets/css/admin.css"
           grep -Fq "#adminmenu" "$THEME/assets/css/admin.css"
           grep -Fq "body.login" "$THEME/assets/css/login.css"
-          grep -Fq "Version: 0.3.0" "$THEME/style.css"
+          grep -Fq "Theme Name: Safe Contracts One Page" "$THEME/style.css"
+          grep -Fq "Version: 0.4.0" "$THEME/style.css"
       - name: Build deterministic installable theme ZIP
         shell: bash
         run: |
@@ -116,15 +124,15 @@ jobs:
           python3 wordpress-theme/package_theme.py check dist/SafeContracts-OnePage-theme.zip
           sha256sum dist/SafeContracts-OnePage-theme.zip > dist/SafeContracts-OnePage-theme.zip.sha256
           printf '%s\n' \
-            "SafeContracts One Page WordPress theme candidate" \
+            "Safe Contracts One Page WordPress theme candidate" \
             "source_commit=$GITHUB_SHA" \
             "install_path=wp-content/themes/safecontracts-onepage" \
             "public_homepage=true" \
             "languages=ar,en" \
             "backend_editor=Appearance > SafeContracts Home" \
             "editable_button_links=true" \
-            "admin_identity=SafeContracts" \
-            "login_identity=SafeContracts" \
+            "admin_identity=Safe Contracts" \
+            "login_identity=Safe Contracts" \
             > dist/THEME-CANDIDATE.txt
       - name: Upload installable theme candidate
         uses: actions/upload-artifact@v4
