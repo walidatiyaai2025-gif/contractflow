@@ -6,7 +6,7 @@ declare(strict_types=1);
 $options = getopt('', ['wp-root:', 'derive', 'tenant-id::', 'roots::', 'verify']);
 $wpRoot = isset($options['wp-root']) ? rtrim((string) $options['wp-root'], '/\\') : '';
 if ($wpRoot === '' || ! is_file($wpRoot . '/wp-load.php')) {
-    fwrite(STDERR, "Usage: php scripts/enterprise_noncore_tenant_backfill.php --wp-root=/path/to/wordpress [--derive] [--tenant-id=ID --roots=rules,templates,devices,imports,suppressions,audit] [--verify]\n");
+    fwrite(STDERR, "Usage: php scripts/enterprise_noncore_tenant_backfill.php --wp-root=/path/to/wordpress [--derive] [--tenant-id=ID --roots=rules,templates,devices,deliveries,imports,suppressions,audit] [--verify]\n");
     exit(64);
 }
 
