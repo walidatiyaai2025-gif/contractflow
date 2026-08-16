@@ -96,8 +96,12 @@ sc_p10c_assert($firstPassDeltaCount > 0, 'P10-014 pending migration applies sche
 $migrator->migrate();
 sc_p10c_assert(count($GLOBALS['sc_test_dbdelta']) === $firstPassDeltaCount, 'P10-014 latest-version migration is idempotent on a second run');
 $migratorSource = sc_p10c_source('wordpress-plugin/safecontracts/src/Database/Migrator.php');
-sc_p10c_assert(str_contains($migratorSource, "public const LATEST_VERSION = '1.11.0';"), 'P10-014 latest migration version remains explicit');
-sc_p10c_assert(str_contains($migratorSource, "'1.11.0' => Migration0012Import::class"), 'P10-014 latest version maps to the expected migration class');
+$safeDeletionMigration = sc_p10c_source('wordpress-plugin/safecontracts/src/Database/Migrations/Migration0013SafeDeletion.php');
+sc_p10c_assert(str_contains($migratorSource, "public const LATEST_VERSION = '1.12.0';"), 'P10-014 latest migration version remains explicit');
+sc_p10c_assert(str_contains($migratorSource, "'1.12.0' => Migration0013SafeDeletion::class"), 'P10-014 latest version maps to the safe-deletion migration class');
+foreach (['is_archived', 'archived_by', 'archived_at', 'archived_payment_date'] as $marker) {
+    sc_p10c_assert(str_contains($safeDeletionMigration, $marker), 'P10-014 safe-deletion migration contains marker: ' . $marker);
+}
 
 // SC-P10-015 — Executable UAT scenario manifest.
 $uatRaw = sc_p10c_source('ops/uat-scenarios.json');
