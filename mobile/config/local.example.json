@@ -1,4 +1,4 @@
 {
-  "SC_ENV": "local",
-  "SC_API_BASE_URL": "http://127.0.0.1:8080/wp-json/safecontracts/v1/"
+  "ESC_ENV": "local",
+  "ESC_API_BASE_URL": "http://127.0.0.1:8080/wp-json/safecontracts/v1/"
 }
