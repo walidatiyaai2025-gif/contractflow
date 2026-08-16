@@ -32,11 +32,12 @@ use SafeContracts\Database\Migrations\Migration0024EnterpriseOrgUnitMemberships;
 use SafeContracts\Database\Migrations\Migration0025EnterpriseCustomerPartyLinks;
 use SafeContracts\Database\Migrations\Migration0026EnterpriseContractTypes;
 use SafeContracts\Database\Migrations\Migration0027EnterpriseContractTemplates;
+use SafeContracts\Database\Migrations\Migration0028EnterpriseContractConfigurationBindings;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.26.0';
+    public const LATEST_VERSION = '1.27.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -67,6 +68,7 @@ final class Migrator
         '1.24.0' => Migration0025EnterpriseCustomerPartyLinks::class,
         '1.25.0' => Migration0026EnterpriseContractTypes::class,
         '1.26.0' => Migration0027EnterpriseContractTemplates::class,
+        '1.27.0' => Migration0028EnterpriseContractConfigurationBindings::class,
     ];
 
     public function maybeMigrate(): void
