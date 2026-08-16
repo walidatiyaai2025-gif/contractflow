@@ -221,17 +221,15 @@ final class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ],
-                if (!registered) ...[
-                  const SizedBox(height: 12),
-                  FilledButton.tonalIcon(
-                    onPressed: status.backendState ==
-                            MobilePushBackendState.registering
-                        ? null
-                        : () => unawaited(_retryPushRegistration()),
-                    icon: const Icon(Icons.refresh),
-                    label: Text(l10n.t('Retry device registration')),
-                  ),
-                ],
+                const SizedBox(height: 12),
+                FilledButton.tonalIcon(
+                  onPressed: status.backendState ==
+                          MobilePushBackendState.registering
+                      ? null
+                      : () => unawaited(_retryPushRegistration()),
+                  icon: const Icon(Icons.refresh),
+                  label: Text(l10n.t('Retry device registration')),
+                ),
               ],
             ),
           ),
@@ -241,7 +239,7 @@ final class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _retryPushRegistration() async {
-    await widget.pushRegistration.retryNow();
+    await widget.pushRegistration.refreshTokenAndRetry();
     if (widget.pushRegistration.status.value.backendRegistered) {
       await widget.controller.load();
     }
