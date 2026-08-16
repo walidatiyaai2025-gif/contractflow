@@ -520,7 +520,8 @@ String _requiredText(Object? value, String field) {
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
-    throw const FormatException('Accountant text field must be string or null.');
+    throw const FormatException(
+        'Accountant text field must be string or null.');
   }
   final normalized = value.trim();
   if (normalized.length > 254) {
