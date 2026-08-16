@@ -19,12 +19,12 @@ final class AdminShell
     public static function register(): void
     {
         add_menu_page(
-            __(Brand::NAME, 'safecontracts'),
-            __(Brand::NAME, 'safecontracts'),
+            Brand::NAME,
+            Brand::NAME,
             Capabilities::ACCESS,
             self::SLUG,
             [self::class, 'render'],
-            'dashicons-shield-alt',
+            Brand::iconDataUri(),
             2
         );
     }
