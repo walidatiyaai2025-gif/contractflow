@@ -31,11 +31,12 @@ use SafeContracts\Database\Migrations\Migration0023EnterpriseOrgUnits;
 use SafeContracts\Database\Migrations\Migration0024EnterpriseOrgUnitMemberships;
 use SafeContracts\Database\Migrations\Migration0025EnterpriseCustomerPartyLinks;
 use SafeContracts\Database\Migrations\Migration0026EnterpriseContractTypes;
+use SafeContracts\Database\Migrations\Migration0027EnterpriseContractTemplates;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.25.0';
+    public const LATEST_VERSION = '1.26.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -65,12 +66,12 @@ final class Migrator
         '1.23.0' => Migration0024EnterpriseOrgUnitMemberships::class,
         '1.24.0' => Migration0025EnterpriseCustomerPartyLinks::class,
         '1.25.0' => Migration0026EnterpriseContractTypes::class,
+        '1.26.0' => Migration0027EnterpriseContractTemplates::class,
     ];
 
     public function maybeMigrate(): void
     {
         $current = (string) get_option(self::VERSION_OPTION, '0.0.0');
-
         if (version_compare($current, self::LATEST_VERSION, '<')) {
             $this->migrate();
         }
@@ -79,26 +80,20 @@ final class Migrator
     public function migrate(): void
     {
         global $wpdb;
-
         if (! is_object($wpdb)) {
             throw new RuntimeException('SafeContracts database migration requires WordPress $wpdb.');
         }
-
         $current = (string) get_option(self::VERSION_OPTION, '0.0.0');
-
         foreach (self::MIGRATIONS as $version => $migrationClass) {
             if (version_compare($current, $version, '>=')) {
                 continue;
             }
-
             /** @var Migration $migration */
             $migration = new $migrationClass();
             $migration->up($wpdb);
-
             update_option(self::VERSION_OPTION, $version, false);
             update_option('safecontracts_db_migrated_at', gmdate('c'), false);
             $current = $version;
-
             do_action('safecontracts_database_migrated', $version);
         }
     }
