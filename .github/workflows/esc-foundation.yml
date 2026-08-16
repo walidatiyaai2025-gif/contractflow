@@ -22,6 +22,8 @@ jobs:
           php-version: "8.1"
       - name: Validate Enterprise Safe Contracts foundation
         run: python3 scripts/validate-esc-foundation.py
+      - name: Validate ESC Android identity and release isolation
+        run: python3 scripts/verify_esc_android_isolation.py
       - name: Validate ESC release artifact isolation
         run: python3 scripts/enterprise_verified_artifacts.py check
       - name: Run backend regression and Enterprise tenancy tests
