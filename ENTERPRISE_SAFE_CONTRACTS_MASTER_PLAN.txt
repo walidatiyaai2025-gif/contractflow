@@ -252,7 +252,7 @@ ESC-P20 Full-system impact validation, security testing, UAT and release hardeni
 CURRENT ESC-P2 DELIVERY STATUS
 ------------------------------
 - ESC-P2-006 / Issue #445: Completed — Enterprise-only tenant membership REST API; service-only mutations, locked tenant authorization, owner-safe mutation guards, adversarial regression and documented REST boundary. Completion validated by ESC Foundation Gate #161.
-- ESC-P2-007 / Issue #447: Validation — Enterprise-only REST rate limiting; persistent atomic hashed abuse buckets, login brute-force protection, tenant-aware authenticated read/write buckets, bounded expiry cleanup, adversarial regression and operational runbook. Must not be marked Completed until the final exact-source ESC Foundation/mobile gates are green.
+- ESC-P2-007 / Issue #447: Completed — Enterprise-only REST rate limiting; persistent atomic hashed abuse buckets, login brute-force protection, tenant-aware authenticated read/write buckets, bounded expiry cleanup, adversarial regression and operational runbook. Implementation validated by ESC Foundation Gate #173 on head `55fe42d599149582b93a33561ade229b21274708`; exact-source status commit must also remain green before Issue #447 is closed.
 
 RELEASE / ARTIFACT ISOLATION
 ----------------------------
