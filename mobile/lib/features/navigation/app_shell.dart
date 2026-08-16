@@ -110,22 +110,28 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   Future<void> _refreshActiveSurface() async {
     if (!mounted || !_foreground || _liveRefreshInFlight) return;
     _liveRefreshInFlight = true;
+    var shellSnapshotChanged = false;
     try {
       switch (_selected) {
         case MobileDestination.dashboard:
           await widget.dashboardController.refreshSilently();
+          shellSnapshotChanged = true;
           break;
         case MobileDestination.customers:
           await widget.customersController.refreshSilently();
+          shellSnapshotChanged = true;
           break;
         case MobileDestination.contracts:
           await widget.contractsController.refreshSilently();
+          shellSnapshotChanged = true;
           break;
         case MobileDestination.notifications:
           await widget.notificationsController.refreshSilently();
+          shellSnapshotChanged = true;
           break;
         case MobileDestination.profile:
           await widget.profileController.refreshSilently();
+          shellSnapshotChanged = true;
           break;
         case MobileDestination.payments:
         case MobileDestination.followUps:
@@ -135,9 +141,16 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           break;
         case MobileDestination.export:
           await widget.dashboardController.refreshSilently();
+          shellSnapshotChanged = true;
           break;
         case MobileDestination.collections:
           break;
+      }
+      if (shellSnapshotChanged && mounted) {
+        // Rebuild only after the background request has completed. The current
+        // screen stays intact while the request is in flight, so there is no
+        // loading overlay or flicker during automatic refresh.
+        setState(() {});
       }
     } on Object {
       // Automatic refresh is deliberately non-disruptive. The last good data
