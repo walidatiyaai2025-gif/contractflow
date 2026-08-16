@@ -10,6 +10,8 @@ use SafeContracts\Tenancy\TenantContextStore;
 
 final class CustomFieldValidationRepository
 {
+    private const MAX_SCAN_ROWS = 501;
+
     public function findContract(int $contractId): ?array
     {
         global $wpdb;
@@ -42,7 +44,7 @@ final class CustomFieldValidationRepository
         global $wpdb;
         $tenantId = $this->tenantId();
         $table = $wpdb->prefix . 'safecontracts_custom_field_definitions';
-        $limit = max(1, min(500, $limit));
+        $limit = max(1, min(self::MAX_SCAN_ROWS, $limit));
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT id, contract_type_id, field_code, data_type, label, is_required, status, sort_order, options_json, validation_json
              FROM {$table}
@@ -65,7 +67,7 @@ final class CustomFieldValidationRepository
         $tenantId = $this->tenantId();
         $values = $wpdb->prefix . 'safecontracts_custom_field_values';
         $definitions = $wpdb->prefix . 'safecontracts_custom_field_definitions';
-        $limit = max(1, min(500, $limit));
+        $limit = max(1, min(self::MAX_SCAN_ROWS, $limit));
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT v.id, v.contract_id, v.definition_id, v.value_json, v.data_type_snapshot, v.definition_config_hash,
                     d.id AS current_definition_id, d.contract_type_id AS current_contract_type_id, d.field_code, d.data_type,
