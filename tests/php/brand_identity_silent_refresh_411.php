@@ -11,7 +11,8 @@ $checks = [
     ],
     'wordpress-plugin/safecontracts/src/Support/Brand.php' => [
         "public const NAME = 'Safe Contracts'",
-        'data:image/jpeg;base64,',
+        "assets/brand/safe-contracts-identity.jpg",
+        'base64_encode($bytes)',
     ],
     'wordpress-plugin/safecontracts/src/Admin/AdminShell.php' => [
         'use SafeContracts\\Support\\Brand;',
@@ -20,7 +21,8 @@ $checks = [
     ],
     'wordpress-theme/safecontracts-onepage/inc/brand.php' => [
         "return 'Safe Contracts';",
-        'data:image/jpeg;base64,',
+        "assets/images/safe-contracts-identity.jpg",
+        'base64_encode( $bytes )',
         "add_action( 'wp_head', 'safecontracts_brand_favicon', 1 );",
     ],
     'wordpress-theme/safecontracts-onepage/header.php' => [
@@ -40,12 +42,14 @@ $checks = [
     'scripts/bootstrap_android.sh' => [
         'android:label="Safe Contracts"',
         '@drawable/safe_contracts_brand',
-        'Safe Contracts brand JPEG is missing from mobile brand source',
+        'mobile/assets/brand/safe_contracts_identity.jpg',
+        'Safe Contracts packaged brand source is not a usable JPEG',
     ],
     'mobile/lib/core/branding/safe_contracts_brand.dart' => [
         "static const name = 'Safe Contracts';",
-        'static const jpegBase64',
+        "static const assetPath = 'assets/brand/safe_contracts_identity.jpg';",
         'SafeContractsBrandMark',
+        'Image.asset(',
     ],
     'mobile/lib/features/navigation/app_shell.dart' => [
         'SafeContractsBrand.name',
@@ -81,8 +85,27 @@ foreach ($checks as $relative => $markers) {
     }
 }
 
-// Validate the actual runtime brand API instead of scraping a long Base64
-// literal from PHP source. This is the exact value WordPress admin/login use.
+$brandAssets = [
+    $root . '/mobile/assets/brand/safe_contracts_identity.jpg',
+    $root . '/wordpress-plugin/safecontracts/assets/brand/safe-contracts-identity.jpg',
+    $root . '/wordpress-theme/safecontracts-onepage/assets/images/safe-contracts-identity.jpg',
+];
+$brandHashes = [];
+foreach ($brandAssets as $brandAsset) {
+    $bytes = @file_get_contents($brandAsset);
+    if (! is_string($bytes) || strlen($bytes) < 1024 || ! str_starts_with($bytes, "\xFF\xD8\xFF")) {
+        fwrite(STDERR, "FAIL: packaged Safe Contracts identity is not a valid JPEG: {$brandAsset}\n");
+        exit(1);
+    }
+    $brandHashes[] = hash('sha256', $bytes);
+    $count++;
+}
+if (count(array_unique($brandHashes)) !== 1) {
+    fwrite(STDERR, "FAIL: mobile/plugin/theme Safe Contracts identity assets diverged\n");
+    exit(1);
+}
+$count++;
+
 require_once $root . '/wordpress-plugin/safecontracts/src/Support/Brand.php';
 $brandUri = \SafeContracts\Support\Brand::iconDataUri();
 $prefix = 'data:image/jpeg;base64,';
