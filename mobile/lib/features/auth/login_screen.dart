@@ -355,9 +355,10 @@ final class _BlockingBootstrapSplash extends StatelessWidget {
                     const SizedBox(height: 22),
                     Text(
                       'SafeContracts',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
                     ),
                     const SizedBox(height: 18),
                     const SizedBox.square(
