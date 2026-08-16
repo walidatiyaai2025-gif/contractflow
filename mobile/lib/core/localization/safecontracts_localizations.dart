@@ -131,7 +131,11 @@ String _twoDecimalMoney(String rawValue) {
   }
 
   final isZero = whole == BigInt.zero && cents == 0;
-  final sign = rawSign == '-' && !isZero ? '-' : rawSign == '+' ? '+' : '';
+  final sign = rawSign == '-' && !isZero
+      ? '-'
+      : rawSign == '+'
+          ? '+'
+          : '';
   return '$sign$whole.${cents.toString().padLeft(2, '0')}';
 }
 
