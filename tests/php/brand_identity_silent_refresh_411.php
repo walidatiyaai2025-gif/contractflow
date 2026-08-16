@@ -37,8 +37,8 @@ $checks = [
     'scripts/bootstrap_android.sh' => [
         'android:label="Alkenzy ADV"',
         '@drawable/alkenzy_adv',
-        'mobile/assets/brand/alkenzy_adv.png',
-        'exact supplied Alkenzy ADV PNG',
+        'mobile/android-release/alkenzy_adv.webp',
+        'lossless Android-safe encoding',
     ],
     'mobile/lib/core/branding/safe_contracts_brand.dart' => [
         "static const name = 'Alkenzy ADV';",
@@ -104,6 +104,14 @@ $mobileBrand = $root . '/mobile/assets/brand/alkenzy_adv.png';
 $mobileBytes = @file_get_contents($mobileBrand);
 if (! is_string($mobileBytes) || strlen($mobileBytes) < 1024 || ! str_starts_with($mobileBytes, "\x89PNG\r\n\x1a\n")) {
     fwrite(STDERR, "FAIL: packaged Alkenzy ADV mobile identity is not a valid PNG\n");
+    exit(1);
+}
+$count++;
+
+$androidBrand = $root . '/mobile/android-release/alkenzy_adv.webp';
+$androidBytes = @file_get_contents($androidBrand);
+if (! is_string($androidBytes) || strlen($androidBytes) < 1024 || ! str_starts_with($androidBytes, 'RIFF') || substr($androidBytes, 8, 4) !== 'WEBP') {
+    fwrite(STDERR, "FAIL: packaged Alkenzy ADV Android launcher identity is not a valid WebP\n");
     exit(1);
 }
 $count++;
