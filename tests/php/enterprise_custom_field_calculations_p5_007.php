@@ -206,7 +206,7 @@ esc_p5_calc_assert(str_contains($schema, 'source_config_hash char(64) NOT NULL')
 esc_p5_calc_assert(str_contains($schema, 'UNIQUE KEY tenant_target (tenant_id, target_definition_id)'), 'one calculation rule exists per tenant target');
 esc_p5_calc_assert(str_contains($schema, 'UNIQUE KEY tenant_rule_source (tenant_id, rule_id, source_definition_id)'), 'dependencies are unique per rule/source');
 esc_p5_calc_assert(str_contains($schema, 'UNIQUE KEY tenant_rule_position (tenant_id, rule_id, position_no)'), 'dependency snapshot ordering is deterministic');
-esc_p5_calc_assert(Migrator::LATEST_VERSION === '1.33.0', 'P5-007 is current schema version');
+esc_p5_calc_assert(version_compare(Migrator::LATEST_VERSION, '1.33.0', '>='), 'P5-007 schema remains included after later additive migrations');
 esc_p5_calc_assert(str_contains($migratorSource, "'1.33.0' => Migration0034EnterpriseCustomFieldCalculationRules::class"), 'P5-007 migration is registered');
 esc_p5_calc_assert(! str_contains($migrationSource, 'ALTER TABLE'), 'P5-007 migration is additive');
 
