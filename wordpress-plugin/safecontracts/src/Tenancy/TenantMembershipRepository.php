@@ -35,17 +35,18 @@ final class TenantMembershipRepository
         return $tenantIds;
     }
 
-    public function isActiveMember(int $tenantId, int $userId): bool
+    /** @return array{id:int,tenant_id:int,user_id:int,role_code:string,is_owner:bool}|null */
+    public function findActiveMembership(int $tenantId, int $userId): ?array
     {
         if ($tenantId <= 0 || $userId <= 0) {
-            return false;
+            return null;
         }
 
         global $wpdb;
         $memberships = $wpdb->prefix . 'safecontracts_tenant_memberships';
         $tenants = $wpdb->prefix . 'safecontracts_tenants';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT m.id
+            "SELECT m.id, m.tenant_id, m.user_id, m.role_code, m.is_owner
              FROM {$memberships} m
              INNER JOIN {$tenants} t ON t.id = m.tenant_id
              WHERE m.tenant_id = %d AND m.user_id = %d
@@ -55,7 +56,22 @@ final class TenantMembershipRepository
             $userId
         ), ARRAY_A);
 
-        return is_array($rows) && $rows !== [];
+        if (! is_array($rows) || $rows === []) {
+            return null;
+        }
+        $row = $rows[0];
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'tenant_id' => (int) ($row['tenant_id'] ?? $tenantId),
+            'user_id' => (int) ($row['user_id'] ?? $userId),
+            'role_code' => (string) ($row['role_code'] ?? TenantRolePolicy::MEMBER),
+            'is_owner' => (bool) ((int) ($row['is_owner'] ?? 0)),
+        ];
+    }
+
+    public function isActiveMember(int $tenantId, int $userId): bool
+    {
+        return $this->findActiveMembership($tenantId, $userId) !== null;
     }
 
     /**
