@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
 import '../contracts/contract_details_screen.dart';
@@ -10,9 +11,9 @@ import '../contracts/contracts.dart';
 import '../contracts/contracts_screen.dart';
 import '../customers/customers.dart';
 import '../customers/customers_screen.dart';
+import '../dashboard/dashboard_context_screen.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_models.dart';
-import '../dashboard/dashboard_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
 import '../followups/followups.dart';
@@ -25,6 +26,7 @@ import '../payments/payments.dart';
 import '../payments/payments_screen.dart';
 import '../profile/profile.dart';
 import '../profile/profile_screen.dart';
+import '../refresh/silent_refresh.dart';
 import '../session/session_controller.dart';
 import '../ui/safecontracts_design.dart';
 import 'navigation_policy.dart';
@@ -111,19 +113,19 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     try {
       switch (_selected) {
         case MobileDestination.dashboard:
-          await widget.dashboardController.refresh();
+          await widget.dashboardController.refreshSilently();
           break;
         case MobileDestination.customers:
-          await widget.customersController.refresh();
+          await widget.customersController.refreshSilently();
           break;
         case MobileDestination.contracts:
-          await widget.contractsController.refresh();
+          await widget.contractsController.refreshSilently();
           break;
         case MobileDestination.notifications:
-          await widget.notificationsController.refresh();
+          await widget.notificationsController.refreshSilently();
           break;
         case MobileDestination.profile:
-          await widget.profileController.load();
+          await widget.profileController.refreshSilently();
           break;
         case MobileDestination.payments:
         case MobileDestination.followUps:
@@ -132,14 +134,14 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           }
           break;
         case MobileDestination.export:
-          await widget.dashboardController.refresh();
+          await widget.dashboardController.refreshSilently();
           break;
         case MobileDestination.collections:
           break;
       }
     } on Object {
-      // Individual controllers/screens own their bounded error state. Live
-      // refresh must never tear down an otherwise usable authenticated shell.
+      // Automatic refresh is deliberately non-disruptive. The last good data
+      // remains visible and manual refresh still exposes actionable failures.
     } finally {
       _liveRefreshInFlight = false;
     }
@@ -167,21 +169,29 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 8,
-        title: Text.rich(
-          TextSpan(
-            children: [
-              const TextSpan(
-                text: 'SafeContracts',
-                style: TextStyle(fontWeight: FontWeight.w800),
+        title: Row(
+          children: [
+            const SafeContractsBrandMark(size: 32, borderRadius: 9),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    const TextSpan(
+                      text: SafeContractsBrand.name,
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    TextSpan(
+                      text: ' | ${_label(l10n, _selected)}',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              TextSpan(
-                text: ' | ${_label(l10n, _selected)}',
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
       drawer: NavigationDrawer(
@@ -194,13 +204,21 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
         },
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(28, 22, 16, 14),
-            child: Text(
-              'SafeContracts',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: SafeContractsVisual.navy,
+            padding: const EdgeInsets.fromLTRB(24, 22, 16, 14),
+            child: Row(
+              children: [
+                const SafeContractsBrandMark(size: 46, borderRadius: 13),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    SafeContractsBrand.name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: SafeContractsVisual.navy,
+                        ),
                   ),
+                ),
+              ],
             ),
           ),
           ...widget.policy.destinations.map(
@@ -238,9 +256,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               destinations: bottomDestinations,
               selected: _selected,
               labelFor: (destination) => _label(l10n, destination),
-              onSelected: (destination) {
-                setState(() => _selected = destination);
-              },
+              onSelected: _selectDestination,
             ),
     );
   }
@@ -262,12 +278,12 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   Widget _body() {
     final apiClient = widget.contractsController.repository.client;
     return switch (_selected) {
-      MobileDestination.dashboard => DashboardScreen(
+      MobileDestination.dashboard => DashboardContextScreen(
           controller: widget.dashboardController,
           currency: widget.config.currency,
           onOpenPayments:
               widget.policy.destinations.contains(MobileDestination.payments)
-                  ? () => setState(() => _selected = MobileDestination.payments)
+                  ? () => _selectDestination(MobileDestination.payments)
                   : null,
         ),
       MobileDestination.customers => CustomersScreen(
