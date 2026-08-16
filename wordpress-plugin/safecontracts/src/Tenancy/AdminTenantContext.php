@@ -72,14 +72,11 @@ final class AdminTenantContext
         }
 
         $memberships = new TenantMembershipRepository();
-        if (! $memberships->isActiveMember($tenantId, $userId)) {
-            throw new RuntimeException('The selected Enterprise tenant is not available to the current user.');
-        }
-
-        update_user_meta($userId, self::USER_META_KEY, $tenantId);
         TenantContextStore::reset();
-        return (new TenantResolver($memberships, TenantContextStore::context()))
+        $resolved = (new TenantResolver($memberships, TenantContextStore::context()))
             ->resolveForUser($userId, $tenantId);
+        update_user_meta($userId, self::USER_META_KEY, $resolved);
+        return $resolved;
     }
 
     public static function handleSelect(): void
