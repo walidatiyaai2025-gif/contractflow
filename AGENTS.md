@@ -52,3 +52,47 @@ Rules:
 Production build/deployment work must follow `docs/PRODUCTION_ENVIRONMENT_BUILD.md`, `docs/ENVIRONMENT.md`, `docs/BACKUP_RESTORE_RUNBOOK.md`, `docs/PRODUCTION_RELEASE_READINESS.md` and `ops/uat-scenarios.json`.
 
 If a human-only production dependency is missing, record the exact blocker and smallest required action instead of bypassing the gate.
+
+# Enterprise Safe Contracts branch instructions
+
+The following rules apply whenever work is performed on `enterprise-safecontracts` or an ESC-specific branch/task.
+
+## Critical product separation
+
+- **Safe Contract** means the existing client-specific/current product.
+- **Enterprise Safe Contracts (ESC)** means the separate multi-tenant enterprise/SaaS CLM product.
+- ESC's official public URL is `https://esc.50sols.com/`.
+- Never merge, port, copy, expose or backport ESC functionality into Safe Contract unless the product owner explicitly requests that exact transfer.
+- Never create a PR from `enterprise-safecontracts` to `main` merely to synchronize the branches.
+- Safe Contract and ESC must have separate task streams, mobile application identities, Firebase registrations, release artifacts and deployment targets.
+- ESC task IDs use `ESC-Px-NNN`; do not reuse client `SC-*` IDs for ESC work.
+
+## ESC architecture and impact rule
+
+- Preserve WordPress/plugin as authoritative backend/business source of truth and Flutter as an API client unless an explicit approved architecture decision changes that baseline.
+- Tenant isolation is server-side and mandatory. IDs, filters, exports, attachments and client payloads are never authorization.
+- Build a generic contract platform plus configuration/templates; do not fork the codebase per industry by default.
+- Every ESC feature/change must review its complete impact across tenant isolation, schema/migrations, backend, authorization, API, admin UI, Flutter, Android identity/builds, landing page, design system, feature registry/plans, search/reports/import/export, notifications, audit, documents, localization, security, performance, tests, documentation, CI and release/rollback behavior.
+- A dimension may be N/A only after explicit review.
+- The owner should not need to list every necessary downstream change; implement the coherent affected surfaces required for a complete feature and create separate tasks for larger optional expansions.
+
+## ESC mobile identity
+
+- Safe Contract and ESC must be simultaneously installable on the same Android device.
+- ESC must use a distinct application/package identity, namespace, app label/icons, Firebase app/configuration, notification channels, deep links, local storage namespace, signing/release lineage, version stream and artifacts.
+- The current ESC production package baseline is `com.safecontracts.enterprise` until superseded by an explicit architecture decision before first production publication.
+- Dev/staging/production ESC builds must not accidentally connect to the wrong backend environment.
+
+## ESC public landing and design
+
+- `https://esc.50sols.com/` is a first-class ESC product surface.
+- Landing, admin, mobile, login, emails and branded reports must use the same ESC design system and localization/RTL principles.
+- Only features with an appropriate public lifecycle state in the ESC Feature Registry may be marketed as generally available.
+
+## ESC release isolation
+
+- Never place ESC output in the existing Safe Contract `Last verified Plugin/` or `Last verified apk/` slots.
+- ESC release retention, checksums and provenance must be separate and subject to equivalent or stronger quality gates.
+- Real-device coexistence verification must be part of ESC Android release readiness.
+
+The authoritative ESC planning documents are `ENTERPRISE_SAFE_CONTRACTS_MASTER_PLAN.txt` and `docs/enterprise/`.

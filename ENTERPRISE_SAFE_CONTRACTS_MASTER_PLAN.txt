@@ -1,0 +1,275 @@
+ENTERPRISE SAFE CONTRACTS (ESC) — MASTER PLAN
+==============================================
+
+OFFICIAL PRODUCT URL
+--------------------
+https://esc.50sols.com/
+
+CRITICAL PRODUCT SEPARATION RULE
+--------------------------------
+Safe Contract = the existing client-specific/current product.
+Enterprise Safe Contracts (ESC) = a separate multi-tenant enterprise/SaaS Contract Lifecycle Management product developed on the enterprise-safecontracts branch.
+
+NEVER implement, merge, port, copy, expose, or backport ESC functionality into Safe Contract unless the product owner explicitly requests that exact transfer.
+NEVER treat Safe Contract and ESC as the same product, release line, APK, plugin artifact, Firebase app, environment, task stream, or deployment target.
+
+Branch rules:
+- Safe Contract/client work: main and client-specific branches/tasks.
+- ESC work: enterprise-safecontracts and ESC-* task IDs.
+- No PR from enterprise-safecontracts to main merely to "keep branches synchronized".
+- Any deliberate transfer between products requires explicit owner instruction, impact analysis, tests, and a bounded PR.
+
+ARCHITECTURAL BASELINE
+----------------------
+ESC evolves the current architecture rather than discarding it:
+- WordPress + custom plugin remain the authoritative backend/business source of truth.
+- Flutter remains an API client; financial calculations, authorization and tenant isolation stay server-side.
+- Schema changes remain versioned migrations.
+- REST APIs remain versioned.
+- Security, release provenance, CI and verified-artifact discipline remain mandatory.
+
+PRODUCT GOAL
+------------
+Build a configurable multi-tenant Contract Lifecycle Management platform usable across many industries without forking the codebase per customer or contract type.
+
+TARGET CAPABILITIES
+-------------------
+1. Multi-tenancy and strict tenant data isolation.
+2. Organizations/workspaces, departments, teams and tenant-aware users.
+3. Generic Party model: customers, suppliers, vendors, contractors, agents, individuals, government entities and other parties.
+4. Contract Types and reusable industry templates.
+5. Dynamic Custom Fields with validation, visibility, calculation and reporting metadata.
+6. Configurable contract lifecycle states.
+7. Workflow engine.
+8. Sequential, parallel and conditional approvals.
+9. Obligations, milestones, deliverables, notice periods, renewals, expiry and escalation.
+10. Financial engine: values, additions, discounts, variations, taxes/VAT, retention, penalties, credits, payments, collections and multi-currency.
+11. Document management, metadata, versioning, expiry, retention and security hooks.
+12. Notifications, reminders, escalation and provider abstraction.
+13. Search, filtering, bulk actions, imports, exports, dashboards and advanced reports.
+14. Audit trail and compliance evidence.
+15. Feature registry, feature flags, subscription plans, usage limits and tenant entitlements.
+16. White-label branding, localization, Arabic RTL, English LTR, timezone and locale support.
+17. Enterprise authentication roadmap: MFA, SSO/OIDC/SAML, Entra ID and SCIM where appropriate.
+18. Integrations: public API, webhooks, e-signature, ERP, CRM, accounting and other adapters.
+19. Observability, health checks, backup/restore, DR, rate limiting and performance engineering.
+20. Web landing experience at https://esc.50sols.com/ describing public ESC capabilities and industries.
+
+ANDROID / APK COEXISTENCE — MANDATORY
+--------------------------------------
+During development and production validation, Safe Contract and ESC MUST be installable on the same Android device at the same time.
+ESC must not replace/update Safe Contract.
+
+Safe Contract current identity remains independent.
+ESC must receive a distinct Android identity, including:
+- applicationId
+- namespace
+- display name
+- icon/adaptive icon
+- splash identity
+- deep links/app links
+- Firebase Android app/project configuration
+- FCM token space and notification channels
+- secure-storage/shared-preference/cache/database namespaces
+- signing identity and release lineage
+- versionCode/versionName stream
+- crash/analytics identity
+- API environment
+- artifact names
+
+Preferred ESC production applicationId baseline: com.safecontracts.enterprise
+Final package naming may be changed only through an explicit architecture decision before first production publication.
+
+ESC environments should support dev, staging and production with visibly distinguishable app labels/icons where helpful, separate API URLs, separate Firebase registrations and safe logging policies.
+
+LANDING PAGE — MANDATORY PRODUCT SURFACE
+----------------------------------------
+The public ESC landing page lives at https://esc.50sols.com/ and is part of the product, not an unrelated marketing microsite.
+It must use the same ESC design language and explain value, capabilities and target industries.
+
+Required content architecture:
+- Hero/value proposition
+- What ESC solves
+- Contract lifecycle overview
+- Multi-tenant architecture/value
+- Contract types and templates
+- Dynamic fields
+- Workflows
+- Approvals
+- Obligations and milestones
+- Financial management
+- Documents
+- Notifications/escalation
+- Dashboards/reports
+- Mobile experience
+- Security/audit
+- Localization/RTL/LTR
+- White label
+- Integrations/API/webhooks
+- Industries/use cases
+- Plans/enterprise options when commercially approved
+- FAQ
+- Request Demo / Contact
+- Login entry point
+
+Only features marked Public in the ESC Feature Registry may be marketed as available. Development/Internal Preview/Beta capabilities must be labeled or hidden appropriately.
+
+UNIFIED ESC DESIGN SYSTEM
+-------------------------
+One coherent design system must cover:
+- Landing page
+- WordPress/ESC administration shell
+- Flutter mobile app
+- Authentication/login
+- Emails/notifications
+- Reports/exports where branded
+- Public/error/empty/loading states
+
+Design tokens must include brand colors, semantic colors, typography, spacing, radii, shadows, breakpoints, icons and component states.
+Requirements: responsive behavior, accessibility, Light/Dark support where applicable, Arabic RTL and English LTR from the beginning.
+
+FULL IMPACT RULE — MANDATORY
+----------------------------
+No ESC task is complete merely because its local code path works.
+Every feature/change must perform an explicit impact review across:
+- business requirement/domain model
+- tenant model/isolation
+- database/migrations/indexes
+- backend business logic
+- authorization/scopes/roles
+- REST API/version compatibility
+- WordPress/admin UI
+- Flutter/mobile UI and offline/local state where applicable
+- Android identity/build environments if relevant
+- landing/marketing/public feature catalog
+- design system/theme
+- feature registry/feature flags/subscription plans
+- search/filter/sort/bulk actions
+- reports/import/export
+- notifications/escalation
+- audit/compliance
+- documents/storage
+- localization/RTL/LTR/timezone/currency
+- security/privacy/rate limits
+- performance/concurrency/idempotency
+- automated tests
+- documentation/demo data/onboarding
+- CI/build/release/rollback
+- backward compatibility
+
+Items may be N/A, but must be consciously reviewed.
+
+FEATURE REGISTRY
+----------------
+ESC must maintain a central feature registry describing at minimum:
+- stable feature code
+- title/category
+- lifecycle: Development, Internal Preview, Beta, Public, Deprecated
+- tenant awareness
+- configuration requirements
+- admin/mobile/public availability
+- plan entitlement
+- permissions
+- documentation status
+- landing-page visibility
+
+DEFINITION OF DONE
+------------------
+Every ESC task must verify, where applicable:
+[ ] business requirement complete
+[ ] tenant impact reviewed
+[ ] cross-tenant leakage tests considered/updated
+[ ] database and migration impact safe
+[ ] authorization impact reviewed
+[ ] API impact reviewed
+[ ] admin UI impact reviewed
+[ ] mobile impact reviewed
+[ ] Android identity/environment impact reviewed
+[ ] landing/public messaging impact reviewed
+[ ] theme/design-system impact reviewed
+[ ] feature registry/plan impact reviewed
+[ ] audit impact reviewed
+[ ] notification impact reviewed
+[ ] reports/search/import/export impact reviewed
+[ ] localization/RTL/timezone/currency impact reviewed
+[ ] security/privacy impact reviewed
+[ ] performance/concurrency impact reviewed
+[ ] automated tests added/updated
+[ ] documentation updated
+[ ] CI green
+[ ] release/rollback impact reviewed
+
+DATA / TENANCY PRINCIPLES
+-------------------------
+Do not scatter ad-hoc TenantId checks throughout the codebase. Establish Tenant, TenantContext/TenantResolver and tenant-aware repositories/services first, then migrate data domains in controlled stages.
+All tenant-owned records must have server-enforced tenant scoping. Object IDs are never authorization.
+Cross-tenant access attempts through REST IDs, filters, exports, attachments, mobile requests and background jobs must be explicitly tested.
+Start with a shared-database/tenant-key model if selected by ADR, designed so large enterprise tenants may later support stronger isolation/dedicated databases without rewriting the domain.
+
+GENERIC CONTRACT MODEL
+----------------------
+Avoid one database/domain implementation per industry. Prefer a generic contract core plus ContractType, Template, CustomField, Party, Workflow, Approval, Obligation, Milestone and Financial components.
+Industry behavior should primarily be configuration/templates, with code extensions only where genuine domain logic requires them.
+
+INITIAL INDUSTRY TEMPLATE TARGETS
+---------------------------------
+- Agriculture & Export
+- Construction
+- Real Estate
+- Trading / Procurement
+- Manufacturing
+- Logistics
+- IT / SaaS
+- Consulting / Professional Services
+- Maintenance / Facilities
+- Government / Public Sector
+- General Business
+
+ROADMAP
+-------
+ESC-P0  Isolation, master plan, rules, product identity, APK coexistence strategy, design-system foundation, impact policy.
+ESC-P1  Tenant architecture and tenant context.
+ESC-P2  Tenant isolation security and authorization.
+ESC-P3  Generic party/organization/department model.
+ESC-P4  Contract types and template engine.
+ESC-P5  Dynamic field engine.
+ESC-P6  Workflow engine.
+ESC-P7  Approval engine.
+ESC-P8  Obligations, milestones, renewals and notices.
+ESC-P9  Enterprise financial engine and multi-currency.
+ESC-P10 Documents, versions, retention and audit.
+ESC-P11 Notifications, escalation and delivery abstraction.
+ESC-P12 Search, reporting, dashboards, import/export and bulk operations.
+ESC-P13 Feature registry, plans, entitlements, usage and feature flags.
+ESC-P14 ESC branding/design system/white label/localization.
+ESC-P15 Flutter enterprise experience plus isolated Android product identity and dev/staging/prod flavors.
+ESC-P16 Public landing page at https://esc.50sols.com/, industry pages, demo/onboarding and full theme integration.
+ESC-P17 Public API, webhooks and integrations.
+ESC-P18 SSO, MFA, enterprise security and compliance capabilities.
+ESC-P19 Performance, scale, observability, backup/restore and DR.
+ESC-P20 Full-system impact validation, security testing, UAT and release hardening.
+
+RELEASE / ARTIFACT ISOLATION
+----------------------------
+ESC must use release artifacts separate from Safe Contract. Never overwrite the client's Last verified Plugin/APK with ESC output.
+Planned ESC retention slots:
+- Last verified Enterprise Plugin/EnterpriseSafeContracts-latest.zip
+- Last verified Enterprise apk/EnterpriseSafeContracts-latest.apk
+Each verified artifact requires checksum/provenance and exact-source quality-gate evidence.
+
+TASK / GITHUB RULES
+-------------------
+- ESC task IDs: ESC-Px-NNN.
+- Safe Contract task IDs remain SC-Px-NNN.
+- Inspect active issues/PRs before coding.
+- Commits/PRs must reference delivered ESC task IDs.
+- Never close ESC work without implementation/validation evidence.
+- Never create a merge path to main solely because ESC is ahead.
+
+NON-FUNCTIONAL BASELINE
+-----------------------
+Plan and validate: pagination, indexing, search scalability, background jobs, cron reliability, idempotency, concurrency/optimistic locking, duplicate prevention, rate limiting, logs/metrics/traces, health checks, secret safety, malware scanning hooks, storage quotas, retention, privacy/data export/delete policies, backup/restore drills, DR, staging, feature flags, deterministic builds, rollback, API compatibility and accessibility.
+
+DECISION PRINCIPLE
+------------------
+When a requested ESC change has downstream consequences, implement/review the complete coherent change across all affected ESC surfaces without waiting for the owner to enumerate each dependency. Preserve scope discipline: improve what is required for correctness and product coherence, and record larger optional expansions as separate ESC tasks.
