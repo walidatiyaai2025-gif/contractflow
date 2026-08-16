@@ -80,7 +80,7 @@ ESC must receive a distinct Android identity, including:
 Preferred ESC production applicationId baseline: com.safecontracts.enterprise
 Final package naming may be changed only through an explicit architecture decision before first production publication.
 
-ESC environments should support dev, staging and production with visibly distinguishishable app labels/icons where helpful, separate API URLs, separate Firebase registrations and safe logging policies.
+ESC environments should support dev, staging and production with visibly distinguishable app labels/icons where helpful, separate API URLs, separate Firebase registrations and safe logging policies.
 
 LANDING PAGE — MANDATORY PRODUCT SURFACE
 ----------------------------------------
