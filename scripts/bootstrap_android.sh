@@ -80,7 +80,7 @@ import re
 import sys
 
 source = Path(sys.argv[1]).read_text(encoding="utf-8")
-match = re.search(r"static const jpegBase64 = '([A-Za-z0-9+/=]+)';", source)
+match = re.search(r"static const jpegBase64\s*=\s*'([A-Za-z0-9+/=]+)';", source)
 if match is None:
     raise SystemExit("FAIL: Safe Contracts brand JPEG is missing from mobile brand source")
 try:
