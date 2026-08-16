@@ -11,7 +11,8 @@ void main() {
   });
 
   test('automatic app-shell refresh uses silent refresh paths', () {
-    final shell = File('lib/features/navigation/app_shell.dart').readAsStringSync();
+    final shell =
+        File('lib/features/navigation/app_shell.dart').readAsStringSync();
     final silent =
         File('lib/features/refresh/silent_refresh.dart').readAsStringSync();
 
@@ -25,8 +26,8 @@ void main() {
   });
 
   test('filtered dashboard preserves and renders customer entity context', () {
-    final controller =
-        File('lib/features/dashboard/dashboard_controller.dart').readAsStringSync();
+    final controller = File('lib/features/dashboard/dashboard_controller.dart')
+        .readAsStringSync();
     final contextScreen = File(
       'lib/features/dashboard/dashboard_context_screen.dart',
     ).readAsStringSync();
@@ -37,7 +38,8 @@ void main() {
     expect(contextScreen, contains("'Dashboard entity'"));
     expect(
       contextScreen,
-      contains('All figures and indicators below are filtered for this entity.'),
+      contains(
+          'All figures and indicators below are filtered for this entity.'),
     );
   });
 }
