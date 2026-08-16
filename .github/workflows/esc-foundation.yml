@@ -19,3 +19,5 @@ jobs:
           python-version: "3.13"
       - name: Validate Enterprise Safe Contracts foundation
         run: python3 scripts/validate-esc-foundation.py
+      - name: Validate ESC release artifact isolation
+        run: python3 scripts/enterprise_verified_artifacts.py check

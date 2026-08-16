@@ -21,3 +21,9 @@ mobile/build/
 # Mobile runtime configuration is local-only. Commit examples, never real values.
 mobile/config/*.json
 !mobile/config/*.example.json
+
+# ESC Firebase Android configs are environment-injected and never committed.
+mobile/android-release/google-services.json
+mobile/android-release/google-services.*.json
+mobile/android/app/google-services.json
+mobile/android/app/src/*/google-services.json

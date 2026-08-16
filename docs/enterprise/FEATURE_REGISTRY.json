@@ -17,6 +17,8 @@
     {"code":"reporting_dashboards","title":"Reporting & Dashboards","category":"Analytics","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
     {"code":"white_label","title":"White Label & Localization","category":"Experience","lifecycle":"Development","tenant_aware":true,"admin":true,"mobile":true,"public_marketing":false,"plan":"TBD"},
     {"code":"public_landing","title":"ESC Public Landing Experience","category":"Web","lifecycle":"Development","tenant_aware":false,"admin":false,"mobile":false,"public_marketing":false,"plan":"Platform"},
-    {"code":"android_coexistence","title":"Independent ESC Android Application","category":"Mobile","lifecycle":"Development","tenant_aware":false,"admin":false,"mobile":true,"public_marketing":false,"plan":"Platform"}
+    {"code":"design_system","title":"Unified ESC Design System","category":"Experience","lifecycle":"Internal Preview","tenant_aware":false,"admin":true,"mobile":true,"public_marketing":false,"plan":"Platform"},
+    {"code":"android_coexistence","title":"Independent ESC Android Application","category":"Mobile","lifecycle":"Development","tenant_aware":false,"admin":false,"mobile":true,"public_marketing":false,"plan":"Platform"},
+    {"code":"release_isolation","title":"Independent ESC Release Line","category":"Platform","lifecycle":"Internal Preview","tenant_aware":false,"admin":false,"mobile":true,"public_marketing":false,"plan":"Platform"}
   ]
 }

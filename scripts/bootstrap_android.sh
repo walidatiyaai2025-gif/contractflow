@@ -4,48 +4,84 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
-FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
-BRAND_SOURCE="$ROOT/mobile/assets/brand/safe_contracts_identity.jpg"
+ICON_SOURCE="$ROOT/mobile/android-release/enterprise-launcher.xml"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
 
+FIREBASE_DEV="${ESC_FIREBASE_ANDROID_CONFIG_DEV:-}"
+FIREBASE_STAGING="${ESC_FIREBASE_ANDROID_CONFIG_STAGING:-}"
+FIREBASE_PRODUCTION="${ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION:-}"
+
 if ! command -v flutter >/dev/null 2>&1; then
-  echo "FAIL: flutter is required to bootstrap the Android platform" >&2
+  echo "FAIL: flutter is required to bootstrap the ESC Android platform" >&2
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$BRAND_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
+for required_source in "$TEMPLATE" "$ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
   if [[ ! -f "$required_source" ]]; then
-    echo "FAIL: committed Android release source is missing: $required_source" >&2
+    echo "FAIL: committed ESC Android release source is missing: $required_source" >&2
     exit 1
   fi
 done
 
-python3 - "$FIREBASE_CONFIG" <<'PY'
+for name in ESC_FIREBASE_ANDROID_CONFIG_DEV ESC_FIREBASE_ANDROID_CONFIG_STAGING ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION; do
+  value="${!name:-}"
+  if [[ -z "$value" || ! -f "$value" ]]; then
+    echo "FAIL: $name must point to a local, uncommitted ESC Firebase google-services.json" >&2
+    exit 1
+  fi
+done
+
+python3 - "$FIREBASE_DEV" "$FIREBASE_STAGING" "$FIREBASE_PRODUCTION" <<'PY'
 import json
 from pathlib import Path
 import sys
 
-path = Path(sys.argv[1])
-data = json.loads(path.read_text(encoding="utf-8"))
-if data.get("project_info", {}).get("project_id") != "safecontract-13846":
-    raise SystemExit("FAIL: Firebase project ID does not match SafeContracts production")
-if data.get("project_info", {}).get("project_number") != "744938686052":
-    raise SystemExit("FAIL: Firebase sender/project number does not match SafeContracts production")
-clients = data.get("client") or []
-packages = {
-    client.get("client_info", {}).get("android_client_info", {}).get("package_name")
-    for client in clients if isinstance(client, dict)
-}
-if "com.safecontracts.safecontracts_mobile" not in packages:
-    raise SystemExit("FAIL: Firebase Android package does not match SafeContracts applicationId")
+configs = [
+    (Path(sys.argv[1]), "com.safecontracts.enterprise.dev", "dev"),
+    (Path(sys.argv[2]), "com.safecontracts.enterprise.staging", "staging"),
+    (Path(sys.argv[3]), "com.safecontracts.enterprise", "production"),
+]
+legacy_package = "com.safecontracts.safecontracts_mobile"
+legacy_app_id = "1:744938686052:android:1710fdbe24fe02cbc00171"
+seen_app_ids = set()
+
+for path, expected_package, flavor in configs:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"FAIL: invalid ESC Firebase config for {flavor}: {exc}")
+    clients = data.get("client") or []
+    match = None
+    all_packages = set()
+    for client in clients:
+        if not isinstance(client, dict):
+            continue
+        info = client.get("client_info", {})
+        package = info.get("android_client_info", {}).get("package_name")
+        if package:
+            all_packages.add(package)
+        if package == expected_package:
+            match = client
+    if match is None:
+        raise SystemExit(
+            f"FAIL: {flavor} Firebase config must contain Android app {expected_package}; "
+            f"found {sorted(all_packages)}"
+        )
+    app_id = str(match.get("client_info", {}).get("mobilesdk_app_id", "")).strip()
+    if not app_id:
+        raise SystemExit(f"FAIL: {flavor} Firebase config has no mobilesdk_app_id")
+    if app_id == legacy_app_id:
+        raise SystemExit(f"FAIL: {flavor} ESC Firebase app reuses the Safe Contract mobile app id")
+    if app_id in seen_app_ids:
+        raise SystemExit("FAIL: ESC dev/staging/production must use distinct Firebase Android app registrations")
+    seen_app_ids.add(app_id)
+    if expected_package == legacy_package:
+        raise SystemExit("FAIL: ESC Firebase config must never target the Safe Contract package")
+
+print("ESC Firebase Android identities validated")
 PY
 
 cd "$MOBILE"
-
-# Flutter owns the platform boilerplate version. Recreate it from the exact
-# Flutter stable toolchain used by CI, then restore the repository's release
-# signing, networking, Firebase, notification presentation, and Safe Contracts
-# identity contracts.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -54,10 +90,13 @@ flutter create \
   .
 
 cp "$TEMPLATE" android/app/build.gradle.kts
-cp "$FIREBASE_CONFIG" android/app/google-services.json
-MAIN_ACTIVITY_TARGET="android/app/src/main/kotlin/com/safecontracts/safecontracts_mobile/MainActivity.kt"
-mkdir -p "$(dirname "$MAIN_ACTIVITY_TARGET")"
-cp "$MAIN_ACTIVITY_TEMPLATE" "$MAIN_ACTIVITY_TARGET"
+
+for flavor in dev staging production; do
+  mkdir -p "android/app/src/$flavor"
+done
+cp "$FIREBASE_DEV" android/app/src/dev/google-services.json
+cp "$FIREBASE_STAGING" android/app/src/staging/google-services.json
+cp "$FIREBASE_PRODUCTION" android/app/src/production/google-services.json
 
 SETTINGS="android/settings.gradle.kts"
 python3 - "$SETTINGS" <<'PY'
@@ -76,18 +115,14 @@ if plugin not in text:
 path.write_text(text, encoding="utf-8")
 PY
 
-BRAND_ICON="android/app/src/main/res/drawable-nodpi/safe_contracts_brand.jpg"
-mkdir -p "$(dirname "$BRAND_ICON")"
-python3 - "$BRAND_SOURCE" "$BRAND_ICON" <<'PY'
-from pathlib import Path
-import sys
+rm -rf android/app/src/main/kotlin/com/safecontracts/safecontracts_mobile
+MAIN_ACTIVITY_TARGET="android/app/src/main/kotlin/com/safecontracts/enterprise/MainActivity.kt"
+mkdir -p "$(dirname "$MAIN_ACTIVITY_TARGET")"
+cp "$MAIN_ACTIVITY_TEMPLATE" "$MAIN_ACTIVITY_TARGET"
 
-source = Path(sys.argv[1])
-image = source.read_bytes()
-if not image.startswith(b"\xff\xd8\xff") or len(image) < 1024:
-    raise SystemExit("FAIL: Safe Contracts packaged brand source is not a usable JPEG")
-Path(sys.argv[2]).write_bytes(image)
-PY
+ICON_TARGET="android/app/src/main/res/drawable/enterprise_safe_contracts_launcher.xml"
+mkdir -p "$(dirname "$ICON_TARGET")"
+cp "$ICON_SOURCE" "$ICON_TARGET"
 
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [[ ! -f "$MANIFEST" ]]; then
@@ -101,57 +136,47 @@ import sys
 
 path = Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-text = text.replace('android:label="safecontracts_mobile"', 'android:label="Safe Contracts"')
-text = re.sub(
-    r'android:icon="@[^"]+"',
-    'android:icon="@drawable/safe_contracts_brand"',
-    text,
-    count=1,
-)
-text = re.sub(
-    r'android:roundIcon="@[^"]+"',
-    'android:roundIcon="@drawable/safe_contracts_brand"',
-    text,
-    count=1,
-)
+text = re.sub(r'android:label="[^"]+"', 'android:label="@string/app_name"', text, count=1)
+text = re.sub(r'android:icon="@[^"]+"', 'android:icon="@drawable/enterprise_safe_contracts_launcher"', text, count=1)
+text = re.sub(r'android:roundIcon="@[^"]+"', 'android:roundIcon="@drawable/enterprise_safe_contracts_launcher"', text, count=1)
 
-permissions = [
-    'android.permission.INTERNET',
-    'android.permission.POST_NOTIFICATIONS',
-]
+permissions = ["android.permission.INTERNET", "android.permission.POST_NOTIFICATIONS"]
 for permission in permissions:
-    if permission in text:
-        continue
-    application = re.search(r'(?m)^([ \t]*)<application\b', text)
-    if application is None:
-        raise SystemExit("FAIL: AndroidManifest.xml does not contain an <application> element")
-    indent = application.group(1)
-    permission_line = f'{indent}<uses-permission android:name="{permission}" />\n'
-    text = text[: application.start()] + permission_line + text[application.start() :]
+    if permission not in text:
+        application = re.search(r'(?m)^([ \t]*)<application\b', text)
+        if application is None:
+            raise SystemExit("FAIL: AndroidManifest.xml does not contain an <application> element")
+        indent = application.group(1)
+        text = text[:application.start()] + f'{indent}<uses-permission android:name="{permission}" />\n' + text[application.start():]
 
 metadata = '''
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="safe_contracts_alerts" />
+            android:value="enterprise_safe_contracts_alerts" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@android:drawable/ic_dialog_info" />
 '''
-if 'com.google.firebase.messaging.default_notification_channel_id' not in text:
+if "com.google.firebase.messaging.default_notification_channel_id" not in text:
     match = re.search(r'(?m)^([ \t]*)</application>', text)
     if match is None:
         raise SystemExit("FAIL: AndroidManifest.xml does not contain </application>")
     text = text[:match.start()] + metadata + text[match.start():]
 
-for permission in permissions:
-    if permission not in text:
-        raise SystemExit(f"FAIL: Android release manifest is missing {permission}")
-if 'android:label="Safe Contracts"' not in text:
-    raise SystemExit("FAIL: Android release manifest is missing Safe Contracts label")
-if 'android:icon="@drawable/safe_contracts_brand"' not in text:
-    raise SystemExit("FAIL: Android release manifest is missing Safe Contracts launcher icon")
-if 'safe_contracts_alerts' not in text:
-    raise SystemExit("FAIL: Android release manifest is missing Safe Contracts notification channel metadata")
+# Reserve an ESC-only custom deep-link scheme. It cannot collide with Safe Contract.
+if 'android:scheme="esc-safecontracts"' not in text:
+    activity_close = re.search(r'(?m)^([ \t]*)</activity>', text)
+    if activity_close is None:
+        raise SystemExit("FAIL: AndroidManifest.xml does not contain </activity>")
+    intent = '''
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="esc-safecontracts" />
+            </intent-filter>
+'''
+    text = text[:activity_close.start()] + intent + text[activity_close.start():]
 
 path.write_text(text, encoding="utf-8")
 PY
@@ -161,47 +186,25 @@ for required in \
   android/gradlew \
   android/gradle/wrapper/gradle-wrapper.jar \
   android/app/build.gradle.kts \
-  android/app/google-services.json \
+  android/app/src/dev/google-services.json \
+  android/app/src/staging/google-services.json \
+  android/app/src/production/google-services.json \
   android/app/src/main/AndroidManifest.xml \
   "$MAIN_ACTIVITY_TARGET" \
-  "$BRAND_ICON"; do
+  "$ICON_TARGET"; do
   if [[ ! -e "$required" ]]; then
-    echo "FAIL: generated Android scaffold missing $required" >&2
+    echo "FAIL: generated ESC Android scaffold missing $required" >&2
     exit 1
   fi
 done
 
-grep -Fq 'android.permission.INTERNET' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing INTERNET permission" >&2
-  exit 1
-}
-grep -Fq 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing POST_NOTIFICATIONS permission" >&2
-  exit 1
-}
-grep -Fq 'android:label="Safe Contracts"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing Safe Contracts label" >&2
-  exit 1
-}
-grep -Fq 'android:icon="@drawable/safe_contracts_brand"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing Safe Contracts launcher icon" >&2
-  exit 1
-}
-grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing high-importance notification channel metadata" >&2
-  exit 1
-}
-grep -Fq 'safecontracts/notifications' "$MAIN_ACTIVITY_TARGET" || {
-  echo "FAIL: Android release activity is missing foreground notification bridge" >&2
-  exit 1
-}
-grep -Fq 'id("com.google.gms.google-services")' android/app/build.gradle.kts || {
-  echo "FAIL: Android app does not apply Google Services Gradle plugin" >&2
-  exit 1
-}
-grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SETTINGS" || {
-  echo "FAIL: Android settings do not declare Google Services Gradle plugin" >&2
-  exit 1
-}
+grep -Fq 'applicationId = "com.safecontracts.enterprise"' android/app/build.gradle.kts
+grep -Fq 'applicationIdSuffix = ".dev"' android/app/build.gradle.kts
+grep -Fq 'applicationIdSuffix = ".staging"' android/app/build.gradle.kts
+grep -Fq 'android:label="@string/app_name"' "$MANIFEST"
+grep -Fq 'enterprise_safe_contracts_alerts' "$MANIFEST"
+grep -Fq 'esc-safecontracts' "$MANIFEST"
+grep -Fq 'enterprise_safecontracts/notifications' "$MAIN_ACTIVITY_TARGET"
+grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SETTINGS"
 
-echo "Safe Contracts Android scaffold bootstrapped with branded launcher icon, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
+echo "Enterprise Safe Contracts Android scaffold bootstrapped with isolated package/flavors, Firebase apps, notifications, deep links and signing namespace."

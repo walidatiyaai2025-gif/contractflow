@@ -1,4 +1,4 @@
-package com.safecontracts.safecontracts_mobile
+package com.safecontracts.enterprise
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -13,9 +13,9 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     companion object {
-        private const val METHOD_CHANNEL = "safecontracts/notifications"
-        private const val NOTIFICATION_CHANNEL_ID = "safe_contracts_alerts"
-        private const val NOTIFICATION_CHANNEL_NAME = "Safe Contracts Alerts"
+        private const val METHOD_CHANNEL = "enterprise_safecontracts/notifications"
+        private const val NOTIFICATION_CHANNEL_ID = "enterprise_safe_contracts_alerts"
+        private const val NOTIFICATION_CHANNEL_NAME = "Enterprise Safe Contracts Alerts"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +52,7 @@ class MainActivity : FlutterActivity() {
             NOTIFICATION_CHANNEL_NAME,
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "Contract, payment and collection alerts from Safe Contracts"
+            description = "Contract lifecycle, approval, obligation and payment alerts from Enterprise Safe Contracts"
             enableVibration(true)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
@@ -99,6 +99,7 @@ class MainActivity : FlutterActivity() {
         "success" -> android.R.drawable.checkbox_on_background
         "payment" -> android.R.drawable.ic_menu_agenda
         "contract_due" -> android.R.drawable.ic_menu_today
+        "approval" -> android.R.drawable.ic_menu_manage
         else -> android.R.drawable.ic_dialog_info
     }
 }

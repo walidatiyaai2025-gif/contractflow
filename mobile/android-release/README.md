@@ -1,33 +1,49 @@
-# SafeContracts Android release scaffold contract
+# Enterprise Safe Contracts Android release scaffold
 
-SafeContracts keeps its Flutter business/UI sources under `mobile/` and generates the Android platform boilerplate reproducibly with the exact Flutter stable toolchain used by CI.
+This directory belongs to the `enterprise-safecontracts` product line only. It must not reuse Safe Contract Android identity, Firebase registration, signing namespace, release artifacts, notification channel, deep-link scheme or retained APK slot.
 
-Run from the repository root:
+## Stable package identities
+
+- Development: `com.safecontracts.enterprise.dev`
+- Staging: `com.safecontracts.enterprise.staging`
+- Production: `com.safecontracts.enterprise`
+
+The product flavors are `dev`, `staging` and `production`. Safe Contract remains a separate Android application and can be installed on the same device.
+
+## Firebase injection
+
+No real ESC `google-services.json` is committed. Before running `./scripts/bootstrap_android.sh`, provide three local files through:
+
+- `ESC_FIREBASE_ANDROID_CONFIG_DEV`
+- `ESC_FIREBASE_ANDROID_CONFIG_STAGING`
+- `ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION`
+
+Each file must contain a Firebase Android app registered for its exact package above. The bootstrap fails if the old Safe Contract app id is reused or if two ESC flavors reuse one Firebase Android app registration.
+
+## Release signing
+
+Production signing uses the ESC-only variables:
+
+- `ESC_ANDROID_KEYSTORE_PATH`
+- `ESC_ANDROID_KEYSTORE_PASSWORD`
+- `ESC_ANDROID_KEY_ALIAS`
+- `ESC_ANDROID_KEY_PASSWORD`
+
+Partial signing configuration fails closed. Keystores and passwords are never committed.
+
+## Build examples
+
+After bootstrap:
 
 ```bash
-./scripts/bootstrap_android.sh
+cd mobile
+flutter build apk --flavor dev --debug --dart-define=SC_ENV=development
+flutter build apk --flavor staging --release --dart-define=SC_ENV=staging
+flutter build apk --flavor production --release --dart-define=SC_ENV=production
 ```
 
-The bootstrap process:
+The API URL for every flavor must be supplied by environment/build configuration and validated so dev/staging cannot silently connect to production and production cannot silently connect to a non-production backend.
 
-1. recreates `mobile/android/` using `flutter create --platforms=android`,
-2. fixes the visible application label to `SafeContracts`,
-3. replaces the generated app Gradle file with `app-build.gradle.kts`,
-4. never falls back to debug signing for a release build.
+## Coexistence release gate
 
-## Release signing environment
-
-Production signing uses all four values together:
-
-- `SC_ANDROID_KEYSTORE_PATH`
-- `SC_ANDROID_KEYSTORE_PASSWORD`
-- `SC_ANDROID_KEY_ALIAS`
-- `SC_ANDROID_KEY_PASSWORD`
-
-If none are present, the release build is an **unsigned release candidate only**. If only some are present, the build fails closed. Keystores and passwords must never be committed.
-
-The stable Android application ID is:
-
-`com.safecontracts.safecontracts_mobile`
-
-A production APK additionally requires a real HTTPS `SC_API_BASE_URL`, successful Quality Gates, signature verification, real-device evidence and business UAT evidence before it may replace `Last verified apk/SafeContracts-latest.apk`.
+An ESC production APK is not verified until evidence proves on a real Android device that Safe Contract and Enterprise Safe Contracts can both be installed, launched, updated and receive notifications independently. ESC output must be retained only in the Enterprise artifact slots.
