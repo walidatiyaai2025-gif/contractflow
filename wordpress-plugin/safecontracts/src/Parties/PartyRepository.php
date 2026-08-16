@@ -27,7 +27,7 @@ final class PartyRepository
     }
 
     /** @return list<array<string,mixed>> */
-    public function list(string $search = '', int $limit = 50, int $offset = 0): array
+    public function search(string $search = '', int $limit = 50, int $offset = 0): array
     {
         global $wpdb;
         $tenantId = $this->tenantId();
