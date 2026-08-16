@@ -110,9 +110,9 @@ foreach ([
     'safecontracts_edit_contracts',
     'safecontracts_create_payments',
     'safecontracts_edit_payments',
-    "mobile/customers/create",
-    "mobile/contracts/create",
-    "mobile/payments/create",
+    'mobile/customers/create',
+    'mobile/contracts/create',
+    'mobile/payments/create',
     "RegExp(r'^\\d+(?:\\.\\d{1,2})?\$')",
 ] as $marker) {
     $assert(str_contains($editor, $marker), "mobile record editor contains {$marker}");
@@ -124,8 +124,8 @@ $assert(str_contains($profile, 'إضافة / تعديل العملاء والع�
 
 $bootstrap = (string) file_get_contents($root . '/scripts/bootstrap_android.sh');
 $assert(str_contains($bootstrap, 'alkenzy_launcher.xml'), 'Android bootstrap packages the Alkenzy launcher resource');
-$assert(str_contains($bootstrap, 'android:icon=\"@drawable/alkenzy_launcher\"'), 'Android manifest launcher icon is changed to Alkenzy');
-$assert(! str_contains($bootstrap, 'android:icon=\"@drawable/safe_contracts_brand\"'), 'old Safe Contracts launcher icon is no longer used');
+$assert(str_contains($bootstrap, 'android:icon="@drawable/alkenzy_launcher"'), 'Android manifest launcher icon is changed to Alkenzy');
+$assert(! str_contains($bootstrap, 'android:icon="@drawable/safe_contracts_brand"'), 'old Safe Contracts launcher icon is no longer used');
 $icon = (string) file_get_contents($root . '/mobile/android-release/alkenzy_launcher.xml');
 $assert(str_contains($icon, '#FFFFE173'), 'Alkenzy launcher retains yellow field');
 $assert(str_contains($icon, '#FF7BC1CD'), 'Alkenzy launcher retains blue Advertising circle');
