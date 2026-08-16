@@ -8,7 +8,7 @@ abstract interface class MobileTokenStore {
 
 final class SecureMobileTokenStore implements MobileTokenStore {
   SecureMobileTokenStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   static const _key = 'enterprise_safecontracts.mobile.bearer_token';
   final FlutterSecureStorage _storage;
@@ -29,7 +29,9 @@ final class SecureMobileTokenStore implements MobileTokenStore {
   Future<void> write(String token, {bool persistent = true}) async {
     final normalized = token.trim();
     if (!RegExp(r'^scm_[A-Za-z0-9_-]{43}$').hasMatch(normalized)) {
-      throw const FormatException('Enterprise Safe Contracts mobile token is invalid.');
+      throw const FormatException(
+        'Enterprise Safe Contracts mobile token is invalid.',
+      );
     }
     _sessionValue = normalized;
     if (persistent) {
