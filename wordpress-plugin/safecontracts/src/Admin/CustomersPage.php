@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Customers\CustomerService;
+use SafeContracts\Deletion\SafeDeletionService;
 use SafeContracts\Roles\Capabilities;
 use Throwable;
 
@@ -12,6 +13,7 @@ final class CustomersPage
 {
     public const SLUG = 'safecontracts-customers';
     public const SAVE_ACTION = 'safecontracts_save_customer';
+    public const DELETE_ACTION = 'safecontracts_delete_customer';
 
     public static function register(): void
     {
@@ -51,6 +53,24 @@ final class CustomersPage
         exit;
     }
 
+    public static function handleDelete(): void
+    {
+        if (! current_user_can(Capabilities::MANAGE_REFERENCE_DATA)) {
+            wp_die(__('You do not have permission to delete customers.', 'safecontracts'));
+        }
+        $customerId = max(0, (int) ($_POST['customer_id'] ?? 0));
+        check_admin_referer(self::DELETE_ACTION . '_' . $customerId);
+        $status = 'deleted';
+        try {
+            (new SafeDeletionService())->archiveCustomer($customerId);
+        } catch (Throwable $error) {
+            unset($error);
+            $status = 'delete_failed';
+        }
+        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'safecontracts_status' => $status], admin_url('admin.php')));
+        exit;
+    }
+
     public static function render(): void
     {
         if (! current_user_can(Capabilities::ACCESS)) {
@@ -69,9 +89,27 @@ final class CustomersPage
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Master data', 'safecontracts'); ?></p><h1><?php echo esc_html__('Customers', 'safecontracts'); ?></h1></div></div>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Contact', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Contact', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($customers as $customer) : ?>
-                        <tr><td><?php echo esc_html((string) ($customer['internal_code'] ?? '—')); ?></td><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'customer_id' => (int) $customer['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) $customer['name']); ?></a></td><td><?php echo esc_html((string) ($customer['contact_name'] ?? $customer['email'] ?? '')); ?></td><td><?php echo ! empty($customer['is_active']) ? esc_html__('Active', 'safecontracts') : esc_html__('Inactive', 'safecontracts'); ?></td></tr>
+                        <tr>
+                            <td><?php echo esc_html((string) ($customer['internal_code'] ?? '—')); ?></td>
+                            <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'customer_id' => (int) $customer['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) $customer['name']); ?></a></td>
+                            <td><?php echo esc_html((string) ($customer['contact_name'] ?? $customer['email'] ?? '')); ?></td>
+                            <td><?php echo ! empty($customer['is_active']) ? esc_html__('Active', 'safecontracts') : esc_html__('Inactive', 'safecontracts'); ?></td>
+                            <td>
+                                <?php if (current_user_can(Capabilities::MANAGE_REFERENCE_DATA)) : ?>
+                                    <div class="safecontracts-dashboard-table-actions">
+                                        <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'customer_id' => (int) $customer['id']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a>
+                                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this customer from active SafeContracts records? Linked contracts and history will be preserved.', 'safecontracts'); ?>">
+                                            <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
+                                            <input type="hidden" name="customer_id" value="<?php echo esc_attr((string) $customer['id']); ?>">
+                                            <?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $customer['id']); ?>
+                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?> / حذف</button>
+                                        </form>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                     </tbody></table>
                 </section>
