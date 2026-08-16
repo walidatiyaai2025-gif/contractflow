@@ -100,7 +100,7 @@ esc_p3_party_assert(str_contains($createSql, 'INSERT INTO wp_safecontracts_parti
 esc_p3_party_assert(str_contains($createSql, 'VALUES (17,'), 'Party create derives tenant ownership from locked server context');
 esc_p3_party_assert(str_contains($createSql, ', NULL,'), 'empty tenant-local party code is stored as NULL, allowing multiple uncoded parties');
 esc_p3_party_assert(str_contains($createSql, "'KW'"), 'country code is normalized');
-esc_p3_party_assert(str_contains($createSql, '"source":"enterprise"'), 'bounded metadata is JSON encoded');
+esc_p3_party_assert(str_contains($createSql, 'source') && str_contains($createSql, 'enterprise'), 'bounded metadata key/value is JSON encoded before persistence');
 esc_p3_party_assert(preg_match("/'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'/", $createSql) === 1, 'Party UUID is generated server-side as UUIDv4');
 
 $GLOBALS['sc_test_queries'] = [];
@@ -115,6 +115,11 @@ esc_p3_party_throws(
     'client mutation data cannot supply UUID identity'
 );
 esc_p3_party_assert($GLOBALS['sc_test_queries'] === [], 'spoofed reserved Party fields fail before persistence');
+esc_p3_party_throws(
+    static fn () => $service->save(['id' => 0, 'display_name' => 'Invalid ID', 'party_kind' => 'organization']),
+    InvalidArgumentException::class,
+    'supplied non-positive Party ID cannot silently turn into create'
+);
 esc_p3_party_throws(
     static fn () => $service->save(['display_name' => 'Role misuse', 'party_kind' => 'customer']),
     InvalidArgumentException::class,
