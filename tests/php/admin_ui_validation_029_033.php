@@ -54,7 +54,8 @@ sc_p6v5_assert(! str_contains($followupSource, 'updateDates(') && ! str_contains
 // SC-P6-031 — Notifications screen: capability-gated bounded operational metadata only.
 $notificationSource = file_get_contents((string) (new ReflectionClass(NotificationsPage::class))->getFileName()) ?: '';
 sc_p6v5_assert(substr_count($notificationSource, 'Capabilities::MANAGE_NOTIFICATIONS') >= 2, 'SC-P6-031 notification registration and render are capability-gated');
-sc_p6v5_assert(str_contains($notificationSource, 'NotificationRuleService') && str_contains($notificationSource, 'DeliveryLogRepository') && str_contains($notificationSource, 'recent(100)'), 'SC-P6-031 notification reads use bounded domain/repository boundaries');
+sc_p6v5_assert(str_contains($notificationSource, 'NotificationRuleService') && str_contains($notificationSource, 'DeliveryLogRepository') && str_contains($notificationSource, 'recent(100,'), 'SC-P6-031 notification reads use bounded domain/repository boundaries');
+sc_p6v5_assert(str_contains($notificationSource, "\$filters['date_from']") && str_contains($notificationSource, "\$filters['date_to']"), 'SC-P6-031 notification delivery reads carry the normalized display period server-side');
 sc_p6v5_assert(! str_contains($notificationSource, 'private_key') && ! str_contains($notificationSource, 'access_token') && ! str_contains($notificationSource, "['device_token']"), 'SC-P6-031 notification operations do not expose credential/token material');
 sc_p6v5_assert(str_contains($notificationSource, 'esc_html') && ! str_contains($notificationSource, '$wpdb'), 'SC-P6-031 notification output is escaped and presentation contains no SQL');
 
