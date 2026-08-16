@@ -6,6 +6,8 @@ namespace SafeContracts\Rest;
 
 use SafeContracts\Roles\AccessScope;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Tenancy\TenantContextStore;
+use SafeContracts\Tenancy\TenantDirectoryRepository;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -34,6 +36,7 @@ final class Router
             ]);
         }
 
+        TenantsController::register();
         PaymentMethodsController::register();
         DataController::register();
         DashboardController::register();
@@ -59,10 +62,15 @@ final class Router
 
     public static function me(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
-        unset($request);
         $access = self::canAccess();
         if ($access instanceof WP_Error) {
             return $access;
+        }
+
+        TenantContextStore::reset();
+        $selectedTenantId = TenantRequestContext::resolve($request, false);
+        if ($selectedTenantId instanceof WP_Error) {
+            return $selectedTenantId;
         }
 
         $capabilities = [];
@@ -70,11 +78,19 @@ final class Router
             $capabilities[$capability] = current_user_can($capability);
         }
 
+        $userId = get_current_user_id();
+        $tenantRepository = new TenantDirectoryRepository();
+        $tenant = $selectedTenantId === null
+            ? null
+            : $tenantRepository->findForUser($selectedTenantId, $userId);
+
         return ApiResponse::ok([
             'authenticated' => true,
-            'user_id' => get_current_user_id(),
+            'user_id' => $userId,
             'scope' => AccessScope::current(),
             'capabilities' => $capabilities,
+            'tenant' => $tenant,
+            'tenant_selection_header' => TenantRequestContext::HEADER,
         ]);
     }
 

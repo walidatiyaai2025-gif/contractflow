@@ -13,11 +13,54 @@ enum SessionState {
   error,
 }
 
+final class EnterpriseTenantIdentity {
+  const EnterpriseTenantIdentity({
+    required this.id,
+    required this.uuid,
+    required this.slug,
+    required this.name,
+    required this.timezone,
+    required this.defaultCurrency,
+    required this.locale,
+    required this.roleCode,
+    required this.isOwner,
+  });
+
+  final int id;
+  final String uuid;
+  final String slug;
+  final String name;
+  final String timezone;
+  final String defaultCurrency;
+  final String locale;
+  final String roleCode;
+  final bool isOwner;
+
+  factory EnterpriseTenantIdentity.fromData(Object? value) {
+    final data = apiObjectMap(value, 'session.tenant');
+    return EnterpriseTenantIdentity(
+      id: _positiveInt(data['id'], 'session.tenant.id'),
+      uuid: _requiredString(data['uuid'], 'session.tenant.uuid'),
+      slug: _requiredString(data['slug'], 'session.tenant.slug'),
+      name: _requiredString(data['name'], 'session.tenant.name'),
+      timezone: _requiredString(data['timezone'], 'session.tenant.timezone'),
+      defaultCurrency: _requiredString(
+        data['default_currency'],
+        'session.tenant.default_currency',
+      ),
+      locale: _requiredString(data['locale'], 'session.tenant.locale'),
+      roleCode: _requiredString(data['role_code'], 'session.tenant.role_code'),
+      isOwner: data['is_owner'] == true,
+    );
+  }
+}
+
 final class SafeContractsSession {
   const SafeContractsSession({
     required this.userId,
     required this.scope,
     required this.capabilities,
+    this.tenant,
   });
 
   static const maxCapabilities = 128;
@@ -25,6 +68,7 @@ final class SafeContractsSession {
   final int userId;
   final SafeContractsDataScope scope;
   final Map<String, bool> capabilities;
+  final EnterpriseTenantIdentity? tenant;
 
   bool can(String capability) => capabilities[capability] ?? false;
 
@@ -49,7 +93,8 @@ final class SafeContractsSession {
     );
     if (rawCapabilities.length > maxCapabilities) {
       throw const FormatException(
-          'session.capabilities contains too many entries.');
+        'session.capabilities contains too many entries.',
+      );
     }
 
     final capabilities = <String, bool>{};
@@ -57,19 +102,25 @@ final class SafeContractsSession {
       if (!_validCapabilityName(entry.key)) {
         throw const FormatException('session capability name is invalid.');
       }
-      final value = entry.value;
-      if (value is! bool) {
+      final capabilityValue = entry.value;
+      if (capabilityValue is! bool) {
         throw FormatException(
           'session capability ${entry.key} must be boolean.',
         );
       }
-      capabilities[entry.key] = value;
+      capabilities[entry.key] = capabilityValue;
     }
+
+    final rawTenant = data['tenant'];
+    final tenant = rawTenant == null
+        ? null
+        : EnterpriseTenantIdentity.fromData(rawTenant);
 
     return SafeContractsSession(
       userId: userId,
       scope: scope,
       capabilities: Map<String, bool>.unmodifiable(capabilities),
+      tenant: tenant,
     );
   }
 }
@@ -129,6 +180,13 @@ int _positiveInt(Object? value, String field) {
     }
   }
   throw FormatException('$field must be a positive integer.');
+}
+
+String _requiredString(Object? value, String field) {
+  if (value is String && value.trim().isNotEmpty) {
+    return value.trim();
+  }
+  throw FormatException('$field must be a non-empty string.');
 }
 
 bool _validCapabilityName(String value) {

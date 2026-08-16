@@ -4,10 +4,7 @@ import '../config/app_environment.dart';
 import 'api_transport.dart';
 
 final class ApiEnvelope {
-  const ApiEnvelope({
-    required this.data,
-    required this.meta,
-  });
+  const ApiEnvelope({required this.data, required this.meta});
 
   final Object? data;
   final Map<String, Object?> meta;
@@ -29,15 +26,19 @@ final class SafeContractsApiException implements Exception {
 }
 
 typedef ApiHeadersProvider = Future<Map<String, String>> Function();
+typedef TenantIdProvider = Future<int?> Function();
 
 final class SafeContractsApiClient {
   SafeContractsApiClient({
     required this.environment,
     required this.transport,
     ApiHeadersProvider? headersProvider,
-  }) : headersProvider = headersProvider ?? _emptyHeaders;
+    TenantIdProvider? tenantIdProvider,
+  }) : headersProvider = headersProvider ?? _emptyHeaders,
+       tenantIdProvider = tenantIdProvider ?? _noTenant;
 
   static const apiVersion = 'v1';
+  static const enterpriseTenantHeader = 'X-ESC-Tenant-ID';
   static const maxJsonRequestBytes = 256 * 1024;
   static const _bodyMethods = <String>{'POST', 'PUT', 'PATCH'};
   static const _supportedMethods = <String>{
@@ -51,6 +52,7 @@ final class SafeContractsApiClient {
   final AppEnvironment environment;
   final SafeContractsTransport transport;
   final ApiHeadersProvider headersProvider;
+  final TenantIdProvider tenantIdProvider;
 
   Future<ApiEnvelope> get(
     String path, {
@@ -100,11 +102,26 @@ final class SafeContractsApiClient {
           : <String, String>{...baseUri.queryParameters, ...query},
     );
     final sessionHeaders = _validatedHeaders(await headersProvider());
+    if (sessionHeaders.keys.any(
+      (key) => key.toLowerCase() == enterpriseTenantHeader.toLowerCase(),
+    )) {
+      throw const FormatException(
+        'Enterprise tenant header is managed by the tenant selection provider.',
+      );
+    }
+    final tenantId = await tenantIdProvider();
+    if (tenantId != null && tenantId <= 0) {
+      throw const FormatException(
+        'Enterprise tenant id must be a positive integer.',
+      );
+    }
+
     final encodedBody = body == null ? null : jsonEncode(body);
     if (encodedBody != null &&
         utf8.encode(encodedBody).length > maxJsonRequestBytes) {
       throw const FormatException(
-          'SafeContracts API JSON request is too large.');
+        'SafeContracts API JSON request is too large.',
+      );
     }
 
     final response = await transport.send(
@@ -112,6 +129,7 @@ final class SafeContractsApiClient {
       method: normalizedMethod,
       headers: <String, String>{
         ...sessionHeaders,
+        if (tenantId != null) enterpriseTenantHeader: '$tenantId',
         'Accept': 'application/json',
         if (encodedBody != null)
           'Content-Type': 'application/json; charset=utf-8',
@@ -147,12 +165,12 @@ final class SafeContractsApiClient {
       );
     }
     final metaValue = root['meta'];
-    final meta =
-        metaValue == null ? <String, Object?>{} : _objectMap(metaValue, 'meta');
+    final meta = metaValue == null
+        ? <String, Object?>{}
+        : _objectMap(metaValue, 'meta');
     final responseVersion = meta['api_version'];
     if (responseVersion != null && responseVersion != apiVersion) {
-      throw const FormatException(
-          'SafeContracts API version is not supported.');
+      throw const FormatException('SafeContracts API version is not supported.');
     }
     return ApiEnvelope(
       data: root['data'],
@@ -163,6 +181,8 @@ final class SafeContractsApiClient {
   static Future<Map<String, String>> _emptyHeaders() async {
     return <String, String>{};
   }
+
+  static Future<int?> _noTenant() async => null;
 }
 
 Map<String, Object?> apiObjectMap(Object? value, String field) {
