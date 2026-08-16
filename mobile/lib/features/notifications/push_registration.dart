@@ -145,6 +145,51 @@ final class MobilePushRegistration {
     await _acquireAndRegisterWithRetry();
   }
 
+  Future<void> refreshTokenAndRetry() async {
+    if (_disposed) {
+      return;
+    }
+    if (!_started) {
+      await start();
+      if (_disposed) {
+        return;
+      }
+    }
+
+    final previousToken = _registeredToken;
+    if (previousToken != null) {
+      try {
+        await client.post(
+          'devices/revoke',
+          body: <String, Object?>{'token': previousToken},
+        );
+      } on Object {
+        // Server cleanup is best-effort; Firebase token rotation must continue.
+      }
+    }
+
+    try {
+      await _messaging.deleteToken();
+    } on Object {
+      _setStatus(
+        permission: status.value.permission,
+        tokenAcquired: status.value.tokenAcquired,
+        backendState: MobilePushBackendState.error,
+        errorCode: 'fcm_token_reset_failed',
+      );
+      return;
+    }
+
+    _registeredToken = null;
+    _setStatus(
+      permission: status.value.permission,
+      tokenAcquired: false,
+      backendState: MobilePushBackendState.registering,
+      errorCode: null,
+    );
+    await _acquireAndRegisterWithRetry();
+  }
+
   Future<void> _acquireAndRegisterWithRetry() async {
     _setStatus(
       permission: status.value.permission,
