@@ -6,6 +6,7 @@ namespace SafeContracts\Import;
 
 use Closure;
 use RuntimeException;
+use SafeContracts\Tenancy\NonCoreTenantScope;
 
 final class PrivateImportStorage
 {
@@ -29,39 +30,63 @@ final class PrivateImportStorage
         if (! preg_match('/^[a-f0-9]{64}$/', $sha256)) {
             throw new RuntimeException('Import storage key must be a SHA-256 value.');
         }
-        $this->ensureDirectory();
-        $destination = $this->pathForKey($sha256);
+
+        $tenantId = NonCoreTenantScope::tenantId();
+        $storageKey = $tenantId === null ? $sha256 : 'tenant-' . $tenantId . '/' . $sha256;
+        $destination = $this->pathForKey($storageKey);
+        $this->ensureDirectory(dirname($destination));
         if (! is_file($destination) && ! ($this->mover)($source, $destination)) {
             throw new RuntimeException('Unable to move workbook into private SafeContracts storage.');
         }
         @chmod($destination, 0600);
-        return $sha256;
+        return $storageKey;
     }
 
     public function pathForKey(string $storageKey): string
     {
-        if (! preg_match('/^[a-f0-9]{64}$/', $storageKey)) {
+        if (preg_match('/^[a-f0-9]{64}$/', $storageKey) === 1) {
+            // Legacy backfilled imports keep their historical key. Database tenant
+            // ownership protects access; all new ESC writes use a tenant-qualified key.
+            return $this->baseDir . '/' . $storageKey . '.xlsx';
+        }
+
+        if (preg_match('/^tenant-([1-9][0-9]*)\/([a-f0-9]{64})$/', $storageKey, $matches) !== 1) {
             throw new RuntimeException('Invalid SafeContracts import storage key.');
         }
-        return $this->baseDir . '/' . $storageKey . '.xlsx';
+
+        $keyTenantId = (int) $matches[1];
+        $currentTenantId = NonCoreTenantScope::tenantId();
+        if ($currentTenantId !== null && $currentTenantId !== $keyTenantId) {
+            throw new RuntimeException('Enterprise import storage key belongs to another tenant.');
+        }
+
+        return $this->baseDir . '/tenant-' . $keyTenantId . '/' . $matches[2] . '.xlsx';
     }
 
-    private function ensureDirectory(): void
+    private function ensureDirectory(string $directory): void
     {
-        if (! is_dir($this->baseDir)) {
-            $created = function_exists('wp_mkdir_p') ? wp_mkdir_p($this->baseDir) : mkdir($this->baseDir, 0700, true);
-            if (! $created && ! is_dir($this->baseDir)) {
+        if (! is_dir($directory)) {
+            $created = function_exists('wp_mkdir_p') ? wp_mkdir_p($directory) : mkdir($directory, 0700, true);
+            if (! $created && ! is_dir($directory)) {
                 throw new RuntimeException('Unable to create private SafeContracts import directory.');
             }
         }
-        @chmod($this->baseDir, 0700);
-        $deny = $this->baseDir . '/.htaccess';
-        if (! is_file($deny)) {
-            @file_put_contents($deny, "Require all denied\nDeny from all\n", LOCK_EX);
-        }
-        $index = $this->baseDir . '/index.php';
-        if (! is_file($index)) {
-            @file_put_contents($index, "<?php\nhttp_response_code(404);\nexit;\n", LOCK_EX);
+        @chmod($directory, 0700);
+
+        // Keep deny/index guards at both the root and tenant subdirectory level.
+        foreach (array_values(array_unique([$this->baseDir, $directory])) as $guardedDirectory) {
+            if (! is_dir($guardedDirectory)) {
+                continue;
+            }
+            @chmod($guardedDirectory, 0700);
+            $deny = $guardedDirectory . '/.htaccess';
+            if (! is_file($deny)) {
+                @file_put_contents($deny, "Require all denied\nDeny from all\n", LOCK_EX);
+            }
+            $index = $guardedDirectory . '/index.php';
+            if (! is_file($index)) {
+                @file_put_contents($index, "<?php\nhttp_response_code(404);\nexit;\n", LOCK_EX);
+            }
         }
     }
 }
