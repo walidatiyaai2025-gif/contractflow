@@ -1,12 +1,12 @@
 <?php
 /**
- * Plugin Name: SafeContracts
+ * Plugin Name: Safe Contracts
  * Plugin URI: https://github.com/walidatiyaai2025-gif/contractflow
- * Description: Contract receivables tracking backend and administration foundation for SafeContracts.
+ * Description: Contract receivables tracking backend and administration foundation for Safe Contracts.
  * Version: 0.1.0
  * Requires at least: 6.5
  * Requires PHP: 8.1
- * Author: SafeContracts Team
+ * Author: Safe Contracts Team
  * Text Domain: safecontracts
  */
 
