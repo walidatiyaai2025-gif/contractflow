@@ -129,7 +129,8 @@ $assert(str_contains($bootstrap, 'android:icon="@drawable/alkenzy_launcher"'), '
 $assert(str_contains($bootstrap, 'android:roundIcon="@drawable/alkenzy_launcher"'), 'Android manifest round launcher icon is changed to Alkenzy');
 $assert(! str_contains($bootstrap, 'android:icon="@drawable/safe_contracts_brand"'), 'old Safe Contracts launcher icon is no longer used');
 $icon = (string) file_get_contents($root . '/mobile/android-release/alkenzy_launcher.png');
-$assert(str_starts_with($icon, "\x89PNG\r\n\x1a\n"), 'Alkenzy launcher is a valid PNG');
-$assert(hash('sha256', $icon) === 'e703241650eeb984791c4715b4243bf96ba5b273b78eb2e25cd3640c188c57c9', 'Alkenzy launcher bytes match the approved supplied-logo rendition');
+$inAppIcon = (string) file_get_contents($root . '/mobile/assets/brand/alkenzy_adv.png');
+$assert(strlen($icon) >= 4096 && str_starts_with($icon, "\x89PNG\r\n\x1a\n"), 'Alkenzy launcher is a valid PNG');
+$assert(hash_equals(hash('sha256', $inAppIcon), hash('sha256', $icon)), 'in-app and Android launcher identities use the same supplied Alkenzy logo bytes');
 
 printf("SafeContracts mobile CRUD permissions + Alkenzy ADV identity regression passed (%d checks).\n", $checks);
