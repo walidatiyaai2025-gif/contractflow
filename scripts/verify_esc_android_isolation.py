@@ -20,6 +20,7 @@ SAFE_APPLICATION_ID = "com.safecontracts.safecontracts_mobile"
 ESC_NOTIFICATION_CHANNEL = "enterprise_safe_contracts_alerts"
 ESC_METHOD_CHANNEL = "enterprise_safecontracts/notifications"
 ESC_DEEP_LINK_SCHEME = "esc-safecontracts"
+ESC_SECURE_STORAGE_KEY = "enterprise_safecontracts.mobile.bearer_token"
 FORBIDDEN_SAFE_WORKFLOWS = (
     "quality-gates.yml",
     "doc-sync.yml",
@@ -60,11 +61,20 @@ def forbid(text: str, markers: tuple[str, ...], label: str) -> None:
 def validate_sources() -> int:
     gradle = read("mobile/android-release/app-build.gradle.kts")
     activity = read("mobile/android-release/MainActivity.kt")
+    launcher = read("mobile/android-release/enterprise-launcher.xml")
+    launcher_foreground = read("mobile/android-release/enterprise-launcher-foreground.xml")
+    launcher_background = read("mobile/android-release/enterprise-launcher-background.xml")
+    adaptive_launcher = read("mobile/android-release/enterprise-launcher-adaptive.xml")
+    splash = read("mobile/android-release/enterprise-splash.xml")
     bootstrap = read("scripts/bootstrap_android.sh")
     app_environment = read("mobile/lib/core/config/app_environment.dart")
+    token_store = read("mobile/lib/core/auth/mobile_token_store.dart")
+    pubspec = read("mobile/pubspec.yaml")
     config_example = read("mobile/config/local.example.json")
     mobile_readme = read("mobile/README.md")
     android_readme = read("mobile/android-release/README.md")
+    identity_doc = read("docs/enterprise/MOBILE_IDENTITY_APK.md")
+    coexistence_doc = read("docs/enterprise/ANDROID_COEXISTENCE_UAT.md")
     publish_workflow = read(".github/workflows/publish-mobile-latest.yml")
     verified_artifacts = read("scripts/enterprise_verified_artifacts.py")
 
@@ -82,6 +92,8 @@ def validate_sources() -> int:
             f'applicationId = "{ESC_APPLICATION_ID}"',
             'applicationIdSuffix = ".dev"',
             'applicationIdSuffix = ".staging"',
+            'versionNameSuffix = "-dev"',
+            'versionNameSuffix = "-staging"',
             'resValue("string", "app_name", "Enterprise Safe Contracts")',
             "ESC_ANDROID_KEYSTORE_PATH",
             "ESC_ANDROID_KEYSTORE_PASSWORD",
@@ -115,6 +127,40 @@ def validate_sources() -> int:
     )
 
     require(
+        launcher,
+        ("#0B1F33", "#2DD4BF", "#FFFFFF"),
+        "ESC legacy launcher",
+    )
+    require(
+        launcher_foreground,
+        ("#2DD4BF", "#FFFFFF"),
+        "ESC adaptive launcher foreground",
+    )
+    require(
+        launcher_background,
+        ("<shape", "#0B1F33"),
+        "ESC adaptive launcher background",
+    )
+    require(
+        adaptive_launcher,
+        (
+            "<adaptive-icon",
+            "@drawable/enterprise_safe_contracts_launcher_background",
+            "@drawable/enterprise_safe_contracts_launcher_foreground",
+        ),
+        "ESC adaptive launcher",
+    )
+    require(
+        splash,
+        (
+            "<layer-list",
+            "@drawable/enterprise_safe_contracts_launcher_background",
+            "@drawable/enterprise_safe_contracts_launcher_foreground",
+        ),
+        "ESC splash",
+    )
+
+    require(
         bootstrap,
         (
             "ESC_FIREBASE_ANDROID_CONFIG_DEV",
@@ -126,6 +172,11 @@ def validate_sources() -> int:
             SAFE_APPLICATION_ID,
             ESC_DEEP_LINK_SCHEME,
             ESC_NOTIFICATION_CHANNEL,
+            "enterprise-launcher-adaptive.xml",
+            "enterprise-splash.xml",
+            "@mipmap/ic_launcher_enterprise",
+            "@drawable/enterprise_safe_contracts_splash",
+            "mipmap-anydpi-v26/ic_launcher_enterprise.xml",
         ),
         "ESC Android bootstrap",
     )
@@ -148,6 +199,33 @@ def validate_sources() -> int:
         ),
         "ESC Flutter environment",
     )
+
+    require(
+        token_store,
+        (
+            "flutter_secure_storage",
+            f"static const _key = '{ESC_SECURE_STORAGE_KEY}';",
+        ),
+        "ESC secure mobile storage",
+    )
+    forbid(
+        token_store,
+        (
+            "static const _key = 'safecontracts.mobile.bearer_token';",
+            "static const _key = 'safecontracts_mobile.bearer_token';",
+        ),
+        "ESC secure mobile storage",
+    )
+
+    version_match = re.search(r"(?m)^version:\s*([^\s]+)\s*$", pubspec)
+    if version_match is None or "+" not in version_match.group(1):
+        fail("ESC Flutter pubspec must carry an independent versionName+versionCode sequence")
+    for dependency in ("firebase_analytics:", "firebase_crashlytics:"):
+        if dependency in pubspec:
+            fail(
+                f"{dependency[:-1]} requires an explicit ESC analytics/crash identity review "
+                "before it may be enabled"
+            )
 
     require(
         config_example,
@@ -179,6 +257,29 @@ def validate_sources() -> int:
             ),
             label,
         )
+
+    require(
+        identity_doc,
+        (
+            "launcher/adaptive icon",
+            "splash identity",
+            "secure storage namespace",
+            "analytics/crash reporting application identity",
+            "versionCode/versionName sequence",
+            ESC_SECURE_STORAGE_KEY,
+        ),
+        "ESC mobile identity documentation",
+    )
+    require(
+        coexistence_doc,
+        (
+            "Physical Android test device",
+            "Session and local-state isolation",
+            "Firebase / notification isolation",
+            "Independent update lineage",
+        ),
+        "ESC Android coexistence UAT",
+    )
 
     require(
         publish_workflow,
@@ -231,7 +332,7 @@ def validate_sources() -> int:
     if (ROOT / "mobile/android-release/google-services.json").exists():
         fail("ESC android-release must never contain a committed google-services.json")
 
-    return 10
+    return 15
 
 
 def resolve_tool(explicit: str | None, name: str) -> str:
