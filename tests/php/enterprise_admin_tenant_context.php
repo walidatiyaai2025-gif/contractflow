@@ -113,11 +113,11 @@ esc_admin_context_assert(is_string($source) && str_contains($source, 'current_us
 esc_admin_context_assert(is_string($source) && str_contains($source, 'wp_validate_redirect'), 'admin switch validates redirect target');
 esc_admin_context_assert(is_string($source) && str_contains($source, 'wp_safe_redirect'), 'admin switch uses safe WordPress redirect');
 esc_admin_context_assert(is_string($source) && str_contains($source, 'TenantDirectoryRepository'), 'switcher tenant options come from authorized tenant directory');
+esc_admin_context_assert(is_string($source) && str_contains($source, "add_action('admin_init', [self::class, 'resolveRequest'], 1)"), 'admin tenant resolution is wired to admin request lifecycle');
+esc_admin_context_assert(is_string($source) && str_contains($source, "add_action('admin_post_' . self::SELECT_ACTION, [self::class, 'handleSelect'])"), 'tenant switch admin-post handler is wired');
 
 $plugin = file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Plugin.php');
 esc_admin_context_assert(is_string($plugin) && str_contains($plugin, 'AdminTenantContext::register();'), 'plugin boot registers admin tenant context');
-esc_admin_context_assert(isset($GLOBALS['sc_test_actions']['admin_init']), 'admin tenant resolution is attached to admin request lifecycle');
-esc_admin_context_assert(isset($GLOBALS['sc_test_actions']['admin_post_' . AdminTenantContext::SELECT_ACTION]), 'tenant switch admin-post handler is registered');
 
 TenantContextStore::reset();
 $GLOBALS['esc_admin_user_meta'] = [];
