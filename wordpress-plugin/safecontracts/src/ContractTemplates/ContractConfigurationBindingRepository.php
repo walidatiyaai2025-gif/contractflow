@@ -83,20 +83,32 @@ final class ContractConfigurationBindingRepository
         global $wpdb;
         $tenantId = $this->tenantId();
         $table = $wpdb->prefix . 'safecontracts_contract_configuration_bindings';
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $templateSql = $templateId === null ? 'NULL' : (string) $templateId;
         $versionSql = $templateVersionId === null ? 'NULL' : (string) $templateVersionId;
+
+        // The contract may leave draft after the service-level read. Re-check draft + archive
+        // state in the same SQL statement that persists the binding so a concurrent lifecycle
+        // transition cannot race the immutable-after-draft rule.
         $sql = $wpdb->prepare(
             "INSERT INTO {$table} (tenant_id, contract_id, contract_type_id, template_id, template_version_id, created_by, updated_by, created_at, updated_at)
-             VALUES (%d, %d, %d, {$templateSql}, {$versionSql}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+             SELECT %d, c.id, %d, {$templateSql}, {$versionSql}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP()
+             FROM {$contracts} c
+             WHERE c.id = %d AND c.tenant_id = %d AND c.status = 'draft' AND c.is_archived = 0
              ON DUPLICATE KEY UPDATE contract_type_id = VALUES(contract_type_id), template_id = VALUES(template_id), template_version_id = VALUES(template_version_id), updated_by = VALUES(updated_by), updated_at = UTC_TIMESTAMP()",
             $tenantId,
-            $contractId,
             $contractTypeId,
             $actorId,
-            $actorId
+            $actorId,
+            $contractId,
+            $tenantId
         );
-        if ($wpdb->query($sql) === false) {
+        $result = $wpdb->query($sql);
+        if ($result === false) {
             throw new RuntimeException('Unable to save Enterprise contract configuration binding.');
+        }
+        if ($result === 0) {
+            throw new RuntimeException('Enterprise contract changed concurrently or is no longer an editable draft.');
         }
     }
 
