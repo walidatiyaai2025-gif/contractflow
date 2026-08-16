@@ -37,7 +37,7 @@ final class PaymentRepository
         ];
     }
 
-    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, accountant_user_id:?int, contract_is_archived:bool}|null */
+    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool}|null */
     public function find(int $paymentId): ?array
     {
         global $wpdb;
@@ -48,7 +48,7 @@ final class PaymentRepository
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT p.id, p.contract_id, p.sequence_no, p.reference, p.due_date, p.expected_payment_date,
-                        p.original_amount, p.paid_amount, p.remaining_amount, p.status,
+                        p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
                         c.accountant_user_id, c.is_archived AS contract_is_archived
                  FROM {$payments} p
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
@@ -76,6 +76,7 @@ final class PaymentRepository
             'paid_amount' => (string) ($row['paid_amount'] ?? '0.0000'),
             'remaining_amount' => (string) ($row['remaining_amount'] ?? '0.0000'),
             'status' => (string) ($row['status'] ?? PaymentStatus::UPCOMING),
+            'is_archived' => (bool) ($row['is_archived'] ?? false),
             'accountant_user_id' => isset($row['accountant_user_id']) && $row['accountant_user_id'] !== null
                 ? (int) $row['accountant_user_id']
                 : null,
@@ -132,7 +133,7 @@ final class PaymentRepository
         $sql = $wpdb->prepare(
             "UPDATE {$table}
              SET status = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
-             WHERE id = %d",
+             WHERE id = %d AND is_archived = 0",
             $status,
             $actorId,
             $paymentId
@@ -150,7 +151,7 @@ final class PaymentRepository
             $sql = $wpdb->prepare(
                 "UPDATE {$table}
                  SET due_date = %s, expected_payment_date = NULL, updated_by = %d, updated_at = UTC_TIMESTAMP()
-                 WHERE id = %d",
+                 WHERE id = %d AND is_archived = 0",
                 $dueDate,
                 $actorId,
                 $paymentId
@@ -159,7 +160,7 @@ final class PaymentRepository
             $sql = $wpdb->prepare(
                 "UPDATE {$table}
                  SET due_date = %s, expected_payment_date = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
-                 WHERE id = %d",
+                 WHERE id = %d AND is_archived = 0",
                 $dueDate,
                 $expectedPaymentDate,
                 $actorId,
