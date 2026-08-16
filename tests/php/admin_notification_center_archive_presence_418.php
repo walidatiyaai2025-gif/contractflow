@@ -26,7 +26,8 @@ $assertNotContains = static function (string $needle, string $haystack, string $
 
 $migrator = $read('wordpress-plugin/safecontracts/src/Database/Migrator.php');
 $migration = $read('wordpress-plugin/safecontracts/src/Database/Migrations/Migration0015NotificationCenter.php');
-$assertContains("LATEST_VERSION = '1.14.0'", $migrator, 'notification center migration must be the current schema version');
+$assertContains("'1.14.0' => Migration0015NotificationCenter::class", $migrator, 'notification center migration must remain registered at its historical version');
+$assertContains("'1.15.0' => Migration0016EnterpriseTenancy::class", $migrator, 'Enterprise tenancy migration must follow notification center without rewriting its version');
 $assertContains('Migration0015NotificationCenter::class', $migrator, 'notification center migration must be registered');
 foreach (['recipient_user_ids_json', 'push_enabled', 'email_enabled', 'email_subject_template', 'email_body_template', 'icon_key', 'safecontracts_notification_suppressions', 'channel varchar(20)'] as $schemaContract) {
     $assertContains($schemaContract, $migration, 'migration must contain ' . $schemaContract);
@@ -102,10 +103,11 @@ $activity = $read('mobile/android-release/MainActivity.kt');
 $presenter = $read('mobile/lib/features/notifications/notification_presenter.dart');
 $main = $read('mobile/lib/main.dart');
 $assertContains("'priority' => 'high'", $fcm, 'FCM must request high-priority Android delivery');
-$assertContains("'channel_id' => 'safe_contracts_alerts'", $fcm, 'FCM must target the visible Safe Contracts notification channel');
-$assertContains('safe_contracts_alerts', $activity, 'Android must create the Safe Contracts notification channel');
+$assertContains("'channel_id' => 'enterprise_safe_contracts_alerts'", $fcm, 'ESC FCM must target the isolated Enterprise notification channel');
+$assertContains('enterprise_safe_contracts_alerts', $activity, 'Android must create the Enterprise notification channel');
 $assertContains('IMPORTANCE_HIGH', $activity, 'Android notification channel must be high importance');
-$assertContains('safecontracts/notifications', $activity, 'native foreground notification bridge must be present');
+$assertContains('enterprise_safecontracts/notifications', $activity, 'native ESC foreground notification bridge must be present');
+$assertContains('enterprise_safecontracts/notifications', $presenter, 'Flutter and Android notification bridges must use the same ESC channel');
 $assertContains('FirebaseMessaging.onMessage', $presenter, 'foreground Firebase messages must be presented');
 $assertContains('MobileNotificationPresenter.start()', $main, 'foreground notification presenter must start at app bootstrap');
 $assertContains('default_notification_channel_id', $bootstrap, 'release Android manifest must declare the default FCM channel');
@@ -124,4 +126,4 @@ foreach (['safecontracts_notification_rule_saved', 'safecontracts_notification_s
 $assertNotContains('token_hash', $newAudit, 'notification-center audit must not record device-token material');
 $assertNotContains('authorization', strtolower($newAudit), 'notification-center audit must not record authorization material');
 
-echo "Admin notification center/archive/presence regression checks passed.\n";
+echo "Admin notification center/archive/presence + ESC identity regression checks passed.\n";

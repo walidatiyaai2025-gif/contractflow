@@ -60,7 +60,7 @@ final class FirebasePushTransport implements PushTransport
     /** @param array<string,mixed> $payload @return array{message:array<string,mixed>} */
     private function buildRequest(string $token, array $payload): array
     {
-        $iconKey = sanitize_key((string) ($payload['icon_key'] ?? 'safe_contracts'));
+        $iconKey = sanitize_key((string) ($payload['icon_key'] ?? 'contract_due'));
         $message = [
             'token' => $token,
             'notification' => [
@@ -70,11 +70,11 @@ final class FirebasePushTransport implements PushTransport
             'android' => [
                 'priority' => 'high',
                 'notification' => [
-                    'channel_id' => 'safe_contracts_alerts',
+                    'channel_id' => 'enterprise_safe_contracts_alerts',
                     'sound' => 'default',
                     'notification_priority' => 'PRIORITY_HIGH',
                     'visibility' => 'PUBLIC',
-                    'tag' => $iconKey !== '' ? 'safe_contracts_' . $iconKey : 'safe_contracts_alert',
+                    'tag' => $iconKey !== '' ? 'enterprise_safe_contracts_' . $iconKey : 'enterprise_safe_contracts_alert',
                 ],
             ],
         ];
