@@ -11,9 +11,10 @@ Run from the repository root:
 The bootstrap process:
 
 1. recreates `mobile/android/` using `flutter create --platforms=android`,
-2. fixes the visible application label to `SafeContracts`,
-3. replaces the generated app Gradle file with `app-build.gradle.kts`,
-4. never falls back to debug signing for a release build.
+2. fixes the visible application label to `Alkenzy ADV`,
+3. installs the supplied Alkenzy Advertising PNG as both launcher and round launcher identity,
+4. replaces the generated app Gradle file with `app-build.gradle.kts`,
+5. never falls back to debug signing for a release build.
 
 ## Release signing environment
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 abstract final class SafeContractsBrand {
-  static const name = 'Safe Contracts';
-  static const assetPath = 'assets/brand/safe_contracts_identity.jpg';
+  static const name = 'Alkenzy ADV';
+  static const assetPath = 'assets/brand/alkenzy_adv.png';
 }
 
 final class SafeContractsBrandMark extends StatelessWidget {

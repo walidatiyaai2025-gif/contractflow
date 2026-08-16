@@ -5,7 +5,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
 FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
-ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.xml"
+ALKENZY_APP_ASSET="$ROOT/mobile/assets/brand/alkenzy_adv.png"
+ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.png"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
 
 if ! command -v flutter >/dev/null 2>&1; then
@@ -13,12 +14,27 @@ if ! command -v flutter >/dev/null 2>&1; then
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
   fi
 done
+
+cmp -s "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" || {
+  echo "FAIL: in-app and launcher Alkenzy identities must use the same supplied logo bytes" >&2
+  exit 1
+}
+
+python3 - "$ALKENZY_ICON_SOURCE" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+content = path.read_bytes()
+if len(content) < 4096 or not content.startswith(b"\x89PNG\r\n\x1a\n"):
+    raise SystemExit("FAIL: Alkenzy launcher icon is not a valid PNG resource")
+PY
 
 python3 - "$FIREBASE_CONFIG" <<'PY'
 import json
@@ -45,7 +61,7 @@ cd "$MOBILE"
 # Flutter owns the platform boilerplate version. Recreate it from the exact
 # Flutter stable toolchain used by CI, then restore the repository's release
 # signing, networking, Firebase, notification presentation, and Safe Contracts
-# runtime contracts. The launcher icon is the approved Alkenzy Advertising mark.
+# runtime contracts. The launcher icon is the supplied Alkenzy Advertising mark.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -76,20 +92,12 @@ if plugin not in text:
 path.write_text(text, encoding="utf-8")
 PY
 
-LAUNCHER_ICON="android/app/src/main/res/drawable/alkenzy_launcher.xml"
+LAUNCHER_ICON="android/app/src/main/res/drawable/alkenzy_launcher.png"
 mkdir -p "$(dirname "$LAUNCHER_ICON")"
 cp "$ALKENZY_ICON_SOURCE" "$LAUNCHER_ICON"
 
-grep -Fq '<vector' "$LAUNCHER_ICON" || {
-  echo "FAIL: Alkenzy launcher icon is not a valid Android vector resource" >&2
-  exit 1
-}
-grep -Fq '#FFFFE173' "$LAUNCHER_ICON" || {
-  echo "FAIL: Alkenzy launcher icon is missing the approved yellow brand field" >&2
-  exit 1
-}
-grep -Fq '#FF7BC1CD' "$LAUNCHER_ICON" || {
-  echo "FAIL: Alkenzy launcher icon is missing the approved blue Advertising mark" >&2
+cmp -s "$ALKENZY_ICON_SOURCE" "$LAUNCHER_ICON" || {
+  echo "FAIL: generated Android launcher does not match the supplied Alkenzy logo" >&2
   exit 1
 }
 
@@ -105,19 +113,26 @@ import sys
 
 path = Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-text = text.replace('android:label="safecontracts_mobile"', 'android:label="Safe Contracts"')
+text = text.replace('android:label="safecontracts_mobile"', 'android:label="Alkenzy ADV"')
 text = re.sub(
     r'android:icon="@[^"]+"',
     'android:icon="@drawable/alkenzy_launcher"',
     text,
     count=1,
 )
-text = re.sub(
-    r'android:roundIcon="@[^"]+"',
-    'android:roundIcon="@drawable/alkenzy_launcher"',
-    text,
-    count=1,
-)
+if 'android:roundIcon=' in text:
+    text = re.sub(
+        r'android:roundIcon="@[^"]+"',
+        'android:roundIcon="@drawable/alkenzy_launcher"',
+        text,
+        count=1,
+    )
+else:
+    text = text.replace(
+        'android:icon="@drawable/alkenzy_launcher"',
+        'android:icon="@drawable/alkenzy_launcher"\n        android:roundIcon="@drawable/alkenzy_launcher"',
+        1,
+    )
 
 permissions = [
     'android.permission.INTERNET',
@@ -150,10 +165,12 @@ if 'com.google.firebase.messaging.default_notification_channel_id' not in text:
 for permission in permissions:
     if permission not in text:
         raise SystemExit(f"FAIL: Android release manifest is missing {permission}")
-if 'android:label="Safe Contracts"' not in text:
-    raise SystemExit("FAIL: Android release manifest is missing Safe Contracts label")
+if 'android:label="Alkenzy ADV"' not in text:
+    raise SystemExit("FAIL: Android release manifest is missing Alkenzy ADV label")
 if 'android:icon="@drawable/alkenzy_launcher"' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Alkenzy launcher icon")
+if 'android:roundIcon="@drawable/alkenzy_launcher"' not in text:
+    raise SystemExit("FAIL: Android release manifest is missing Alkenzy round launcher icon")
 if 'safe_contracts_alerts' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Safe Contracts notification channel metadata")
 
@@ -183,12 +200,16 @@ grep -Fq 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing POST_NOTIFICATIONS permission" >&2
   exit 1
 }
-grep -Fq 'android:label="Safe Contracts"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing Safe Contracts label" >&2
+grep -Fq 'android:label="Alkenzy ADV"' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing Alkenzy ADV label" >&2
   exit 1
 }
 grep -Fq 'android:icon="@drawable/alkenzy_launcher"' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing Alkenzy launcher icon" >&2
+  exit 1
+}
+grep -Fq 'android:roundIcon="@drawable/alkenzy_launcher"' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing Alkenzy round launcher icon" >&2
   exit 1
 }
 grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
@@ -208,4 +229,4 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "Safe Contracts Android scaffold bootstrapped with Alkenzy launcher icon, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
+echo "Alkenzy ADV Android scaffold bootstrapped with supplied Alkenzy launcher icon, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."

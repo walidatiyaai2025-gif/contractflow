@@ -35,18 +35,15 @@ $checks = [
         'safecontracts_login_logo_title',
     ],
     'scripts/bootstrap_android.sh' => [
-        'android:label="Safe Contracts"',
+        'android:label="Alkenzy ADV"',
         '@drawable/alkenzy_launcher',
-        'mobile/android-release/alkenzy_launcher.xml',
-        'Alkenzy launcher icon is not a valid Android vector resource',
-    ],
-    'mobile/android-release/alkenzy_launcher.xml' => [
-        '#FFFFE173',
-        '#FF7BC1CD',
+        'mobile/android-release/alkenzy_launcher.png',
+        'Alkenzy launcher icon is not a valid PNG resource',
+        'in-app and launcher Alkenzy identities must use the same supplied logo bytes',
     ],
     'mobile/lib/core/branding/safe_contracts_brand.dart' => [
-        "static const name = 'Safe Contracts';",
-        "static const assetPath = 'assets/brand/safe_contracts_identity.jpg';",
+        "static const name = 'Alkenzy ADV';",
+        "static const assetPath = 'assets/brand/alkenzy_adv.png';",
         'SafeContractsBrandMark',
         'Image.asset(',
     ],
@@ -101,6 +98,21 @@ foreach ($brandAssets as $brandAsset) {
 }
 if (count(array_unique($brandHashes)) !== 1) {
     fwrite(STDERR, "FAIL: mobile/plugin/theme Safe Contracts identity assets diverged\n");
+    exit(1);
+}
+$count++;
+
+$mobileAlkenzy = @file_get_contents($root . '/mobile/assets/brand/alkenzy_adv.png');
+$androidAlkenzy = @file_get_contents($root . '/mobile/android-release/alkenzy_launcher.png');
+foreach ([$mobileAlkenzy, $androidAlkenzy] as $alkenzyBytes) {
+    if (! is_string($alkenzyBytes) || strlen($alkenzyBytes) < 4096 || ! str_starts_with($alkenzyBytes, "\x89PNG\r\n\x1a\n")) {
+        fwrite(STDERR, "FAIL: packaged Alkenzy ADV identity is not a valid PNG\n");
+        exit(1);
+    }
+    $count++;
+}
+if (! is_string($mobileAlkenzy) || ! is_string($androidAlkenzy) || ! hash_equals(hash('sha256', $mobileAlkenzy), hash('sha256', $androidAlkenzy))) {
+    fwrite(STDERR, "FAIL: in-app and Android launcher Alkenzy identities diverged\n");
     exit(1);
 }
 $count++;

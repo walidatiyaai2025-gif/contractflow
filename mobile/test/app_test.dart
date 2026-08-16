@@ -9,7 +9,7 @@ import 'package:safecontracts_mobile/core/config/app_environment.dart';
 import 'fake_api_transport.dart';
 
 void main() {
-  testWidgets('renders authenticated Safe Contracts dashboard shell', (
+  testWidgets('renders authenticated Alkenzy ADV dashboard shell', (
     tester,
   ) async {
     final environment = AppEnvironment.fromValues(
@@ -27,7 +27,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Safe Contracts | Dashboard'), findsOneWidget);
+    expect(find.text('Alkenzy ADV | Dashboard'), findsOneWidget);
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('Payment Lifecycle Overview'), findsOneWidget);
     expect(find.text('Remaining'), findsOneWidget);

@@ -123,11 +123,14 @@ $assert(str_contains($profile, 'MobileRecordEditorScreen'), 'profile exposes the
 $assert(str_contains($profile, 'إضافة / تعديل العملاء والعقود والدفعات'), 'Arabic data-management entry is present');
 
 $bootstrap = (string) file_get_contents($root . '/scripts/bootstrap_android.sh');
-$assert(str_contains($bootstrap, 'alkenzy_launcher.xml'), 'Android bootstrap packages the Alkenzy launcher resource');
+$assert(str_contains($bootstrap, 'alkenzy_launcher.png'), 'Android bootstrap packages the supplied Alkenzy PNG launcher resource');
+$assert(str_contains($bootstrap, 'android:label="Alkenzy ADV"'), 'Android manifest label is changed to Alkenzy ADV');
 $assert(str_contains($bootstrap, 'android:icon="@drawable/alkenzy_launcher"'), 'Android manifest launcher icon is changed to Alkenzy');
+$assert(str_contains($bootstrap, 'android:roundIcon="@drawable/alkenzy_launcher"'), 'Android manifest round launcher icon is changed to Alkenzy');
 $assert(! str_contains($bootstrap, 'android:icon="@drawable/safe_contracts_brand"'), 'old Safe Contracts launcher icon is no longer used');
-$icon = (string) file_get_contents($root . '/mobile/android-release/alkenzy_launcher.xml');
-$assert(str_contains($icon, '#FFFFE173'), 'Alkenzy launcher retains yellow field');
-$assert(str_contains($icon, '#FF7BC1CD'), 'Alkenzy launcher retains blue Advertising circle');
+$icon = (string) file_get_contents($root . '/mobile/android-release/alkenzy_launcher.png');
+$inAppIcon = (string) file_get_contents($root . '/mobile/assets/brand/alkenzy_adv.png');
+$assert(strlen($icon) >= 4096 && str_starts_with($icon, "\x89PNG\r\n\x1a\n"), 'Alkenzy launcher is a valid PNG');
+$assert(hash_equals(hash('sha256', $inAppIcon), hash('sha256', $icon)), 'in-app and Android launcher identities use the same supplied Alkenzy logo bytes');
 
-printf("SafeContracts mobile CRUD permissions + Alkenzy icon regression passed (%d checks).\n", $checks);
+printf("SafeContracts mobile CRUD permissions + Alkenzy ADV identity regression passed (%d checks).\n", $checks);
