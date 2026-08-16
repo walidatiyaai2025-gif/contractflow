@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Contracts;
 
 use RuntimeException;
+use SafeContracts\Tenancy\CoreTenantScope;
 
 final class ContractHistoryRepository
 {
@@ -14,12 +15,14 @@ final class ContractHistoryRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_contract_history';
+        $tenantId = CoreTenantScope::tenantId();
+        $this->assertOwnedContract($wpdb, $contractId, $tenantId);
         $snapshotJson = json_encode(
             $snapshot,
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
         );
 
-        if ($actorUserId === null) {
+        if ($tenantId === null && $actorUserId === null) {
             $sql = $wpdb->prepare(
                 "INSERT INTO {$table} (contract_id, event_type, actor_user_id, snapshot_json, created_at)
                  VALUES (%d, %s, NULL, %s, UTC_TIMESTAMP())",
@@ -27,10 +30,29 @@ final class ContractHistoryRepository
                 $eventType,
                 $snapshotJson
             );
-        } else {
+        } elseif ($tenantId === null) {
             $sql = $wpdb->prepare(
                 "INSERT INTO {$table} (contract_id, event_type, actor_user_id, snapshot_json, created_at)
                  VALUES (%d, %s, %d, %s, UTC_TIMESTAMP())",
+                $contractId,
+                $eventType,
+                $actorUserId,
+                $snapshotJson
+            );
+        } elseif ($actorUserId === null) {
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (tenant_id, contract_id, event_type, actor_user_id, snapshot_json, created_at)
+                 VALUES (%d, %d, %s, NULL, %s, UTC_TIMESTAMP())",
+                $tenantId,
+                $contractId,
+                $eventType,
+                $snapshotJson
+            );
+        } else {
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (tenant_id, contract_id, event_type, actor_user_id, snapshot_json, created_at)
+                 VALUES (%d, %d, %s, %d, %s, UTC_TIMESTAMP())",
+                $tenantId,
                 $contractId,
                 $eventType,
                 $actorUserId,
@@ -52,11 +74,12 @@ final class ContractHistoryRepository
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_contract_history';
         $limit = max(1, min(500, $limit));
+        $tenant = $this->tenantCondition();
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id, contract_id, event_type, actor_user_id, snapshot_json, created_at
                  FROM {$table}
-                 WHERE contract_id = %d
+                 WHERE contract_id = %d{$tenant}
                  ORDER BY created_at DESC, id DESC
                  LIMIT %d",
                 $contractId,
@@ -81,6 +104,28 @@ final class ContractHistoryRepository
         }
 
         return $history;
+    }
+
+    private function tenantCondition(string $column = 'tenant_id'): string
+    {
+        $tenantId = CoreTenantScope::tenantId();
+        return $tenantId === null ? '' : ' AND ' . $column . ' = ' . $tenantId;
+    }
+
+    private function assertOwnedContract(object $wpdb, int $contractId, ?int $tenantId): void
+    {
+        if ($tenantId === null) {
+            return;
+        }
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT id FROM {$contracts} WHERE id = %d AND tenant_id = %d LIMIT 1",
+            $contractId,
+            $tenantId
+        ), ARRAY_A);
+        if (! is_array($rows) || $rows === []) {
+            throw new RuntimeException('Contract history target is outside the current Enterprise tenant.');
+        }
     }
 
     private function assertWpdb(mixed $wpdb): void

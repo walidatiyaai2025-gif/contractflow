@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Audit;
 
 use RuntimeException;
+use SafeContracts\Tenancy\TenantContextStore;
 
 final class AuditRepository
 {
@@ -20,6 +21,12 @@ final class AuditRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_audit_log';
+
+        $tenantId = TenantContextStore::context()->tenantId();
+        if ($tenantId !== null) {
+            $context ??= [];
+            $context['tenant_id'] = $tenantId;
+        }
 
         $entityIdSql = $entityId === null ? 'NULL' : '%d';
         $actorSql = $actorUserId === null ? 'NULL' : '%d';
