@@ -1,6 +1,6 @@
 # ESC Tenant Data Ownership Migration
 
-Enterprise tenant ownership is introduced with an **expand → backfill → verify → enforce** sequence. This document is authoritative for P1 ownership work and exists to prevent accidental reassignment of Safe Contract legacy data.
+Enterprise tenant ownership is introduced with an **expand → backfill → verify → enforce → harden** sequence. This document is authoritative for P1 ownership work and exists to prevent accidental reassignment of Safe Contract legacy data.
 
 ## Phase A — expand
 
@@ -74,11 +74,13 @@ When enabled:
 - core REST business routes require one server-authorized locked `TenantContext`;
 - the client `X-ESC-Tenant-ID` value remains selection input only and never grants membership;
 - core list/detail/report queries add tenant predicates;
-- contract/payment/collection/follow-up mutations derive `tenant_id` from server context instead of request JSON;
+- customer/contract/payment/collection/follow-up mutations derive `tenant_id` from server context instead of request JSON;
 - repositories fail closed if enforcement is enabled without a locked tenant;
-- contract financial children and attachments validate the selected contract against the current tenant before inserting;
+- contract financial children, history and attachments validate the selected contract against the current tenant before inserting;
 - report/export reads inherit the same tenant-scoped repository boundary;
-- known-record IDs do not bypass the tenant predicate.
+- archive/deletion/reconciliation paths retain the same tenant predicates;
+- audit events inject the locked tenant ID into server-generated audit context and overwrite a caller-supplied tenant value;
+- known record IDs do not bypass the tenant predicate.
 
 Controlled remediation may temporarily disable runtime enforcement only after an explicit operational decision:
 
@@ -90,12 +92,53 @@ php scripts/enterprise_tenant_backfill.php \
 
 Disabling enforcement is not a normal application mode and must not be used to bypass unresolved ownership defects. Re-run `--verify` before enabling it again.
 
-Schema hardening remains a separate follow-up after runtime enforcement is proven green: convert ownership columns to enforced non-null where appropriate, replace global business uniqueness with tenant-scoped uniqueness such as `(tenant_id, contract_number)`, and tune tenant-first indexes to real query shapes.
+## Phase E — explicit schema hardening
+
+Schema hardening is intentionally **not** part of the automatic WordPress Migrator. MySQL DDL can auto-commit, so the hardening step is an explicit operator action with fail-closed preflight and post-DDL verification rather than an automatic deployment side effect.
+
+Check readiness first:
+
+```bash
+php scripts/enterprise_tenant_schema_harden.php \
+  --wp-root=/path/to/wordpress \
+  --status
+```
+
+The hardener reports ready only when all of the following are true:
+
+- core ownership verification is green;
+- runtime tenant enforcement is already enabled;
+- there are no duplicate customer `internal_code` values inside the same tenant;
+- there are no duplicate `contract_number` values inside the same tenant.
+
+Apply only after the status/preflight is green:
+
+```bash
+php scripts/enterprise_tenant_schema_harden.php \
+  --wp-root=/path/to/wordpress \
+  --apply
+```
+
+The hardener then:
+
+- converts `tenant_id` to `NOT NULL` on all nine core-owned tables;
+- adds `UNIQUE (tenant_id, internal_code)` for non-null customer internal codes;
+- adds `UNIQUE (tenant_id, contract_number)` for contract numbers;
+- removes the legacy global uniqueness indexes only after the tenant-scoped unique indexes exist;
+- adds tenant-first indexes for customer, contract, financial-child, history, payment, collection and follow-up query shapes;
+- verifies that no core tenant column remains nullable, required indexes exist, and legacy global unique indexes are gone;
+- persists the hardened marker only after verification succeeds.
+
+The operation is designed to be idempotently re-runnable after partial DDL execution: existing indexes are detected before add/drop operations, and a failed verification does not mark the schema hardened. Operators must still use a normal database backup/change window because DDL rollback is not guaranteed.
+
+After hardening, two different tenants may use the same customer internal code or contract number where designed, while duplicate values inside one tenant remain prohibited.
 
 ## Reference data and non-core tables
 
-Payment methods, notifications/delivery state, audit, import jobs, deletion/suppression records and other independently queried system tables require their own ownership decisions. Some reference data may be platform-global with tenant overrides rather than duplicated per tenant. These areas must not be assigned ownership mechanically just because the core graph uses `tenant_id`.
+Payment methods, notifications/delivery state, audit storage, import jobs, deletion/suppression records and other independently queried system tables require their own ownership decisions. Some reference data may be platform-global with tenant overrides rather than duplicated per tenant. These areas must not be assigned ownership mechanically just because the core graph uses `tenant_id`.
+
+Payment methods remain platform-global in this phase. Audit records receive server-derived tenant attribution in `context_json`; making the audit table itself independently tenant-owned/filterable is a separate non-core ownership task.
 
 ## Safe Contract separation
 
-All ownership migration code in this document belongs only to `enterprise-safecontracts`. It must not be backported to Safe Contract `main` unless the product owner explicitly requests that exact transfer and its client-data migration impact is separately reviewed.
+All ownership migration, runtime enforcement and schema-hardening code in this document belongs only to `enterprise-safecontracts`. It must not be backported to Safe Contract `main` unless the product owner explicitly requests that exact transfer and its client-data migration impact is separately reviewed.
