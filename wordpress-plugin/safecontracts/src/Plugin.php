@@ -32,6 +32,7 @@ use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Rest\Router;
+use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\TranslationCatalog;
 
 final class Plugin
@@ -59,6 +60,7 @@ final class Plugin
         // SafeContracts translations are intentionally scoped to the plugin
         // text domain. They never mutate WordPress site/user locale settings.
         TranslationCatalog::register();
+        AdminArabicDefaults::register();
         MobileBearerAuthentication::register();
         FirebaseAccessTokenProvider::register();
         (new Migrator())->maybeMigrate();
