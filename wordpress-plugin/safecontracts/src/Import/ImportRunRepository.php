@@ -147,9 +147,11 @@ final class ImportRunRepository
     public function addError(int $runId, int $rowNumber, ?string $field, string $code, string $message): void
     {
         global $wpdb;
-        if ($this->find($runId) === null) {
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId !== null && $this->find($runId) === null) {
             throw new RuntimeException('Import run does not belong to the active Enterprise tenant.');
         }
+
         $table = $wpdb->prefix . 'safecontracts_import_errors';
         $fieldName = $field === null ? null : substr(trim(strip_tags($field)), 0, 100);
         if ($fieldName === '') {
@@ -157,7 +159,6 @@ final class ImportRunRepository
         }
         $code = substr(preg_replace('/[^a-z0-9_.-]/', '_', strtolower($code)) ?? 'invalid', 0, 80);
         $message = substr(trim(strip_tags($message)), 0, 1000);
-        $tenantId = NonCoreTenantScope::tenantId();
 
         if ($tenantId === null) {
             if ($fieldName === null) {
