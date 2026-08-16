@@ -33,7 +33,9 @@ function esc_ownership_query_contains(string $needle): bool
 
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
-esc_ownership_assert(Migrator::LATEST_VERSION === '1.16.0', 'core tenant ownership expansion is the current migration');
+esc_ownership_assert(version_compare(Migrator::LATEST_VERSION, '1.16.0', '>='), 'core tenant ownership expansion remains in the migration chain');
+$migratorSource = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Database/Migrator.php');
+esc_ownership_assert(str_contains($migratorSource, "'1.16.0' => Migration0017CoreTenantOwnershipExpand::class"), 'core tenant ownership migration remains registered at 1.16.0');
 
 $tables = [
     'wp_safecontracts_customers',

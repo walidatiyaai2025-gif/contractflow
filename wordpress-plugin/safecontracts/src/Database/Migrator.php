@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Database;
 
+use RuntimeException;
 use SafeContracts\Database\Migrations\Migration0001Foundation;
 use SafeContracts\Database\Migrations\Migration0002MasterData;
 use SafeContracts\Database\Migrations\Migration0003ReferenceDataCapability;
@@ -21,12 +22,12 @@ use SafeContracts\Database\Migrations\Migration0014NotificationSchedule;
 use SafeContracts\Database\Migrations\Migration0015NotificationCenter;
 use SafeContracts\Database\Migrations\Migration0016EnterpriseTenancy;
 use SafeContracts\Database\Migrations\Migration0017CoreTenantOwnershipExpand;
-use RuntimeException;
+use SafeContracts\Database\Migrations\Migration0018NonCoreTenantOwnershipExpand;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.16.0';
+    public const LATEST_VERSION = '1.17.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -47,6 +48,7 @@ final class Migrator
         '1.14.0' => Migration0015NotificationCenter::class,
         '1.15.0' => Migration0016EnterpriseTenancy::class,
         '1.16.0' => Migration0017CoreTenantOwnershipExpand::class,
+        '1.17.0' => Migration0018NonCoreTenantOwnershipExpand::class,
     ];
 
     public function maybeMigrate(): void

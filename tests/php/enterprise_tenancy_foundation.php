@@ -35,7 +35,9 @@ function esc_tenant_throws(callable $callback, string $message): void
 
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
-esc_tenant_assert(Migrator::LATEST_VERSION === '1.16.0', 'enterprise tenancy/ownership expansion migration is current');
+esc_tenant_assert(version_compare(Migrator::LATEST_VERSION, '1.15.0', '>='), 'enterprise tenancy foundation remains in the migration chain');
+$migratorSource = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Database/Migrator.php');
+esc_tenant_assert(str_contains($migratorSource, "'1.15.0' => Migration0016EnterpriseTenancy::class"), 'enterprise tenancy migration remains registered at 1.15.0');
 
 $tenantSchema = '';
 $membershipSchema = '';
