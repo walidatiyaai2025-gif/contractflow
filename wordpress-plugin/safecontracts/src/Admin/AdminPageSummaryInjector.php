@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Notifications\DeliveryLogRepository;
+use SafeContracts\Notifications\FirebaseSettings;
 use SafeContracts\Notifications\NotificationRuleService;
 use SafeContracts\Notifications\NotificationScheduleRepository;
+use SafeContracts\ReferenceData\PaymentMethodRepository;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Settings\GeneralSettings;
+use SafeContracts\Settings\MobileConfiguration;
+use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
 final class AdminPageSummaryInjector
@@ -23,7 +28,7 @@ final class AdminPageSummaryInjector
             return;
         }
         $page = isset($_GET['page']) && is_scalar($_GET['page']) ? sanitize_key((string) $_GET['page']) : '';
-        if ($page === '' || in_array($page, [ArchivePage::SLUG, ActiveUsersPage::SLUG, NotificationCenterPage::SLUG], true)) {
+        if ($page === '' || in_array($page, [ArchivePage::SLUG, ActiveUsersPage::SLUG, NotificationCenterPage::SLUG, UsersRolesPage::SLUG], true)) {
             return;
         }
         try {
@@ -72,12 +77,11 @@ final class AdminPageSummaryInjector
         }
         if ($page === PaymentsPage::SLUG) {
             $rows = $repository->payments($filters);
-            $remaining = self::sum($rows, 'remaining_amount');
             return [
                 ['label' => __('Payments shown', 'safecontracts'), 'value' => count($rows)],
                 ['label' => __('Overdue payments', 'safecontracts'), 'value' => self::countState($rows, 'status', 'overdue')],
                 ['label' => __('Paid payments', 'safecontracts'), 'value' => self::countState($rows, 'status', 'paid')],
-                ['label' => __('Remaining amount', 'safecontracts'), 'value' => number_format($remaining, 4, '.', '')],
+                ['label' => __('Remaining amount', 'safecontracts'), 'value' => number_format(self::sum($rows, 'remaining_amount'), 4, '.', '')],
             ];
         }
         if ($page === CollectionsPage::SLUG) {
@@ -97,9 +101,12 @@ final class AdminPageSummaryInjector
                 ['label' => __('Overdue exposure', 'safecontracts'), 'value' => (string) ($summary['overdue_exposure'] ?? '0.0000')],
             ];
         }
-        if ($page === NotificationsPage::SLUG) {
-            $rules = current_user_can(Capabilities::MANAGE_NOTIFICATIONS) ? (new NotificationRuleService())->all() : [];
-            $deliveries = current_user_can(Capabilities::MANAGE_NOTIFICATIONS) ? (new DeliveryLogRepository())->recent(100, $filters['date_from'], $filters['date_to']) : [];
+        if ($page === NotificationsPage::SLUG || $page === NotificationSettingsPage::SLUG) {
+            if (! current_user_can(Capabilities::MANAGE_NOTIFICATIONS)) {
+                return [];
+            }
+            $rules = (new NotificationRuleService())->all();
+            $deliveries = (new DeliveryLogRepository())->recent(100, $filters['date_from'], $filters['date_to']);
             return [
                 ['label' => __('Active rules', 'safecontracts'), 'value' => count(array_filter($rules, static fn (array $r): bool => ! empty($r['is_active'])))],
                 ['label' => __('Delivery attempts', 'safecontracts'), 'value' => count($deliveries)],
@@ -116,13 +123,6 @@ final class AdminPageSummaryInjector
                 ['label' => __('Failed / partial', 'safecontracts'), 'value' => self::countState($rows, 'status', 'failed') + self::countState($rows, 'status', 'partial')],
             ];
         }
-        if ($page === UsersRolesPage::SLUG && current_user_can(Capabilities::MANAGE_USERS)) {
-            $users = get_users(['fields' => 'ID']);
-            return [
-                ['label' => __('WordPress users', 'safecontracts'), 'value' => is_array($users) ? count($users) : 0],
-                ['label' => __('Safe Contracts users', 'safecontracts'), 'value' => is_array($users) ? count(array_filter($users, static fn ($id): bool => user_can((int) $id, Capabilities::ACCESS))) : 0],
-            ];
-        }
         if ($page === FollowUpsPage::SLUG) {
             global $wpdb;
             $table = $wpdb->prefix . 'safecontracts_payment_followups';
@@ -136,6 +136,56 @@ final class AdminPageSummaryInjector
             $rows = $wpdb->get_results("SELECT COUNT(*) AS total FROM {$table}", ARRAY_A);
             $count = is_array($rows) && isset($rows[0]['total']) ? (int) $rows[0]['total'] : 0;
             return [['label' => __('Import runs', 'safecontracts'), 'value' => $count]];
+        }
+        if ($page === PaymentMethodsPage::SLUG && current_user_can(Capabilities::MANAGE_REFERENCE_DATA)) {
+            $methods = (new PaymentMethodRepository())->all(true);
+            return [
+                ['label' => __('Active payment methods', 'safecontracts'), 'value' => count($methods)],
+                ['label' => __('Reference-data state', 'safecontracts'), 'value' => __('Active only', 'safecontracts'), 'detail' => __('Deleted methods are in Archive', 'safecontracts')],
+            ];
+        }
+        if ($page === GeneralSettingsPage::SLUG && current_user_can(Capabilities::MANAGE_SYSTEM)) {
+            $settings = (new GeneralSettings())->read();
+            return [
+                ['label' => __('Organization', 'safecontracts'), 'value' => (string) ($settings['organization_name'] ?? '')],
+                ['label' => __('Currency', 'safecontracts'), 'value' => trim((string) ($settings['currency_code'] ?? '') . ' ' . (string) ($settings['currency_symbol'] ?? ''))],
+                ['label' => __('Admin page size', 'safecontracts'), 'value' => (string) ($settings['admin_page_size'] ?? '')],
+            ];
+        }
+        if ($page === MobileConfigurationPage::SLUG && current_user_can(Capabilities::MANAGE_SYSTEM)) {
+            $config = (new MobileConfiguration())->read();
+            $enabledFeatures = count(array_filter([
+                ! empty($config['excel_export_enabled']),
+                ! empty($config['push_notifications_enabled']),
+                ! empty($config['collection_entry_enabled']),
+            ]));
+            return [
+                ['label' => __('Enabled mobile features', 'safecontracts'), 'value' => $enabledFeatures . '/3'],
+                ['label' => __('Mobile page size', 'safecontracts'), 'value' => (string) ($config['default_page_size'] ?? '')],
+                ['label' => __('Push notifications', 'safecontracts'), 'value' => ! empty($config['push_notifications_enabled']) ? __('Enabled', 'safecontracts') : __('Disabled', 'safecontracts')],
+            ];
+        }
+        if ($page === FirebaseSettingsPage::SLUG && current_user_can(Capabilities::MANAGE_SYSTEM)) {
+            $config = (new FirebaseSettings())->publicConfig();
+            global $wpdb;
+            $tokens = $wpdb->prefix . 'safecontracts_device_tokens';
+            $tokenRows = $wpdb->get_results("SELECT COUNT(*) AS total FROM {$tokens} WHERE is_active = 1", ARRAY_A);
+            $activeTokens = is_array($tokenRows) && isset($tokenRows[0]['total']) ? (int) $tokenRows[0]['total'] : 0;
+            return [
+                ['label' => __('Firebase project', 'safecontracts'), 'value' => trim((string) ($config['project_id'] ?? '')) !== '' ? __('Configured', 'safecontracts') : __('Not configured', 'safecontracts')],
+                ['label' => __('Sender ID', 'safecontracts'), 'value' => trim((string) ($config['messaging_sender_id'] ?? '')) !== '' ? __('Configured', 'safecontracts') : __('Not configured', 'safecontracts')],
+                ['label' => __('Active device registrations', 'safecontracts'), 'value' => $activeTokens],
+            ];
+        }
+        if ($page === TranslationsPage::SLUG && current_user_can(Capabilities::MANAGE_SYSTEM)) {
+            $overrides = TranslationCatalog::overrides();
+            $ar = is_array($overrides['ar'] ?? null) ? count(array_filter($overrides['ar'], static fn ($value): bool => trim((string) $value) !== '')) : 0;
+            $en = is_array($overrides['en'] ?? null) ? count(array_filter($overrides['en'], static fn ($value): bool => trim((string) $value) !== '')) : 0;
+            return [
+                ['label' => __('Arabic overrides', 'safecontracts'), 'value' => $ar],
+                ['label' => __('English overrides', 'safecontracts'), 'value' => $en],
+                ['label' => __('Current language', 'safecontracts'), 'value' => strtoupper(TranslationCatalog::currentLanguage())],
+            ];
         }
         return [];
     }
