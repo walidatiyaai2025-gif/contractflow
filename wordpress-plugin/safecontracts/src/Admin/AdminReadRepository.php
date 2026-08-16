@@ -265,7 +265,7 @@ final class AdminReadRepository
     private function periodWhere(array $filters, string $dateExpression): array
     {
         if (! empty($filters['date_range_error'])) {
-            return [];
+            return ['1 = 0'];
         }
         $where = [];
         if (($filters['date_from'] ?? null) !== null) {
