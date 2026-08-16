@@ -53,6 +53,9 @@ final class DashboardContextScreen extends StatelessWidget {
     final customerId = controller.filters.customerId;
     if (customerId == null) return null;
 
+    final remembered = controller.selectedCustomerName?.trim();
+    if (remembered != null && remembered.isNotEmpty) return remembered;
+
     final customers = controller.overview?.customers ?? const <CustomerOption>[];
     for (final customer in customers) {
       if (customer.id == customerId) return customer.name;
@@ -77,6 +80,8 @@ final class DashboardContextScreen extends StatelessWidget {
   String? _selectedContract(DashboardController controller) {
     final contractId = controller.filters.contractId;
     if (contractId == null) return null;
+    final remembered = controller.selectedContractNumber?.trim();
+    if (remembered != null && remembered.isNotEmpty) return remembered;
     for (final contract in controller.availableContracts) {
       if (contract.id == contractId) return contract.contractNumber;
     }
