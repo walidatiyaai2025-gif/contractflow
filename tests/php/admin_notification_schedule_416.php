@@ -38,6 +38,7 @@ $service = (string) file_get_contents($root . 'Notifications/NotificationSchedul
 $scheduler = (string) file_get_contents($root . 'Notifications/NotificationScheduler.php');
 $delivery = (string) file_get_contents($root . 'Notifications/DeliveryLogRepository.php');
 $audit = (string) file_get_contents($root . 'Audit/NotificationScheduleAuditRecorder.php');
+$i18n = (string) file_get_contents($root . 'Translations/NotificationScheduleArabicDefaults.php');
 $plugin = (string) file_get_contents($root . 'Plugin.php');
 
 sc_416_assert(str_contains($page, 'Capabilities::MANAGE_NOTIFICATIONS') && str_contains($page, 'check_admin_referer(self::MANUAL_SEND_ACTION . \'_\' . $scheduleId)'), 'Issue #416 manual send is capability and nonce protected');
@@ -56,5 +57,9 @@ sc_416_assert(str_contains($service, "'suppressed_or_rule_mismatch'") && str_con
 sc_416_assert(str_contains($scheduler, "'interval' => 300") && str_contains($scheduler, 'wp_schedule_event') && str_contains($scheduler, 'dispatchDue()'), 'Issue #416 scheduler runs on a five-minute WP-Cron cadence');
 sc_416_assert(str_contains($audit, "'notification_manual_dispatch'") && str_contains($audit, "'notification_automatic_dispatch'"), 'Issue #416 audits manual and automatic dispatches');
 sc_416_assert(str_contains($plugin, 'NotificationSchedulePage::MANUAL_SEND_ACTION') && str_contains($plugin, 'NotificationScheduler::register()'), 'Issue #416 plugin boot wires admin actions and scheduler');
+sc_416_assert(str_contains($plugin, 'NotificationScheduleArabicDefaults::register()'), 'Issue #416 plugin boots Arabic defaults for the new schedule page');
+foreach (['جدولة الإشعارات', 'تم الإرسال', 'لم يتم الإرسال', 'إرسال يدوي', 'وقت الإرسال اليومي'] as $arabic) {
+    sc_416_assert(str_contains($i18n, $arabic), 'Issue #416 Arabic operations vocabulary contains: ' . $arabic);
+}
 
 echo "OK: {$tests} notification schedule assertions passed\n";
