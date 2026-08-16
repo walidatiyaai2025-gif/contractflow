@@ -38,10 +38,8 @@ extension DashboardSilentRefresh on DashboardController {
       }
       errorMessage = null;
       state = DashboardLoadState.ready;
-      // ChangeNotifier exposes this publicly; this extension intentionally
-      // notifies only after fresh data is ready so no loading frame is shown.
-      // ignore: invalid_use_of_protected_member
-      notifyListeners();
+      // The shell rebuilds after this fresh snapshot is ready. No loading frame
+      // or controller notification is emitted while background work is running.
     } on Object {
       // Background refresh is deliberately silent: keep the last good snapshot.
     }
@@ -51,8 +49,9 @@ extension DashboardSilentRefresh on DashboardController {
 extension CustomersSilentRefresh on CustomersController {
   Future<void> refreshSilently() async {
     final page = currentPage;
-    if (!canAccess || state == CustomersLoadState.loading || page == null)
+    if (!canAccess || state == CustomersLoadState.loading || page == null) {
       return;
+    }
     try {
       currentPage = await repository.loadPage(
         page: page.page,
@@ -61,8 +60,6 @@ extension CustomersSilentRefresh on CustomersController {
       );
       errorMessage = null;
       state = CustomersLoadState.ready;
-      // ignore: invalid_use_of_protected_member
-      notifyListeners();
     } on Object {
       // Preserve the visible page and do not surface background transport noise.
     }
@@ -72,8 +69,9 @@ extension CustomersSilentRefresh on CustomersController {
 extension ContractsSilentRefresh on ContractsController {
   Future<void> refreshSilently() async {
     final page = currentPage;
-    if (!canAccess || state == ContractsLoadState.loading || page == null)
+    if (!canAccess || state == ContractsLoadState.loading || page == null) {
       return;
+    }
     try {
       currentPage = await repository.loadPage(
         page: page.page,
@@ -83,8 +81,6 @@ extension ContractsSilentRefresh on ContractsController {
       );
       errorMessage = null;
       state = ContractsLoadState.ready;
-      // ignore: invalid_use_of_protected_member
-      notifyListeners();
     } on Object {
       // Preserve the last good contract page on automatic refresh failure.
     }
@@ -104,8 +100,6 @@ extension NotificationsSilentRefresh on NotificationsController {
       );
       errorMessage = null;
       state = NotificationsLoadState.ready;
-      // ignore: invalid_use_of_protected_member
-      notifyListeners();
     } on Object {
       // Keep the existing inbox snapshot if a background refresh fails.
     }
@@ -119,8 +113,6 @@ extension ProfileSilentRefresh on ProfileController {
       snapshot = await repository.loadDevices();
       errorMessage = null;
       state = ProfileDeviceLoadState.ready;
-      // ignore: invalid_use_of_protected_member
-      notifyListeners();
     } on Object {
       // Device/profile refresh should not replace a usable screen with an error.
     }
