@@ -2,11 +2,11 @@
   "filename": "SafeContracts-latest.zip",
   "kind": "wordpress-plugin",
   "package_root": "safecontracts/",
-  "published_utc": "2026-08-16T17:17:30Z",
+  "published_utc": "2026-08-16T17:38:12Z",
   "quality_conclusion": "success",
-  "quality_run_id": "31960854037",
-  "sha256": "61986372f0b618e95432c6a349e8ba1baafd939efde4b7555833d60b8ccbddfc",
-  "size_bytes": 270225,
-  "source_sha": "5d0abddc8e3cef801f47f0a0055001bb5e73a2a4",
+  "quality_run_id": "31961881572",
+  "sha256": "2ca019c0183216c5a6f2902165c3c987179a84d93f3b587107e71c55c8484435",
+  "size_bytes": 277850,
+  "source_sha": "5e641c03a87d63030fca24cabba8abc13476c44f",
   "verified": true
 }
