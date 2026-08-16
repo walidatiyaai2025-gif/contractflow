@@ -26,7 +26,20 @@ final class AdminTenantContext
         if (! CoreTenantEnforcement::isEnabled()) {
             return;
         }
-        if (! self::isSafeContractsAdminRequest() || ! current_user_can(Capabilities::ACCESS)) {
+
+        // Platform-global SafeContracts pages/actions deliberately execute without
+        // a tenant context. This prevents an arbitrary previously selected tenant
+        // from changing the authorization semantics of deployment/reference/system
+        // controls that are still global in the current architecture.
+        TenantContextStore::reset();
+        if (! AdminTenantRequestPolicy::isTenantOwnedRequest()) {
+            return;
+        }
+
+        // Context is still empty here, so the central tenant capability filter is
+        // narrowing-neutral. After resolveUser() locks the tenant, all subsequent
+        // direct current_user_can() checks become tenant-role aware.
+        if (! current_user_can(Capabilities::ACCESS)) {
             return;
         }
 
@@ -81,6 +94,9 @@ final class AdminTenantContext
 
     public static function handleSelect(): void
     {
+        // The selector itself is a platform/control-plane action and runs without
+        // tenant context, so an invalid role on the previously selected tenant
+        // cannot prevent switching to another active membership.
         if (! current_user_can(Capabilities::ACCESS)) {
             wp_die(__('You do not have permission to select an Enterprise tenant.', 'safecontracts'));
         }
@@ -104,8 +120,8 @@ final class AdminTenantContext
     {
         if (
             ! CoreTenantEnforcement::isEnabled()
-            || ! AdminShell::isSafeContractsPage()
-            || ! current_user_can(Capabilities::ACCESS)
+            || ! AdminTenantRequestPolicy::isTenantOwnedPage()
+            || ! TenantCapabilityFilter::globalCapabilityGranted(Capabilities::ACCESS)
         ) {
             return;
         }
@@ -170,14 +186,5 @@ final class AdminTenantContext
             return $page;
         }
         return AdminShell::SLUG;
-    }
-
-    private static function isSafeContractsAdminRequest(): bool
-    {
-        if (AdminShell::isSafeContractsPage()) {
-            return true;
-        }
-        $action = sanitize_key((string) ($_REQUEST['action'] ?? ''));
-        return str_starts_with($action, 'safecontracts_');
     }
 }
