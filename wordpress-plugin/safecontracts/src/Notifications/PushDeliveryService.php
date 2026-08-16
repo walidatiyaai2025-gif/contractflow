@@ -6,6 +6,8 @@ namespace SafeContracts\Notifications;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use SafeContracts\Tenancy\NonCoreTenantScope;
+use SafeContracts\Tenancy\TenantMembershipRepository;
 use Throwable;
 
 final class PushDeliveryService
@@ -16,10 +18,12 @@ final class PushDeliveryService
     public function __construct(
         private PushTransport $transport,
         private ?DeviceTokenRepository $tokens = null,
-        private ?DeliveryLogRepository $deliveries = null
+        private ?DeliveryLogRepository $deliveries = null,
+        private ?TenantMembershipRepository $memberships = null
     ) {
         $this->tokens ??= new DeviceTokenRepository();
         $this->deliveries ??= new DeliveryLogRepository();
+        $this->memberships ??= new TenantMembershipRepository();
     }
 
     /**
@@ -42,8 +46,16 @@ final class PushDeliveryService
         $scheduledFor = $this->normalizeDate($plan['scheduled_for'] ?? '');
         $templateCode = NotificationRule::normalizeCode($plan['template_code'] ?? '');
         $payload = $this->normalizePayload($plan['payload'] ?? []);
-        $recipientIds = is_array($plan['recipient_ids'] ?? null) ? $plan['recipient_ids'] : [];
-        $deviceRows = $this->tokens->activeForUsers(array_map('intval', $recipientIds));
+        $recipientIds = is_array($plan['recipient_ids'] ?? null)
+            ? array_values(array_unique(array_filter(array_map('intval', $plan['recipient_ids']), static fn (int $id): bool => $id > 0)))
+            : [];
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId !== null) {
+            // Membership is re-evaluated at the final transport boundary so a user
+            // removed after schedule creation cannot receive from a stale plan.
+            $recipientIds = $this->memberships->filterActiveUserIds($tenantId, $recipientIds);
+        }
+        $deviceRows = $this->tokens->activeForUsers($recipientIds);
 
         $sent = 0;
         $failed = 0;
