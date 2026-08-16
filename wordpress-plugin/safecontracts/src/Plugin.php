@@ -43,6 +43,7 @@ use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Presence\PresenceService;
 use SafeContracts\Rest\CoreTenantRestGuard;
 use SafeContracts\Rest\Router;
+use SafeContracts\Tenancy\AdminTenantContext;
 use SafeContracts\Tenancy\TenantContextStore;
 use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\NotificationCenterArabicDefaults;
@@ -79,6 +80,7 @@ final class Plugin
         RuntimeLabels::register();
         MobileBearerAuthentication::register();
         TenantContextStore::register();
+        AdminTenantContext::register();
         CoreTenantRestGuard::register();
         PresenceService::register();
         FirebaseAccessTokenProvider::register();
