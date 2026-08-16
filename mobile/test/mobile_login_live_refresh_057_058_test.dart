@@ -39,7 +39,8 @@ void main() {
     );
   });
 
-  test('authenticated shell refreshes the active surface while foregrounded', () {
+  test('authenticated shell refreshes the active surface while foregrounded',
+      () {
     final shell = source('lib/features/navigation/app_shell.dart');
 
     expect(shell, contains('with WidgetsBindingObserver'));
@@ -48,7 +49,8 @@ void main() {
     expect(shell, contains('didChangeAppLifecycleState'));
     expect(shell, contains('AppLifecycleState.resumed'));
     expect(shell, contains('bool _liveRefreshInFlight = false;'));
-    expect(shell, contains('if (!mounted || !_foreground || _liveRefreshInFlight)'));
+    expect(shell,
+        contains('if (!mounted || !_foreground || _liveRefreshInFlight)'));
     expect(shell, contains('widget.dashboardController.refresh()'));
     expect(shell, contains('widget.customersController.refresh()'));
     expect(shell, contains('widget.contractsController.refresh()'));
@@ -64,9 +66,11 @@ void main() {
 
     for (final screen in <String>[payments, followUps]) {
       expect(screen, contains('final int refreshRevision;'));
-      expect(screen, contains('oldWidget.refreshRevision != widget.refreshRevision'));
+      expect(screen,
+          contains('oldWidget.refreshRevision != widget.refreshRevision'));
       expect(screen, contains('background: true'));
-      expect(screen, contains('final keepVisible = background && _page != null;'));
+      expect(
+          screen, contains('final keepVisible = background && _page != null;'));
       expect(screen, contains('if (!keepVisible)'));
       expect(screen, contains('if (keepVisible) return;'));
     }
