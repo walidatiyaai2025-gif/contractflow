@@ -646,7 +646,7 @@ final class _MobileRecordEditorScreenState
     await _runSave(() async {
       final body = <String, Object?>{
         'contract_number': number,
-        'customer_id': _contractCustomerId,
+        if (!editing || _canAssignContracts) 'customer_id': _contractCustomerId,
         if (_canAssignContracts) 'accountant_user_id': _contractAccountantId,
         if (_canEditContracts) 'start_date': start.isEmpty ? null : start,
         if (_canEditContracts) 'end_date': end.isEmpty ? null : end,
