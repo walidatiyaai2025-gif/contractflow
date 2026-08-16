@@ -30,6 +30,20 @@ final class ContractStatus
         return $status;
     }
 
+    /** @return list<string> */
+    public static function allowedTargets(string $from): array
+    {
+        $from = self::normalize($from);
+        $allowed = [
+            self::DRAFT => [self::ACTIVE, self::CANCELLED],
+            self::ACTIVE => [self::COMPLETED, self::CANCELLED],
+            self::COMPLETED => [],
+            self::CANCELLED => [],
+        ];
+
+        return $allowed[$from];
+    }
+
     public static function assertTransition(string $from, string $to): void
     {
         $from = self::normalize($from);
@@ -39,14 +53,7 @@ final class ContractStatus
             return;
         }
 
-        $allowed = [
-            self::DRAFT => [self::ACTIVE, self::CANCELLED],
-            self::ACTIVE => [self::COMPLETED, self::CANCELLED],
-            self::COMPLETED => [],
-            self::CANCELLED => [],
-        ];
-
-        if (! in_array($to, $allowed[$from], true)) {
+        if (! in_array($to, self::allowedTargets($from), true)) {
             throw new DomainException("Invalid contract status transition: {$from} -> {$to}.");
         }
     }
