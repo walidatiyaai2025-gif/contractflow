@@ -1,0 +1,30 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('SC-MOBILE-056 visual identity is shared across shell and pages', () {
+    final design =
+        File('lib/features/ui/safecontracts_design.dart').readAsStringSync();
+    final layout =
+        File('lib/features/ui/mobile_layout.dart').readAsStringSync();
+    final shell =
+        File('lib/features/navigation/app_shell.dart').readAsStringSync();
+
+    expect(design, contains('SafeContractsBackdrop'));
+    expect(design, contains('_TopographicPainter'));
+    expect(design, contains('SafeContractsSurface'));
+    expect(design, contains('SafeContractsVisual.navy'));
+    expect(design, contains('SafeContractsVisual.green'));
+    expect(design, contains('SafeContractsVisual.red'));
+    expect(design, contains('SafeContractsVisual.amber'));
+
+    expect(layout, contains('SafeContractsBackdrop'));
+    expect(shell, contains('_SafeContractsBottomNavigation'));
+    expect(shell, contains('SafeContractsBackdrop'));
+    expect(shell, contains("text: 'SafeContracts'"));
+    expect(shell, contains('MobileDestination.dashboard'));
+    expect(shell, contains('MobileDestination.contracts'));
+    expect(shell, contains('MobileDestination.payments'));
+  });
+}

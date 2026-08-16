@@ -26,6 +26,7 @@ import '../payments/payments_screen.dart';
 import '../profile/profile.dart';
 import '../profile/profile_screen.dart';
 import '../session/session_controller.dart';
+import '../ui/safecontracts_design.dart';
 import 'navigation_policy.dart';
 
 final class SafeContractsShell extends StatefulWidget {
@@ -76,20 +77,33 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
       _selected = widget.policy.destinations.first;
     }
 
+    final bottomDestinations = _bottomDestinations();
     return Scaffold(
+      backgroundColor: SafeContractsVisual.background,
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('SafeContracts'),
-            Text(
-              _label(l10n, _selected),
-              style: Theme.of(context).textTheme.labelMedium,
-            ),
-          ],
+        backgroundColor: SafeContractsVisual.background,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: 8,
+        title: Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(
+                text: 'SafeContracts',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              TextSpan(
+                text: ' | ${_label(l10n, _selected)}',
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
       drawer: NavigationDrawer(
+        backgroundColor: SafeContractsVisual.surface,
         selectedIndex: widget.policy.destinations.indexOf(_selected),
         onDestinationSelected: (index) {
           setState(() {
@@ -98,33 +112,70 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           Navigator.of(context).pop();
         },
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(28, 20, 16, 12),
-            child: Text('SafeContracts'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 22, 16, 14),
+            child: Text(
+              'SafeContracts',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: SafeContractsVisual.navy,
+                  ),
+            ),
           ),
           ...widget.policy.destinations.map(
             (destination) => NavigationDrawerDestination(
               icon: Icon(_icon(destination)),
+              selectedIcon: Icon(
+                _icon(destination),
+                color: SafeContractsVisual.navy,
+              ),
               label: Text(_label(l10n, destination)),
             ),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          if (widget.usingConfigDefaults)
-            MaterialBanner(
-              content: Text(
-                l10n.t(
-                  'Remote mobile configuration is unavailable. Safe defaults are active.',
+      body: SafeContractsBackdrop(
+        child: Column(
+          children: [
+            if (widget.usingConfigDefaults)
+              MaterialBanner(
+                backgroundColor: SafeContractsVisual.amberSoft,
+                content: Text(
+                  l10n.t(
+                    'Remote mobile configuration is unavailable. Safe defaults are active.',
+                  ),
                 ),
+                actions: const <Widget>[SizedBox.shrink()],
               ),
-              actions: const <Widget>[SizedBox.shrink()],
-            ),
-          Expanded(child: _body()),
-        ],
+            Expanded(child: _body()),
+          ],
+        ),
       ),
+      bottomNavigationBar: bottomDestinations.isEmpty
+          ? null
+          : _SafeContractsBottomNavigation(
+              destinations: bottomDestinations,
+              selected: _selected,
+              labelFor: (destination) => _label(l10n, destination),
+              onSelected: (destination) {
+                setState(() => _selected = destination);
+              },
+            ),
     );
+  }
+
+  List<MobileDestination> _bottomDestinations() {
+    const preferred = <MobileDestination>[
+      MobileDestination.dashboard,
+      MobileDestination.customers,
+      MobileDestination.contracts,
+      MobileDestination.payments,
+      MobileDestination.profile,
+    ];
+    return preferred
+        .where(widget.policy.destinations.contains)
+        .take(5)
+        .toList(growable: false);
   }
 
   Widget _body() {
@@ -133,6 +184,10 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
       MobileDestination.dashboard => DashboardScreen(
           controller: widget.dashboardController,
           currency: widget.config.currency,
+          onOpenPayments:
+              widget.policy.destinations.contains(MobileDestination.payments)
+                  ? () => setState(() => _selected = MobileDestination.payments)
+                  : null,
         ),
       MobileDestination.customers => CustomersScreen(
           controller: widget.customersController,
@@ -231,6 +286,82 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
   }
 }
 
+final class _SafeContractsBottomNavigation extends StatelessWidget {
+  const _SafeContractsBottomNavigation({
+    required this.destinations,
+    required this.selected,
+    required this.labelFor,
+    required this.onSelected,
+  });
+
+  final List<MobileDestination> destinations;
+  final MobileDestination selected;
+  final String Function(MobileDestination destination) labelFor;
+  final ValueChanged<MobileDestination> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: SafeContractsVisual.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x205E5142),
+              blurRadius: 18,
+              offset: Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 8, 6, 6),
+          child: Row(
+            children: destinations.map((destination) {
+              final isSelected = destination == selected;
+              return Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => onSelected(destination),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _icon(destination),
+                          color: isSelected
+                              ? SafeContractsVisual.navy
+                              : SafeContractsVisual.muted,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          labelFor(destination),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: isSelected
+                                        ? SafeContractsVisual.navy
+                                        : SafeContractsVisual.muted,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w800
+                                        : FontWeight.w500,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(growable: false),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 final class _PlannedDestination extends StatelessWidget {
   const _PlannedDestination({required this.destination});
 
@@ -269,12 +400,12 @@ String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
 
 IconData _icon(MobileDestination destination) {
   return switch (destination) {
-    MobileDestination.dashboard => Icons.dashboard_outlined,
-    MobileDestination.customers => Icons.business_outlined,
-    MobileDestination.contracts => Icons.description_outlined,
-    MobileDestination.payments => Icons.event_note_outlined,
+    MobileDestination.dashboard => Icons.home_rounded,
+    MobileDestination.customers => Icons.people_alt_outlined,
+    MobileDestination.contracts => Icons.folder_copy_outlined,
+    MobileDestination.payments => Icons.receipt_long_outlined,
     MobileDestination.collections => Icons.payments_outlined,
-    MobileDestination.followUps => Icons.follow_the_signs_outlined,
+    MobileDestination.followUps => Icons.timeline_outlined,
     MobileDestination.notifications => Icons.notifications_outlined,
     MobileDestination.export => Icons.file_download_outlined,
     MobileDestination.profile => Icons.person_outline,

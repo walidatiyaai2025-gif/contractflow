@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'safecontracts_design.dart';
+
 enum SafeContractsBreakpoint { narrow, medium, wide }
 
 SafeContractsBreakpoint safeContractsBreakpoint(double width) {
@@ -50,33 +52,35 @@ final class SafeContractsAdaptiveBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final breakpoint = safeContractsBreakpoint(constraints.maxWidth);
-        final horizontalPadding = switch (breakpoint) {
-          SafeContractsBreakpoint.narrow => 18.0,
-          SafeContractsBreakpoint.medium => 26.0,
-          SafeContractsBreakpoint.wide => 36.0,
-        };
-        final verticalPadding = switch (breakpoint) {
-          SafeContractsBreakpoint.narrow => 18.0,
-          SafeContractsBreakpoint.medium => 22.0,
-          SafeContractsBreakpoint.wide => 28.0,
-        };
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: verticalPadding,
+    return SafeContractsBackdrop(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final breakpoint = safeContractsBreakpoint(constraints.maxWidth);
+          final horizontalPadding = switch (breakpoint) {
+            SafeContractsBreakpoint.narrow => 18.0,
+            SafeContractsBreakpoint.medium => 26.0,
+            SafeContractsBreakpoint.wide => 36.0,
+          };
+          final verticalPadding = switch (breakpoint) {
+            SafeContractsBreakpoint.narrow => 18.0,
+            SafeContractsBreakpoint.medium => 22.0,
+            SafeContractsBreakpoint.wide => 28.0,
+          };
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: verticalPadding,
+                ),
+                child: child,
               ),
-              child: child,
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
