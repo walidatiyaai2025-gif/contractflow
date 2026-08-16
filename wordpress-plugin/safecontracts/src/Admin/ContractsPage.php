@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Admin;
 
+use SafeContracts\Contracts\ContractArchiveService;
 use SafeContracts\Contracts\ContractService;
 use SafeContracts\Roles\Capabilities;
 use Throwable;
@@ -12,6 +13,7 @@ final class ContractsPage
 {
     public const SLUG = 'safecontracts-contracts';
     public const SAVE_ACTION = 'safecontracts_save_contract_admin';
+    public const DELETE_ACTION = 'safecontracts_delete_contract_admin';
 
     public static function register(): void
     {
@@ -62,6 +64,24 @@ final class ContractsPage
         exit;
     }
 
+    public static function handleDelete(): void
+    {
+        if (! current_user_can(Capabilities::MANAGE_SYSTEM)) {
+            wp_die(__('You do not have permission to delete contracts.', 'safecontracts'));
+        }
+        $contractId = max(0, (int) ($_POST['contract_id'] ?? 0));
+        check_admin_referer(self::DELETE_ACTION . '_' . $contractId);
+        $status = 'deleted';
+        try {
+            (new ContractArchiveService())->archive($contractId);
+        } catch (Throwable $error) {
+            unset($error);
+            $status = 'delete_failed';
+        }
+        wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'safecontracts_status' => $status], admin_url('admin.php')));
+        exit;
+    }
+
     public static function render(): void
     {
         if (! current_user_can(Capabilities::ACCESS)) {
@@ -90,9 +110,27 @@ final class ContractsPage
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Contract operations', 'safecontracts'); ?></p><h1><?php echo esc_html__('Contracts', 'safecontracts'); ?></h1></div></div>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($contracts as $contract) : ?>
-                        <tr><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><?php echo ! empty($contract['is_archived']) ? ' · ' . esc_html__('Archived', 'safecontracts') : ''; ?></td><td><?php echo esc_html((string) $contract['customer_name']); ?></td><td><?php echo esc_html((string) $contract['status']); ?></td><td><?php echo esc_html(number_format((float) $contract['base_value'], 2)); ?></td></tr>
+                        <tr>
+                            <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><?php echo ! empty($contract['is_archived']) ? ' · ' . esc_html__('Archived', 'safecontracts') : ''; ?></td>
+                            <td><?php echo esc_html((string) $contract['customer_name']); ?></td>
+                            <td><?php echo esc_html((string) $contract['status']); ?></td>
+                            <td><?php echo esc_html(number_format((float) $contract['base_value'], 2)); ?></td>
+                            <td>
+                                <div class="safecontracts-dashboard-table-actions">
+                                    <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a>
+                                    <?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_SYSTEM)) : ?>
+                                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Payments, collections, history and audit evidence will be preserved.', 'safecontracts'); ?>">
+                                            <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
+                                            <input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contract['id']); ?>">
+                                            <?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $contract['id']); ?>
+                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?> / حذف</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                     </tbody></table>
                 </section>
