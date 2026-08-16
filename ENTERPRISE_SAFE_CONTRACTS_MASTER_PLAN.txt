@@ -80,7 +80,7 @@ ESC must receive a distinct Android identity, including:
 Preferred ESC production applicationId baseline: com.safecontracts.enterprise
 Final package naming may be changed only through an explicit architecture decision before first production publication.
 
-ESC environments should support dev, staging and production with visibly distinguishable app labels/icons where helpful, separate API URLs, separate Firebase registrations and safe logging policies.
+ESC environments should support dev, staging and production with visibly distinguishishable app labels/icons where helpful, separate API URLs, separate Firebase registrations and safe logging policies.
 
 LANDING PAGE — MANDATORY PRODUCT SURFACE
 ----------------------------------------
@@ -248,6 +248,11 @@ ESC-P17 Public API, webhooks and integrations.
 ESC-P18 SSO, MFA, enterprise security and compliance capabilities.
 ESC-P19 Performance, scale, observability, backup/restore and DR.
 ESC-P20 Full-system impact validation, security testing, UAT and release hardening.
+
+CURRENT ESC-P2 DELIVERY STATUS
+------------------------------
+- ESC-P2-006 / Issue #445: Completed — Enterprise-only tenant membership REST API; service-only mutations, locked tenant authorization, owner-safe mutation guards, adversarial regression and documented REST boundary. Completion validated by ESC Foundation Gate #161.
+- ESC-P2-007 / Issue #447: Validation — Enterprise-only REST rate limiting; persistent atomic hashed abuse buckets, login brute-force protection, tenant-aware authenticated read/write buckets, bounded expiry cleanup, adversarial regression and operational runbook. Must not be marked Completed until the final exact-source ESC Foundation/mobile gates are green.
 
 RELEASE / ARTIFACT ISOLATION
 ----------------------------
