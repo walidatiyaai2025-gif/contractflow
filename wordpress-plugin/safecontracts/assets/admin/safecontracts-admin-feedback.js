@@ -17,13 +17,9 @@
     }
 
     function closeToast(toast) {
-        if (!toast) {
-            return;
-        }
+        if (!toast) return;
         toast.classList.add('is-leaving');
-        window.setTimeout(function () {
-            toast.remove();
-        }, 180);
+        window.setTimeout(function () { toast.remove(); }, 180);
     }
 
     function showToast(type, title, message, autoDismiss) {
@@ -59,44 +55,31 @@
         toast.appendChild(close);
         stack.appendChild(toast);
         close.addEventListener('click', function () { closeToast(toast); });
-
-        if (autoDismiss) {
-            window.setTimeout(function () { closeToast(toast); }, 5200);
-        }
+        if (autoDismiss) window.setTimeout(function () { closeToast(toast); }, 5200);
         return toast;
     }
 
     document.querySelectorAll('[data-safecontracts-toast]').forEach(function (toast) {
         const close = toast.querySelector('[data-safecontracts-toast-close]');
-        if (close) {
-            close.addEventListener('click', function () { closeToast(toast); });
-        }
+        if (close) close.addEventListener('click', function () { closeToast(toast); });
         if (toast.dataset.autoDismiss === '1') {
             window.setTimeout(function () { closeToast(toast); }, 5200);
         }
     });
 
     function fieldLabel(field) {
-        if (!field) {
-            return '';
-        }
+        if (!field) return '';
         if (field.id) {
             const explicit = document.querySelector('label[for="' + CSS.escape(field.id) + '"]');
-            if (explicit) {
-                return explicit.textContent.trim().replace(/\s+/g, ' ');
-            }
+            if (explicit) return explicit.textContent.trim().replace(/\s+/g, ' ');
         }
         const parentLabel = field.closest('label');
-        if (parentLabel) {
-            return parentLabel.textContent.trim().replace(/\s+/g, ' ');
-        }
+        if (parentLabel) return parentLabel.textContent.trim().replace(/\s+/g, ' ');
         return field.getAttribute('aria-label') || field.name || '';
     }
 
     document.querySelectorAll('form[method="post"]').forEach(function (form) {
-        if (!form.closest('.safecontracts-settings, .safecontracts-admin-shell, .safecontracts-dashboard')) {
-            return;
-        }
+        if (!form.closest('.safecontracts-settings, .safecontracts-admin-shell, .safecontracts-dashboard')) return;
 
         form.noValidate = true;
         form.addEventListener('submit', function (event) {
@@ -108,7 +91,6 @@
             const invalid = Array.from(form.querySelectorAll('input, select, textarea')).filter(function (field) {
                 return !field.disabled && !field.checkValidity();
             });
-
             if (invalid.length > 0) {
                 event.preventDefault();
                 invalid.forEach(function (field) {
@@ -117,17 +99,17 @@
                 });
                 const first = invalid[0];
                 const label = fieldLabel(first);
-                const detail = label ? (messages.validationMessage || '') + ' ' + (messages.fieldPrefix || '') + ' ' + label : (messages.validationMessage || '');
+                const detail = label
+                    ? (messages.validationMessage || '') + ' ' + (messages.fieldPrefix || '') + ' ' + label
+                    : (messages.validationMessage || '');
                 showToast('error', messages.validationTitle || 'Check the form', detail, false);
                 first.focus({ preventScroll: false });
                 return;
             }
 
             if (form.matches('[data-safecontracts-delete-form]')) {
-                const confirmed = window.confirm(messages.deleteConfirm || 'Delete this contract?');
-                if (!confirmed) {
-                    event.preventDefault();
-                }
+                const confirmation = form.dataset.deleteMessage || messages.deleteConfirm || 'Delete this record?';
+                if (!window.confirm(confirmation)) event.preventDefault();
             }
         });
 
