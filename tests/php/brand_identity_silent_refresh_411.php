@@ -39,6 +39,7 @@ $checks = [
         '@drawable/alkenzy_launcher',
         'mobile/android-release/alkenzy_launcher.png',
         'Alkenzy launcher icon is not a valid PNG resource',
+        'in-app and launcher Alkenzy identities must use the same supplied logo bytes',
     ],
     'mobile/lib/core/branding/safe_contracts_brand.dart' => [
         "static const name = 'Alkenzy ADV';",
@@ -102,15 +103,19 @@ if (count(array_unique($brandHashes)) !== 1) {
 $count++;
 
 $mobileAlkenzy = @file_get_contents($root . '/mobile/assets/brand/alkenzy_adv.png');
-if (! is_string($mobileAlkenzy) || strlen($mobileAlkenzy) < 4096 || ! str_starts_with($mobileAlkenzy, "\x89PNG\r\n\x1a\n")) {
-    fwrite(STDERR, "FAIL: packaged Alkenzy ADV mobile identity is not a valid PNG\n");
+$androidAlkenzy = @file_get_contents($root . '/mobile/android-release/alkenzy_launcher.png');
+foreach ([$mobileAlkenzy, $androidAlkenzy] as $alkenzyBytes) {
+    if (! is_string($alkenzyBytes) || strlen($alkenzyBytes) < 4096 || ! str_starts_with($alkenzyBytes, "\x89PNG\r\n\x1a\n")) {
+        fwrite(STDERR, "FAIL: packaged Alkenzy ADV identity is not a valid PNG\n");
+        exit(1);
+    }
+    $count++;
+}
+if (! is_string($mobileAlkenzy) || ! is_string($androidAlkenzy) || ! hash_equals(hash('sha256', $mobileAlkenzy), hash('sha256', $androidAlkenzy))) {
+    fwrite(STDERR, "FAIL: in-app and Android launcher Alkenzy identities diverged\n");
     exit(1);
 }
-if (hash('sha256', $mobileAlkenzy) !== 'e703241650eeb984791c4715b4243bf96ba5b273b78eb2e25cd3640c188c57c9') {
-    fwrite(STDERR, "FAIL: packaged Alkenzy ADV mobile identity does not match the approved supplied-logo rendition\n");
-    exit(1);
-}
-$count += 2;
+$count++;
 
 require_once $root . '/wordpress-plugin/safecontracts/src/Support/Brand.php';
 $brandUri = \SafeContracts\Support\Brand::iconDataUri();
