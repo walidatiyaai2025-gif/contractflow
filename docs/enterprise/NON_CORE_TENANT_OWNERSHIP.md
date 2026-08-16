@@ -29,7 +29,7 @@ Environment credentials identify the ESC deployment, not a business tenant. They
 
 Non-core tenancy follows the same staged safety model as core ownership:
 
-**expand → explicit/derived backfill → verify → runtime enforce → harden**
+**expand → explicit/derived backfill → verify → harden → runtime enforce**
 
 Migration `1.17.0` performs **expand only**. It adds nullable `tenant_id` and an `esc_tenant_record (tenant_id, id)` lookup index to the tenant-owned tables listed above. It does not assign existing rows, change uniqueness, make ownership non-null, alter delivery behavior or activate runtime enforcement.
 
@@ -54,8 +54,6 @@ Do **not** copy every legacy notification rule/template/token/import into every 
 
 ### Deterministic derivation
 
-Run deterministic child derivation independently of root assignment:
-
 ```bash
 php scripts/enterprise_noncore_tenant_backfill.php \
   --wp-root=/path/to/wordpress \
@@ -65,8 +63,6 @@ php scripts/enterprise_noncore_tenant_backfill.php \
 This operation is transactional and never assigns notification-rule, template, device-token or import-run roots.
 
 ### Explicit root mapping
-
-Map only explicitly reviewed root groups:
 
 ```bash
 php scripts/enterprise_noncore_tenant_backfill.php \
@@ -84,21 +80,53 @@ If any cross-tenant parent/child mismatch exists after a derivation or reviewed 
 
 ### Verification
 
-Run a report without changing ownership:
-
 ```bash
 php scripts/enterprise_noncore_tenant_backfill.php \
   --wp-root=/path/to/wordpress \
   --verify
 ```
 
-The report separates:
+The report separates tenant-owned rows still missing ownership, cross-tenant parent/child mismatches and intentionally unowned platform-global audit rows. `ready=true` means tenant-required non-core ownership is complete and internally consistent; platform-global audit rows do not block readiness.
 
-- tenant-owned rows still missing ownership;
-- cross-tenant parent/child mismatches;
-- intentionally unowned platform-global audit rows.
+## Explicit schema hardening
 
-`ready=true` means tenant-required non-core ownership is complete and internally consistent; platform-global audit rows do not block readiness.
+Non-core hardening is **not** an automatic WordPress migration. Run it only after the ownership verifier is green and within a normal database backup/change window.
+
+Check status/preflight:
+
+```bash
+php scripts/enterprise_noncore_tenant_schema_harden.php \
+  --wp-root=/path/to/wordpress \
+  --status
+```
+
+Preflight blocks hardening if there are duplicate values inside the same tenant for:
+
+- notification rule code;
+- notification template code;
+- device token hash;
+- delivery idempotency key;
+- schedule rule/payment/attempt tuple;
+- suppression uniqueness tuple.
+
+Apply only after preflight is green:
+
+```bash
+php scripts/enterprise_noncore_tenant_schema_harden.php \
+  --wp-root=/path/to/wordpress \
+  --apply
+```
+
+The hardener then:
+
+- makes `tenant_id` NOT NULL for rules, templates, devices, deliveries, schedules, suppressions, import runs and import errors;
+- intentionally leaves audit `tenant_id` nullable so defined platform-global audit events remain representable;
+- replaces global unique indexes with tenant-scoped unique indexes for rule/template code, device token hash, delivery idempotency key, schedule attempts and suppressions;
+- adds tenant-first indexes for device lookup, delivery history, due schedules, import status/errors and audit browsing;
+- removes legacy global unique indexes only after scoped replacements exist;
+- verifies the resulting structure before persisting the non-core hardened marker.
+
+This ordering is required before runtime notification/device enforcement because a single physical device token must be representable independently in more than one tenant without moving or overwriting another tenant's registration.
 
 ## Runtime requirements after enforcement
 
@@ -114,16 +142,7 @@ The report separates:
 - cache keys for tenant-owned data include tenant identity;
 - generated/export/storage object keys cannot collide across tenants.
 
-## Hardening rules
-
-Only after a non-core ownership verifier is green may later work:
-
-- make tenant ownership non-null where appropriate; audit may retain nullable ownership for explicitly platform-global event classes;
-- replace global business/config uniqueness with tenant-scoped uniqueness where designed;
-- add tenant-first indexes matching delivery, schedule, inbox, import and audit query shapes;
-- activate runtime enforcement/background tenant iteration.
-
-No destructive DDL is allowed automatically just because the expand migration has run.
+Runtime non-core enforcement must not be enabled until both the ownership verifier and schema hardener are green.
 
 ## Safe Contract separation
 
