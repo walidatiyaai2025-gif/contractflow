@@ -11,7 +11,8 @@ import 'package:safecontracts_mobile/features/auth/mobile_auth.dart';
 import 'fake_api_transport.dart';
 
 void main() {
-  test('Remember me controls bearer-token persistence without storing password', () async {
+  test('Remember me controls bearer-token persistence without storing password',
+      () async {
     final environment = AppEnvironment.fromValues(
       name: 'local',
       apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
@@ -51,7 +52,8 @@ void main() {
     expect(
       tokenStore.toString(),
       isNot(contains('do-not-store-this-password')),
-      reason: 'The token store never receives or retains the WordPress password.',
+      reason:
+          'The token store never receives or retains the WordPress password.',
     );
 
     await repository.login(
@@ -62,7 +64,8 @@ void main() {
     expect(tokenStore.lastPersistentWrite, isTrue);
   });
 
-  test('Arabic and English language choice is normalized and persisted', () async {
+  test('Arabic and English language choice is normalized and persisted',
+      () async {
     final store = _MemoryLocaleStore();
     final controller = MobileLocaleController(store: store);
 
