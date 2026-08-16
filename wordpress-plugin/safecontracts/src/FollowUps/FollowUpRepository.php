@@ -9,7 +9,7 @@ use RuntimeException;
 final class FollowUpRepository
 {
     /** @return list<array<string, mixed>> */
-    public function queue(?int $accountantUserId, int $limit): array
+    public function queue(?int $accountantUserId, int $limit, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         global $wpdb;
         $this->assertWpdb($wpdb);
@@ -18,6 +18,13 @@ final class FollowUpRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $followups = $wpdb->prefix . 'safecontracts_payment_followups';
         $scope = $accountantUserId === null ? '' : ' AND c.accountant_user_id = %d';
+        $period = '';
+        if ($dateFrom !== null) {
+            $period .= ' AND p.due_date >= %s';
+        }
+        if ($dateTo !== null) {
+            $period .= ' AND p.due_date <= %s';
+        }
         $sql = "SELECT p.id AS payment_id, p.contract_id, c.customer_id, c.accountant_user_id,
                        c.status AS contract_status,
                        p.reference, p.due_date, p.expected_payment_date, p.original_amount,
@@ -29,12 +36,18 @@ final class FollowUpRepository
                 WHERE c.is_archived = 0
                   AND p.is_archived = 0
                   AND p.remaining_amount > 0
-                  AND p.status <> 'paid'{$scope}
+                  AND p.status <> 'paid'{$scope}{$period}
                 ORDER BY p.due_date ASC, p.id ASC
                 LIMIT %d";
         $args = [];
         if ($accountantUserId !== null) {
             $args[] = $accountantUserId;
+        }
+        if ($dateFrom !== null) {
+            $args[] = $dateFrom;
+        }
+        if ($dateTo !== null) {
+            $args[] = $dateTo;
         }
         $args[] = $limit;
         $rows = $wpdb->get_results($wpdb->prepare($sql, ...$args), ARRAY_A);
@@ -79,18 +92,28 @@ final class FollowUpRepository
     }
 
     /** @return list<array<string, mixed>> */
-    public function history(int $paymentId, int $limit): array
+    public function history(int $paymentId, int $limit, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_payment_followups';
+        $period = '';
+        $args = [$paymentId];
+        if ($dateFrom !== null) {
+            $period .= ' AND DATE(created_at) >= %s';
+            $args[] = $dateFrom;
+        }
+        if ($dateTo !== null) {
+            $period .= ' AND DATE(created_at) <= %s';
+            $args[] = $dateTo;
+        }
+        $args[] = $limit;
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id, payment_id, state, note, promised_date, deferred_until, created_by, created_at
-                 FROM {$table} WHERE payment_id = %d
+                 FROM {$table} WHERE payment_id = %d{$period}
                  ORDER BY created_at DESC, id DESC LIMIT %d",
-                $paymentId,
-                $limit
+                ...$args
             ),
             ARRAY_A
         );

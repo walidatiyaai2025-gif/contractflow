@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SafeContracts\Import;
 
 use RuntimeException;
+use SafeContracts\Admin\AdminPeriodFilter;
+use SafeContracts\Admin\ImportsPage;
 
 final class ImportRunRepository
 {
@@ -98,12 +100,40 @@ final class ImportRunRepository
     }
 
     /** @return list<array<string,mixed>> */
-    public function recent(int $limit = 20): array
+    public function recent(int $limit = 20, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         global $wpdb;
         $limit = max(1, min(100, $limit));
+
+        // ImportsPage predates the shared admin-read repository. Keep its
+        // existing call surface backwards compatible while allowing the admin
+        // page to use the same strict period query contract as other data pages.
+        if ($dateFrom === null && $dateTo === null && (string) ($_GET['page'] ?? '') === ImportsPage::SLUG) {
+            $period = AdminPeriodFilter::normalize($_GET);
+            if (! empty($period['date_range_error'])) {
+                return [];
+            }
+            $dateFrom = $period['date_from'];
+            $dateTo = $period['date_to'];
+        }
+
         $table = $wpdb->prefix . 'safecontracts_import_runs';
-        $rows = $wpdb->get_results("SELECT id, original_filename, storage_key, file_sha256, file_size, status, selected_sheet, discovery_json, mapping_json, duplicate_strategy, total_rows, valid_rows, imported_rows, skipped_rows, error_rows, created_by, created_at, updated_at FROM {$table} ORDER BY id DESC LIMIT {$limit}", ARRAY_A);
+        $where = ['1 = 1'];
+        $args = [];
+        if ($dateFrom !== null) {
+            $where[] = 'DATE(created_at) >= %s';
+            $args[] = $dateFrom;
+        }
+        if ($dateTo !== null) {
+            $where[] = 'DATE(created_at) <= %s';
+            $args[] = $dateTo;
+        }
+        $args[] = $limit;
+        $sql = "SELECT id, original_filename, storage_key, file_sha256, file_size, status, selected_sheet, discovery_json, mapping_json, duplicate_strategy, total_rows, valid_rows, imported_rows, skipped_rows, error_rows, created_by, created_at, updated_at
+                FROM {$table}
+                WHERE " . implode(' AND ', $where) . '
+                ORDER BY id DESC LIMIT %d';
+        $rows = $wpdb->get_results($wpdb->prepare($sql, ...$args), ARRAY_A);
         return array_map(fn (array $row): array => $this->normalizeRun($row), is_array($rows) ? $rows : []);
     }
 

@@ -62,13 +62,8 @@ final class FollowUpsPage
         if (! current_user_can(Capabilities::ACCESS)) {
             wp_die(__('You do not have permission to access follow-up.', 'safecontracts'));
         }
+        $filters = DashboardFilters::normalize($_GET);
         $service = new FollowUpService();
-        try {
-            $queue = $service->queue(250);
-        } catch (Throwable $error) {
-            unset($error);
-            $queue = [];
-        }
         try {
             $selectedPaymentId = isset($_GET['payment_id']) && $_GET['payment_id'] !== ''
                 ? Input::int($_GET['payment_id'], 'Payment ID', 1)
@@ -77,24 +72,36 @@ final class FollowUpsPage
             unset($error);
             $selectedPaymentId = 0;
         }
+
+        $queue = [];
         $history = [];
-        if ($selectedPaymentId > 0) {
+        if (empty($filters['date_range_error'])) {
             try {
-                $history = $service->history($selectedPaymentId, 100);
+                $queue = $service->queue(250, $filters['date_from'], $filters['date_to']);
             } catch (Throwable $error) {
                 unset($error);
-                $history = [];
+                $queue = [];
+            }
+            if ($selectedPaymentId > 0) {
+                try {
+                    $history = $service->history($selectedPaymentId, 100, $filters['date_from'], $filters['date_to']);
+                } catch (Throwable $error) {
+                    unset($error);
+                    $history = [];
+                }
             }
         }
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Operational receivables', 'safecontracts'); ?></p><h1><?php echo esc_html__('Follow-up', 'safecontracts'); ?></h1></div></div>
+            <?php AdminPeriodFilter::render(self::SLUG, $filters, $selectedPaymentId > 0 ? ['payment_id' => $selectedPaymentId] : []); ?>
+            <p class="description"><?php echo esc_html__('The queue period uses contractual payment due date. When a payment is selected, append-only follow-up history uses the follow-up event creation date.', 'safecontracts'); ?></p>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <h2><?php echo esc_html__('Assigned follow-up queue', 'safecontracts'); ?></h2>
                     <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Due', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Remaining', 'safecontracts'); ?></th><th><?php echo esc_html__('Follow-up state', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($queue as $row) : ?>
-                        <tr><td><?php echo esc_html((string) $row['due_date']); ?></td><td>#<?php echo esc_html((string) $row['contract_id']); ?></td><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => (int) $row['payment_id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) ($row['reference'] ?: '#' . $row['payment_id'])); ?></a></td><td><?php echo esc_html(number_format((float) $row['remaining_amount'], 2)); ?></td><td><?php echo esc_html(self::stateLabel((string) ($row['followup_state'] ?: 'pending'))); ?></td></tr>
+                        <tr><td><?php echo esc_html((string) $row['due_date']); ?></td><td>#<?php echo esc_html((string) $row['contract_id']); ?></td><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => (int) $row['payment_id'], 'date_from' => $filters['date_from'], 'date_to' => $filters['date_to']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) ($row['reference'] ?: '#' . $row['payment_id'])); ?></a></td><td><?php echo esc_html(number_format((float) $row['remaining_amount'], 2)); ?></td><td><?php echo esc_html(self::stateLabel((string) ($row['followup_state'] ?: 'pending'))); ?></td></tr>
                     <?php endforeach; ?>
                     </tbody></table>
                     <p class="description"><?php echo esc_html__('Contractual due date remains the receivable due authority. Promise/deferred dates are operational follow-up state only.', 'safecontracts'); ?></p>

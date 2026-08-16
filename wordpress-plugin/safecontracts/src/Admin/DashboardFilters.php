@@ -10,7 +10,7 @@ use SafeContracts\Payments\PaymentStatus;
 
 final class DashboardFilters
 {
-    /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} */
+    /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string,date_from:?string,date_to:?string,date_range_error:bool} */
     public static function normalize(array $input): array
     {
         $customerId = self::id($input['customer_id'] ?? null);
@@ -28,11 +28,17 @@ final class DashboardFilters
             $status = '';
         }
 
+        // Keep the legacy payment due-range contract for API/admin backwards
+        // compatibility. The new generic display period below never swaps an
+        // inverted request: it rejects it so the UI cannot silently change the
+        // operator's intended range.
         $dueFrom = self::date($input['due_from'] ?? null);
         $dueTo = self::date($input['due_to'] ?? null);
         if ($dueFrom !== null && $dueTo !== null && $dueTo < $dueFrom) {
             [$dueFrom, $dueTo] = [$dueTo, $dueFrom];
         }
+
+        $period = AdminPeriodFilter::normalize($input);
 
         return [
             'customer_id' => $customerId,
@@ -41,6 +47,9 @@ final class DashboardFilters
             'status' => $status,
             'due_from' => $dueFrom,
             'due_to' => $dueTo,
+            'date_from' => $period['date_from'],
+            'date_to' => $period['date_to'],
+            'date_range_error' => $period['date_range_error'],
         ];
     }
 

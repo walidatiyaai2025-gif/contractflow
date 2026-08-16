@@ -226,9 +226,10 @@ sc_p10v_assert($exportDenied instanceof WP_Error && ($exportDenied->data['status
 $GLOBALS['sc_test_current_caps'][Capabilities::EXPORT_REPORTS] = true;
 sc_p10v_assert(ExcelExportController::canExport() === true, 'P10-026 assigned user with explicit export capability may request server export');
 $exportController = sc_p10v_source('wordpress-plugin/safecontracts/src/Rest/ExcelExportController.php');
-foreach (['DashboardFilters::normalize($input)', 'queue(500)', 'current_user_can(Capabilities::VIEW_ALL)', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'] as $needle) {
-    sc_p10v_assert(str_contains($exportSource, $needle), 'P10-026 server export contract remains scoped/bounded/stable: ' . $needle);
+foreach (['DashboardFilters::normalize($input)', 'current_user_can(Capabilities::VIEW_ALL)', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'] as $needle) {
+    sc_p10v_assert(str_contains($exportSource, $needle), 'P10-026 server export contract remains scoped/stable: ' . $needle);
 }
+sc_p10v_assert(str_contains($exportSource, 'queue(500,') && str_contains($exportSource, "\$filters['date_from']") && str_contains($exportSource, "\$filters['date_to']"), 'P10-026 follow-up export remains bounded to 500 rows while forwarding the normalized server-side period');
 sc_p10v_assert(str_contains($exportController, "'encoding' => 'base64'"), 'P10-026 REST export declares transport encoding');
 foreach (['password', 'private_key', 'service_account'] as $secretField) {
     sc_p10v_assert(! str_contains(strtolower($exportSource . $exportController), $secretField), 'P10-026 export surface contains no secret field contract: ' . $secretField);

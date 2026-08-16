@@ -14,6 +14,7 @@ $lang      = safecontracts_current_lang();
 $direction = safecontracts_direction();
 $demo_url  = safecontracts_button_link( 'header_demo' );
 $login_url = safecontracts_button_link( 'header_login' );
+$apk_url   = safecontracts_apk_download_url();
 ?>
 <!doctype html>
 <html lang="<?php echo esc_attr( $lang ); ?>" dir="<?php echo esc_attr( $direction ); ?>">
@@ -61,6 +62,9 @@ $login_url = safecontracts_button_link( 'header_login' );
 				<span aria-hidden="true">/</span>
 				<a class="<?php echo 'en' === $lang ? 'is-current' : ''; ?>" href="<?php echo safecontracts_language_url( 'en' ); ?>" lang="en">EN</a>
 			</div>
+			<?php if ( '' !== $apk_url ) : ?>
+				<a class="sc-btn sc-btn-ghost sc-header-apk" href="<?php echo esc_url( $apk_url ); ?>" rel="noopener"><?php echo esc_html( safecontracts_apk_download_label() ); ?></a>
+			<?php endif; ?>
 			<a class="sc-btn sc-btn-ghost sc-header-demo" href="<?php echo esc_url( $demo_url ); ?>"><?php echo esc_html( $copy['actions']['demo'] ); ?></a>
 			<a class="sc-btn sc-btn-solid sc-header-login" href="<?php echo esc_url( $login_url ); ?>"><?php echo esc_html( $copy['actions']['login'] ); ?></a>
 		</div>

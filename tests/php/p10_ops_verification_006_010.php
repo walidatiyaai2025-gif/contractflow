@@ -110,7 +110,7 @@ sc_p10b_assert(ExcelExportController::canExport() === true, 'P10-010 authorized 
 $exportSource = sc_p10b_source('wordpress-plugin/safecontracts/src/Reports/ReportExportService.php');
 $controllerSource = sc_p10b_source('wordpress-plugin/safecontracts/src/Rest/ExcelExportController.php');
 sc_p10b_assert(str_contains($exportSource, 'DashboardFilters::normalize($input)'), 'P10-010 export normalizes the same server-side dashboard filter contract');
-sc_p10b_assert(str_contains($exportSource, 'queue(500)'), 'P10-010 follow-up export retains a bounded server-side read');
+sc_p10b_assert(str_contains($exportSource, 'queue(500,') && str_contains($exportSource, "\$filters['date_from']") && str_contains($exportSource, "\$filters['date_to']"), 'P10-010 follow-up export retains a bounded server-side read and forwards the normalized display period');
 sc_p10b_assert(str_contains($exportSource, "current_user_can(Capabilities::VIEW_ALL)"), 'P10-010 accountant filter widening is conditional on explicit view-all capability');
 sc_p10b_assert(str_contains($exportSource, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), 'P10-010 server produces a stable XLSX content type');
 sc_p10b_assert(str_contains($controllerSource, "'encoding' => 'base64'"), 'P10-010 REST download wraps server-generated workbook in explicit transport encoding');
