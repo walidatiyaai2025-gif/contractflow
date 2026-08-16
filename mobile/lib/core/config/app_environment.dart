@@ -57,7 +57,8 @@ final class AppEnvironment {
       );
     }
     if (_containsTraversal(uri.pathSegments)) {
-      throw FormatException('ESC_API_BASE_URL must not contain path traversal.');
+      throw FormatException(
+          'ESC_API_BASE_URL must not contain path traversal.');
     }
 
     final normalizedPath = uri.path.endsWith('/') ? uri.path : '${uri.path}/';
