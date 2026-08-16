@@ -56,6 +56,50 @@
   color: #854d0e;
 }
 
+.safecontracts-translations__table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.safecontracts-translations__table {
+  min-width: 1120px;
+  table-layout: fixed;
+}
+
+.safecontracts-translations__table th:first-child,
+.safecontracts-translations__table td:first-child {
+  width: 180px;
+}
+
+.safecontracts-translations__table td {
+  vertical-align: top;
+}
+
+.safecontracts-translations__table textarea {
+  width: 100%;
+  min-height: 78px;
+  resize: vertical;
+}
+
+.safecontracts-translations__table code {
+  display: inline-flex;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.safecontracts-translations__table small {
+  overflow-wrap: anywhere;
+}
+
+.safecontracts-translations__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
 [dir="rtl"] .safecontracts-settings-card,
 .rtl .safecontracts-settings-card {
   text-align: right;
@@ -70,5 +114,14 @@
   .safecontracts-settings-card select,
   .safecontracts-settings-card textarea {
     width: 100%;
+  }
+
+  .safecontracts-translations__table {
+    min-width: 920px;
+  }
+
+  .safecontracts-translations__actions .button {
+    flex: 1 1 180px;
+    text-align: center;
   }
 }

@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once get_theme_file_path( '/inc/i18n.php' );
 require_once get_theme_file_path( '/inc/admin-settings.php' );
+require_once get_theme_file_path( '/inc/translation-overrides.php' );
 require_once get_theme_file_path( '/inc/button-links.php' );
 require_once get_theme_file_path( '/inc/admin-branding.php' );
 

@@ -9,6 +9,7 @@ use SafeContracts\Deletion\SafeDeletionService;
 use SafeContracts\Payments\PaymentService;
 use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
 final class PaymentsPage
@@ -107,7 +108,7 @@ final class PaymentsPage
                             <td><?php echo esc_html((string) $payment['due_date']); ?></td>
                             <td><?php echo esc_html((string) $payment['contract_number']); ?></td>
                             <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => (int) $payment['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) ($payment['reference'] ?: '#' . $payment['sequence_no'])); ?></a></td>
-                            <td><?php echo esc_html((string) $payment['status']); ?></td>
+                            <td><?php echo esc_html(self::statusLabel((string) $payment['status'])); ?></td>
                             <td><?php echo esc_html(number_format((float) $payment['remaining_amount'], 2)); ?></td>
                             <td>
                                 <div class="safecontracts-dashboard-table-actions">
@@ -117,7 +118,7 @@ final class PaymentsPage
                                             <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
                                             <input type="hidden" name="payment_id" value="<?php echo esc_attr((string) $payment['id']); ?>">
                                             <?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $payment['id']); ?>
-                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?> / حذف</button>
+                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
                                         </form>
                                     <?php endif; ?>
                                 </div>
@@ -151,5 +152,10 @@ final class PaymentsPage
             </div>
         </div>
         <?php
+    }
+
+    private static function statusLabel(string $status): string
+    {
+        return TranslationCatalog::text(ucwords(str_replace('_', ' ', $status)));
     }
 }

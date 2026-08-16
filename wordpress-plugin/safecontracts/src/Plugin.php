@@ -22,6 +22,7 @@ use SafeContracts\Admin\NotificationsPage;
 use SafeContracts\Admin\PaymentMethodsPage;
 use SafeContracts\Admin\PaymentsPage;
 use SafeContracts\Admin\ReportsPage;
+use SafeContracts\Admin\TranslationsPage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Audit\AuditRecorder;
 use SafeContracts\Audit\ContractArchiveAuditRecorder;
@@ -31,6 +32,9 @@ use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Rest\Router;
+use SafeContracts\Translations\AdminArabicDefaults;
+use SafeContracts\Translations\RuntimeLabels;
+use SafeContracts\Translations\TranslationCatalog;
 
 final class Plugin
 {
@@ -54,6 +58,11 @@ final class Plugin
 
         $this->booted = true;
 
+        // SafeContracts translations are intentionally scoped to the plugin
+        // text domain. They never mutate WordPress site/user locale settings.
+        TranslationCatalog::register();
+        AdminArabicDefaults::register();
+        RuntimeLabels::register();
         MobileBearerAuthentication::register();
         FirebaseAccessTokenProvider::register();
         (new Migrator())->maybeMigrate();
@@ -80,6 +89,7 @@ final class Plugin
         add_action('admin_menu', [NotificationSettingsPage::class, 'register'], 32);
         add_action('admin_menu', [FirebaseSettingsPage::class, 'register'], 33);
         add_action('admin_menu', [MobileConfigurationPage::class, 'register'], 34);
+        add_action('admin_menu', [TranslationsPage::class, 'register'], 35);
         add_action('admin_enqueue_scripts', [AdminShell::class, 'enqueueAssets']);
         add_action('admin_enqueue_scripts', [AdminFeedback::class, 'enqueueAssets'], 20);
         add_action('admin_notices', [AdminFeedback::class, 'render']);
@@ -108,6 +118,7 @@ final class Plugin
         add_action('admin_post_' . FirebaseSettingsPage::TEST_ACTION, [FirebaseSettingsPage::class, 'handleTest']);
         add_action('admin_post_' . FirebaseSettingsPage::TEST_PUSH_ACTION, [FirebaseSettingsPage::class, 'handleTestPush']);
         add_action('admin_post_' . MobileConfigurationPage::SAVE_ACTION, [MobileConfigurationPage::class, 'handleSave']);
+        add_action('admin_post_' . TranslationsPage::SAVE_ACTION, [TranslationsPage::class, 'handleSave']);
         do_action('safecontracts_loaded');
     }
 }

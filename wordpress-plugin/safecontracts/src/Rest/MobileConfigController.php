@@ -6,6 +6,7 @@ namespace SafeContracts\Rest;
 
 use SafeContracts\Settings\GeneralSettings;
 use SafeContracts\Settings\MobileConfiguration;
+use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 use WP_Error;
 use WP_REST_Request;
@@ -41,6 +42,7 @@ final class MobileConfigController
                     'push_notifications' => $config['push_notifications_enabled'],
                     'collection_entry' => $config['collection_entry_enabled'],
                 ],
+                'translation_overrides' => TranslationCatalog::mobileOverrides(),
             ]);
         } catch (Throwable $error) {
             return RequestGuard::failure($error, 'safecontracts_mobile_config_failed');

@@ -54,7 +54,7 @@ final class AdminFeedback
                     <strong><?php echo esc_html($title); ?></strong>
                     <p><?php echo esc_html($message); ?></p>
                 </div>
-                <button type="button" class="safecontracts-toast__close" data-safecontracts-toast-close aria-label="<?php echo esc_attr(self::isArabic() ? 'إغلاق الرسالة' : 'Close message'); ?>">×</button>
+                <button type="button" class="safecontracts-toast__close" data-safecontracts-toast-close aria-label="<?php echo esc_attr__('Close message', 'safecontracts'); ?>">×</button>
             </div>
         </div>
         <?php
@@ -67,15 +67,16 @@ final class AdminFeedback
             return null;
         }
 
-        $ar = self::isArabic();
         return match ($status) {
-            'saved' => ['success', $ar ? 'تم الحفظ' : 'Saved', $ar ? 'تم حفظ البيانات بنجاح.' : 'Your changes were saved successfully.'],
-            'invalid' => ['error', $ar ? 'راجع البيانات' : 'Check the form', $ar ? 'تعذر الحفظ. راجع الحقول المطلوبة وصحة القيم ثم حاول مرة أخرى.' : 'The record could not be saved. Check required fields and entered values, then try again.'],
-            'archived', 'deleted' => ['success', $ar ? 'تم الحذف الآمن' : 'Safely deleted', $ar ? 'تمت إزالة العنصر من العمليات النشطة مع الحفاظ على السجل التاريخي والمالي وسجل التدقيق عند الحاجة.' : 'The item was removed from active operations while required historical, financial and audit evidence was preserved.'],
-            'archive_failed', 'delete_failed' => ['error', $ar ? 'تعذر الحذف' : 'Delete failed', $ar ? 'لم يتم الحذف. قد يكون العنصر محمياً بسجلات مرتبطة أو لا تسمح الصلاحيات الحالية بهذه العملية.' : 'The item could not be deleted. It may be protected by linked records or the current permissions may not allow this operation.'],
-            'uploaded' => ['success', $ar ? 'تم الرفع' : 'Uploaded', $ar ? 'تم رفع الملف بنجاح.' : 'The file was uploaded successfully.'],
-            'upload_failed' => ['error', $ar ? 'فشل الرفع' : 'Upload failed', $ar ? 'تعذر رفع الملف. راجع الملف والبيانات ثم حاول مرة أخرى.' : 'The file could not be uploaded. Check the file and input, then try again.'],
-            'executed' => ['success', $ar ? 'تم التنفيذ' : 'Completed', $ar ? 'تم تنفيذ العملية بنجاح.' : 'The operation completed successfully.'],
+            'saved' => ['success', __('Saved', 'safecontracts'), __('Your changes were saved successfully.', 'safecontracts')],
+            'invalid' => ['error', __('Check the form', 'safecontracts'), __('The record could not be saved. Check required fields and entered values, then try again.', 'safecontracts')],
+            'archived', 'deleted' => ['success', __('Safely deleted', 'safecontracts'), __('The item was removed from active operations while required historical, financial and audit evidence was preserved.', 'safecontracts')],
+            'archive_failed', 'delete_failed' => ['error', __('Delete failed', 'safecontracts'), __('The item could not be deleted. It may be protected by linked records or the current permissions may not allow this operation.', 'safecontracts')],
+            'uploaded' => ['success', __('Uploaded', 'safecontracts'), __('The file was uploaded successfully.', 'safecontracts')],
+            'upload_failed' => ['error', __('Upload failed', 'safecontracts'), __('The file could not be uploaded. Check the file and input, then try again.', 'safecontracts')],
+            'executed' => ['success', __('Completed', 'safecontracts'), __('The operation completed successfully.', 'safecontracts')],
+            'translations_saved' => ['success', __('Saved', 'safecontracts'), __('Translations saved.', 'safecontracts')],
+            'translations_reset' => ['success', __('Saved', 'safecontracts'), __('Translations reset.', 'safecontracts')],
             default => null,
         };
     }
@@ -83,19 +84,12 @@ final class AdminFeedback
     /** @return array<string,string> */
     private static function clientMessages(): array
     {
-        $ar = self::isArabic();
         return [
-            'validationTitle' => $ar ? 'راجع البيانات' : 'Check the form',
-            'validationMessage' => $ar ? 'يرجى استكمال الحقول المطلوبة والتأكد من صحة القيم قبل المتابعة.' : 'Complete required fields and correct invalid values before continuing.',
-            'fieldPrefix' => $ar ? 'أول حقل يحتاج مراجعة:' : 'First field to review:',
-            'deleteConfirm' => $ar ? 'هل أنت متأكد من الحذف؟ سيتم إخراج السجل من العمليات النشطة مع الحفاظ على السجل التاريخي والمالي عند الحاجة.' : 'Delete this record from active SafeContracts operations? Required historical and financial evidence will be preserved.',
-            'closeLabel' => $ar ? 'إغلاق الرسالة' : 'Close message',
+            'validationTitle' => __('Check the form', 'safecontracts'),
+            'validationMessage' => __('Complete required fields and correct invalid values before continuing.', 'safecontracts'),
+            'fieldPrefix' => __('First field to review:', 'safecontracts'),
+            'deleteConfirm' => __('Delete this record from active SafeContracts operations? Required historical and financial evidence will be preserved.', 'safecontracts'),
+            'closeLabel' => __('Close message', 'safecontracts'),
         ];
-    }
-
-    private static function isArabic(): bool
-    {
-        $locale = function_exists('get_user_locale') ? (string) get_user_locale() : (function_exists('get_locale') ? (string) get_locale() : 'en_US');
-        return str_starts_with(strtolower($locale), 'ar');
     }
 }

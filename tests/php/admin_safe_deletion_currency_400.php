@@ -32,6 +32,7 @@ $read = sc_400_source('wordpress-plugin/safecontracts/src/Admin/AdminReadReposit
 $dashboard = sc_400_source('wordpress-plugin/safecontracts/src/Admin/DashboardPage.php');
 $feedbackJs = sc_400_source('wordpress-plugin/safecontracts/assets/admin/safecontracts-admin-feedback.js');
 $followups = sc_400_source('wordpress-plugin/safecontracts/src/FollowUps/FollowUpRepository.php');
+$translationCatalog = sc_400_source('wordpress-plugin/safecontracts/src/Translations/TranslationCatalog.php');
 
 // Safe-delete semantics: no physical financial/history deletion.
 sc_400_assert(! str_contains(strtoupper($deletion), 'DELETE FROM'), '#400 safe deletion service contains no SQL hard delete');
@@ -51,7 +52,7 @@ foreach (['is_archived', 'archived_by', 'archived_at', 'archived_payment_date', 
 sc_400_assert(str_contains($migrator, "public const LATEST_VERSION = '1.12.0';"), '#400 migrator latest version is 1.12.0');
 sc_400_assert(str_contains($migrator, "'1.12.0' => Migration0013SafeDeletion::class"), '#400 migration 1.12.0 is registered');
 
-// Every requested admin surface has capability+nonce Delete/حذف wiring.
+// Every requested admin surface has capability+nonce localized Delete wiring.
 $pageContracts = [
     'wordpress-plugin/safecontracts/src/Admin/CustomersPage.php' => ['DELETE_ACTION', 'archiveCustomer', 'MANAGE_REFERENCE_DATA'],
     'wordpress-plugin/safecontracts/src/Admin/ContractsPage.php' => ['DELETE_ACTION', 'ContractArchiveService', 'MANAGE_SYSTEM'],
@@ -66,8 +67,10 @@ foreach ($pageContracts as $path => $markers) {
     }
     sc_400_assert(str_contains($source, 'check_admin_referer'), '#400 delete page uses nonce protection: ' . $path);
     sc_400_assert(str_contains($source, 'data-safecontracts-delete-form'), '#400 delete page uses explicit confirmation: ' . $path);
-    sc_400_assert(str_contains($source, 'Delete') && str_contains($source, 'حذف'), '#400 delete action is bilingual: ' . $path);
+    sc_400_assert(str_contains($source, "esc_html__('Delete', 'safecontracts')"), '#400 delete action uses SafeContracts localization domain: ' . $path);
+    sc_400_assert(! str_contains($source, 'Delete / حذف') && ! str_contains($source, ' / حذف'), '#404 delete action no longer hard-codes two languages: ' . $path);
 }
+sc_400_assert(str_contains($translationCatalog, "'Delete' => 'حذف'"), '#400/#404 central catalog preserves Arabic delete translation');
 
 foreach (['CustomersPage::DELETE_ACTION', 'ContractsPage::DELETE_ACTION', 'PaymentsPage::DELETE_ACTION', 'CollectionsPage::DELETE_ACTION', 'PaymentMethodsPage::DELETE_ACTION'] as $marker) {
     sc_400_assert(str_contains($plugin, $marker), '#400 plugin boots delete handler: ' . $marker);
@@ -94,4 +97,4 @@ sc_400_assert(str_contains($feedbackJs, 'form.dataset.deleteMessage'), '#400 del
 sc_400_assert(! str_contains($plugin, "add_filter('locale'") && ! str_contains($plugin, 'switch_to_locale'), '#400 plugin bootstrap does not force WordPress locale');
 sc_400_assert(! str_contains($deletion, "add_filter('locale'") && ! str_contains($deletion, 'switch_to_locale'), '#400 safe deletion does not alter WordPress locale');
 
-printf("SafeContracts issue #400 admin safe-delete/currency regression passed (%d assertions).\n", $tests);
+printf("SafeContracts issue #400/#404 admin safe-delete/currency localization regression passed (%d assertions).\n", $tests);

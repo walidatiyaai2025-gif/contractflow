@@ -53,7 +53,6 @@ final class _SafeContractsLoginScreenState
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     final scheme = Theme.of(context).colorScheme;
-    final isArabic = Directionality.of(context) == TextDirection.rtl;
     final selectedLanguage = widget.languageCode == 'ar' ? 'ar' : 'en';
     return Scaffold(
       body: DecoratedBox(
@@ -85,11 +84,15 @@ final class _SafeContractsLoginScreenState
                         Align(
                           alignment: AlignmentDirectional.centerEnd,
                           child: SegmentedButton<String>(
-                            segments: const <ButtonSegment<String>>[
+                            segments: <ButtonSegment<String>>[
                               ButtonSegment<String>(
-                                  value: 'en', label: Text('English')),
+                                value: 'en',
+                                label: Text(l10n.t('English')),
+                              ),
                               ButtonSegment<String>(
-                                  value: 'ar', label: Text('العربية')),
+                                value: 'ar',
+                                label: Text(l10n.t('Arabic')),
+                              ),
                             ],
                             selected: <String>{selectedLanguage},
                             onSelectionChanged: submitting ||
@@ -127,7 +130,7 @@ final class _SafeContractsLoginScreenState
                         ),
                         const SizedBox(height: 18),
                         Text(
-                          'SafeContracts',
+                          l10n.t('SafeContracts'),
                           style: Theme.of(context)
                               .textTheme
                               .headlineMedium
@@ -220,12 +223,11 @@ final class _SafeContractsLoginScreenState
                                       contentPadding: EdgeInsets.zero,
                                       controlAffinity:
                                           ListTileControlAffinity.leading,
-                                      title: Text(
-                                          isArabic ? 'تذكرني' : 'Remember me'),
+                                      title: Text(l10n.t('Remember me')),
                                       subtitle: Text(
-                                        isArabic
-                                            ? 'احتفظ بتسجيل الدخول على هذا الجهاز. لا يتم حفظ كلمة المرور.'
-                                            : 'Keep me signed in on this device. Your password is never stored.',
+                                        l10n.t(
+                                          'Keep me signed in on this device. Your password is never stored.',
+                                        ),
                                       ),
                                     ),
                                     if (widget.controller.errorMessage !=

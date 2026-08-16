@@ -7,6 +7,7 @@ namespace SafeContracts\Admin;
 use SafeContracts\FollowUps\FollowUpService;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Support\Input;
+use SafeContracts\Translations\RuntimeLabels;
 use Throwable;
 
 final class FollowUpsPage
@@ -93,7 +94,7 @@ final class FollowUpsPage
                     <h2><?php echo esc_html__('Assigned follow-up queue', 'safecontracts'); ?></h2>
                     <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Due', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Remaining', 'safecontracts'); ?></th><th><?php echo esc_html__('Follow-up state', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($queue as $row) : ?>
-                        <tr><td><?php echo esc_html((string) $row['due_date']); ?></td><td>#<?php echo esc_html((string) $row['contract_id']); ?></td><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => (int) $row['payment_id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) ($row['reference'] ?: '#' . $row['payment_id'])); ?></a></td><td><?php echo esc_html(number_format((float) $row['remaining_amount'], 2)); ?></td><td><?php echo esc_html((string) ($row['followup_state'] ?: 'pending')); ?></td></tr>
+                        <tr><td><?php echo esc_html((string) $row['due_date']); ?></td><td>#<?php echo esc_html((string) $row['contract_id']); ?></td><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => (int) $row['payment_id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) ($row['reference'] ?: '#' . $row['payment_id'])); ?></a></td><td><?php echo esc_html(number_format((float) $row['remaining_amount'], 2)); ?></td><td><?php echo esc_html(self::stateLabel((string) ($row['followup_state'] ?: 'pending'))); ?></td></tr>
                     <?php endforeach; ?>
                     </tbody></table>
                     <p class="description"><?php echo esc_html__('Contractual due date remains the receivable due authority. Promise/deferred dates are operational follow-up state only.', 'safecontracts'); ?></p>
@@ -113,11 +114,16 @@ final class FollowUpsPage
                         </form>
                         <?php endif; ?>
                         <h3><?php echo esc_html__('Append-only history', 'safecontracts'); ?></h3>
-                        <table class="widefat striped"><thead><tr><th><?php echo esc_html__('When', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Promise / defer', 'safecontracts'); ?></th><th><?php echo esc_html__('Note', 'safecontracts'); ?></th></tr></thead><tbody><?php foreach ($history as $event) : ?><tr><td><?php echo esc_html((string) $event['created_at']); ?></td><td><?php echo esc_html((string) $event['state']); ?></td><td><?php echo esc_html(trim((string) ($event['promised_date'] ?? '') . ' ' . (string) ($event['deferred_until'] ?? ''))); ?></td><td><?php echo esc_html((string) ($event['note'] ?? '')); ?></td></tr><?php endforeach; ?></tbody></table>
+                        <table class="widefat striped"><thead><tr><th><?php echo esc_html__('When', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Promise / defer', 'safecontracts'); ?></th><th><?php echo esc_html__('Note', 'safecontracts'); ?></th></tr></thead><tbody><?php foreach ($history as $event) : ?><tr><td><?php echo esc_html((string) $event['created_at']); ?></td><td><?php echo esc_html(self::stateLabel((string) $event['state'])); ?></td><td><?php echo esc_html(trim((string) ($event['promised_date'] ?? '') . ' ' . (string) ($event['deferred_until'] ?? ''))); ?></td><td><?php echo esc_html((string) ($event['note'] ?? '')); ?></td></tr><?php endforeach; ?></tbody></table>
                     <?php endif; ?>
                 </section>
             </div>
         </div>
         <?php
+    }
+
+    private static function stateLabel(string $state): string
+    {
+        return RuntimeLabels::text(ucwords(str_replace('_', ' ', $state)));
     }
 }
