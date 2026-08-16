@@ -17,6 +17,12 @@ $assertContains = static function (string $needle, string $haystack, string $mes
         exit(1);
     }
 };
+$assertNotContains = static function (string $needle, string $haystack, string $message): void {
+    if (str_contains($haystack, $needle)) {
+        fwrite(STDERR, "FAIL: {$message}\n");
+        exit(1);
+    }
+};
 
 $contractsPage = $read('wordpress-plugin/safecontracts/src/Admin/ContractsPage.php');
 foreach ([
@@ -100,20 +106,48 @@ foreach ([
 }
 
 $email = $read('wordpress-plugin/safecontracts/src/Notifications/EmailDeliveryService.php');
+$direct = $read('wordpress-plugin/safecontracts/src/Notifications/DirectNotificationService.php');
+$smtpSettings = $read('wordpress-plugin/safecontracts/src/Notifications/SmtpSettings.php');
+$smtpTransport = $read('wordpress-plugin/safecontracts/src/Notifications/DirectSmtpTransport.php');
 foreach ([
     "\$user->user_email",
-    "'From: ' . \$config['from_name'] . ' <' . \$config['from_address'] . '>'",
-    'wp_mail(',
+    'SmtpSettings',
+    'DirectSmtpTransport',
     "'recipient_email_unavailable'",
-    "'wp_mail_failed'",
     "'email'",
 ] as $emailContract) {
-    $assertContains($emailContract, $email, 'email delivery must use WordPress user email, configured sender identity and delivery logging: ' . $emailContract);
+    $assertContains($emailContract, $email, 'email delivery must use WordPress user email with direct SMTP delivery logging: ' . $emailContract);
+}
+$assertContains('DirectSmtpTransport', $direct, 'direct one-user email must use the same direct SMTP transport');
+$assertNotContains('wp_mail(', $email, 'scheduled email delivery must bypass WordPress wp_mail');
+$assertNotContains('wp_mail(', $direct, 'direct email delivery must bypass WordPress wp_mail');
+foreach (['safecontracts_notification_smtp_host', 'safecontracts_notification_smtp_port', 'safecontracts_notification_smtp_password', 'aes-256-gcm', 'password_configured'] as $smtpSettingContract) {
+    $assertContains($smtpSettingContract, $smtpSettings, 'SMTP settings must retain encrypted connection configuration: ' . $smtpSettingContract);
+}
+foreach (['stream_socket_client(', 'STARTTLS', 'AUTH LOGIN', 'MAIL FROM:<', 'RCPT TO:<', 'Content-Type: text/plain; charset=UTF-8'] as $smtpTransportContract) {
+    $assertContains($smtpTransportContract, $smtpTransport, 'direct SMTP transport must perform the SMTP protocol itself: ' . $smtpTransportContract);
+}
+$assertNotContains('wp_mail(', $smtpTransport, 'direct SMTP transport must never call WordPress wp_mail');
+
+$smtpControl = $read('wordpress-plugin/safecontracts/src/Admin/DirectSmtpSettingsControl.php');
+foreach ([
+    "public const ACTION = 'safecontracts_direct_smtp_save'",
+    'check_admin_referer(self::ACTION)',
+    'Capabilities::MANAGE_NOTIFICATIONS',
+    'SMTP host',
+    'SMTP port',
+    'SMTP username',
+    'SMTP password',
+    'Save Direct SMTP Settings',
+    'WordPress wp_mail and WordPress SMTP plugins are bypassed.',
+] as $smtpUiContract) {
+    $assertContains($smtpUiContract, $smtpControl, 'Notification Center must expose guarded Direct SMTP settings: ' . $smtpUiContract);
 }
 
 $emailTest = $read('wordpress-plugin/safecontracts/src/Admin/NotificationEmailTestControl.php');
 foreach ([
     "public const ACTION = 'safecontracts_notification_email_test'",
+    'DirectSmtpSettingsControl::register();',
     "add_action('admin_post_' . self::ACTION, [self::class, 'handle'])",
     'check_admin_referer(self::ACTION)',
     'Capabilities::MANAGE_NOTIFICATIONS',
@@ -123,8 +157,9 @@ foreach ([
     'EmailSettings::validEmail($email)',
     'Send test email',
     'safecontracts_email_test',
+    'Direct SMTP',
 ] as $emailTestContract) {
-    $assertContains($emailTestContract, $emailTest, 'one-click email test must use the real guarded email path: ' . $emailTestContract);
+    $assertContains($emailTestContract, $emailTest, 'one-click email test must use the real guarded Direct SMTP path: ' . $emailTestContract);
 }
 
 $plugin = $read('wordpress-plugin/safecontracts/src/Plugin.php');
@@ -138,4 +173,4 @@ foreach ([
     $assertContains($wireContract, $plugin, 'plugin bootstrap must keep responsible-accountant/email handlers wired: ' . $wireContract);
 }
 
-echo "Responsible accountant -> scoped data -> notification/email regression checks passed.\n";
+echo "Responsible accountant -> scoped data -> direct SMTP notification/email regression checks passed.\n";
