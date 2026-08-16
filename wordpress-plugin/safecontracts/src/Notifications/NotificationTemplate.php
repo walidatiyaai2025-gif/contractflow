@@ -85,7 +85,7 @@ final class NotificationTemplate
 
     private static function normalizeText(mixed $value, int $maxLength, string $field): string
     {
-        $text = trim(wp_strip_all_tags((string) $value));
+        $text = trim(strip_tags((string) $value));
         if ($text === '' || strlen($text) > $maxLength) {
             throw new InvalidArgumentException("{$field} is required and must not exceed {$maxLength} characters.");
         }
@@ -105,7 +105,7 @@ final class NotificationTemplate
             if (! is_scalar($value) && $value !== null) {
                 throw new InvalidArgumentException("Notification template context {$key} must be scalar.");
             }
-            return trim(wp_strip_all_tags((string) $value));
+            return trim(strip_tags((string) $value));
         }, $text);
 
         if (! is_string($rendered)) {
