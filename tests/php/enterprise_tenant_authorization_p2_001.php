@@ -66,8 +66,8 @@ esc_p2_auth_assert(! AccessScope::canAccess(), 'tenant membership never replaces
 
 $root = dirname(__DIR__, 2);
 $guardSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/CoreTenantRestGuard.php');
-$resolvePosition = strpos($guardSource, 'TenantRequestContext::resolve($request, true)');
-$accessPosition = strpos($guardSource, 'Permission::access()');
+$resolvePosition = strpos($guardSource, '$tenantId = TenantRequestContext::resolve($request, true);');
+$accessPosition = strpos($guardSource, '$access = Permission::access();');
 esc_p2_auth_assert($resolvePosition !== false && $accessPosition !== false && $resolvePosition < $accessPosition, 'core REST guard locks tenant context before tenant-aware authorization');
 
 $scopeSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Roles/AccessScope.php');
