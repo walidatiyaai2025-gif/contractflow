@@ -199,8 +199,10 @@ def main() -> None:
         (
             f'namespace = "{SAFE_APPLICATION_ID}"',
             f'applicationId = "{SAFE_APPLICATION_ID}"',
-            "SC_ANDROID_KEYSTORE_PATH",
-            "SC_ANDROID_KEYSTORE_PASSWORD",
+            'System.getenv("SC_ANDROID_KEYSTORE_PATH")',
+            'System.getenv("SC_ANDROID_KEYSTORE_PASSWORD")',
+            'System.getenv("SC_ANDROID_KEY_ALIAS")',
+            'System.getenv("SC_ANDROID_KEY_PASSWORD")',
         ),
         "ESC Android Gradle contract",
     )
