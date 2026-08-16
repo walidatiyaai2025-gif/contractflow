@@ -29,6 +29,12 @@ final class AuditRecorder
         'safecontracts_import_mapping_saved',
         'safecontracts_import_validated',
         'safecontracts_import_completed',
+        'safecontracts_notification_rule_saved',
+        'safecontracts_notification_template_saved',
+        'safecontracts_notification_suppression_changed',
+        'safecontracts_direct_notification_sent',
+        'safecontracts_role_capabilities_changed',
+        'safecontracts_user_role_changed',
     ];
 
     public static function register(): void
@@ -119,6 +125,31 @@ final class AuditRecorder
                 'payment', (int) ($args[1] ?? 0), 'followup_recorded', (int) ($args[3] ?? 0), null,
                 ['followup_id' => (int) ($args[0] ?? 0), 'state' => $args[2] ?? null],
                 ['promised_date' => $args[4] ?? null, 'deferred_until' => $args[5] ?? null],
+            ],
+            'safecontracts_notification_rule_saved' => [
+                'notification_rule', null, 'notification_rule_saved', (int) ($args[1] ?? 0), null,
+                ['code' => (string) ($args[0] ?? '')],
+                is_array($args[2] ?? null) ? $args[2] : null,
+            ],
+            'safecontracts_notification_template_saved' => [
+                'notification_template', null, 'notification_template_saved', (int) ($args[1] ?? 0), null,
+                ['code' => (string) ($args[0] ?? '')], null,
+            ],
+            'safecontracts_notification_suppression_changed' => [
+                (string) ($args[0] ?? 'notification'), (int) ($args[1] ?? 0), 'notification_suppression_changed', (int) ($args[4] ?? 0), null,
+                ['suppressed' => (bool) ($args[2] ?? false)], ['reason' => (string) ($args[3] ?? '')],
+            ],
+            'safecontracts_direct_notification_sent' => [
+                'user', (int) ($args[0] ?? 0), 'direct_notification_sent', (int) ($args[2] ?? 0), null,
+                is_array($args[1] ?? null) ? $args[1] : null, null,
+            ],
+            'safecontracts_role_capabilities_changed' => [
+                'role', null, 'role_capabilities_changed', (int) ($args[2] ?? 0), null,
+                ['role' => (string) ($args[0] ?? ''), 'capabilities' => is_array($args[1] ?? null) ? $args[1] : []], null,
+            ],
+            'safecontracts_user_role_changed' => [
+                'user', (int) ($args[0] ?? 0), 'user_role_changed', (int) ($args[2] ?? 0), null,
+                ['role' => (string) ($args[1] ?? '')], null,
             ],
             'safecontracts_export_completed' => self::externalEvent('export', 'export_completed', $args),
             'safecontracts_import_uploaded' => self::externalEvent('import', 'import_uploaded', $args),
