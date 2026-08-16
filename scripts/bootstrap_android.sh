@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
 FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
-BRAND_SOURCE="$ROOT/mobile/lib/core/branding/safe_contracts_brand.dart"
+BRAND_SOURCE="$ROOT/mobile/assets/brand/safe_contracts_identity.jpg"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
@@ -74,21 +74,13 @@ PY
 BRAND_ICON="android/app/src/main/res/drawable-nodpi/safe_contracts_brand.jpg"
 mkdir -p "$(dirname "$BRAND_ICON")"
 python3 - "$BRAND_SOURCE" "$BRAND_ICON" <<'PY'
-import base64
 from pathlib import Path
-import re
 import sys
 
-source = Path(sys.argv[1]).read_text(encoding="utf-8")
-match = re.search(r"static const jpegBase64\s*=\s*'([A-Za-z0-9+/=]+)';", source)
-if match is None:
-    raise SystemExit("FAIL: Safe Contracts brand JPEG is missing from mobile brand source")
-try:
-    image = base64.b64decode(match.group(1), validate=True)
-except Exception as exc:
-    raise SystemExit(f"FAIL: Safe Contracts brand JPEG is invalid: {exc}") from exc
+source = Path(sys.argv[1])
+image = source.read_bytes()
 if not image.startswith(b"\xff\xd8\xff") or len(image) < 1024:
-    raise SystemExit("FAIL: Safe Contracts brand source is not a usable JPEG")
+    raise SystemExit("FAIL: Safe Contracts packaged brand source is not a usable JPEG")
 Path(sys.argv[2]).write_bytes(image)
 PY
 
