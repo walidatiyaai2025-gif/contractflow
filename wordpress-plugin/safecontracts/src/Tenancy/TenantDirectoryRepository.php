@@ -65,4 +65,29 @@ final class TenantDirectoryRepository
         }
         return null;
     }
+
+    /**
+     * Server-side background iteration source. Business tables must never be
+     * used to infer the tenants that a cron/job should process.
+     *
+     * @return list<int>
+     */
+    public function activeIds(): array
+    {
+        global $wpdb;
+        $tenants = $wpdb->prefix . 'safecontracts_tenants';
+        $rows = $wpdb->get_results(
+            "SELECT id FROM {$tenants} WHERE status = 'active' ORDER BY id ASC",
+            ARRAY_A
+        );
+
+        $ids = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            $tenantId = (int) ($row['id'] ?? 0);
+            if ($tenantId > 0) {
+                $ids[] = $tenantId;
+            }
+        }
+        return array_values(array_unique($ids));
+    }
 }
