@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use SafeContracts\Contracts\ContractArchiveService;
 use SafeContracts\Contracts\ContractService;
+use SafeContracts\Contracts\ContractStatus;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
@@ -50,6 +51,10 @@ final class ContractsPage
                         'notes' => sanitize_textarea_field((string) ($_POST['notes'] ?? '')),
                     ]);
                     $service->updateDates($contractId, $_POST['start_date'] ?? null, $_POST['end_date'] ?? null);
+                    $targetStatus = sanitize_key((string) ($_POST['status'] ?? ''));
+                    if ($targetStatus !== '') {
+                        $service->changeStatus($contractId, $targetStatus);
+                    }
                 }
                 if (current_user_can(Capabilities::ASSIGN_CONTRACTS)) {
                     $service->assignCustomer($contractId, (int) ($_POST['customer_id'] ?? 0));
@@ -109,6 +114,8 @@ final class ContractsPage
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Contract operations', 'safecontracts'); ?></p><h1><?php echo esc_html__('Contracts', 'safecontracts'); ?></h1></div></div>
+            <?php AdminPeriodFilter::render(self::SLUG, $filters, $selectedId > 0 ? ['contract_id' => $selectedId] : []); ?>
+            <p class="description"><?php echo esc_html__('Contract period filtering uses the contract start date, falling back to the record creation date when no start date exists.', 'safecontracts'); ?></p>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
@@ -146,7 +153,14 @@ final class ContractsPage
                         <p><label><?php echo esc_html__('Contract number', 'safecontracts'); ?><input class="widefat" name="contract_number" required value="<?php echo esc_attr((string) ($selected['contract_number'] ?? '')); ?>"></label></p>
                         <p><label><?php echo esc_html__('Customer', 'safecontracts'); ?><select class="widefat" name="customer_id" required><?php foreach ($customers as $customer) : ?><option value="<?php echo esc_attr((string) $customer['id']); ?>" <?php selected((int) ($selected['customer_id'] ?? 0), $customer['id']); ?>><?php echo esc_html($customer['name']); ?></option><?php endforeach; ?></select></label></p>
                         <p><label><?php echo esc_html__('Accountant user ID', 'safecontracts'); ?><input class="widefat" type="number" min="1" name="accountant_user_id" value="<?php echo esc_attr((string) ($selected['accountant_user_id'] ?? '')); ?>"></label></p>
-                        <?php if ($selected) : ?><p class="safecontracts-field-row"><label><?php echo esc_html__('Start date', 'safecontracts'); ?><input type="date" name="start_date" value="<?php echo esc_attr((string) ($selected['start_date'] ?? '')); ?>"></label><label><?php echo esc_html__('End date', 'safecontracts'); ?><input type="date" name="end_date" value="<?php echo esc_attr((string) ($selected['end_date'] ?? '')); ?>"></label></p><?php endif; ?>
+                        <?php if ($selected) : ?>
+                            <p class="safecontracts-field-row"><label><?php echo esc_html__('Start date', 'safecontracts'); ?><input type="date" name="start_date" value="<?php echo esc_attr((string) ($selected['start_date'] ?? '')); ?>"></label><label><?php echo esc_html__('End date', 'safecontracts'); ?><input type="date" name="end_date" value="<?php echo esc_attr((string) ($selected['end_date'] ?? '')); ?>"></label></p>
+                            <?php if (current_user_can(Capabilities::EDIT_CONTRACTS)) : ?>
+                                <?php $statusOptions = array_values(array_unique(array_merge([(string) $selected['status']], ContractStatus::allowedTargets((string) $selected['status'])))); ?>
+                                <p><label><?php echo esc_html__('Contract status', 'safecontracts'); ?><select class="widefat" name="status"><?php foreach ($statusOptions as $statusOption) : ?><option value="<?php echo esc_attr($statusOption); ?>" <?php selected((string) $selected['status'], $statusOption); ?>><?php echo esc_html(self::statusLabel($statusOption)); ?></option><?php endforeach; ?></select></label></p>
+                                <?php if (count($statusOptions) === 1) : ?><p class="description"><?php echo esc_html__('This contract is in a terminal lifecycle state and cannot transition to another status.', 'safecontracts'); ?></p><?php endif; ?>
+                            <?php endif; ?>
+                        <?php endif; ?>
                         <p><label><?php echo esc_html__('Notes', 'safecontracts'); ?><textarea class="widefat" rows="4" name="notes"><?php echo esc_textarea((string) ($selected['notes'] ?? '')); ?></textarea></label></p>
                         <?php submit_button($selected ? __('Save contract', 'safecontracts') : __('Create contract', 'safecontracts')); ?>
                     </form>
