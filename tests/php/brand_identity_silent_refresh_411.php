@@ -81,14 +81,19 @@ foreach ($checks as $relative => $markers) {
     }
 }
 
-$brandPhp = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Support/Brand.php');
-if (! preg_match("/ICON_JPEG_BASE64 = '([A-Za-z0-9+\\/=]+)'/", $brandPhp, $matches)) {
-    fwrite(STDERR, "FAIL: plugin brand JPEG payload cannot be resolved\n");
+// Validate the actual runtime brand API instead of scraping a long Base64
+// literal from PHP source. This is the exact value WordPress admin/login use.
+require_once $root . '/wordpress-plugin/safecontracts/src/Support/Brand.php';
+$brandUri = \SafeContracts\Support\Brand::iconDataUri();
+$prefix = 'data:image/jpeg;base64,';
+if (! str_starts_with($brandUri, $prefix)) {
+    fwrite(STDERR, "FAIL: plugin brand API does not return a JPEG data URI\n");
     exit(1);
 }
-$decoded = base64_decode($matches[1], true);
+$decoded = base64_decode(substr($brandUri, strlen($prefix)), true);
 if (! is_string($decoded) || strlen($decoded) < 1024 || ! str_starts_with($decoded, "\xFF\xD8\xFF")) {
-    fwrite(STDERR, "FAIL: plugin brand identity is not a valid embedded JPEG\n");
+    $length = is_string($decoded) ? strlen($decoded) : 0;
+    fwrite(STDERR, "FAIL: plugin brand API returned invalid JPEG bytes (length={$length})\n");
     exit(1);
 }
 $count++;
