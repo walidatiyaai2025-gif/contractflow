@@ -9,13 +9,13 @@ use SafeContracts\Roles\Capabilities;
 
 final class AdminReadRepository
 {
-    /** @param array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} $filters */
     public function kpis(array $filters): array
     {
         global $wpdb;
+        $normalized = DashboardFilters::normalize($filters);
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
-        $where = $this->where($filters, 'c', 'p');
+        $where = $this->where($normalized, 'c', 'p', 'p.due_date');
         $where[] = 'c.is_archived = 0';
         $today = function_exists('wp_date') ? wp_date('Y-m-d') : gmdate('Y-m-d');
         $sql = "SELECT
@@ -47,12 +47,13 @@ final class AdminReadRepository
         if ($normalized['customer_id'] > 0) {
             $where[] = 'cu.id = ' . $normalized['customer_id'];
         }
+        $where = array_merge($where, $this->periodWhere($normalized, 'DATE(cu.created_at)'));
         if (! current_user_can(Capabilities::VIEW_ALL)) {
             $this->requireAssignedScope();
             $userId = get_current_user_id();
             $where[] = "EXISTS (SELECT 1 FROM {$contracts} sc_scope WHERE sc_scope.customer_id = cu.id AND sc_scope.accountant_user_id = {$userId} AND sc_scope.is_archived = 0)";
         }
-        $sql = "SELECT cu.id, cu.internal_code, cu.name, cu.contact_name, cu.email, cu.phone, cu.notes, cu.is_active
+        $sql = "SELECT cu.id, cu.internal_code, cu.name, cu.contact_name, cu.email, cu.phone, cu.notes, cu.is_active, cu.created_at, cu.updated_at
                 FROM {$customers} cu WHERE " . implode(' AND ', $where) . ' ORDER BY cu.name ASC LIMIT 500';
         return $this->rows($wpdb->get_results($sql, ARRAY_A));
     }
@@ -64,9 +65,9 @@ final class AdminReadRepository
         $normalized = DashboardFilters::normalize($filters);
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
-        $where = $this->where($normalized, 'c', null);
+        $where = $this->where($normalized, 'c', null, 'COALESCE(c.start_date, DATE(c.created_at))');
         $sql = "SELECT c.id, c.contract_number, c.customer_id, cu.name AS customer_name, c.accountant_user_id,
-                       c.status, c.start_date, c.end_date, c.base_value, c.notes, c.is_archived
+                       c.status, c.start_date, c.end_date, c.base_value, c.notes, c.is_archived, c.created_at, c.updated_at
                 FROM {$contracts} c
                 INNER JOIN {$customers} cu ON cu.id = c.customer_id
                 WHERE " . implode(' AND ', $where) . '
@@ -82,7 +83,7 @@ final class AdminReadRepository
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
-        $where = $this->where($normalized, 'c', 'p');
+        $where = $this->where($normalized, 'c', 'p', 'p.due_date');
         $where[] = 'c.is_archived = 0';
         $where[] = 'p.is_archived = 0';
         $sql = "SELECT p.id, p.contract_id, p.sequence_no, p.reference, p.due_date, p.expected_payment_date,
@@ -100,30 +101,13 @@ final class AdminReadRepository
     /** @return list<array<string,mixed>> */
     public function collections(array $filters = []): array
     {
-        global $wpdb;
-        $normalized = DashboardFilters::normalize($filters);
-        $collections = $wpdb->prefix . 'safecontracts_payment_collections';
-        $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
-        $contracts = $wpdb->prefix . 'safecontracts_contracts';
-        $customers = $wpdb->prefix . 'safecontracts_customers';
-        $methods = $wpdb->prefix . 'safecontracts_payment_methods';
-        $where = $this->where($normalized, 'c', 'p');
-        $where[] = 'c.is_archived = 0';
-        $where[] = 'p.is_archived = 0';
-        $where[] = 'cl.is_archived = 0';
-        $sql = "SELECT cl.id, cl.payment_id, cl.amount, cl.collection_date, cl.payment_method_id,
-                       cl.reference, cl.details, cl.proof_media_id, cl.created_by, cl.created_at, cl.is_archived,
-                       p.reference AS payment_reference, p.sequence_no, p.due_date, p.status AS payment_status,
-                       p.remaining_amount, c.id AS contract_id, c.contract_number, c.accountant_user_id,
-                       cu.id AS customer_id, cu.name AS customer_name, pm.name AS payment_method_name
-                FROM {$collections} cl
-                INNER JOIN {$payments} p ON p.id = cl.payment_id
-                INNER JOIN {$contracts} c ON c.id = p.contract_id
-                INNER JOIN {$customers} cu ON cu.id = c.customer_id
-                INNER JOIN {$methods} pm ON pm.id = cl.payment_method_id
-                WHERE " . implode(' AND ', $where) . '
-                ORDER BY cl.collection_date DESC, cl.id DESC LIMIT 500';
-        return $this->rows($wpdb->get_results($sql, ARRAY_A));
+        return $this->collectionRows($filters, false, 500);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function collectorAttachments(array $filters = [], int $limit = 12): array
+    {
+        return $this->collectionRows($filters, true, max(1, min(100, $limit)));
     }
 
     /**
@@ -141,28 +125,31 @@ final class AdminReadRepository
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $followups = $wpdb->prefix . 'safecontracts_payment_followups';
-        $where = $this->where($normalized, 'c', 'p');
-        $where[] = 'c.is_archived = 0';
-        $where[] = 'p.is_archived = 0';
-        $whereSql = implode(' AND ', $where);
 
+        $collectionWhere = $this->where($normalized, 'c', 'p', 'cl.collection_date');
+        $collectionWhere[] = 'c.is_archived = 0';
+        $collectionWhere[] = 'p.is_archived = 0';
+        $collectionWhere[] = 'cl.is_archived = 0';
         $collectionSql = "SELECT COUNT(cl.id) AS collection_transactions,
                                  COALESCE(SUM(cl.amount), 0) AS collection_ledger_total
                           FROM {$collections} cl
                           INNER JOIN {$payments} p ON p.id = cl.payment_id
                           INNER JOIN {$contracts} c ON c.id = p.contract_id
-                          WHERE {$whereSql} AND cl.is_archived = 0";
+                          WHERE " . implode(' AND ', $collectionWhere);
         $collectionTotals = $this->firstRow($wpdb->get_results($collectionSql, ARRAY_A), [
             'collection_transactions' => '0',
             'collection_ledger_total' => '0.0000',
         ]);
 
+        $followupWhere = $this->where($normalized, 'c', 'p', 'DATE(f.created_at)');
+        $followupWhere[] = 'c.is_archived = 0';
+        $followupWhere[] = 'p.is_archived = 0';
         $followupSql = "SELECT COUNT(f.id) AS followup_events,
                                COUNT(DISTINCT f.payment_id) AS followed_up_payments
                         FROM {$followups} f
                         INNER JOIN {$payments} p ON p.id = f.payment_id
                         INNER JOIN {$contracts} c ON c.id = p.contract_id
-                        WHERE {$whereSql}";
+                        WHERE " . implode(' AND ', $followupWhere);
         $followupTotals = $this->firstRow($wpdb->get_results($followupSql, ARRAY_A), [
             'followup_events' => '0',
             'followed_up_payments' => '0',
@@ -196,8 +183,42 @@ final class AdminReadRepository
         ], $rows));
     }
 
+    /** @return list<array<string,mixed>> */
+    private function collectionRows(array $filters, bool $proofOnly, int $limit): array
+    {
+        global $wpdb;
+        $normalized = DashboardFilters::normalize($filters);
+        $collections = $wpdb->prefix . 'safecontracts_payment_collections';
+        $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $customers = $wpdb->prefix . 'safecontracts_customers';
+        $methods = $wpdb->prefix . 'safecontracts_payment_methods';
+        $where = $this->where($normalized, 'c', 'p', 'cl.collection_date');
+        $where[] = 'c.is_archived = 0';
+        $where[] = 'p.is_archived = 0';
+        $where[] = 'cl.is_archived = 0';
+        if ($proofOnly) {
+            $where[] = 'cl.proof_media_id IS NOT NULL';
+            $where[] = 'cl.proof_media_id > 0';
+        }
+        $limit = max(1, min(500, $limit));
+        $sql = "SELECT cl.id, cl.payment_id, cl.amount, cl.collection_date, cl.payment_method_id,
+                       cl.reference, cl.details, cl.proof_media_id, cl.created_by, cl.created_at, cl.is_archived,
+                       p.reference AS payment_reference, p.sequence_no, p.due_date, p.status AS payment_status,
+                       p.remaining_amount, c.id AS contract_id, c.contract_number, c.accountant_user_id,
+                       cu.id AS customer_id, cu.name AS customer_name, pm.name AS payment_method_name
+                FROM {$collections} cl
+                INNER JOIN {$payments} p ON p.id = cl.payment_id
+                INNER JOIN {$contracts} c ON c.id = p.contract_id
+                INNER JOIN {$customers} cu ON cu.id = c.customer_id
+                INNER JOIN {$methods} pm ON pm.id = cl.payment_method_id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY cl.collection_date DESC, cl.id DESC LIMIT {$limit}";
+        return $this->rows($wpdb->get_results($sql, ARRAY_A));
+    }
+
     /** @return list<string> */
-    private function where(array $filters, string $contractAlias, ?string $paymentAlias): array
+    private function where(array $filters, string $contractAlias, ?string $paymentAlias, ?string $dateExpression = null): array
     {
         if (! current_user_can(Capabilities::ACCESS)) {
             throw new DomainException('SafeContracts admin data requires access capability.');
@@ -224,13 +245,34 @@ final class AdminReadRepository
                 : $contractAlias;
             $where[] = $alias . ".status = '" . addslashes($status) . "'";
         }
-        if ($paymentAlias !== null) {
-            if (($filters['due_from'] ?? null) !== null) {
-                $where[] = $paymentAlias . ".due_date >= '" . addslashes((string) $filters['due_from']) . "'";
+
+        if ($dateExpression !== null) {
+            $where = array_merge($where, $this->periodWhere($filters, $dateExpression));
+            if (($filters['date_from'] ?? null) === null && ($filters['date_to'] ?? null) === null && $paymentAlias !== null && $dateExpression === $paymentAlias . '.due_date') {
+                if (($filters['due_from'] ?? null) !== null) {
+                    $where[] = $dateExpression . " >= '" . addslashes((string) $filters['due_from']) . "'";
+                }
+                if (($filters['due_to'] ?? null) !== null) {
+                    $where[] = $dateExpression . " <= '" . addslashes((string) $filters['due_to']) . "'";
+                }
             }
-            if (($filters['due_to'] ?? null) !== null) {
-                $where[] = $paymentAlias . ".due_date <= '" . addslashes((string) $filters['due_to']) . "'";
-            }
+        }
+
+        return $where;
+    }
+
+    /** @return list<string> */
+    private function periodWhere(array $filters, string $dateExpression): array
+    {
+        if (! empty($filters['date_range_error'])) {
+            return [];
+        }
+        $where = [];
+        if (($filters['date_from'] ?? null) !== null) {
+            $where[] = $dateExpression . " >= '" . addslashes((string) $filters['date_from']) . "'";
+        }
+        if (($filters['date_to'] ?? null) !== null) {
+            $where[] = $dateExpression . " <= '" . addslashes((string) $filters['date_to']) . "'";
         }
         return $where;
     }
