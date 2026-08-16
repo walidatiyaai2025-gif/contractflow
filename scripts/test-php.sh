@@ -74,14 +74,7 @@ php "$ROOT/tests/php/enterprise_tenant_membership_idempotency_p2_004.php"
 php "$ROOT/tests/php/enterprise_tenant_members_admin_ui_p2_005.php"
 php "$ROOT/tests/php/enterprise_tenant_members_rest_p2_006.php"
 php "$ROOT/tests/php/enterprise_rate_limiting_p2_007.php"
-party_output=''
-if ! party_output=$(php "$ROOT/tests/php/enterprise_party_foundation_p3_001.php" 2>&1); then
-  echo "$party_output" >&2
-  party_annotation=$(printf '%s' "$party_output" | tr '\n\r' '  ')
-  echo "::error title=ESC P3-001 Party regression::${party_annotation}"
-  exit 1
-fi
-echo "$party_output"
+php "$ROOT/tests/php/enterprise_party_foundation_p3_001.php"
 php "$ROOT/tests/php/enterprise_tenant_rest_context.php"
 php "$ROOT/tests/php/enterprise_tenant_ownership_expand.php"
 php "$ROOT/tests/php/enterprise_core_tenant_enforcement.php"
