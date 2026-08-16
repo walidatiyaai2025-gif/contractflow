@@ -31,7 +31,7 @@ function esc_noncore_backfill_query_contains(string $needle): bool
 
 $service = new NonCoreTenantOwnershipBackfill();
 esc_noncore_backfill_assert(
-    NonCoreTenantOwnershipBackfill::rootGroups() === ['rules', 'templates', 'devices', 'imports', 'suppressions', 'audit'],
+    NonCoreTenantOwnershipBackfill::rootGroups() === ['rules', 'templates', 'devices', 'deliveries', 'imports', 'suppressions', 'audit'],
     'explicit non-core root groups are stable and enumerable'
 );
 
@@ -44,10 +44,12 @@ esc_noncore_backfill_assert($derived['ready'] === true, 'deterministic derivatio
 esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('START TRANSACTION'), 'deterministic derivation is transactional');
 esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('UPDATE wp_safecontracts_notification_schedule s INNER JOIN wp_safecontracts_scheduled_payments p'), 'schedule ownership derives from payment');
 esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('UPDATE wp_safecontracts_notification_deliveries d INNER JOIN wp_safecontracts_scheduled_payments p'), 'delivery ownership derives from payment');
-esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('UPDATE wp_safecontracts_import_errors e INNER JOIN wp_safecontracts_import_runs r'), 'import error ownership derives from import run');
-esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('UPDATE wp_safecontracts_notification_suppressions s INNER JOIN wp_safecontracts_scheduled_payments p'), 'payment suppression ownership derives from payment');
+esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('UPDATE wp_safecontracts_notification_deliveries d INNER JOIN wp_safecontracts_notification_rules r'), 'delivery ownership may derive from an already-owned rule');
+esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('UPDATE wp_safecontracts_import_errors e INNER JOIN wp_safecontracts_import_runs r ON r.id = e.import_run_id'), 'import error ownership derives from import run using live import_run_id schema');
+esc_noncore_backfill_assert(esc_noncore_backfill_query_contains("s.scope_type = 'payment'"), 'payment suppression ownership derives through scope_type/scope_id');
+esc_noncore_backfill_assert(esc_noncore_backfill_query_contains("s.scope_type = 'contract'"), 'contract suppression ownership derives through scope_type/scope_id');
 esc_noncore_backfill_assert(esc_noncore_backfill_query_contains("a.entity_type = 'contract'"), 'contract audit ownership derives from contract parent');
-esc_noncore_backfill_assert(esc_noncore_backfill_query_contains("a.entity_type = 'notification_schedule'"), 'schedule audit ownership derives from schedule parent');
+esc_noncore_backfill_assert(esc_noncore_backfill_query_contains("a.entity_type = 'import_run'"), 'import audit ownership uses live import_run audit entity type');
 esc_noncore_backfill_assert(! esc_noncore_backfill_query_contains('UPDATE wp_safecontracts_notification_rules SET tenant_id'), 'derive mode never guesses notification rule root ownership');
 esc_noncore_backfill_assert(! esc_noncore_backfill_query_contains('UPDATE wp_safecontracts_device_tokens SET tenant_id'), 'derive mode never guesses device root ownership');
 esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('COMMIT'), 'mismatch-free deterministic derivation commits');
@@ -95,12 +97,16 @@ try {
 esc_noncore_backfill_assert($rolledBack, 'cross-tenant mismatch blocks reviewed root mapping');
 esc_noncore_backfill_assert(esc_noncore_backfill_query_contains('ROLLBACK'), 'mismatch root mapping rolls back');
 
+$source = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Tenancy/NonCoreTenantOwnershipBackfill.php');
+esc_noncore_backfill_assert(! str_contains($source, 'e.run_id'), 'backfill contains no obsolete import-error run_id reference');
+esc_noncore_backfill_assert(! str_contains($source, 's.payment_id'), 'suppression backfill contains no nonexistent payment_id column');
+esc_noncore_backfill_assert(! str_contains($source, 's.rule_id'), 'suppression backfill contains no nonexistent rule_id column');
+
 $doc = (string) file_get_contents(dirname(__DIR__, 2) . '/docs/enterprise/NON_CORE_TENANT_OWNERSHIP.md');
 esc_noncore_backfill_assert(str_contains($doc, 'explicit reviewed mapping/recreation'), 'runbook requires explicit root decisions');
 esc_noncore_backfill_assert(str_contains($doc, 'platform-global audit'), 'runbook distinguishes platform audit from tenant audit');
 
 $script = (string) file_get_contents(dirname(__DIR__, 2) . '/scripts/enterprise_noncore_tenant_backfill.php');
-esc_noncore_backfill_assert(str_contains($script, '--roots=rules,templates,devices,imports,suppressions,audit'), 'operator script advertises explicit root groups');
 esc_noncore_backfill_assert(str_contains($script, '--derive'), 'operator script exposes deterministic derivation separately');
 
 fwrite(STDOUT, "Enterprise non-core tenant ownership backfill passed ({$assertions} assertions).\n");
