@@ -26,3 +26,23 @@ jobs:
         run: python3 scripts/enterprise_verified_artifacts.py check
       - name: Run backend regression and Enterprise tenancy tests
         run: ./scripts/test-php.sh
+
+  esc-mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Enforce Flutter formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analyze Flutter client
+        run: flutter analyze
+      - name: Test Flutter client
+        run: flutter test

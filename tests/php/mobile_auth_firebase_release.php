@@ -29,7 +29,8 @@ $required = [
     ],
     'mobile/lib/core/auth/mobile_token_store.dart' => [
         'FlutterSecureStorage',
-        'safecontracts.mobile.bearer_token',
+        'enterprise_safecontracts.mobile.bearer_token',
+        'Enterprise Safe Contracts mobile token is invalid.',
     ],
     'mobile/lib/features/notifications/push_registration.dart' => [
         'requestPermission(',
@@ -37,10 +38,18 @@ $required = [
         'onTokenRefresh',
         "'devices/register'",
     ],
-    'mobile/android-release/google-services.json' => [
-        'safecontract-13846',
-        'com.safecontracts.safecontracts_mobile',
-        '744938686052',
+    'scripts/bootstrap_android.sh' => [
+        'ESC_FIREBASE_ANDROID_CONFIG_DEV',
+        'ESC_FIREBASE_ANDROID_CONFIG_STAGING',
+        'ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION',
+        'com.safecontracts.enterprise.dev',
+        'com.safecontracts.enterprise.staging',
+        'com.safecontracts.enterprise',
+        'ESC Firebase app reuses the Safe Contract mobile app id',
+    ],
+    '.gitignore' => [
+        'mobile/android-release/google-services.json',
+        'mobile/android/app/src/*/google-services.json',
     ],
 ];
 
@@ -48,7 +57,7 @@ $checks = 0;
 foreach ($required as $relative => $markers) {
     $path = $root . '/' . $relative;
     if (! is_file($path)) {
-        fwrite(STDERR, "FAIL: missing release auth/Firebase file {$relative}\n");
+        fwrite(STDERR, "FAIL: missing release auth/ESC Firebase policy file {$relative}\n");
         exit(1);
     }
     $content = (string) file_get_contents($path);
@@ -60,6 +69,13 @@ foreach ($required as $relative => $markers) {
         $checks++;
     }
 }
+
+$legacyFirebase = $root . '/mobile/android-release/google-services.json';
+if (is_file($legacyFirebase)) {
+    fwrite(STDERR, "FAIL: ESC branch must not commit the inherited Safe Contract google-services.json\n");
+    exit(1);
+}
+$checks++;
 
 $sessionStore = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Auth/MobileSessionStore.php');
 $optionWrite = strpos($sessionStore, 'update_option(self::OPTION, $sessions, false)');
@@ -79,4 +95,4 @@ if (str_contains($authController, 'Application Password')) {
     exit(1);
 }
 
-printf("SafeContracts mobile login + Firebase release validation passed (%d checks).\n", $checks);
+printf("Enterprise Safe Contracts mobile login + isolated Firebase release policy validation passed (%d checks).\n", $checks);
