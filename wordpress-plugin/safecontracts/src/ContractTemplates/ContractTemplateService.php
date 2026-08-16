@@ -101,12 +101,16 @@ final class ContractTemplateService
         do_action('safecontracts_enterprise_contract_template_deactivated', $templateId, $actorId);
     }
 
-    public function findVersion(int $templateId, int $versionId): ?array
+    public function findVersion(int $templateId, int $versionId): array
     {
         $this->authorize(Capabilities::ACCESS);
         $this->requireTemplate($templateId, false);
         $this->requirePositive($versionId, 'Contract Template version ID');
-        return $this->repository->findVersion($templateId, $versionId);
+        $version = $this->repository->findVersion($templateId, $versionId);
+        if ($version === null) {
+            throw new InvalidArgumentException('Contract Template version was not found in the current tenant/template.');
+        }
+        return $version;
     }
 
     /** @return list<array<string,mixed>> */
