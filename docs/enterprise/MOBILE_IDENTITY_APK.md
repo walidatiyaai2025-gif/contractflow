@@ -68,6 +68,18 @@ Dev/Staging builds should remain visually distinguishable from production to red
 
 No real `google-services.json` is committed. `scripts/bootstrap_android.sh` requires three explicit ESC Firebase configuration paths and fails if a Safe Contract Firebase app ID/package is reused.
 
+## Launcher, adaptive icon and splash identity
+
+ESC owns committed Android identity resources under `mobile/android-release/`:
+
+- `enterprise-launcher.xml` — legacy/pre-adaptive launcher source;
+- `enterprise-launcher-foreground.xml` — ESC adaptive foreground;
+- `enterprise-launcher-background.xml` — ESC adaptive background;
+- `enterprise-launcher-adaptive.xml` — Android 8+ adaptive icon definition;
+- `enterprise-splash.xml` — explicit ESC launch background/splash identity.
+
+The bootstrap installs the launcher as `@mipmap/ic_launcher_enterprise`, installs the Android 8+ adaptive override, and rewrites Flutter's generated `LaunchTheme` to use `@drawable/enterprise_safe_contracts_splash`. Android 12+ may use the isolated adaptive application icon as part of the platform splash behavior. These resources must never be replaced with Safe Contract launcher/splash resources as part of ESC work.
+
 ## Notification and deep-link namespaces
 
 ESC reserves:
@@ -80,9 +92,25 @@ These identifiers belong only to ESC. New App Link hosts or notification channel
 
 ## Local state
 
-ESC authentication tokens use an ESC-specific secure-storage key. Any future SharedPreferences, SQLite/Drift/Hive/Isar database, cache directory or analytics/crash-reporting identifier must use an ESC-specific namespace and must be included in the full-impact review before release.
+ESC authentication tokens use the secure-storage key:
 
-Package separation provides Android sandbox separation, but code-level namespaces are still required to prevent accidental migration/import/export or automation collisions.
+- `enterprise_safecontracts.mobile.bearer_token`
+
+Android package separation provides OS sandbox isolation and the code-level key prevents accidental migration/import/export or automation collisions.
+
+No SharedPreferences database, SQLite/Drift/Hive/Isar database, or explicit shared cache namespace is currently introduced by the ESC Flutter client. When any such persistence is added, its logical identifiers must use an `enterprise_safecontracts`/ESC-specific namespace and the Android coexistence regression must be extended in the same change.
+
+## Analytics and crash identity
+
+`firebase_analytics` and `firebase_crashlytics` are not currently enabled in the ESC Flutter client. The static Android isolation gate fails closed if either dependency is introduced before the identity contract is explicitly reviewed and updated.
+
+When telemetry is enabled, it must use the ESC Firebase Android registrations and ESC product/release identity. It must never reuse a Safe Contract Firebase Android app, analytics app stream, crash-reporting application mapping, API key material or release label.
+
+## Version and release lineage
+
+The ESC Flutter project owns its `version:` sequence in `mobile/pubspec.yaml`; Android maps that sequence to `versionName`/`versionCode`. Dev and staging flavors add their own version-name suffixes, while production retains the ESC production sequence.
+
+Version values may numerically overlap another Android product without causing an OS collision because the package IDs are distinct, but ESC release history must advance independently and must never be derived from or published into the Safe Contract release lineage.
 
 ## Static and binary isolation gate
 
