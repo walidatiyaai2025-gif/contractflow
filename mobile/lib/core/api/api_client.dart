@@ -34,8 +34,8 @@ final class SafeContractsApiClient {
     required this.transport,
     ApiHeadersProvider? headersProvider,
     TenantIdProvider? tenantIdProvider,
-  }) : headersProvider = headersProvider ?? _emptyHeaders,
-       tenantIdProvider = tenantIdProvider ?? _noTenant;
+  })  : headersProvider = headersProvider ?? _emptyHeaders,
+        tenantIdProvider = tenantIdProvider ?? _noTenant;
 
   static const apiVersion = 'v1';
   static const enterpriseTenantHeader = 'X-ESC-Tenant-ID';
@@ -165,12 +165,12 @@ final class SafeContractsApiClient {
       );
     }
     final metaValue = root['meta'];
-    final meta = metaValue == null
-        ? <String, Object?>{}
-        : _objectMap(metaValue, 'meta');
+    final meta =
+        metaValue == null ? <String, Object?>{} : _objectMap(metaValue, 'meta');
     final responseVersion = meta['api_version'];
     if (responseVersion != null && responseVersion != apiVersion) {
-      throw const FormatException('SafeContracts API version is not supported.');
+      throw const FormatException(
+          'SafeContracts API version is not supported.');
     }
     return ApiEnvelope(
       data: root['data'],
