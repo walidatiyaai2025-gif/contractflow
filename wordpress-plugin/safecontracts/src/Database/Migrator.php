@@ -16,12 +16,13 @@ use SafeContracts\Database\Migrations\Migration0009FollowupAudit;
 use SafeContracts\Database\Migrations\Migration0010NotificationRules;
 use SafeContracts\Database\Migrations\Migration0011NotificationDelivery;
 use SafeContracts\Database\Migrations\Migration0012Import;
+use SafeContracts\Database\Migrations\Migration0013SafeDeletion;
 use RuntimeException;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.11.0';
+    public const LATEST_VERSION = '1.12.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -37,6 +38,7 @@ final class Migrator
         '1.9.0' => Migration0010NotificationRules::class,
         '1.10.0' => Migration0011NotificationDelivery::class,
         '1.11.0' => Migration0012Import::class,
+        '1.12.0' => Migration0013SafeDeletion::class,
     ];
 
     public function maybeMigrate(): void
