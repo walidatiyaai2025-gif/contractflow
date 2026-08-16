@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Tenancy\CoreTenantEnforcement;
+use SafeContracts\Tenancy\CoreTenantScope;
 
 final class ArchivePage
 {
@@ -65,11 +67,39 @@ final class ArchivePage
         $collections = $wpdb->prefix . 'safecontracts_payment_collections';
         $methods = $wpdb->prefix . 'safecontracts_payment_methods';
 
-        self::append($result, $wpdb->get_results("SELECT id, name AS label, updated_at AS archived_at, 0 AS archived_by FROM {$customers} WHERE is_active = 0 ORDER BY updated_at DESC LIMIT 500", ARRAY_A), 'Customer');
-        self::append($result, $wpdb->get_results("SELECT id, contract_number AS label, updated_at AS archived_at, COALESCE(updated_by, 0) AS archived_by FROM {$contracts} WHERE is_archived = 1 ORDER BY updated_at DESC LIMIT 500", ARRAY_A), 'Contract');
-        self::append($result, $wpdb->get_results("SELECT id, COALESCE(reference, CONCAT('Payment #', id)) AS label, COALESCE(archived_at, updated_at) AS archived_at, COALESCE(archived_by, 0) AS archived_by FROM {$payments} WHERE is_archived = 1 ORDER BY archived_at DESC, id DESC LIMIT 500", ARRAY_A), 'Payment');
-        self::append($result, $wpdb->get_results("SELECT id, COALESCE(reference, CONCAT('Collection #', id)) AS label, COALESCE(archived_at, updated_at) AS archived_at, COALESCE(archived_by, 0) AS archived_by FROM {$collections} WHERE is_archived = 1 ORDER BY archived_at DESC, id DESC LIMIT 500", ARRAY_A), 'Collection');
-        self::append($result, $wpdb->get_results("SELECT id, name AS label, updated_at AS archived_at, 0 AS archived_by FROM {$methods} WHERE is_active = 0 ORDER BY updated_at DESC LIMIT 500", ARRAY_A), 'Payment method');
+        if (CoreTenantEnforcement::isEnabled()) {
+            // ArchivePage historically bypassed repositories with direct SQL. In
+            // Enterprise mode these reads must be scoped explicitly just like the
+            // operational repositories; CoreTenantScope also fails closed when no
+            // tenant context has been locked for this tenant-owned page.
+            $tenantId = CoreTenantScope::tenantId();
+            self::append($result, $wpdb->get_results($wpdb->prepare(
+                "SELECT id, name AS label, updated_at AS archived_at, 0 AS archived_by FROM {$customers} WHERE tenant_id = %d AND is_active = 0 ORDER BY updated_at DESC LIMIT 500",
+                $tenantId
+            ), ARRAY_A), 'Customer');
+            self::append($result, $wpdb->get_results($wpdb->prepare(
+                "SELECT id, contract_number AS label, updated_at AS archived_at, COALESCE(updated_by, 0) AS archived_by FROM {$contracts} WHERE tenant_id = %d AND is_archived = 1 ORDER BY updated_at DESC LIMIT 500",
+                $tenantId
+            ), ARRAY_A), 'Contract');
+            self::append($result, $wpdb->get_results($wpdb->prepare(
+                "SELECT id, COALESCE(reference, CONCAT('Payment #', id)) AS label, COALESCE(archived_at, updated_at) AS archived_at, COALESCE(archived_by, 0) AS archived_by FROM {$payments} WHERE tenant_id = %d AND is_archived = 1 ORDER BY archived_at DESC, id DESC LIMIT 500",
+                $tenantId
+            ), ARRAY_A), 'Payment');
+            self::append($result, $wpdb->get_results($wpdb->prepare(
+                "SELECT id, COALESCE(reference, CONCAT('Collection #', id)) AS label, COALESCE(archived_at, updated_at) AS archived_at, COALESCE(archived_by, 0) AS archived_by FROM {$collections} WHERE tenant_id = %d AND is_archived = 1 ORDER BY archived_at DESC, id DESC LIMIT 500",
+                $tenantId
+            ), ARRAY_A), 'Collection');
+            // Payment methods are a platform-global reference catalog. They are
+            // intentionally omitted from a tenant-owned Enterprise archive rather
+            // than being mixed into tenant business records.
+        } else {
+            // Preserve Safe Contract legacy behavior outside Enterprise enforcement.
+            self::append($result, $wpdb->get_results("SELECT id, name AS label, updated_at AS archived_at, 0 AS archived_by FROM {$customers} WHERE is_active = 0 ORDER BY updated_at DESC LIMIT 500", ARRAY_A), 'Customer');
+            self::append($result, $wpdb->get_results("SELECT id, contract_number AS label, updated_at AS archived_at, COALESCE(updated_by, 0) AS archived_by FROM {$contracts} WHERE is_archived = 1 ORDER BY updated_at DESC LIMIT 500", ARRAY_A), 'Contract');
+            self::append($result, $wpdb->get_results("SELECT id, COALESCE(reference, CONCAT('Payment #', id)) AS label, COALESCE(archived_at, updated_at) AS archived_at, COALESCE(archived_by, 0) AS archived_by FROM {$payments} WHERE is_archived = 1 ORDER BY archived_at DESC, id DESC LIMIT 500", ARRAY_A), 'Payment');
+            self::append($result, $wpdb->get_results("SELECT id, COALESCE(reference, CONCAT('Collection #', id)) AS label, COALESCE(archived_at, updated_at) AS archived_at, COALESCE(archived_by, 0) AS archived_by FROM {$collections} WHERE is_archived = 1 ORDER BY archived_at DESC, id DESC LIMIT 500", ARRAY_A), 'Collection');
+            self::append($result, $wpdb->get_results("SELECT id, name AS label, updated_at AS archived_at, 0 AS archived_by FROM {$methods} WHERE is_active = 0 ORDER BY updated_at DESC LIMIT 500", ARRAY_A), 'Payment method');
+        }
 
         usort($result, static fn (array $a, array $b): int => strcmp((string) $b['archived_at'], (string) $a['archived_at']));
         return array_slice($result, 0, 1000);
