@@ -26,8 +26,9 @@ $assertNotContains = static function (string $needle, string $haystack, string $
 
 $migrator = $read('wordpress-plugin/safecontracts/src/Database/Migrator.php');
 $migration = $read('wordpress-plugin/safecontracts/src/Database/Migrations/Migration0015NotificationCenter.php');
-$assertContains("LATEST_VERSION = '1.14.0'", $migrator, 'notification center migration must be the current schema version');
-$assertContains('Migration0015NotificationCenter::class', $migrator, 'notification center migration must be registered');
+$assertContains("LATEST_VERSION = '1.15.0'", $migrator, 'mobile CRUD capability migration must be the current schema version');
+$assertContains('Migration0015NotificationCenter::class', $migrator, 'notification center migration must remain registered');
+$assertContains('Migration0016MobileCrudCapabilities::class', $migrator, 'mobile CRUD capability migration must be registered');
 foreach (['recipient_user_ids_json', 'push_enabled', 'email_enabled', 'email_subject_template', 'email_body_template', 'icon_key', 'safecontracts_notification_suppressions', 'channel varchar(20)'] as $schemaContract) {
     $assertContains($schemaContract, $migration, 'migration must contain ' . $schemaContract);
 }

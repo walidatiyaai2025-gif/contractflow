@@ -14,11 +14,6 @@ $checks = [
         "assets/brand/safe-contracts-identity.jpg",
         'base64_encode($bytes)',
     ],
-    'wordpress-plugin/safecontracts/src/Admin/AdminShell.php' => [
-        'use SafeContracts\\Support\\Brand;',
-        'Brand::iconDataUri()',
-        'Brand::NAME',
-    ],
     'wordpress-theme/safecontracts-onepage/inc/brand.php' => [
         "return 'Safe Contracts';",
         "assets/images/safe-contracts-identity.jpg",
@@ -41,9 +36,13 @@ $checks = [
     ],
     'scripts/bootstrap_android.sh' => [
         'android:label="Safe Contracts"',
-        '@drawable/safe_contracts_brand',
-        'mobile/assets/brand/safe_contracts_identity.jpg',
-        'Safe Contracts packaged brand source is not a usable JPEG',
+        '@drawable/alkenzy_launcher',
+        'mobile/android-release/alkenzy_launcher.xml',
+        'Alkenzy launcher icon is not a valid Android vector resource',
+    ],
+    'mobile/android-release/alkenzy_launcher.xml' => [
+        '#FFFFE173',
+        '#FF7BC1CD',
     ],
     'mobile/lib/core/branding/safe_contracts_brand.dart' => [
         "static const name = 'Safe Contracts';",

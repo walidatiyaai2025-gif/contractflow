@@ -14,7 +14,7 @@ final class RoleRegistrar
     /**
      * Register baseline roles/capabilities on activation only.
      * Runtime code must not continuously re-add removed capabilities because
-     * contract editing is intentionally configurable per role.
+     * Safe Contracts permissions are intentionally configurable per role.
      */
     public static function registerDefaults(): void
     {
@@ -23,9 +23,13 @@ final class RoleRegistrar
         self::registerRole(self::MANAGER, 'SafeContracts Manager', [
             Capabilities::ACCESS,
             Capabilities::VIEW_ALL,
+            Capabilities::CREATE_CUSTOMERS,
+            Capabilities::EDIT_CUSTOMERS,
             Capabilities::CREATE_CONTRACTS,
             Capabilities::EDIT_CONTRACTS,
             Capabilities::ASSIGN_CONTRACTS,
+            Capabilities::CREATE_PAYMENTS,
+            Capabilities::EDIT_PAYMENTS,
             Capabilities::MANAGE_PAYMENTS,
             Capabilities::MANAGE_COLLECTIONS,
             Capabilities::MANAGE_FOLLOWUPS,
@@ -38,6 +42,8 @@ final class RoleRegistrar
             Capabilities::ACCESS,
             Capabilities::VIEW_ASSIGNED,
             Capabilities::CREATE_CONTRACTS,
+            Capabilities::CREATE_PAYMENTS,
+            Capabilities::EDIT_PAYMENTS,
             Capabilities::MANAGE_PAYMENTS,
             Capabilities::MANAGE_COLLECTIONS,
             Capabilities::MANAGE_FOLLOWUPS,
