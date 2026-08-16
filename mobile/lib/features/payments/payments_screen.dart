@@ -21,6 +21,7 @@ final class PaymentsScreen extends StatefulWidget {
     this.canEnterCollection = false,
     this.onEditExpectedDate,
     this.onRecordCollection,
+    this.refreshRevision = 0,
     super.key,
   });
 
@@ -32,6 +33,7 @@ final class PaymentsScreen extends StatefulWidget {
   final bool canEnterCollection;
   final PaymentAction? onEditExpectedDate;
   final PaymentAction? onRecordCollection;
+  final int refreshRevision;
 
   @override
   State<PaymentsScreen> createState() => _PaymentsScreenState();
@@ -55,15 +57,20 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
     if (oldWidget.filters != widget.filters ||
         oldWidget.pageSize != widget.pageSize) {
       unawaited(_load(1));
+    } else if (oldWidget.refreshRevision != widget.refreshRevision) {
+      unawaited(_load(_pageNumber, background: true));
     }
   }
 
-  Future<void> _load(int page) async {
-    setState(() {
-      _loading = true;
-      _error = null;
-      _pageNumber = page;
-    });
+  Future<void> _load(int page, {bool background = false}) async {
+    final keepVisible = background && _page != null;
+    if (!keepVisible) {
+      setState(() {
+        _loading = true;
+        _error = null;
+        _pageNumber = page;
+      });
+    }
     try {
       final result = await widget.repository.loadPage(
         page: page,
@@ -73,10 +80,13 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
       if (!mounted) return;
       setState(() {
         _page = result;
+        _pageNumber = page;
+        _error = null;
         _loading = false;
       });
     } on Object catch (error) {
       if (!mounted) return;
+      if (keepVisible) return;
       setState(() {
         _error = error.toString();
         _loading = false;
