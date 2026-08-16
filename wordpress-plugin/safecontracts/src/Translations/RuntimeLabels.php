@@ -30,6 +30,11 @@ final class RuntimeLabels
         'Skipped' => 'تم التجاوز',
         'Enabled' => 'مفعّل',
         'Disabled' => 'معطل',
+        'System Administrator' => 'مسؤول النظام',
+        'Manager' => 'مدير',
+        'Accountant' => 'محاسب',
+        'Viewer' => 'مشاهد',
+        'Assigned Accountant' => 'المحاسب المسند',
     ];
 
     public static function register(): void
@@ -92,6 +97,11 @@ final class RuntimeLabels
             __('Skipped', 'safecontracts'),
             __('Enabled', 'safecontracts'),
             __('Disabled', 'safecontracts'),
+            __('System Administrator', 'safecontracts'),
+            __('Manager', 'safecontracts'),
+            __('Accountant', 'safecontracts'),
+            __('Viewer', 'safecontracts'),
+            __('Assigned Accountant', 'safecontracts'),
         ];
     }
 }
