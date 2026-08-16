@@ -123,12 +123,17 @@ $assert(str_contains($profile, 'MobileRecordEditorScreen'), 'profile exposes the
 $assert(str_contains($profile, 'إضافة / تعديل العملاء والعقود والدفعات'), 'Arabic data-management entry is present');
 
 $bootstrap = (string) file_get_contents($root . '/scripts/bootstrap_android.sh');
-$assert(str_contains($bootstrap, 'mobile/assets/brand/alkenzy_adv.png'), 'Android bootstrap uses the exact supplied Alkenzy ADV PNG');
+$assert(str_contains($bootstrap, 'mobile/android-release/alkenzy_adv.webp'), 'Android bootstrap uses the lossless Android-safe Alkenzy ADV launcher asset');
 $assert(str_contains($bootstrap, 'android:label="Alkenzy ADV"'), 'Android manifest label is Alkenzy ADV');
-$assert(str_contains($bootstrap, 'android:icon="@drawable/alkenzy_adv"'), 'Android manifest launcher icon is the supplied Alkenzy ADV image');
+$assert(str_contains($bootstrap, 'android:icon="@drawable/alkenzy_adv"'), 'Android manifest launcher icon is Alkenzy ADV');
 $assert(! str_contains($bootstrap, 'android:icon="@drawable/safe_contracts_brand"'), 'old Safe Contracts launcher icon is no longer used');
-$icon = (string) file_get_contents($root . '/mobile/assets/brand/alkenzy_adv.png');
-$assert(str_starts_with($icon, "\x89PNG\r\n\x1a\n"), 'supplied Alkenzy ADV launcher is a valid PNG');
-$assert(strlen($icon) > 1024, 'supplied Alkenzy ADV launcher is packaged at useful resolution');
+
+$flutterIcon = (string) file_get_contents($root . '/mobile/assets/brand/alkenzy_adv.png');
+$assert(str_starts_with($flutterIcon, "\x89PNG\r\n\x1a\n"), 'supplied Alkenzy ADV Flutter brand asset is a valid PNG');
+$assert(strlen($flutterIcon) > 1024, 'supplied Alkenzy ADV Flutter brand asset is packaged at useful resolution');
+
+$androidIcon = (string) file_get_contents($root . '/mobile/android-release/alkenzy_adv.webp');
+$assert(str_starts_with($androidIcon, 'RIFF') && substr($androidIcon, 8, 4) === 'WEBP', 'Android Alkenzy ADV launcher asset is a valid WebP');
+$assert(strlen($androidIcon) > 1024, 'Android Alkenzy ADV launcher asset is packaged at useful resolution');
 
 printf("SafeContracts mobile CRUD permissions + Alkenzy ADV identity regression passed (%d checks).\n", $checks);
