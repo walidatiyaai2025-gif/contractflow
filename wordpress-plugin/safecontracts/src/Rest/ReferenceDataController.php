@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SafeContracts\Rest;
 
 use SafeContracts\ReferenceData\PaymentMethodRepository;
+use SafeContracts\Roles\Capabilities;
+use SafeContracts\Roles\RoleRegistrar;
 use Throwable;
 use WP_Error;
 use WP_REST_Request;
@@ -35,7 +37,43 @@ final class ReferenceDataController
                 ],
                 (new PaymentMethodRepository())->all(true)
             );
-            return RequestGuard::response(['payment_methods' => $methods]);
+
+            $accountants = [];
+            if (current_user_can(Capabilities::ASSIGN_CONTRACTS)) {
+                $users = get_users([
+                    'role' => RoleRegistrar::ACCOUNTANT,
+                    'orderby' => 'display_name',
+                    'order' => 'ASC',
+                ]);
+                if (is_array($users)) {
+                    foreach ($users as $user) {
+                        if (! is_object($user) || ! isset($user->ID)) {
+                            continue;
+                        }
+                        $id = (int) $user->ID;
+                        if ($id <= 0 ||
+                            ! user_can($id, Capabilities::ACCESS) ||
+                            ! user_can($id, Capabilities::CREATE_CONTRACTS) ||
+                            ! user_can($id, Capabilities::VIEW_ASSIGNED)) {
+                            continue;
+                        }
+                        $name = trim((string) ($user->display_name ?? ''));
+                        if ($name === '') {
+                            $name = trim((string) ($user->user_login ?? ''));
+                        }
+                        $accountants[] = [
+                            'id' => $id,
+                            'name' => $name !== '' ? $name : ('#' . $id),
+                            'email' => trim((string) ($user->user_email ?? '')),
+                        ];
+                    }
+                }
+            }
+
+            return RequestGuard::response([
+                'payment_methods' => $methods,
+                'accountants' => $accountants,
+            ]);
         } catch (Throwable $error) {
             return RequestGuard::failure($error, 'safecontracts_reference_data_failed');
         }
