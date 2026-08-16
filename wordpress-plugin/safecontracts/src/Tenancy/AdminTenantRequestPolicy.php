@@ -8,6 +8,7 @@ final class AdminTenantRequestPolicy
 {
     /** @var list<string> */
     private const PLATFORM_GLOBAL_PAGES = [
+        AdminTenantContext::SELECT_PAGE,
         'safecontracts-active-users',
         'safecontracts-users-roles',
         'safecontracts-settings',
