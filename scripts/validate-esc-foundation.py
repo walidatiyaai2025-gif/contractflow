@@ -16,6 +16,7 @@ REQUIRED_FILES = (
     "docs/enterprise/PRODUCT_DESIGN_LANDING.md",
     "docs/enterprise/MOBILE_IDENTITY_APK.md",
     "docs/enterprise/DESIGN_SYSTEM.md",
+    "docs/enterprise/TENANT_DATA_OWNERSHIP.md",
     "docs/enterprise/ROADMAP.md",
     "docs/enterprise/FEATURE_REGISTRY.json",
     "assets/enterprise/theme/tokens.json",
@@ -24,6 +25,7 @@ REQUIRED_FILES = (
     "mobile/android-release/enterprise-launcher.xml",
     "mobile/android-release/README.md",
     "scripts/bootstrap_android.sh",
+    "scripts/enterprise_tenant_backfill.php",
     "scripts/enterprise_verified_artifacts.py",
     "Last verified Enterprise Plugin/README.md",
     "Last verified Enterprise apk/README.md",
@@ -61,7 +63,6 @@ def main() -> None:
         if not (ROOT / relative).is_file():
             fail(f"missing required file: {relative}")
 
-    # A Safe Contract Firebase file is intentionally removed from the ESC branch.
     if (ROOT / "mobile/android-release/google-services.json").exists():
         fail("committed Safe Contract google-services.json must not exist in ESC android-release")
 
@@ -70,9 +71,11 @@ def main() -> None:
     mobile_doc = read_text("docs/enterprise/MOBILE_IDENTITY_APK.md")
     landing = read_text("docs/enterprise/PRODUCT_DESIGN_LANDING.md")
     design = read_text("docs/enterprise/DESIGN_SYSTEM.md")
+    ownership = read_text("docs/enterprise/TENANT_DATA_OWNERSHIP.md")
     gradle = read_text("mobile/android-release/app-build.gradle.kts")
     activity = read_text("mobile/android-release/MainActivity.kt")
     bootstrap = read_text("scripts/bootstrap_android.sh")
+    backfill = read_text("scripts/enterprise_tenant_backfill.php")
     release_script = read_text("scripts/enterprise_verified_artifacts.py")
 
     for marker in (
@@ -99,6 +102,26 @@ def main() -> None:
         fail("mobile identity document missing ESC package baseline")
     if PUBLIC_URL not in landing or PUBLIC_URL not in design:
         fail("landing/design docs must reference the official public URL")
+
+    for marker in (
+        "expand → backfill → verify → enforce",
+        "Migration `1.16.0`",
+        "CoreTenantOwnershipBackfill::report()",
+        "Do not use the default-tenant command as a substitute for a real mapping decision.",
+        "Safe Contract separation",
+    ):
+        if marker not in ownership:
+            fail(f"tenant ownership runbook missing marker: {marker}")
+
+    for marker in (
+        "--wp-root=",
+        "--tenant-id",
+        "--apply",
+        "--verify",
+        "CoreTenantOwnershipBackfill",
+    ):
+        if marker not in backfill:
+            fail(f"tenant backfill command missing marker: {marker}")
 
     for marker in (
         f'namespace = "{APPLICATION_ID}"',

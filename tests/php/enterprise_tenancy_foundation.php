@@ -35,7 +35,7 @@ function esc_tenant_throws(callable $callback, string $message): void
 
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
-esc_tenant_assert(Migrator::LATEST_VERSION === '1.15.0', 'enterprise tenancy migration is current');
+esc_tenant_assert(Migrator::LATEST_VERSION === '1.16.0', 'enterprise tenancy/ownership expansion migration is current');
 
 $tenantSchema = '';
 $membershipSchema = '';
