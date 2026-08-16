@@ -17,7 +17,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
       - name: Validate Enterprise Safe Contracts foundation
         run: python3 scripts/validate-esc-foundation.py
       - name: Validate ESC release artifact isolation
         run: python3 scripts/enterprise_verified_artifacts.py check
+      - name: Run backend regression and Enterprise tenancy tests
+        run: ./scripts/test-php.sh
