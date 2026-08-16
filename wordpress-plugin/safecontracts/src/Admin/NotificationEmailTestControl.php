@@ -16,6 +16,7 @@ final class NotificationEmailTestControl
 
     public static function register(): void
     {
+        DirectSmtpSettingsControl::register();
         add_action('admin_notices', [self::class, 'render'], 25);
         add_action('admin_post_' . self::ACTION, [self::class, 'handle']);
     }
@@ -35,8 +36,8 @@ final class NotificationEmailTestControl
                 $userId,
                 self::text('Safe Contracts email test', 'اختبار بريد Safe Contracts'),
                 self::text(
-                    'This test confirms that the saved Safe Contracts sender settings and the WordPress mail transport can deliver email.',
-                    'تؤكد هذه الرسالة أن إعدادات مرسل Safe Contracts المحفوظة ونظام بريد WordPress قادران على إرسال البريد الإلكتروني.'
+                    'This test confirms that the saved Safe Contracts sender settings and direct SMTP connection can deliver email.',
+                    'تؤكد هذه الرسالة أن إعدادات مرسل Safe Contracts المحفوظة واتصال SMTP المباشر قادران على إرسال البريد الإلكتروني.'
                 ),
                 false,
                 true,
@@ -67,9 +68,9 @@ final class NotificationEmailTestControl
             ? sanitize_key((string) $_GET['safecontracts_email_test'])
             : '';
         if ($status === 'sent') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(self::text('Test email sent successfully. Review your inbox and Recent delivery attempts.', 'تم إرسال رسالة الاختبار بنجاح. راجع بريدك ومحاولات الإرسال الأخيرة.')) . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(self::text('Test email sent successfully through Direct SMTP. Review your inbox and Recent delivery attempts.', 'تم إرسال رسالة الاختبار بنجاح عبر SMTP المباشر. راجع بريدك ومحاولات الإرسال الأخيرة.')) . '</p></div>';
         } elseif ($status === 'failed') {
-            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html(self::text('Test email failed. Verify email delivery is enabled, your WordPress profile email is valid, and the WordPress mail/SMTP transport is configured.', 'فشل إرسال رسالة الاختبار. تأكد من تفعيل البريد وصحة بريد حساب WordPress وضبط نظام البريد أو SMTP في WordPress.')) . '</p></div>';
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html(self::text('Test email failed. Verify email delivery is enabled, your WordPress profile email is valid, and the Direct SMTP host, port, encryption and credentials are correct.', 'فشل إرسال رسالة الاختبار. تأكد من تفعيل البريد وصحة بريد حساب WordPress وصحة خادم ومنفذ وتشفير وبيانات دخول SMTP المباشر.')) . '</p></div>';
         }
 
         $user = function_exists('get_userdata') ? get_userdata(get_current_user_id()) : false;
@@ -80,7 +81,7 @@ final class NotificationEmailTestControl
         <div class="notice notice-info">
             <p><strong><?php echo esc_html(self::text('Email delivery test', 'اختبار إرسال البريد')); ?></strong></p>
             <?php if ($canTest) : ?>
-                <p><?php echo esc_html(sprintf(self::text('Send a real test through the saved Safe Contracts sender settings and WordPress wp_mail to your profile email: %s', 'أرسل اختباراً فعلياً باستخدام إعدادات مرسل Safe Contracts المحفوظة وWordPress wp_mail إلى بريد حسابك: %s'), $email)); ?></p>
+                <p><?php echo esc_html(sprintf(self::text('Send a real test through the saved Safe Contracts Direct SMTP settings to your profile email: %s', 'أرسل اختباراً فعلياً باستخدام إعدادات SMTP المباشر المحفوظة في Safe Contracts إلى بريد حسابك: %s'), $email)); ?></p>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin: 0 0 12px;">
                     <input type="hidden" name="action" value="<?php echo esc_attr(self::ACTION); ?>">
                     <?php wp_nonce_field(self::ACTION); ?>
