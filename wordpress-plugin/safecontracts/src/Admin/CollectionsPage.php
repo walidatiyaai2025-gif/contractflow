@@ -95,10 +95,12 @@ final class CollectionsPage
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Cash application', 'safecontracts'); ?></p><h1><?php echo esc_html__('Collections', 'safecontracts'); ?></h1></div></div>
+            <?php AdminPeriodFilter::render(self::SLUG, $filters, $selectedPaymentId > 0 ? ['payment_id' => $selectedPaymentId] : []); ?>
+            <p class="description"><?php echo esc_html__('The displayed period is applied to the collection date.', 'safecontracts'); ?></p>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <h2><?php echo esc_html__('Collection ledger', 'safecontracts'); ?></h2>
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Date', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer / Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Method', 'safecontracts'); ?></th><th><?php echo esc_html__('Amount', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Date', 'safecontracts'); ?></th><th><?php echo esc_html__('Customer / Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Method', 'safecontracts'); ?></th><th><?php echo esc_html__('Amount', 'safecontracts'); ?></th><th><?php echo esc_html__('Proof', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($collections as $collection) : ?>
                         <tr>
                             <td><?php echo esc_html((string) $collection['collection_date']); ?></td>
@@ -106,6 +108,7 @@ final class CollectionsPage
                             <td><?php echo esc_html((string) ($collection['payment_reference'] ?: '#' . $collection['sequence_no'])); ?></td>
                             <td><?php echo esc_html((string) $collection['payment_method_name']); ?></td>
                             <td><?php echo esc_html(number_format((float) $collection['amount'], 2)); ?></td>
+                            <td><?php CollectorAttachmentView::render($collection, true); ?></td>
                             <td>
                                 <?php if (current_user_can(Capabilities::MANAGE_COLLECTIONS)) : ?>
                                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete/reverse this collection? The payment paid amount, remaining amount and status will be recalculated from the remaining active collection ledger.', 'safecontracts'); ?>">
