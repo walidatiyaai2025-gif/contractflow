@@ -20,6 +20,14 @@ SAFE_APPLICATION_ID = "com.safecontracts.safecontracts_mobile"
 ESC_NOTIFICATION_CHANNEL = "enterprise_safe_contracts_alerts"
 ESC_METHOD_CHANNEL = "enterprise_safecontracts/notifications"
 ESC_DEEP_LINK_SCHEME = "esc-safecontracts"
+FORBIDDEN_SAFE_WORKFLOWS = (
+    "quality-gates.yml",
+    "doc-sync.yml",
+    "plan-sync.yml",
+    "project-status.yml",
+    "retain-verified-plugin.yml",
+    "theme-quality.yml",
+)
 
 
 class IsolationError(RuntimeError):
@@ -59,6 +67,13 @@ def validate_sources() -> int:
     android_readme = read("mobile/android-release/README.md")
     publish_workflow = read(".github/workflows/publish-mobile-latest.yml")
     verified_artifacts = read("scripts/enterprise_verified_artifacts.py")
+
+    workflow_dir = ROOT / ".github/workflows"
+    for filename in FORBIDDEN_SAFE_WORKFLOWS:
+        if (workflow_dir / filename).exists():
+            fail(
+                f"inherited Safe Contract workflow must not exist on the ESC branch: {filename}"
+            )
 
     require(
         gradle,
@@ -216,7 +231,7 @@ def validate_sources() -> int:
     if (ROOT / "mobile/android-release/google-services.json").exists():
         fail("ESC android-release must never contain a committed google-services.json")
 
-    return 9
+    return 10
 
 
 def resolve_tool(explicit: str | None, name: str) -> str:
