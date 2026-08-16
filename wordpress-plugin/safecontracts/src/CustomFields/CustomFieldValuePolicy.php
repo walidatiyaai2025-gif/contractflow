@@ -12,6 +12,7 @@ final class CustomFieldValuePolicy
 {
     public const MAX_TEXT_BYTES = 10000;
     public const MAX_LONG_TEXT_BYTES = 200000;
+    public const MAX_NUMERIC_INPUT_BYTES = 256;
 
     /**
      * @param array<string,mixed> $definition
@@ -97,8 +98,13 @@ final class CustomFieldValuePolicy
     {
         if (is_int($value)) {
             $integer = $value;
-        } elseif (is_string($value) && preg_match('/^-?(0|[1-9][0-9]*)$/', trim($value)) === 1) {
-            $validated = filter_var(trim($value), FILTER_VALIDATE_INT);
+        } elseif (is_string($value)) {
+            $raw = trim($value);
+            if ($raw === '' || strlen($raw) > self::MAX_NUMERIC_INPUT_BYTES || preg_match('/^-?[0-9]+$/', $raw) !== 1) {
+                throw new InvalidArgumentException('Custom Field integer value must be an integer.');
+            }
+            $normalized = self::canonicalIntegerString($raw);
+            $validated = filter_var($normalized, FILTER_VALIDATE_INT);
             if ($validated === false) {
                 throw new InvalidArgumentException('Custom Field integer value is outside the supported integer range.');
             }
@@ -289,10 +295,23 @@ final class CustomFieldValuePolicy
         throw new InvalidArgumentException('Custom Field decimal validation boundary is invalid.');
     }
 
+    private static function canonicalIntegerString(string $value): string
+    {
+        $negative = str_starts_with($value, '-');
+        if ($negative) {
+            $value = substr($value, 1);
+        }
+        $value = ltrim($value, '0');
+        if ($value === '') {
+            return '0';
+        }
+        return $negative ? '-' . $value : $value;
+    }
+
     private static function canonicalDecimal(string $value): string
     {
         $value = trim($value);
-        if (preg_match('/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/', $value) !== 1) {
+        if ($value === '' || strlen($value) > self::MAX_NUMERIC_INPUT_BYTES || preg_match('/^-?[0-9]+(?:\.[0-9]+)?$/', $value) !== 1) {
             throw new InvalidArgumentException('Custom Field decimal value must use plain decimal notation.');
         }
         $negative = str_starts_with($value, '-');
