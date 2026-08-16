@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'status=$?; echo "::error title=ESC backend regression failed::Command failed (exit ${status}): ${BASH_COMMAND}"; exit "${status}"' ERR
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
