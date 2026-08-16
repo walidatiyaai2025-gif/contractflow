@@ -41,7 +41,21 @@ final class TenantMembershipRepository
             return false;
         }
 
-        return in_array($userId, $this->filterActiveUserIds($tenantId, [$userId]), true);
+        global $wpdb;
+        $memberships = $wpdb->prefix . 'safecontracts_tenant_memberships';
+        $tenants = $wpdb->prefix . 'safecontracts_tenants';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT m.id
+             FROM {$memberships} m
+             INNER JOIN {$tenants} t ON t.id = m.tenant_id
+             WHERE m.tenant_id = %d AND m.user_id = %d
+               AND m.status = 'active' AND t.status = 'active'
+             LIMIT 1",
+            $tenantId,
+            $userId
+        ), ARRAY_A);
+
+        return is_array($rows) && $rows !== [];
     }
 
     /**
