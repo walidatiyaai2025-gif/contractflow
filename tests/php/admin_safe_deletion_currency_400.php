@@ -45,11 +45,11 @@ foreach (['START TRANSACTION', 'ROLLBACK', 'ContractMoney::subtract', 'PaymentSt
 sc_400_assert(str_contains($deletion, 'Payments with collected amounts cannot be deleted'), '#400 payment deletion protects collected financial evidence');
 sc_400_assert(str_contains($deletion, 'Reverse their collections first'), '#400 payment deletion requires collection reversal before archive');
 
-// Schema is additive and migration registry is contiguous through 1.12.0.
+// Schema is additive and migration 1.12.0 remains registered even when newer migrations follow it.
 foreach (['is_archived', 'archived_by', 'archived_at', 'archived_payment_date', 'archived_due'] as $marker) {
     sc_400_assert(str_contains($migration, $marker), '#400 additive archive schema contains ' . $marker);
 }
-sc_400_assert(str_contains($migrator, "public const LATEST_VERSION = '1.12.0';"), '#400 migrator latest version is 1.12.0');
+sc_400_assert(version_compare(\SafeContracts\Database\Migrator::LATEST_VERSION, '1.12.0', '>='), '#400 migrator remains at or beyond safe-deletion version 1.12.0');
 sc_400_assert(str_contains($migrator, "'1.12.0' => Migration0013SafeDeletion::class"), '#400 migration 1.12.0 is registered');
 
 // Every requested admin surface has capability+nonce localized Delete wiring.
