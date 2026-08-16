@@ -41,14 +41,14 @@ final class _SafeContractsLoginScreenState
 
   Future<void> _submit() async {
     if (_bootstrapping || !_formKey.currentState!.validate()) return;
-    final success = await widget.controller.submit(
-      username: _username.text,
-      password: _password.text,
-    );
-    if (!success || !mounted) return;
-    _password.clear();
     setState(() => _bootstrapping = true);
     try {
+      final success = await widget.controller.submit(
+        username: _username.text,
+        password: _password.text,
+      );
+      if (!success || !mounted) return;
+      _password.clear();
       await widget.onAuthenticated();
     } finally {
       if (mounted) {
