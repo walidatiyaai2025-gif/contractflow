@@ -50,9 +50,9 @@ final class ESC_NonCore_Schema_Wpdb
         $this->indexes[$this->prefix . 'safecontracts_notification_rules']['code'] = true;
         $this->indexes[$this->prefix . 'safecontracts_notification_templates']['code'] = true;
         $this->indexes[$this->prefix . 'safecontracts_device_tokens']['token_hash'] = true;
-        $this->indexes[$this->prefix . 'safecontracts_notification_deliveries']['idempotency_key'] = true;
         $this->indexes[$this->prefix . 'safecontracts_notification_schedule']['rule_payment_attempt'] = true;
-        $this->indexes[$this->prefix . 'safecontracts_notification_suppressions']['suppression_unique'] = true;
+        $this->indexes[$this->prefix . 'safecontracts_notification_suppressions']['scope'] = true;
+        $this->indexes[$this->prefix . 'safecontracts_import_runs']['storage_key'] = true;
     }
 
     public function prepare(string $query, mixed ...$args): string
@@ -151,19 +151,26 @@ foreach ([
     'esc_tenant_rule_code (tenant_id, code)',
     'esc_tenant_template_code (tenant_id, code)',
     'esc_tenant_token_hash (tenant_id, token_hash)',
-    'esc_tenant_idempotency_key (tenant_id, idempotency_key)',
     'esc_tenant_rule_payment_attempt (tenant_id, rule_id, payment_id, attempt_no)',
-    'esc_tenant_suppression_unique (tenant_id, user_id, scope, rule_id, payment_id)',
+    'esc_tenant_suppression_scope (tenant_id, scope_type, scope_id)',
+    'esc_tenant_storage_key (tenant_id, storage_key)',
 ] as $indexDefinition) {
     esc_noncore_schema_assert(str_contains($ddl, $indexDefinition), "tenant-scoped unique index {$indexDefinition} is created");
 }
-foreach (['code', 'token_hash', 'idempotency_key', 'rule_payment_attempt', 'suppression_unique'] as $legacy) {
+foreach (['code', 'token_hash', 'rule_payment_attempt', 'scope', 'storage_key'] as $legacy) {
     esc_noncore_schema_assert(str_contains($ddl, 'DROP INDEX ' . $legacy), "legacy global unique index {$legacy} is removed after scoped replacement");
 }
-esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_user_enabled'), 'device lookup gets tenant-first user index');
-esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_status_due'), 'schedule due queue gets tenant-first index');
-esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_run_status'), 'import run status gets tenant-first index');
+esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_user_active (tenant_id, user_id, is_active, id)'), 'device lookup uses live is_active field');
+esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_status_due (tenant_id, status, scheduled_for, id)'), 'schedule due queue uses live scheduled_for field');
+esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_run_row (tenant_id, import_run_id, row_number, id)'), 'import error index uses live import_run_id field');
+esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_scope_active (tenant_id, scope_type, scope_id, is_active, id)'), 'suppression index uses live scope fields');
 esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_audit_entity'), 'audit browsing gets tenant-first entity index');
+
+$source = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Tenancy/NonCoreTenantSchemaHardener.php');
+esc_noncore_schema_assert(! str_contains($source, 'idempotency_key'), 'hardener does not invent a delivery idempotency column');
+esc_noncore_schema_assert(! str_contains($source, 'scheduled_for_utc'), 'hardener contains no obsolete scheduled_for_utc field');
+esc_noncore_schema_assert(! str_contains($source, 'enabled, id'), 'hardener contains no obsolete device enabled field');
+esc_noncore_schema_assert(! str_contains($source, 'run_id, row_number'), 'hardener contains no obsolete import error run_id field');
 
 $verification = $hardener->verify($database);
 esc_noncore_schema_assert($verification['ready'] === true, 'post-DDL non-core verification is green');
