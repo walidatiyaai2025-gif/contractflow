@@ -43,6 +43,7 @@ use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Presence\PresenceService;
 use SafeContracts\Rest\CoreTenantRestGuard;
+use SafeContracts\Rest\EnterpriseRateLimitGuard;
 use SafeContracts\Rest\Router;
 use SafeContracts\Tenancy\AdminTenantContext;
 use SafeContracts\Tenancy\TenantCapabilityFilter;
@@ -85,6 +86,7 @@ final class Plugin
         TenantCapabilityFilter::register();
         AdminTenantContext::register();
         CoreTenantRestGuard::register();
+        EnterpriseRateLimitGuard::register();
         PresenceService::register();
         FirebaseAccessTokenProvider::register();
         NotificationScheduler::register();
