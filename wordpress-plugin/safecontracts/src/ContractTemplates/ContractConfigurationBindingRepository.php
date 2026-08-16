@@ -84,31 +84,56 @@ final class ContractConfigurationBindingRepository
         $tenantId = $this->tenantId();
         $table = $wpdb->prefix . 'safecontracts_contract_configuration_bindings';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
-        $templateSql = $templateId === null ? 'NULL' : (string) $templateId;
-        $versionSql = $templateVersionId === null ? 'NULL' : (string) $templateVersionId;
+        $types = $wpdb->prefix . 'safecontracts_contract_types';
 
-        // The contract may leave draft after the service-level read. Re-check draft + archive
-        // state in the same SQL statement that persists the binding so a concurrent lifecycle
-        // transition cannot race the immutable-after-draft rule.
-        $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (tenant_id, contract_id, contract_type_id, template_id, template_version_id, created_by, updated_by, created_at, updated_at)
-             SELECT %d, c.id, %d, {$templateSql}, {$versionSql}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP()
-             FROM {$contracts} c
-             WHERE c.id = %d AND c.tenant_id = %d AND c.status = 'draft' AND c.is_archived = 0
-             ON DUPLICATE KEY UPDATE contract_type_id = VALUES(contract_type_id), template_id = VALUES(template_id), template_version_id = VALUES(template_version_id), updated_by = VALUES(updated_by), updated_at = UTC_TIMESTAMP()",
-            $tenantId,
-            $contractTypeId,
-            $actorId,
-            $actorId,
-            $contractId,
-            $tenantId
-        );
+        if ($templateId === null || $templateVersionId === null) {
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (tenant_id, contract_id, contract_type_id, template_id, template_version_id, created_by, updated_by, created_at, updated_at)
+                 SELECT %d, c.id, ct.id, NULL, NULL, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP()
+                 FROM {$contracts} c
+                 INNER JOIN {$types} ct ON ct.id = %d AND ct.tenant_id = %d AND ct.status = 'active'
+                 WHERE c.id = %d AND c.tenant_id = %d AND c.status = 'draft' AND c.is_archived = 0
+                 ON DUPLICATE KEY UPDATE contract_type_id = VALUES(contract_type_id), template_id = VALUES(template_id), template_version_id = VALUES(template_version_id), updated_by = VALUES(updated_by), updated_at = UTC_TIMESTAMP()",
+                $tenantId,
+                $actorId,
+                $actorId,
+                $contractTypeId,
+                $tenantId,
+                $contractId,
+                $tenantId
+            );
+        } else {
+            $templates = $wpdb->prefix . 'safecontracts_contract_templates';
+            $versions = $wpdb->prefix . 'safecontracts_contract_template_versions';
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (tenant_id, contract_id, contract_type_id, template_id, template_version_id, created_by, updated_by, created_at, updated_at)
+                 SELECT %d, c.id, ct.id, t.id, v.id, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP()
+                 FROM {$contracts} c
+                 INNER JOIN {$types} ct ON ct.id = %d AND ct.tenant_id = %d AND ct.status = 'active'
+                 INNER JOIN {$templates} t ON t.id = %d AND t.tenant_id = %d AND t.contract_type_id = ct.id AND t.status = 'active'
+                 INNER JOIN {$versions} v ON v.id = %d AND v.tenant_id = %d AND v.template_id = t.id AND v.version_status = 'published'
+                 WHERE c.id = %d AND c.tenant_id = %d AND c.status = 'draft' AND c.is_archived = 0
+                 ON DUPLICATE KEY UPDATE contract_type_id = VALUES(contract_type_id), template_id = VALUES(template_id), template_version_id = VALUES(template_version_id), updated_by = VALUES(updated_by), updated_at = UTC_TIMESTAMP()",
+                $tenantId,
+                $actorId,
+                $actorId,
+                $contractTypeId,
+                $tenantId,
+                $templateId,
+                $tenantId,
+                $templateVersionId,
+                $tenantId,
+                $contractId,
+                $tenantId
+            );
+        }
+
         $result = $wpdb->query($sql);
         if ($result === false) {
             throw new RuntimeException('Unable to save Enterprise contract configuration binding.');
         }
         if ($result === 0) {
-            throw new RuntimeException('Enterprise contract changed concurrently or is no longer an editable draft.');
+            throw new RuntimeException('Enterprise contract or selected configuration changed concurrently and is no longer bindable.');
         }
     }
 
