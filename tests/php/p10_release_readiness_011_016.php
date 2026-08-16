@@ -129,12 +129,28 @@ foreach (['contract-lifecycle', 'assigned-scope', 'collection-settlement', 'foll
 }
 
 // SC-P10-016 — Production release-readiness gate.
-$qualityGates = sc_p10c_source('.github/workflows/quality-gates.yml');
+// The shared SafeContracts regression must validate the release gate for the product
+// line that owns this branch. Safe Contract retains quality-gates.yml on main; ESC
+// intentionally removes that workflow and uses ESC-only foundation/publish gates.
+$repoRoot = dirname(__DIR__, 2);
+$safeQualityPath = $repoRoot . '/.github/workflows/quality-gates.yml';
+if (is_file($safeQualityPath)) {
+    $qualityGates = sc_p10c_source('.github/workflows/quality-gates.yml');
+    foreach (['release-readiness:', 'needs: [repository-standards, backend-foundation, mobile-foundation]', 'python3 scripts/backup_manifest.py --check', 'python3 scripts/release_readiness.py --check'] as $marker) {
+        sc_p10c_assert(str_contains($qualityGates, $marker), 'P10-016 Quality Gates release marker is present: ' . $marker);
+    }
+} else {
+    $escFoundation = sc_p10c_source('.github/workflows/esc-foundation.yml');
+    $escPublish = sc_p10c_source('.github/workflows/publish-mobile-latest.yml');
+    foreach (['ESC Foundation Gate', 'python3 scripts/validate-esc-foundation.py', 'python3 scripts/verify_esc_android_isolation.py', 'python3 scripts/enterprise_verified_artifacts.py check', './scripts/test-php.sh', 'flutter analyze', 'flutter test'] as $marker) {
+        sc_p10c_assert(str_contains($escFoundation, $marker), 'P10-016 ESC foundation release marker is present: ' . $marker);
+    }
+    foreach (['refs/heads/enterprise-safecontracts', 'environment: esc-production', '--flavor production --release', '--dart-define=ESC_ENV=production', 'EnterpriseSafeContracts-latest.apk', 'esc-mobile-latest', 'coexistence_evidence'] as $marker) {
+        sc_p10c_assert(str_contains($escPublish, $marker), 'P10-016 ESC publish isolation marker is present: ' . $marker);
+    }
+}
 $releaseVerifier = sc_p10c_source('scripts/release_readiness.py');
 $releaseDoc = sc_p10c_source('docs/PRODUCTION_RELEASE_READINESS.md');
-foreach (['release-readiness:', 'needs: [repository-standards, backend-foundation, mobile-foundation]', 'python3 scripts/backup_manifest.py --check', 'python3 scripts/release_readiness.py --check'] as $marker) {
-    sc_p10c_assert(str_contains($qualityGates, $marker), 'P10-016 Quality Gates release marker is present: ' . $marker);
-}
 foreach (['validate_audit_completeness', 'validate_migration_chain', 'validate_accessibility_contract', 'validate_backup_contract', 'validate_uat_contract', 'validate_ci_release_gate'] as $marker) {
     sc_p10c_assert(str_contains($releaseVerifier, $marker), 'P10-016 release verifier section is present: ' . $marker);
 }
