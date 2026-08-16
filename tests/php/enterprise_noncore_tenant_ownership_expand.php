@@ -32,7 +32,10 @@ function esc_noncore_expand_query_contains(string $needle): bool
 
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
-esc_noncore_expand_assert(Migrator::LATEST_VERSION === '1.17.0', 'non-core tenant ownership expansion is the current migration');
+esc_noncore_expand_assert(
+    version_compare(Migrator::LATEST_VERSION, '1.17.0', '>='),
+    'non-core tenant ownership expansion remains registered after later Enterprise schema versions'
+);
 
 $tables = [
     'wp_safecontracts_notification_rules',
