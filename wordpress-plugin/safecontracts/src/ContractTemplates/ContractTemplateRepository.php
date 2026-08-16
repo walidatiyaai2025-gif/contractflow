@@ -225,24 +225,29 @@ final class ContractTemplateRepository
         $fields = $wpdb->prefix . 'safecontracts_contract_template_version_fields';
         $definitions = $wpdb->prefix . 'safecontracts_custom_field_definitions';
         $sql = $wpdb->prepare(
-            "UPDATE {$versions} v
-             INNER JOIN {$templates} t ON t.id = v.template_id AND t.tenant_id = v.tenant_id
-             INNER JOIN {$types} ct ON ct.id = t.contract_type_id AND ct.tenant_id = t.tenant_id
-             SET v.version_status = 'published', v.published_by = %d, v.published_at = UTC_TIMESTAMP(), v.updated_by = %d, v.updated_at = UTC_TIMESTAMP()
-             WHERE v.id = %d AND v.template_id = %d AND v.tenant_id = %d AND v.version_status = 'draft'
-               AND t.status = 'active' AND ct.status = 'active'
-               AND NOT EXISTS (
+            "UPDATE {$versions} SET version_status = 'published', published_by = %d, published_at = UTC_TIMESTAMP(), updated_by = %d, updated_at = UTC_TIMESTAMP()
+             WHERE id = %d AND template_id = %d AND tenant_id = %d AND version_status = 'draft'
+               AND EXISTS (
                     SELECT 1
-                    FROM {$fields} f
-                    LEFT JOIN {$definitions} d ON d.id = f.definition_id AND d.tenant_id = f.tenant_id
-                    WHERE f.tenant_id = v.tenant_id AND f.template_id = v.template_id AND f.template_version_id = v.id
-                      AND (
-                          d.id IS NULL OR d.status <> 'active' OR d.contract_type_id <> t.contract_type_id
-                          OR d.field_code <> f.field_code_snapshot OR d.data_type <> f.data_type_snapshot
-                          OR d.label <> f.label_snapshot OR COALESCE(d.help_text, '') <> COALESCE(f.help_text_snapshot, '')
-                          OR d.is_required <> f.definition_required_snapshot
-                          OR COALESCE(d.options_json, '') <> COALESCE(f.options_json_snapshot, '')
-                          OR COALESCE(d.validation_json, '') <> COALESCE(f.validation_json_snapshot, '')
+                    FROM {$templates} t
+                    INNER JOIN {$types} ct ON ct.id = t.contract_type_id AND ct.tenant_id = t.tenant_id
+                    WHERE t.id = {$versions}.template_id AND t.tenant_id = {$versions}.tenant_id
+                      AND t.status = 'active' AND ct.status = 'active'
+                      AND NOT EXISTS (
+                           SELECT 1
+                           FROM {$fields} f
+                           LEFT JOIN {$definitions} d ON d.id = f.definition_id AND d.tenant_id = f.tenant_id
+                           WHERE f.tenant_id = {$versions}.tenant_id
+                             AND f.template_id = {$versions}.template_id
+                             AND f.template_version_id = {$versions}.id
+                             AND (
+                                 d.id IS NULL OR d.status <> 'active' OR d.contract_type_id <> t.contract_type_id
+                                 OR d.field_code <> f.field_code_snapshot OR d.data_type <> f.data_type_snapshot
+                                 OR d.label <> f.label_snapshot OR COALESCE(d.help_text, '') <> COALESCE(f.help_text_snapshot, '')
+                                 OR d.is_required <> f.definition_required_snapshot
+                                 OR COALESCE(d.options_json, '') <> COALESCE(f.options_json_snapshot, '')
+                                 OR COALESCE(d.validation_json, '') <> COALESCE(f.validation_json_snapshot, '')
+                             )
                       )
                )",
             $actorId,
