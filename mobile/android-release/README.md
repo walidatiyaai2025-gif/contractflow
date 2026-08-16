@@ -20,6 +20,18 @@ No real ESC `google-services.json` is committed. Before running `./scripts/boots
 
 Each file must contain a Firebase Android app registered for its exact package above. The bootstrap fails if the Safe Contract app ID is reused or if two ESC flavors reuse one Firebase Android app registration.
 
+## Launcher, adaptive icon and splash
+
+The committed ESC Android overlay owns a complete product-specific visual identity:
+
+- `enterprise-launcher.xml` — legacy launcher vector;
+- `enterprise-launcher-foreground.xml` — adaptive foreground;
+- `enterprise-launcher-background.xml` — adaptive background;
+- `enterprise-launcher-adaptive.xml` — Android 8+ adaptive icon;
+- `enterprise-splash.xml` — launch/splash drawable.
+
+The bootstrap installs the launcher under the ESC-only resource `@mipmap/ic_launcher_enterprise` and replaces Flutter's generic launch background with `@drawable/enterprise_safe_contracts_splash`. The generated manifest must never point to Safe Contract icon/splash resources.
+
 ## Release signing
 
 Production signing uses the ESC-only variables:
@@ -39,6 +51,8 @@ ESC Flutter builds use only:
 - `ESC_API_BASE_URL`
 
 The Safe Contract variables `SC_ENV` and `SC_API_BASE_URL` are intentionally invalid for the ESC build contract.
+
+ESC authentication persistence uses the code-level secure-storage key `enterprise_safecontracts.mobile.bearer_token` in addition to Android's package sandbox. Future preferences/cache/database identifiers must preserve the same ESC-specific logical namespace.
 
 ## Build examples
 
@@ -68,6 +82,8 @@ Run from repository root:
 ```bash
 python3 scripts/verify_esc_android_isolation.py
 ```
+
+The gate validates the package/flavor/signing contract, ESC-only Firebase bootstrap, adaptive launcher/splash sources, secure-storage namespace, version sequence, notification/deep-link namespaces, artifact/release isolation and production evidence requirements. It also fails closed if Analytics or Crashlytics is enabled before a dedicated ESC identity review is added.
 
 After building an ESC production APK, verify the package encoded in the binary:
 
