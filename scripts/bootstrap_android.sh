@@ -5,13 +5,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
 FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
+BRAND_SOURCE="$ROOT/mobile/lib/core/branding/safe_contracts_brand.dart"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$BRAND_SOURCE"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
@@ -42,7 +43,7 @@ cd "$MOBILE"
 
 # Flutter owns the platform boilerplate version. Recreate it from the exact
 # Flutter stable toolchain used by CI, then restore the repository's release
-# signing, networking, and Firebase contracts.
+# signing, networking, Firebase, and Safe Contracts identity contracts.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -70,6 +71,27 @@ if plugin not in text:
 path.write_text(text, encoding="utf-8")
 PY
 
+BRAND_ICON="android/app/src/main/res/drawable-nodpi/safe_contracts_brand.jpg"
+mkdir -p "$(dirname "$BRAND_ICON")"
+python3 - "$BRAND_SOURCE" "$BRAND_ICON" <<'PY'
+import base64
+from pathlib import Path
+import re
+import sys
+
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+match = re.search(r"static const jpegBase64 = '([A-Za-z0-9+/=]+)';", source)
+if match is None:
+    raise SystemExit("FAIL: Safe Contracts brand JPEG is missing from mobile brand source")
+try:
+    image = base64.b64decode(match.group(1), validate=True)
+except Exception as exc:
+    raise SystemExit(f"FAIL: Safe Contracts brand JPEG is invalid: {exc}") from exc
+if not image.startswith(b"\xff\xd8\xff") or len(image) < 1024:
+    raise SystemExit("FAIL: Safe Contracts brand source is not a usable JPEG")
+Path(sys.argv[2]).write_bytes(image)
+PY
+
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [[ ! -f "$MANIFEST" ]]; then
   echo "FAIL: Flutter did not generate AndroidManifest.xml" >&2
@@ -82,7 +104,19 @@ import sys
 
 path = Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-text = text.replace('android:label="safecontracts_mobile"', 'android:label="SafeContracts"')
+text = text.replace('android:label="safecontracts_mobile"', 'android:label="Safe Contracts"')
+text = re.sub(
+    r'android:icon="@[^"]+"',
+    'android:icon="@drawable/safe_contracts_brand"',
+    text,
+    count=1,
+)
+text = re.sub(
+    r'android:roundIcon="@[^"]+"',
+    'android:roundIcon="@drawable/safe_contracts_brand"',
+    text,
+    count=1,
+)
 
 permissions = [
     'android.permission.INTERNET',
@@ -101,6 +135,10 @@ for permission in permissions:
 for permission in permissions:
     if permission not in text:
         raise SystemExit(f"FAIL: Android release manifest is missing {permission}")
+if 'android:label="Safe Contracts"' not in text:
+    raise SystemExit("FAIL: Android release manifest is missing Safe Contracts label")
+if 'android:icon="@drawable/safe_contracts_brand"' not in text:
+    raise SystemExit("FAIL: Android release manifest is missing Safe Contracts launcher icon")
 
 path.write_text(text, encoding="utf-8")
 PY
@@ -111,7 +149,8 @@ for required in \
   android/gradle/wrapper/gradle-wrapper.jar \
   android/app/build.gradle.kts \
   android/app/google-services.json \
-  android/app/src/main/AndroidManifest.xml; do
+  android/app/src/main/AndroidManifest.xml \
+  "$BRAND_ICON"; do
   if [[ ! -e "$required" ]]; then
     echo "FAIL: generated Android scaffold missing $required" >&2
     exit 1
@@ -126,6 +165,14 @@ grep -Fq 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing POST_NOTIFICATIONS permission" >&2
   exit 1
 }
+grep -Fq 'android:label="Safe Contracts"' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing Safe Contracts label" >&2
+  exit 1
+}
+grep -Fq 'android:icon="@drawable/safe_contracts_brand"' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing Safe Contracts launcher icon" >&2
+  exit 1
+}
 grep -Fq 'id("com.google.gms.google-services")' android/app/build.gradle.kts || {
   echo "FAIL: Android app does not apply Google Services Gradle plugin" >&2
   exit 1
@@ -135,4 +182,4 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "SafeContracts Android scaffold bootstrapped with release signing, INTERNET, notifications, and Firebase contracts."
+echo "Safe Contracts Android scaffold bootstrapped with branded launcher icon, release signing, INTERNET, notifications, and Firebase contracts."
