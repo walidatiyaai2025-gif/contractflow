@@ -97,11 +97,8 @@ final class AdminTenantContext
             wp_die(__('The selected Enterprise tenant is not available to your account.', 'safecontracts'));
         }
 
-        $fallback = admin_url('admin.php?page=' . AdminShell::SLUG);
-        $requestedRedirect = isset($_POST['redirect_to']) ? (string) $_POST['redirect_to'] : '';
-        $redirect = $requestedRedirect === ''
-            ? $fallback
-            : wp_validate_redirect($requestedRedirect, $fallback);
+        $page = self::safePageSlug((string) ($_POST['return_page'] ?? AdminShell::SLUG));
+        $redirect = add_query_arg(['page' => $page], admin_url('admin.php'));
         wp_safe_redirect($redirect);
         exit;
     }
@@ -130,16 +127,12 @@ final class AdminTenantContext
             return;
         }
 
-        $page = sanitize_key((string) ($_GET['page'] ?? AdminShell::SLUG));
-        if ($page !== AdminShell::SLUG && ! str_starts_with($page, 'safecontracts-')) {
-            $page = AdminShell::SLUG;
-        }
-        $redirectTo = add_query_arg(['page' => $page], admin_url('admin.php'));
+        $page = self::safePageSlug((string) ($_GET['page'] ?? AdminShell::SLUG));
         ?>
         <div class="notice notice-info safecontracts-tenant-switcher">
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;">
                 <input type="hidden" name="action" value="<?php echo esc_attr(self::SELECT_ACTION); ?>">
-                <input type="hidden" name="redirect_to" value="<?php echo esc_attr($redirectTo); ?>">
+                <input type="hidden" name="return_page" value="<?php echo esc_attr($page); ?>">
                 <?php wp_nonce_field(self::SELECT_ACTION); ?>
                 <strong><?php echo esc_html__('Enterprise tenant', 'safecontracts'); ?></strong>
                 <label class="screen-reader-text" for="safecontracts-esc-tenant-select"><?php echo esc_html__('Select Enterprise tenant', 'safecontracts'); ?></label>
@@ -171,6 +164,15 @@ final class AdminTenantContext
         $value = get_user_meta($userId, self::USER_META_KEY, true);
         $tenantId = is_numeric($value) ? (int) $value : 0;
         return $tenantId > 0 ? $tenantId : null;
+    }
+
+    public static function safePageSlug(string $page): string
+    {
+        $page = sanitize_key($page);
+        if ($page === AdminShell::SLUG || str_starts_with($page, 'safecontracts-')) {
+            return $page;
+        }
+        return AdminShell::SLUG;
     }
 
     private static function isSafeContractsAdminRequest(): bool
