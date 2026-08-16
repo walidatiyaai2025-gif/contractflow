@@ -67,10 +67,12 @@ $GLOBALS['sc_test_results'] = [['Field' => 'tenant_id']];
 esc_noncore_expand_assert($GLOBALS['sc_test_queries'] === [], 'non-core expansion is idempotent when column/index already exist');
 
 $doc = (string) file_get_contents(dirname(__DIR__, 2) . '/docs/enterprise/NON_CORE_TENANT_OWNERSHIP.md');
-esc_noncore_expand_assert(str_contains($doc, 'expand → explicit/derived backfill → verify → runtime enforce → harden'), 'non-core ownership runbook documents staged rollout');
+esc_noncore_expand_assert(str_contains($doc, 'expand → explicit/derived backfill → verify → runtime enforce → adversarial validate → harden'), 'non-core ownership runbook documents verify/enforce/adversarial/harden rollout');
 esc_noncore_expand_assert(str_contains($doc, 'Do **not** copy every legacy notification rule/template/token/import into every tenant.'), 'runbook forbids guessed fan-out of global legacy roots');
 esc_noncore_expand_assert(str_contains($doc, 'payment-method/reference catalog'), 'runbook preserves explicitly global reference data');
 esc_noncore_expand_assert(str_contains($doc, 'scheduler/cron execution enumerates tenants explicitly'), 'runbook requires tenant-aware background iteration');
+esc_noncore_expand_assert(str_contains($doc, 'notification dispatch-time and email enable/from-name/from-address business settings'), 'runbook classifies notification business settings as tenant-owned');
+esc_noncore_expand_assert(str_contains($doc, 'Firebase application/project identity, project-keyed OAuth access-token cache'), 'runbook keeps Firebase deployment identity explicitly platform-global');
 
 $migratorSource = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Database/Migrator.php');
 esc_noncore_expand_assert(str_contains($migratorSource, "'1.17.0' => Migration0018NonCoreTenantOwnershipExpand::class"), 'non-core expansion is registered at schema 1.17.0');
