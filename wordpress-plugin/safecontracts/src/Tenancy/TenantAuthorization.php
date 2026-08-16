@@ -45,30 +45,6 @@ final class TenantAuthorization
     }
 
     /**
-     * Overloaded WordPress capability names (for example MANAGE_SYSTEM and
-     * MANAGE_REFERENCE_DATA) cannot describe whether an operation is platform-
-     * global or tenant-owned. Tenant-owned callers therefore authorize a named
-     * operation explicitly after the global WordPress capability check.
-     */
-    public static function allowsOperation(string $operation): bool
-    {
-        if (! self::tenantRoleBoundaryApplies()) {
-            return true;
-        }
-
-        $membership = self::activeMembership();
-        if ($membership === null) {
-            return false;
-        }
-
-        return TenantRolePolicy::allowsOperation(
-            (string) $membership['role_code'],
-            (bool) $membership['is_owner'],
-            $operation
-        );
-    }
-
-    /**
      * @return 'all'|'assigned'|'inherit'|'none'|null
      * Null means tenant-role narrowing does not apply to the current operation.
      */
