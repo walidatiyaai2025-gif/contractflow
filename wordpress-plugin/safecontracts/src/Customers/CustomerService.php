@@ -28,10 +28,19 @@ final class CustomerService
 
     public function save(array $input): int
     {
-        if (! current_user_can(Capabilities::MANAGE_REFERENCE_DATA)) {
-            throw new DomainException('You do not have permission to manage SafeContracts customers.');
-        }
         $customerId = max(0, (int) ($input['id'] ?? 0));
+        if ($customerId > 0) {
+            $this->requireAnyCapability(
+                [Capabilities::EDIT_CUSTOMERS, Capabilities::MANAGE_REFERENCE_DATA],
+                'You do not have permission to edit SafeContracts customers.'
+            );
+        } else {
+            $this->requireAnyCapability(
+                [Capabilities::CREATE_CUSTOMERS, Capabilities::MANAGE_REFERENCE_DATA],
+                'You do not have permission to create SafeContracts customers.'
+            );
+        }
+
         $data = $this->normalize($input);
         if ($customerId > 0) {
             if ($this->repository->find($customerId) === null) {
@@ -81,5 +90,16 @@ final class CustomerService
             throw new InvalidArgumentException("{$label} is too long.");
         }
         return $value;
+    }
+
+    /** @param list<string> $capabilities */
+    private function requireAnyCapability(array $capabilities, string $message): void
+    {
+        foreach ($capabilities as $capability) {
+            if (current_user_can($capability)) {
+                return;
+            }
+        }
+        throw new DomainException($message);
     }
 }
