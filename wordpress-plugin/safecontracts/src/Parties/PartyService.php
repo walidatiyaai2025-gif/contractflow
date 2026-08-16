@@ -57,7 +57,14 @@ final class PartyService
         $this->requireWritePermission();
         $this->rejectUnsupportedFields($input);
 
-        $partyId = max(0, (int) ($input['id'] ?? 0));
+        $partyId = 0;
+        if (array_key_exists('id', $input)) {
+            $partyId = (int) $input['id'];
+            if ($partyId <= 0) {
+                throw new InvalidArgumentException('Party ID must be positive when supplied.');
+            }
+        }
+
         $data = $this->normalize($input);
         $actorId = get_current_user_id();
 
