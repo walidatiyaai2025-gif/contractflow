@@ -85,8 +85,14 @@ final class FirebasePushTransport implements PushTransport
     {
         $decoded = json_decode($body, true);
         if (is_array($decoded)) {
-            $details = $decoded['error']['details'] ?? [];
-            foreach (is_array($details) ? $details : [] as $detail) {
+            $error = is_array($decoded['error'] ?? null) ? $decoded['error'] : [];
+            $details = is_array($error['details'] ?? null) ? $error['details'] : [];
+            $invalidRegistrationToken = $this->isInvalidRegistrationToken(
+                (string) ($error['message'] ?? ''),
+                $details
+            );
+
+            foreach ($details as $detail) {
                 if (! is_array($detail)) {
                     continue;
                 }
@@ -94,7 +100,9 @@ final class FirebasePushTransport implements PushTransport
                 $mapped = match ($fcmCode) {
                     'UNREGISTERED' => 'firebase_token_not_found',
                     'SENDER_ID_MISMATCH' => 'firebase_sender_id_mismatch',
-                    'INVALID_ARGUMENT' => 'firebase_invalid_argument',
+                    'INVALID_ARGUMENT' => $invalidRegistrationToken
+                        ? 'firebase_token_not_found'
+                        : 'firebase_invalid_argument',
                     'QUOTA_EXCEEDED' => 'firebase_quota_exceeded',
                     'UNAVAILABLE' => 'firebase_unavailable',
                     'INTERNAL' => 'firebase_internal',
@@ -106,11 +114,13 @@ final class FirebasePushTransport implements PushTransport
                 }
             }
 
-            $status = strtoupper(trim((string) ($decoded['error']['status'] ?? '')));
+            $status = strtoupper(trim((string) ($error['status'] ?? '')));
             $mappedStatus = match ($status) {
                 'PERMISSION_DENIED' => 'firebase_permission_denied',
                 'UNAUTHENTICATED' => 'firebase_auth_failed',
-                'INVALID_ARGUMENT' => 'firebase_invalid_argument',
+                'INVALID_ARGUMENT' => $invalidRegistrationToken
+                    ? 'firebase_token_not_found'
+                    : 'firebase_invalid_argument',
                 'RESOURCE_EXHAUSTED' => 'firebase_quota_exceeded',
                 'UNAVAILABLE' => 'firebase_unavailable',
                 'INTERNAL' => 'firebase_internal',
@@ -132,5 +142,33 @@ final class FirebasePushTransport implements PushTransport
             return 'firebase_permission_denied';
         }
         return 'firebase_http_' . max(0, $statusCode);
+    }
+
+    /** @param list<mixed> $details */
+    private function isInvalidRegistrationToken(string $message, array $details): bool
+    {
+        $message = strtolower(trim($message));
+        if (str_contains($message, 'registration token')
+            && (str_contains($message, 'invalid') || str_contains($message, 'not a valid fcm'))) {
+            return true;
+        }
+
+        foreach ($details as $detail) {
+            if (! is_array($detail)) {
+                continue;
+            }
+            $violations = $detail['fieldViolations'] ?? [];
+            foreach (is_array($violations) ? $violations : [] as $violation) {
+                if (! is_array($violation)) {
+                    continue;
+                }
+                $field = strtolower(trim((string) ($violation['field'] ?? '')));
+                $description = strtolower(trim((string) ($violation['description'] ?? '')));
+                if ($field === 'message.token' || str_contains($description, 'registration token')) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

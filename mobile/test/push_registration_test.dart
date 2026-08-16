@@ -119,6 +119,58 @@ void main() {
     await registration.dispose();
     await messaging.dispose();
   });
+
+  test('manual recovery rotates the FCM token before re-registering', () async {
+    const oldToken = 'safecontracts-fcm-old-token-123456789012345678';
+    const freshToken = 'safecontracts-fcm-fresh-token-9876543210987654';
+    final messaging = _FakePushMessagingGateway(
+      permission: MobilePushPermissionState.authorized,
+      tokens: <String?>[oldToken, freshToken],
+    );
+    late FakeApiTransport transport;
+    transport = FakeApiTransport((uri) {
+      if (uri.path.endsWith('/devices/register')) {
+        return _ok(<String, Object?>{
+          'registered': true,
+          'platform': 'android',
+        }, statusCode: 201);
+      }
+      if (uri.path.endsWith('/devices/revoke')) {
+        return _ok(<String, Object?>{'revoked': true});
+      }
+      fail('Unexpected push registration request: ${uri.path}');
+    });
+    final registration = MobilePushRegistration(
+      client: _client(transport),
+      messaging: messaging,
+      retryDelay: (_) async {},
+    );
+
+    await registration.start();
+    expect(registration.status.value.backendRegistered, isTrue);
+
+    await registration.refreshTokenAndRetry();
+
+    expect(messaging.deleteTokenCalls, 1);
+    expect(messaging.getTokenCalls, 2);
+    expect(registration.status.value.backendRegistered, isTrue);
+    expect(registration.status.value.errorCode, isNull);
+    expect(transport.requests, hasLength(3));
+
+    final firstRegistration =
+        jsonDecode(transport.requests[0].body!) as Map<String, Object?>;
+    final revoke =
+        jsonDecode(transport.requests[1].body!) as Map<String, Object?>;
+    final secondRegistration =
+        jsonDecode(transport.requests[2].body!) as Map<String, Object?>;
+    expect(firstRegistration['token'], oldToken);
+    expect(revoke['token'], oldToken);
+    expect(secondRegistration['token'], freshToken);
+    expect(secondRegistration['token'], isNot(oldToken));
+
+    await registration.dispose();
+    await messaging.dispose();
+  });
 }
 
 SafeContractsApiClient _client(FakeApiTransport transport) {
@@ -168,6 +220,7 @@ final class _FakePushMessagingGateway implements PushMessagingGateway {
   final StreamController<String> _refresh =
       StreamController<String>.broadcast();
   int getTokenCalls = 0;
+  int deleteTokenCalls = 0;
 
   @override
   Future<MobilePushPermissionState> requestPermission() async => permission;
@@ -187,7 +240,9 @@ final class _FakePushMessagingGateway implements PushMessagingGateway {
   void emitRefresh(String token) => _refresh.add(token);
 
   @override
-  Future<void> deleteToken() async {}
+  Future<void> deleteToken() async {
+    deleteTokenCalls++;
+  }
 
   Future<void> dispose() => _refresh.close();
 }
