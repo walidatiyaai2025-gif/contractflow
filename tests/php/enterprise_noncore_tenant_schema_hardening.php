@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
+use SafeContracts\Tenancy\NonCoreTenantEnforcement;
 use SafeContracts\Tenancy\NonCoreTenantSchemaHardener;
 
 $assertions = 0;
@@ -108,10 +109,24 @@ $originalWpdb = $GLOBALS['wpdb'];
 $database = new ESC_NonCore_Schema_Wpdb();
 $GLOBALS['wpdb'] = $database;
 $GLOBALS['sc_test_options'][NonCoreTenantSchemaHardener::OPTION] = '0';
+$GLOBALS['sc_test_options'][NonCoreTenantEnforcement::OPTION] = '0';
 
 $hardener = new NonCoreTenantSchemaHardener();
 $preflight = $hardener->preflight();
-esc_noncore_schema_assert($preflight['ready'] === true, 'verified ownership and unique tenant roots unlock non-core hardening');
+esc_noncore_schema_assert($preflight['runtime_enforcement'] === false, 'schema preflight reports runtime enforcement state');
+esc_noncore_schema_assert($preflight['ready'] === false, 'ownership alone cannot skip runtime enforcement and harden immediately');
+$blockedBeforeRuntime = false;
+try {
+    $hardener->harden();
+} catch (Throwable $error) {
+    $blockedBeforeRuntime = str_contains($error->getMessage(), 'runtime tenant enforcement');
+}
+esc_noncore_schema_assert($blockedBeforeRuntime, 'non-core hardener fails closed until runtime tenant enforcement is enabled and validated');
+
+$GLOBALS['sc_test_options'][NonCoreTenantEnforcement::OPTION] = '1';
+$preflight = $hardener->preflight();
+esc_noncore_schema_assert($preflight['runtime_enforcement'] === true, 'schema preflight sees active runtime tenant enforcement');
+esc_noncore_schema_assert($preflight['ready'] === true, 'verified ownership plus runtime enforcement unlocks hardening preflight');
 
 $database->duplicateRuleCodes = 1;
 $preflight = $hardener->preflight();
@@ -126,7 +141,7 @@ esc_noncore_schema_assert($blocked, 'non-core hardener fails closed while unique
 
 $database->duplicateRuleCodes = 0;
 $result = $hardener->harden();
-esc_noncore_schema_assert($result['ready'] === true && $result['hardened'] === true, 'non-core hardening completes with structural verification');
+esc_noncore_schema_assert($result['ready'] === true && $result['hardened'] === true, 'non-core hardening completes only after runtime enforcement and structural verification');
 esc_noncore_schema_assert($hardener->isHardened(), 'non-core hardened marker is persisted only after verification');
 
 $ddl = implode("\n", $database->queries);
@@ -167,6 +182,7 @@ esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_scope_active (tenant_id
 esc_noncore_schema_assert(str_contains($ddl, 'esc_tenant_audit_entity'), 'audit browsing gets tenant-first entity index');
 
 $source = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Tenancy/NonCoreTenantSchemaHardener.php');
+esc_noncore_schema_assert(str_contains($source, 'NonCoreTenantEnforcement::isEnabled()'), 'hardener explicitly depends on runtime enforcement state');
 esc_noncore_schema_assert(! str_contains($source, 'idempotency_key'), 'hardener does not invent a delivery idempotency column');
 esc_noncore_schema_assert(! str_contains($source, 'scheduled_for_utc'), 'hardener contains no obsolete scheduled_for_utc field');
 esc_noncore_schema_assert(! str_contains($source, 'enabled, id'), 'hardener contains no obsolete device enabled field');
@@ -179,5 +195,6 @@ esc_noncore_schema_assert($verification['legacy_global_unique_indexes'] === [], 
 
 $GLOBALS['wpdb'] = $originalWpdb;
 $GLOBALS['sc_test_options'][NonCoreTenantSchemaHardener::OPTION] = '0';
+$GLOBALS['sc_test_options'][NonCoreTenantEnforcement::OPTION] = '0';
 
 fwrite(STDOUT, "Enterprise non-core tenant schema hardening passed ({$assertions} assertions).\n");
