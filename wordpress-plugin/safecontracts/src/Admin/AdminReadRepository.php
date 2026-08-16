@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use DomainException;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Tenancy\CoreTenantScope;
 
 final class AdminReadRepository
 {
@@ -16,9 +17,14 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $customers = $wpdb->prefix . 'safecontracts_customers';
+        $tenantId = CoreTenantScope::tenantId();
         $where = $this->where($normalized, 'c', 'p', 'p.due_date');
         $where[] = 'c.is_archived = 0';
         $where[] = 'cu.is_active = 1';
+        if ($tenantId !== null) {
+            $where[] = 'cu.tenant_id = ' . $tenantId;
+        }
+        $paymentTenantJoin = $tenantId === null ? '' : ' AND p.tenant_id = ' . $tenantId;
         $today = function_exists('wp_date') ? wp_date('Y-m-d') : gmdate('Y-m-d');
         $sql = "SELECT
                 COUNT(DISTINCT c.id) AS contract_count,
@@ -28,7 +34,7 @@ final class AdminReadRepository
                 COALESCE(SUM(p.paid_amount), 0) AS collected_total
             FROM {$contracts} c
             INNER JOIN {$customers} cu ON cu.id = c.customer_id
-            LEFT JOIN {$payments} p ON p.contract_id = c.id AND p.is_archived = 0
+            LEFT JOIN {$payments} p ON p.contract_id = c.id AND p.is_archived = 0{$paymentTenantJoin}
             WHERE " . implode(' AND ', $where);
         return $this->firstRow($wpdb->get_results($sql, ARRAY_A), [
             'contract_count' => '0',
@@ -46,7 +52,11 @@ final class AdminReadRepository
         $normalized = DashboardFilters::normalize($filters);
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $tenantId = CoreTenantScope::tenantId();
         $where = ['cu.is_active = 1'];
+        if ($tenantId !== null) {
+            $where[] = 'cu.tenant_id = ' . $tenantId;
+        }
         if ($normalized['customer_id'] > 0) {
             $where[] = 'cu.id = ' . $normalized['customer_id'];
         }
@@ -54,7 +64,8 @@ final class AdminReadRepository
         if (! current_user_can(Capabilities::VIEW_ALL)) {
             $this->requireAssignedScope();
             $userId = get_current_user_id();
-            $where[] = "EXISTS (SELECT 1 FROM {$contracts} sc_scope WHERE sc_scope.customer_id = cu.id AND sc_scope.accountant_user_id = {$userId} AND sc_scope.is_archived = 0)";
+            $tenantScope = $tenantId === null ? '' : ' AND sc_scope.tenant_id = ' . $tenantId;
+            $where[] = "EXISTS (SELECT 1 FROM {$contracts} sc_scope WHERE sc_scope.customer_id = cu.id AND sc_scope.accountant_user_id = {$userId} AND sc_scope.is_archived = 0{$tenantScope})";
         }
         $sql = "SELECT cu.id, cu.internal_code, cu.name, cu.contact_name, cu.email, cu.phone, cu.notes, cu.is_active, cu.created_at, cu.updated_at
                 FROM {$customers} cu WHERE " . implode(' AND ', $where) . ' ORDER BY cu.name ASC LIMIT 500';
@@ -68,9 +79,13 @@ final class AdminReadRepository
         $normalized = DashboardFilters::normalize($filters);
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
+        $tenantId = CoreTenantScope::tenantId();
         $where = $this->where($normalized, 'c', null, 'COALESCE(c.start_date, DATE(c.created_at))');
         $where[] = 'c.is_archived = 0';
         $where[] = 'cu.is_active = 1';
+        if ($tenantId !== null) {
+            $where[] = 'cu.tenant_id = ' . $tenantId;
+        }
         $sql = "SELECT c.id, c.contract_number, c.customer_id, cu.name AS customer_name, c.accountant_user_id,
                        c.status, c.start_date, c.end_date, c.base_value, c.notes, c.is_archived, c.created_at, c.updated_at
                 FROM {$contracts} c
@@ -88,10 +103,15 @@ final class AdminReadRepository
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
+        $tenantId = CoreTenantScope::tenantId();
         $where = $this->where($normalized, 'c', 'p', 'p.due_date');
         $where[] = 'c.is_archived = 0';
         $where[] = 'p.is_archived = 0';
         $where[] = 'cu.is_active = 1';
+        if ($tenantId !== null) {
+            $where[] = 'p.tenant_id = ' . $tenantId;
+            $where[] = 'cu.tenant_id = ' . $tenantId;
+        }
         $sql = "SELECT p.id, p.contract_id, p.sequence_no, p.reference, p.due_date, p.expected_payment_date,
                        p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
                        c.contract_number, c.accountant_user_id, c.is_archived AS contract_is_archived,
@@ -132,12 +152,18 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $followups = $wpdb->prefix . 'safecontracts_payment_followups';
+        $tenantId = CoreTenantScope::tenantId();
 
         $collectionWhere = $this->where($normalized, 'c', 'p', 'cl.collection_date');
         $collectionWhere[] = 'c.is_archived = 0';
         $collectionWhere[] = 'p.is_archived = 0';
         $collectionWhere[] = 'cl.is_archived = 0';
         $collectionWhere[] = 'cu.is_active = 1';
+        if ($tenantId !== null) {
+            $collectionWhere[] = 'p.tenant_id = ' . $tenantId;
+            $collectionWhere[] = 'cl.tenant_id = ' . $tenantId;
+            $collectionWhere[] = 'cu.tenant_id = ' . $tenantId;
+        }
         $collectionSql = "SELECT COUNT(cl.id) AS collection_transactions,
                                  COALESCE(SUM(cl.amount), 0) AS collection_ledger_total
                           FROM {$collections} cl
@@ -154,6 +180,11 @@ final class AdminReadRepository
         $followupWhere[] = 'c.is_archived = 0';
         $followupWhere[] = 'p.is_archived = 0';
         $followupWhere[] = 'cu.is_active = 1';
+        if ($tenantId !== null) {
+            $followupWhere[] = 'p.tenant_id = ' . $tenantId;
+            $followupWhere[] = 'f.tenant_id = ' . $tenantId;
+            $followupWhere[] = 'cu.tenant_id = ' . $tenantId;
+        }
         $followupSql = "SELECT COUNT(f.id) AS followup_events,
                                COUNT(DISTINCT f.payment_id) AS followed_up_payments
                         FROM {$followups} f
@@ -201,11 +232,17 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
         $methods = $wpdb->prefix . 'safecontracts_payment_methods';
+        $tenantId = CoreTenantScope::tenantId();
         $where = $this->where($normalized, 'c', 'p', 'cl.collection_date');
         $where[] = 'c.is_archived = 0';
         $where[] = 'p.is_archived = 0';
         $where[] = 'cl.is_archived = 0';
         $where[] = 'cu.is_active = 1';
+        if ($tenantId !== null) {
+            $where[] = 'p.tenant_id = ' . $tenantId;
+            $where[] = 'cl.tenant_id = ' . $tenantId;
+            $where[] = 'cu.tenant_id = ' . $tenantId;
+        }
         if ($proofOnly) {
             $where[] = 'cl.proof_media_id IS NOT NULL';
             $where[] = 'cl.proof_media_id > 0';
@@ -233,6 +270,10 @@ final class AdminReadRepository
             throw new DomainException('SafeContracts admin data requires access capability.');
         }
         $where = ['1 = 1'];
+        $tenantId = CoreTenantScope::tenantId();
+        if ($tenantId !== null) {
+            $where[] = $contractAlias . '.tenant_id = ' . $tenantId;
+        }
         if (current_user_can(Capabilities::VIEW_ALL)) {
             if (($filters['accountant_user_id'] ?? 0) > 0) {
                 $where[] = $contractAlias . '.accountant_user_id = ' . (int) $filters['accountant_user_id'];

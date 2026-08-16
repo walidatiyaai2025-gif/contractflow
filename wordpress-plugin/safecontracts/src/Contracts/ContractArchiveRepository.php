@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Contracts;
 
 use RuntimeException;
+use SafeContracts\Tenancy\CoreTenantScope;
 
 final class ContractArchiveRepository
 {
@@ -17,8 +18,9 @@ final class ContractArchiveRepository
         }
 
         $table = $wpdb->prefix . 'safecontracts_contracts';
+        $tenant = $this->tenantCondition();
         $rows = $wpdb->get_results(
-            $wpdb->prepare("SELECT id, accountant_user_id, is_archived FROM {$table} WHERE id = %d LIMIT 1", $contractId),
+            $wpdb->prepare("SELECT id, accountant_user_id, is_archived FROM {$table} WHERE id = %d{$tenant} LIMIT 1", $contractId),
             ARRAY_A
         );
         if (! is_array($rows) || ! isset($rows[0]) || ! is_array($rows[0])) {
@@ -41,13 +43,20 @@ final class ContractArchiveRepository
         }
 
         $table = $wpdb->prefix . 'safecontracts_contracts';
+        $tenant = $this->tenantCondition();
         $sql = $wpdb->prepare(
-            "UPDATE {$table} SET is_archived = 1, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d AND is_archived = 0",
+            "UPDATE {$table} SET is_archived = 1, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d AND is_archived = 0{$tenant}",
             $actorId,
             $contractId
         );
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to archive contract.');
         }
+    }
+
+    private function tenantCondition(string $column = 'tenant_id'): string
+    {
+        $tenantId = CoreTenantScope::tenantId();
+        return $tenantId === null ? '' : ' AND ' . $column . ' = ' . $tenantId;
     }
 }

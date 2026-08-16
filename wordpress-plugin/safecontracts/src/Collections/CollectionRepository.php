@@ -6,6 +6,7 @@ namespace SafeContracts\Collections;
 
 use RuntimeException;
 use SafeContracts\Payments\PaymentStatus;
+use SafeContracts\Tenancy\CoreTenantScope;
 
 final class CollectionRepository
 {
@@ -39,13 +40,17 @@ final class CollectionRepository
         $this->assertWpdb($wpdb);
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $tenantId = CoreTenantScope::tenantId();
+        $tenant = $tenantId === null
+            ? ''
+            : ' AND p.tenant_id = ' . $tenantId . ' AND c.tenant_id = ' . $tenantId;
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT p.id, p.contract_id, p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
                         c.accountant_user_id, c.is_archived AS contract_is_archived
                  FROM {$payments} p
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
-                 WHERE p.id = %d
+                 WHERE p.id = %d{$tenant}
                  LIMIT 1
                  FOR UPDATE",
                 $paymentId
@@ -94,9 +99,10 @@ final class CollectionRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_payment_collections';
+        $tenant = $this->tenantCondition();
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT COALESCE(SUM(amount), 0.0000) AS total FROM {$table} WHERE payment_id = %d AND is_archived = 0",
+                "SELECT COALESCE(SUM(amount), 0.0000) AS total FROM {$table} WHERE payment_id = %d AND is_archived = 0{$tenant}",
                 $paymentId
             ),
             ARRAY_A
@@ -122,15 +128,25 @@ final class CollectionRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_payment_collections';
+        $tenantId = CoreTenantScope::tenantId();
 
         $referencePlaceholder = $reference === null ? 'NULL' : '%s';
         $detailsPlaceholder = $details === null ? 'NULL' : '%s';
         $proofPlaceholder = $proofMediaId === null ? 'NULL' : '%d';
+        $tenantColumn = $tenantId === null ? '' : 'tenant_id, ';
+        $tenantPlaceholder = $tenantId === null ? '' : '%d, ';
         $statement = "INSERT INTO {$table}
-            (payment_id, amount, collection_date, payment_method_id, reference, details, proof_media_id, created_by, updated_by, created_at, updated_at)
-            VALUES (%d, %s, %s, %d, {$referencePlaceholder}, {$detailsPlaceholder}, {$proofPlaceholder}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
+            ({$tenantColumn}payment_id, amount, collection_date, payment_method_id, reference, details, proof_media_id, created_by, updated_by, created_at, updated_at)
+            VALUES ({$tenantPlaceholder}%d, %s, %s, %d, {$referencePlaceholder}, {$detailsPlaceholder}, {$proofPlaceholder}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
 
-        $args = [$paymentId, $amount, $collectionDate, $paymentMethodId];
+        $args = [];
+        if ($tenantId !== null) {
+            $args[] = $tenantId;
+        }
+        $args[] = $paymentId;
+        $args[] = $amount;
+        $args[] = $collectionDate;
+        $args[] = $paymentMethodId;
         if ($reference !== null) {
             $args[] = $reference;
         }
@@ -159,6 +175,7 @@ final class CollectionRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $tenant = $this->tenantCondition();
         $sql = $wpdb->prepare(
             "UPDATE {$table}
              SET paid_amount = %s,
@@ -166,7 +183,7 @@ final class CollectionRepository
                  status = %s,
                  updated_by = %d,
                  updated_at = UTC_TIMESTAMP()
-             WHERE id = %d AND is_archived = 0",
+             WHERE id = %d AND is_archived = 0{$tenant}",
             $paidAmount,
             $remainingAmount,
             $status,
@@ -182,12 +199,13 @@ final class CollectionRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_payment_collections';
+        $tenant = $this->tenantCondition();
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id, payment_id, amount, collection_date, payment_method_id, reference, details,
                         proof_media_id, created_by, updated_by, created_at, updated_at
                  FROM {$table}
-                 WHERE payment_id = %d AND is_archived = 0
+                 WHERE payment_id = %d AND is_archived = 0{$tenant}
                  ORDER BY collection_date ASC, id ASC",
                 $paymentId
             ),
@@ -215,6 +233,12 @@ final class CollectionRepository
             ],
             $rows
         );
+    }
+
+    private function tenantCondition(string $column = 'tenant_id'): string
+    {
+        $tenantId = CoreTenantScope::tenantId();
+        return $tenantId === null ? '' : ' AND ' . $column . ' = ' . $tenantId;
     }
 
     private function assertWpdb(mixed $wpdb): void

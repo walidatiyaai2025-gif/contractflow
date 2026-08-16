@@ -54,19 +54,43 @@ For a dataset that belongs to more than one future tenant, pre-map the root cust
 
 A zero-unowned result alone is not sufficient: child and parent tenant ownership must agree.
 
-## Phase D — enforce (separate task)
+## Phase D — enforce
 
-Only after Phase C is green may a later migration/service change:
+Runtime enforcement is feature-gated. **Deploying the enforcement code does not enable it.** The environment stays in migration-compatible mode until an operator explicitly enables it after a successful ownership verification.
 
-- require tenant context for core business writes;
-- add tenant predicates to list/detail/mutation/export queries;
-- convert nullable ownership to enforced ownership where appropriate;
-- replace global uniqueness with tenant-scoped uniqueness such as `(tenant_id, contract_number)`;
-- add tenant-first indexes for actual query shapes;
-- deny cross-tenant attachment/media access;
-- activate cross-tenant mutation/export/deletion regression gates.
+Enable only after `--verify` reports `ready=true`:
 
-Enforcement is intentionally not bundled into migration `1.16.0`. Keeping expansion and enforcement separate makes rollback, verification and legacy-data remediation auditable.
+```bash
+php scripts/enterprise_tenant_backfill.php \
+  --wp-root=/path/to/wordpress \
+  --verify \
+  --enable-enforcement
+```
+
+The enable command calls `CoreTenantOwnershipBackfill::assertReadyForEnforcement()` before persisting the enforcement flag. It cannot turn enforcement on while unowned rows or parent/child tenant mismatches exist.
+
+When enabled:
+
+- core REST business routes require one server-authorized locked `TenantContext`;
+- the client `X-ESC-Tenant-ID` value remains selection input only and never grants membership;
+- core list/detail/report queries add tenant predicates;
+- contract/payment/collection/follow-up mutations derive `tenant_id` from server context instead of request JSON;
+- repositories fail closed if enforcement is enabled without a locked tenant;
+- contract financial children and attachments validate the selected contract against the current tenant before inserting;
+- report/export reads inherit the same tenant-scoped repository boundary;
+- known-record IDs do not bypass the tenant predicate.
+
+Controlled remediation may temporarily disable runtime enforcement only after an explicit operational decision:
+
+```bash
+php scripts/enterprise_tenant_backfill.php \
+  --wp-root=/path/to/wordpress \
+  --disable-enforcement
+```
+
+Disabling enforcement is not a normal application mode and must not be used to bypass unresolved ownership defects. Re-run `--verify` before enabling it again.
+
+Schema hardening remains a separate follow-up after runtime enforcement is proven green: convert ownership columns to enforced non-null where appropriate, replace global business uniqueness with tenant-scoped uniqueness such as `(tenant_id, contract_number)`, and tune tenant-first indexes to real query shapes.
 
 ## Reference data and non-core tables
 

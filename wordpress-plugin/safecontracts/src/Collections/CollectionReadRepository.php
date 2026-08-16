@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Collections;
 
 use RuntimeException;
+use SafeContracts\Tenancy\CoreTenantScope;
 
 final class CollectionReadRepository
 {
@@ -23,6 +24,10 @@ final class CollectionReadRepository
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $methods = $wpdb->prefix . 'safecontracts_payment_methods';
+        $tenantId = CoreTenantScope::tenantId();
+        $tenant = $tenantId === null
+            ? ''
+            : ' AND cl.tenant_id = ' . $tenantId . ' AND p.tenant_id = ' . $tenantId . ' AND c.tenant_id = ' . $tenantId;
 
         $rows = $wpdb->get_results(
             $wpdb->prepare(
@@ -33,7 +38,7 @@ final class CollectionReadRepository
                  INNER JOIN {$payments} p ON p.id = cl.payment_id
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
                  INNER JOIN {$methods} pm ON pm.id = cl.payment_method_id
-                 WHERE cl.id = %d AND cl.is_archived = 0 AND p.is_archived = 0
+                 WHERE cl.id = %d AND cl.is_archived = 0 AND p.is_archived = 0{$tenant}
                  LIMIT 1",
                 $collectionId
             ),

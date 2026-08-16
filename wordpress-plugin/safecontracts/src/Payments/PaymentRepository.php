@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Payments;
 
 use RuntimeException;
+use SafeContracts\Tenancy\CoreTenantScope;
 
 final class PaymentRepository
 {
@@ -15,9 +16,10 @@ final class PaymentRepository
         $this->assertWpdb($wpdb);
 
         $table = $wpdb->prefix . 'safecontracts_contracts';
+        $tenant = $this->tenantCondition();
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, accountant_user_id, is_archived FROM {$table} WHERE id = %d LIMIT 1",
+                "SELECT id, accountant_user_id, is_archived FROM {$table} WHERE id = %d{$tenant} LIMIT 1",
                 $contractId
             ),
             ARRAY_A
@@ -45,6 +47,10 @@ final class PaymentRepository
 
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $tenantId = CoreTenantScope::tenantId();
+        $tenant = $tenantId === null
+            ? ''
+            : ' AND p.tenant_id = ' . $tenantId . ' AND c.tenant_id = ' . $tenantId;
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT p.id, p.contract_id, p.sequence_no, p.reference, p.due_date, p.expected_payment_date,
@@ -52,7 +58,7 @@ final class PaymentRepository
                         c.accountant_user_id, c.is_archived AS contract_is_archived
                  FROM {$payments} p
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
-                 WHERE p.id = %d AND p.is_archived = 0 LIMIT 1",
+                 WHERE p.id = %d AND p.is_archived = 0{$tenant} LIMIT 1",
                 $paymentId
             ),
             ARRAY_A
@@ -96,14 +102,25 @@ final class PaymentRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $tenantId = CoreTenantScope::tenantId();
+        if ($tenantId !== null && $this->contractContext($contractId) === null) {
+            throw new RuntimeException('Payment contract is outside the current Enterprise tenant.');
+        }
 
         $referenceSql = $reference === null ? 'NULL' : '%s';
         $expectedSql = $expectedPaymentDate === null ? 'NULL' : '%s';
+        $tenantColumn = $tenantId === null ? '' : 'tenant_id, ';
+        $tenantPlaceholder = $tenantId === null ? '' : '%d, ';
         $query = "INSERT INTO {$table}
-            (contract_id, sequence_no, reference, due_date, expected_payment_date, original_amount, paid_amount, remaining_amount, status, created_by, updated_by, created_at, updated_at)
-            VALUES (%d, %d, {$referenceSql}, %s, {$expectedSql}, %s, '0.0000', %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
+            ({$tenantColumn}contract_id, sequence_no, reference, due_date, expected_payment_date, original_amount, paid_amount, remaining_amount, status, created_by, updated_by, created_at, updated_at)
+            VALUES ({$tenantPlaceholder}%d, %d, {$referenceSql}, %s, {$expectedSql}, %s, '0.0000', %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
 
-        $args = [$contractId, $sequenceNo];
+        $args = [];
+        if ($tenantId !== null) {
+            $args[] = $tenantId;
+        }
+        $args[] = $contractId;
+        $args[] = $sequenceNo;
         if ($reference !== null) {
             $args[] = $reference;
         }
@@ -130,10 +147,11 @@ final class PaymentRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $tenant = $this->tenantCondition();
         $sql = $wpdb->prepare(
             "UPDATE {$table}
              SET status = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
-             WHERE id = %d AND is_archived = 0",
+             WHERE id = %d AND is_archived = 0{$tenant}",
             $status,
             $actorId,
             $paymentId
@@ -146,12 +164,13 @@ final class PaymentRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $tenant = $this->tenantCondition();
 
         if ($expectedPaymentDate === null) {
             $sql = $wpdb->prepare(
                 "UPDATE {$table}
                  SET due_date = %s, expected_payment_date = NULL, updated_by = %d, updated_at = UTC_TIMESTAMP()
-                 WHERE id = %d AND is_archived = 0",
+                 WHERE id = %d AND is_archived = 0{$tenant}",
                 $dueDate,
                 $actorId,
                 $paymentId
@@ -160,7 +179,7 @@ final class PaymentRepository
             $sql = $wpdb->prepare(
                 "UPDATE {$table}
                  SET due_date = %s, expected_payment_date = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
-                 WHERE id = %d AND is_archived = 0",
+                 WHERE id = %d AND is_archived = 0{$tenant}",
                 $dueDate,
                 $expectedPaymentDate,
                 $actorId,
@@ -169,6 +188,12 @@ final class PaymentRepository
         }
 
         $this->executeMutation($wpdb, $sql, 'Unable to update payment dates.');
+    }
+
+    private function tenantCondition(string $column = 'tenant_id'): string
+    {
+        $tenantId = CoreTenantScope::tenantId();
+        return $tenantId === null ? '' : ' AND ' . $column . ' = ' . $tenantId;
     }
 
     private function assertWpdb(mixed $wpdb): void

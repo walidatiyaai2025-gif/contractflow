@@ -10,6 +10,7 @@ use RuntimeException;
 use SafeContracts\Contracts\ContractMoney;
 use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Tenancy\CoreTenantScope;
 use Throwable;
 
 final class SafeDeletionService
@@ -22,8 +23,9 @@ final class SafeDeletionService
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_customers';
+        $tenant = $this->tenantCondition();
         $row = $this->firstRow($wpdb->get_results($wpdb->prepare(
-            "SELECT id, is_active FROM {$table} WHERE id = %d LIMIT 1",
+            "SELECT id, is_active FROM {$table} WHERE id = %d{$tenant} LIMIT 1",
             $customerId
         ), ARRAY_A));
         if ($row === null) {
@@ -34,7 +36,7 @@ final class SafeDeletionService
         }
 
         $sql = $wpdb->prepare(
-            "UPDATE {$table} SET is_active = 0, updated_at = UTC_TIMESTAMP() WHERE id = %d",
+            "UPDATE {$table} SET is_active = 0, updated_at = UTC_TIMESTAMP() WHERE id = %d{$tenant}",
             $customerId
         );
         $this->execute($wpdb, $sql, 'Unable to archive customer.');
@@ -78,11 +80,16 @@ final class SafeDeletionService
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $collections = $wpdb->prefix . 'safecontracts_payment_collections';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $tenantId = CoreTenantScope::tenantId();
+        $joinTenant = $tenantId === null
+            ? ''
+            : ' AND p.tenant_id = ' . $tenantId . ' AND c.tenant_id = ' . $tenantId;
+        $collectionTenant = $tenantId === null ? '' : ' AND tenant_id = ' . $tenantId;
         $row = $this->firstRow($wpdb->get_results($wpdb->prepare(
             "SELECT p.id, p.paid_amount, p.status, p.is_archived, c.accountant_user_id
              FROM {$payments} p
              INNER JOIN {$contracts} c ON c.id = p.contract_id
-             WHERE p.id = %d LIMIT 1",
+             WHERE p.id = %d{$joinTenant} LIMIT 1",
             $paymentId
         ), ARRAY_A));
         if ($row === null) {
@@ -96,7 +103,7 @@ final class SafeDeletionService
             throw new DomainException('Payments with collected amounts cannot be deleted. Reverse their collections first.');
         }
         $collection = $this->firstRow($wpdb->get_results($wpdb->prepare(
-            "SELECT id FROM {$collections} WHERE payment_id = %d AND is_archived = 0 LIMIT 1",
+            "SELECT id FROM {$collections} WHERE payment_id = %d AND is_archived = 0{$collectionTenant} LIMIT 1",
             $paymentId
         ), ARRAY_A));
         if ($collection !== null) {
@@ -104,10 +111,11 @@ final class SafeDeletionService
         }
 
         $actorId = get_current_user_id();
+        $paymentTenant = $tenantId === null ? '' : ' AND tenant_id = ' . $tenantId;
         $sql = $wpdb->prepare(
             "UPDATE {$payments}
              SET is_archived = 1, archived_by = %d, archived_at = UTC_TIMESTAMP(), updated_by = %d, updated_at = UTC_TIMESTAMP()
-             WHERE id = %d",
+             WHERE id = %d{$paymentTenant}",
             $actorId,
             $actorId,
             $paymentId
@@ -127,6 +135,12 @@ final class SafeDeletionService
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $actorId = get_current_user_id();
+        $tenantId = CoreTenantScope::tenantId();
+        $joinTenant = $tenantId === null
+            ? ''
+            : ' AND cl.tenant_id = ' . $tenantId . ' AND p.tenant_id = ' . $tenantId . ' AND c.tenant_id = ' . $tenantId;
+        $collectionTenant = $tenantId === null ? '' : ' AND tenant_id = ' . $tenantId;
+        $paymentTenant = $tenantId === null ? '' : ' AND tenant_id = ' . $tenantId;
 
         $this->execute($wpdb, 'START TRANSACTION', 'Unable to start collection reversal.');
         try {
@@ -137,7 +151,7 @@ final class SafeDeletionService
                  FROM {$collections} cl
                  INNER JOIN {$payments} p ON p.id = cl.payment_id
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
-                 WHERE cl.id = %d LIMIT 1 FOR UPDATE",
+                 WHERE cl.id = %d{$joinTenant} LIMIT 1 FOR UPDATE",
                 $collectionId
             ), ARRAY_A));
             if ($row === null) {
@@ -161,7 +175,7 @@ final class SafeDeletionService
             $archiveSql = $wpdb->prepare(
                 "UPDATE {$collections}
                  SET is_archived = 1, archived_by = %d, archived_at = UTC_TIMESTAMP(), updated_by = %d, updated_at = UTC_TIMESTAMP()
-                 WHERE id = %d",
+                 WHERE id = %d{$collectionTenant}",
                 $actorId,
                 $actorId,
                 $collectionId
@@ -171,7 +185,7 @@ final class SafeDeletionService
             $ledger = $this->firstRow($wpdb->get_results($wpdb->prepare(
                 "SELECT COALESCE(SUM(amount), 0.0000) AS total
                  FROM {$collections}
-                 WHERE payment_id = %d AND is_archived = 0",
+                 WHERE payment_id = %d AND is_archived = 0{$collectionTenant}",
                 (int) $row['payment_id']
             ), ARRAY_A));
             $newPaid = ContractMoney::normalizeNonNegative((string) ($ledger['total'] ?? '0.0000'));
@@ -189,7 +203,7 @@ final class SafeDeletionService
             $settlementSql = $wpdb->prepare(
                 "UPDATE {$payments}
                  SET paid_amount = %s, remaining_amount = %s, status = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
-                 WHERE id = %d",
+                 WHERE id = %d{$paymentTenant}",
                 $newPaid,
                 $newRemaining,
                 $newStatus,
@@ -212,6 +226,12 @@ final class SafeDeletionService
             $before,
             ['paid_amount' => $newPaid, 'remaining_amount' => $newRemaining, 'status' => $newStatus]
         );
+    }
+
+    private function tenantCondition(string $column = 'tenant_id'): string
+    {
+        $tenantId = CoreTenantScope::tenantId();
+        return $tenantId === null ? '' : ' AND ' . $column . ' = ' . $tenantId;
     }
 
     private function assertScope(mixed $accountantUserId): void
