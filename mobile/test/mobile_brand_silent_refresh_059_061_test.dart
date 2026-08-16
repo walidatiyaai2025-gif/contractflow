@@ -4,10 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/core/branding/safe_contracts_brand.dart';
 
 void main() {
-  test('Safe Contracts uses the supplied embedded identity', () {
+  test('Safe Contracts uses the supplied packaged identity', () {
     expect(SafeContractsBrand.name, 'Safe Contracts');
-    expect(SafeContractsBrand.iconBytes.length, greaterThan(1024));
-    expect(SafeContractsBrand.iconBytes.take(3), <int>[0xff, 0xd8, 0xff]);
+    expect(
+      SafeContractsBrand.assetPath,
+      'assets/brand/safe_contracts_identity.jpg',
+    );
+
+    final bytes = File(SafeContractsBrand.assetPath).readAsBytesSync();
+    expect(bytes.length, greaterThan(1024));
+    expect(bytes.take(3), <int>[0xff, 0xd8, 0xff]);
   });
 
   test('automatic app-shell refresh uses silent refresh paths', () {
@@ -39,7 +45,8 @@ void main() {
     expect(
       contextScreen,
       contains(
-          'All figures and indicators below are filtered for this entity.'),
+        'All figures and indicators below are filtered for this entity.',
+      ),
     );
   });
 }
