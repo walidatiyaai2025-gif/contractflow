@@ -26,7 +26,8 @@ void main() {
     expect(shell, contains('SafeContractsBackdrop'));
     expect(shell, contains('SafeContractsBrand.name'));
     expect(shell, contains('SafeContractsBrandMark'));
-    expect(brand, contains("static const name = 'Safe Contracts';"));
+    expect(brand, contains("static const name = 'Alkenzy ADV';"));
+    expect(brand, contains("assets/brand/alkenzy_adv.png"));
     expect(shell, contains('MobileDestination.dashboard'));
     expect(shell, contains('MobileDestination.contracts'));
     expect(shell, contains('MobileDestination.payments'));
