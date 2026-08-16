@@ -91,7 +91,9 @@ esc_p4_bind_assert(Migrator::LATEST_VERSION === '1.27.0', 'P4-003 is latest sche
 esc_p4_bind_assert(! str_contains($legacyContractMigration, 'contract_type_id'), 'legacy contract foundation remains unchanged');
 esc_p4_bind_assert(! str_contains($contractStatusSource, 'template'), 'legacy ContractStatus remains independent of templates');
 esc_p4_bind_assert(str_contains($repositorySource, "c.status = 'draft' AND c.is_archived = 0"), 'binding persistence atomically rechecks editable draft state');
-esc_p4_bind_assert(str_contains($repositorySource, 'INSERT INTO {$table}') && str_contains($repositorySource, 'FROM {$contracts} c'), 'binding persistence uses INSERT SELECT against the owned contract row');
+esc_p4_bind_assert(str_contains($repositorySource, "ct.status = 'active'"), 'binding persistence atomically rechecks active Contract Type');
+esc_p4_bind_assert(str_contains($repositorySource, "t.contract_type_id = ct.id AND t.status = 'active'"), 'template persistence guard rechecks active Template and Type relationship');
+esc_p4_bind_assert(str_contains($repositorySource, "v.template_id = t.id AND v.version_status = 'published'"), 'version persistence guard rechecks published Template Version ownership');
 
 $GLOBALS['sc_test_current_caps'] = [
     Capabilities::ACCESS => true,
@@ -124,9 +126,21 @@ $service->bind(71, 31, 41, 51);
 esc_p4_bind_assert(count($GLOBALS['sc_test_queries']) === 1, 'valid published template binding performs one mutation');
 $sql = (string) ($GLOBALS['sc_test_queries'][0] ?? '');
 esc_p4_bind_assert(str_contains($sql, 'INSERT INTO wp_safecontracts_contract_configuration_bindings'), 'binding writes only separate Enterprise table');
-esc_p4_bind_assert(str_contains($sql, 'SELECT 17, c.id, 31, 41, 51'), 'binding ownership and references are server-validated in INSERT SELECT');
+esc_p4_bind_assert(str_contains($sql, 'SELECT 17, c.id, ct.id, t.id, v.id'), 'template binding references are sourced from atomic validated joins');
+esc_p4_bind_assert(str_contains($sql, "INNER JOIN wp_safecontracts_contract_types ct ON ct.id = 31 AND ct.tenant_id = 17 AND ct.status = 'active'"), 'template binding atomically rechecks current-tenant active Contract Type');
+esc_p4_bind_assert(str_contains($sql, "INNER JOIN wp_safecontracts_contract_templates t ON t.id = 41 AND t.tenant_id = 17 AND t.contract_type_id = ct.id AND t.status = 'active'"), 'template binding atomically rechecks Template-to-Type relationship');
+esc_p4_bind_assert(str_contains($sql, "INNER JOIN wp_safecontracts_contract_template_versions v ON v.id = 51 AND v.tenant_id = 17 AND v.template_id = t.id AND v.version_status = 'published'"), 'template binding atomically rechecks published Version-to-Template relationship');
 esc_p4_bind_assert(str_contains($sql, "WHERE c.id = 71 AND c.tenant_id = 17 AND c.status = 'draft' AND c.is_archived = 0"), 'binding mutation atomically rejects a concurrent lifecycle/archive change');
 esc_p4_bind_assert(str_contains($sql, 'ON DUPLICATE KEY UPDATE'), 'draft binding replacement is atomic');
+
+$GLOBALS['sc_test_queries'] = [];
+$GLOBALS['sc_test_read_queries'] = [];
+$GLOBALS['sc_test_result_queue'] = [esc_p4_bind_contract(), esc_p4_bind_type(), []];
+$service->bind(71, 31);
+$typeOnlySql = (string) ($GLOBALS['sc_test_queries'][0] ?? '');
+esc_p4_bind_assert(str_contains($typeOnlySql, 'SELECT 17, c.id, ct.id, NULL, NULL'), 'type-only binding remains supported without Template/Version');
+esc_p4_bind_assert(str_contains($typeOnlySql, "ct.id = 31 AND ct.tenant_id = 17 AND ct.status = 'active'"), 'type-only binding atomically rechecks current-tenant active Contract Type');
+esc_p4_bind_assert(! str_contains($typeOnlySql, 'safecontracts_contract_template_versions'), 'type-only binding does not require Template tables');
 
 $GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [esc_p4_bind_contract(), esc_p4_bind_type(), esc_p4_bind_template(), esc_p4_bind_version(), esc_p4_bind_binding()];
