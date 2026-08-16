@@ -36,7 +36,7 @@ ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION=/secure/esc-production-google-services.js
 ./scripts/bootstrap_android.sh
 ```
 
-See `android-release/README.md` and `../../docs/enterprise/MOBILE_IDENTITY_APK.md` for package IDs, signing policy and coexistence requirements.
+See `android-release/README.md` and `../docs/enterprise/MOBILE_IDENTITY_APK.md` for package IDs, signing policy and coexistence requirements.
 
 ## Validation
 
