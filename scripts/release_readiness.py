@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed SafeContracts production release-readiness verification."""
+"""Fail-closed release-readiness verification for the active product line."""
 
 from __future__ import annotations
 
@@ -253,22 +253,56 @@ def validate_uat_contract() -> int:
 
 
 def validate_ci_release_gate() -> int:
-    workflow = _read(".github/workflows/quality-gates.yml")
+    safe_workflow = ROOT / ".github/workflows/quality-gates.yml"
     php_runner = _read("scripts/test-php.sh")
     release_doc = _read("docs/PRODUCTION_RELEASE_READINESS.md")
+    checks = 0
 
-    workflow_markers = (
-        "release-readiness:",
-        "needs: [repository-standards, backend-foundation, mobile-foundation]",
-        "python3 scripts/backup_manifest.py --check",
-        "python3 scripts/release_readiness.py --check",
-    )
-    for marker in workflow_markers:
-        if marker not in workflow:
-            fail(f"Quality Gates are missing release marker: {marker}")
+    if safe_workflow.exists():
+        workflow = safe_workflow.read_text(encoding="utf-8")
+        workflow_markers = (
+            "release-readiness:",
+            "needs: [repository-standards, backend-foundation, mobile-foundation]",
+            "python3 scripts/backup_manifest.py --check",
+            "python3 scripts/release_readiness.py --check",
+        )
+        for marker in workflow_markers:
+            if marker not in workflow:
+                fail(f"Quality Gates are missing release marker: {marker}")
+            checks += 1
+    else:
+        foundation = _read(".github/workflows/esc-foundation.yml")
+        publish = _read(".github/workflows/publish-mobile-latest.yml")
+        foundation_markers = (
+            "ESC Foundation Gate",
+            "python3 scripts/validate-esc-foundation.py",
+            "python3 scripts/verify_esc_android_isolation.py",
+            "python3 scripts/enterprise_verified_artifacts.py check",
+            "./scripts/test-php.sh",
+            "flutter analyze",
+            "flutter test",
+        )
+        publish_markers = (
+            "refs/heads/enterprise-safecontracts",
+            "environment: esc-production",
+            "--flavor production --release",
+            "--dart-define=ESC_ENV=production",
+            "EnterpriseSafeContracts-latest.apk",
+            "esc-mobile-latest",
+            "coexistence_evidence",
+        )
+        for marker in foundation_markers:
+            if marker not in foundation:
+                fail(f"ESC Foundation Gate is missing release marker: {marker}")
+            checks += 1
+        for marker in publish_markers:
+            if marker not in publish:
+                fail(f"ESC publish gate is missing release marker: {marker}")
+            checks += 1
 
     if 'p10_release_readiness_011_016.php' not in php_runner:
         fail("backend gate does not execute P10 release-readiness regression")
+    checks += 1
 
     for marker in (
         "SC-P10-011",
@@ -281,7 +315,8 @@ def validate_ci_release_gate() -> int:
     ):
         if marker not in release_doc:
             fail(f"release-readiness documentation is missing marker: {marker}")
-    return len(workflow_markers) + 1 + 7
+        checks += 1
+    return checks
 
 
 def main() -> int:
@@ -301,7 +336,7 @@ def main() -> int:
     total = sum(sections.values())
     if args.check:
         print(
-            "SafeContracts production release readiness passed "
+            "Release readiness passed "
             f"({total} checks across {len(sections)} sections)."
         )
     else:
