@@ -111,7 +111,7 @@ esc_p5_meta_assert(str_contains($schema, 'exportable tinyint(1) NOT NULL DEFAULT
 esc_p5_meta_assert(str_contains($schema, 'report_data_class varchar(30) NOT NULL'), 'report data class is explicit');
 esc_p5_meta_assert(str_contains($schema, 'aggregation_policy varchar(20) NOT NULL'), 'aggregation policy is explicit');
 esc_p5_meta_assert(str_contains($schema, 'UNIQUE KEY tenant_definition (tenant_id, definition_id)'), 'one metadata row per tenant definition');
-esc_p5_meta_assert(Migrator::LATEST_VERSION === '1.31.0', 'P5-005 is current schema version');
+esc_p5_meta_assert(version_compare(Migrator::LATEST_VERSION, '1.31.0', '>='), 'P5-005 schema remains included after later additive migrations');
 esc_p5_meta_assert(str_contains($migratorSource, "'1.31.0' => Migration0032EnterpriseCustomFieldMetadata::class"), 'P5-005 migration is registered');
 esc_p5_meta_assert(! str_contains($migrationSource, 'ALTER TABLE'), 'P5-005 migration is additive');
 
