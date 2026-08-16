@@ -21,6 +21,8 @@ For protected core business REST routes while ESC core tenant enforcement is ena
 5. apply the tenant membership role ceiling;
 6. enter tenant-scoped repositories/services.
 
+For WordPress admin requests, P2-003 first classifies the request as either tenant-owned or platform-global. Tenant-owned pages/actions resolve and lock tenant context during `admin_init`; direct `current_user_can()` checks are then narrowed through `TenantCapabilityFilter`. Platform-global pages/actions explicitly reset/retain an empty tenant context and therefore keep their global WordPress capability semantics.
+
 This ordering prevents global WordPress capabilities from being evaluated as if they independently authorized tenant data.
 
 ## Compatibility boundary
@@ -47,8 +49,6 @@ The existing membership fields `role_code` and `is_owner` are authorization inpu
 
 Unknown or blank explicit role codes fail closed for locked tenant business access. They are never interpreted as administrator roles.
 
-Platform-global capability classes such as system administration and the shared reference catalog remain classified separately from tenant business roles. A tenant role must not silently turn platform configuration into tenant-owned configuration.
-
 ## Effective-scope rule
 
 Tenant scope is a narrowing ceiling only:
@@ -57,6 +57,22 @@ Tenant scope is a narrowing ceiling only:
 - global `VIEW_ASSIGNED` + tenant `manager/tenant_admin/owner` => effective `assigned`;
 - no global view scope => effective `none` regardless of tenant role;
 - legacy `member` => inherits existing global scope until deliberately remapped.
+
+## P2-003 — WordPress admin boundary
+
+SafeContracts historically reused a few WordPress capability names for both platform controls and tenant-owned admin actions. P2-003 resolves that ambiguity by classifying the **request** before capability evaluation instead of assuming the capability name identifies data ownership.
+
+Platform-global control-plane pages include the legacy organization/system settings, payment-method reference catalog, global WordPress users/roles and presence tooling, Firebase deployment credentials/settings, mobile deployment configuration, translations, and the dedicated Enterprise tenant selector. Their matching admin-post actions run with no tenant context.
+
+Tenant-owned pages/actions include the dashboard, customers, contracts, payments, collections, follow-ups, notification business configuration/delivery, imports, reports and archive. Firebase test-push is also tenant-owned because device registrations are tenant-owned even though Firebase credentials are platform-global.
+
+`TenantCapabilityFilter` narrows SafeContracts WordPress capabilities only when a tenant context is locked. The shared capability names `MANAGE_SYSTEM`, `MANAGE_REFERENCE_DATA` and `MANAGE_USERS` are still narrowed during tenant-owned execution. They are bypassed only while WordPress is constructing `admin_menu`, so platform-global menu entries remain discoverable; entering the corresponding global page resets tenant context before authorization.
+
+The dedicated `Enterprise Tenant` selector is a control-plane page. It uses the user's global SafeContracts access grant and active membership directory rather than the previous tenant role ceiling. This provides an escape path when a previously selected membership has an invalid/unknown role while keeping tenant data fail closed.
+
+### Archive direct-SQL rule
+
+`ArchivePage` historically queried core archive tables directly instead of going through repositories. Under ESC enforcement those direct reads now require `CoreTenantScope` and add `tenant_id` predicates to customers, contracts, scheduled payments and collections. The platform-global payment-method archive is omitted from the tenant archive. Outside ESC enforcement the legacy Safe Contract query shape is unchanged.
 
 ## Security regressions
 
@@ -74,9 +90,20 @@ Tenant scope is a narrowing ceiling only:
 
 - viewer/accountant roles narrow a global all-data grant to assigned scope;
 - explicit roles deny capabilities outside their tenant role ceiling even when WordPress grants them globally;
+- shared legacy capability names are narrowed when evaluated inside locked tenant context;
 - manager/tenant-admin allowed operations still require matching global grants;
 - unknown/blank roles fail closed;
 - the compatibility `member` role preserves old memberships without manufacturing privileges;
 - owner status cannot manufacture a missing global capability;
 - a manager/owner tenant role cannot broaden a globally assigned-only user to all-data scope;
 - non-ESC legacy behavior remains unchanged.
+
+`tests/php/enterprise_admin_authorization_p2_003.php` verifies:
+
+- platform-global and tenant-owned admin pages/actions are classified explicitly;
+- direct admin capabilities are narrowed by the active tenant role, including overloaded system/reference/user capability names;
+- global control-plane capability behavior is preserved with no tenant context;
+- unknown tenant roles fail closed in direct admin authorization;
+- Enterprise archive direct SQL is tenant-scoped on every tenant-owned table and excludes platform-global payment-method archive rows;
+- Safe Contract legacy archive behavior remains unchanged when ESC enforcement is disabled;
+- the central capability filter and dedicated tenant selector are wired into runtime.
