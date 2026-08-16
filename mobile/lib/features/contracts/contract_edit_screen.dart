@@ -17,8 +17,8 @@ enum ContractEditState {
   error
 }
 
-final class _AccountantOption {
-  const _AccountantOption({
+final class AccountantOption {
+  const AccountantOption({
     required this.id,
     required this.name,
     required this.email,
@@ -30,9 +30,9 @@ final class _AccountantOption {
 
   String get label => email == null ? name : '$name <$email>';
 
-  factory _AccountantOption.fromData(Object? value) {
+  factory AccountantOption.fromData(Object? value) {
     final data = apiObjectMap(value, 'reference-data.accountant');
-    return _AccountantOption(
+    return AccountantOption(
       id: _positiveInt(data['id'], 'reference-data.accountant.id'),
       name: _requiredText(data['name'], 'reference-data.accountant.name'),
       email: _optionalText(data['email']),
@@ -48,7 +48,7 @@ final class ContractEditController extends ChangeNotifier {
   ContractEditState state = ContractEditState.idle;
   String? message;
   bool canAssignAccountant = false;
-  List<_AccountantOption> accountants = const <_AccountantOption>[];
+  List<AccountantOption> accountants = const <AccountantOption>[];
 
   Future<void> loadAccountants() async {
     try {
@@ -61,7 +61,7 @@ final class ContractEditController extends ChangeNotifier {
       canAssignAccountant =
           capabilities['safecontracts_assign_contracts'] == true;
       if (!canAssignAccountant) {
-        accountants = const <_AccountantOption>[];
+        accountants = const <AccountantOption>[];
         notifyListeners();
         return;
       }
@@ -81,9 +81,9 @@ final class ContractEditController extends ChangeNotifier {
         );
       }
       final ids = <int>{};
-      final parsed = <_AccountantOption>[];
+      final parsed = <AccountantOption>[];
       for (final row in rows) {
-        final accountant = _AccountantOption.fromData(row);
+        final accountant = AccountantOption.fromData(row);
         if (!ids.add(accountant.id)) {
           throw const FormatException(
             'reference-data.accountants contains duplicate IDs.',
@@ -91,16 +91,16 @@ final class ContractEditController extends ChangeNotifier {
         }
         parsed.add(accountant);
       }
-      accountants = List<_AccountantOption>.unmodifiable(parsed);
+      accountants = List<AccountantOption>.unmodifiable(parsed);
       state = ContractEditState.idle;
     } on SafeContractsApiException catch (error) {
-      accountants = const <_AccountantOption>[];
+      accountants = const <AccountantOption>[];
       message = error.message;
       state = error.statusCode == 403
           ? ContractEditState.forbidden
           : ContractEditState.error;
     } on Object catch (error) {
-      accountants = const <_AccountantOption>[];
+      accountants = const <AccountantOption>[];
       message = error.toString();
       state = ContractEditState.error;
     }
