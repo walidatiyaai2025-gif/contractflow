@@ -7,6 +7,7 @@ namespace SafeContracts\Admin;
 use SafeContracts\Notifications\DeliveryLogRepository;
 use SafeContracts\Notifications\NotificationRuleService;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\RuntimeLabels;
 
 final class NotificationsPage
 {
@@ -32,7 +33,7 @@ final class NotificationsPage
                 <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Rule', 'safecontracts'); ?></th><th><?php echo esc_html__('Trigger', 'safecontracts'); ?></th><th><?php echo esc_html__('Recipients', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th></tr></thead><tbody>
                 <?php foreach ($rules as $rule) : ?>
                     <?php $roles = is_array($rule['recipient_roles'] ?? null) ? $rule['recipient_roles'] : []; ?>
-                    <tr><td><strong><?php echo esc_html((string) $rule['name']); ?></strong><br><code><?php echo esc_html((string) $rule['code']); ?></code></td><td><?php echo esc_html((string) $rule['trigger_type']); ?></td><td><?php echo esc_html(implode(', ', array_map('strval', $roles))); ?><?php echo ! empty($rule['target_assigned_accountant']) ? esc_html__(' + assigned accountant', 'safecontracts') : ''; ?></td><td><?php echo esc_html((string) $rule['template_code']); ?></td><td><?php echo ! empty($rule['is_active']) ? esc_html__('Active', 'safecontracts') : esc_html__('Disabled', 'safecontracts'); ?></td></tr>
+                    <tr><td><strong><?php echo esc_html((string) $rule['name']); ?></strong><br><code><?php echo esc_html((string) $rule['code']); ?></code></td><td><?php echo esc_html(self::triggerLabel((string) $rule['trigger_type'])); ?></td><td><?php echo esc_html(implode(', ', array_map([self::class, 'roleLabel'], array_map('strval', $roles)))); ?><?php echo ! empty($rule['target_assigned_accountant']) ? ' + ' . esc_html(RuntimeLabels::text('Assigned Accountant')) : ''; ?></td><td><?php echo esc_html((string) $rule['template_code']); ?></td><td><?php echo ! empty($rule['is_active']) ? esc_html__('Active', 'safecontracts') : esc_html__('Disabled', 'safecontracts'); ?></td></tr>
                 <?php endforeach; ?>
                 </tbody></table>
                 <p class="description"><?php echo esc_html__('This operational screen intentionally exposes no Firebase credentials, service-account material or device-token values. Notification configuration is handled by dedicated settings tasks.', 'safecontracts'); ?></p>
@@ -41,12 +42,34 @@ final class NotificationsPage
                 <h2><?php echo esc_html__('Recent delivery log', 'safecontracts'); ?></h2>
                 <table class="widefat striped"><thead><tr><th><?php echo esc_html__('When', 'safecontracts'); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('User', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('Attempt', 'safecontracts'); ?></th><th><?php echo esc_html__('Result', 'safecontracts'); ?></th></tr></thead><tbody>
                 <?php foreach ($deliveries as $delivery) : ?>
-                    <tr><td><?php echo esc_html((string) $delivery['created_at']); ?></td><td>#<?php echo esc_html((string) $delivery['payment_id']); ?></td><td>#<?php echo esc_html((string) $delivery['user_id']); ?></td><td><?php echo esc_html((string) $delivery['template_code']); ?></td><td><?php echo esc_html((string) $delivery['attempt_no']); ?></td><td><?php echo esc_html((string) $delivery['status']); ?><?php if (! empty($delivery['error_code'])) : ?><br><code><?php echo esc_html((string) $delivery['error_code']); ?></code><?php endif; ?></td></tr>
+                    <tr><td><?php echo esc_html((string) $delivery['created_at']); ?></td><td>#<?php echo esc_html((string) $delivery['payment_id']); ?></td><td>#<?php echo esc_html((string) $delivery['user_id']); ?></td><td><?php echo esc_html((string) $delivery['template_code']); ?></td><td><?php echo esc_html((string) $delivery['attempt_no']); ?></td><td><?php echo esc_html(self::stateLabel((string) $delivery['status'])); ?><?php if (! empty($delivery['error_code'])) : ?><br><code><?php echo esc_html((string) $delivery['error_code']); ?></code><?php endif; ?></td></tr>
                 <?php endforeach; ?>
                 </tbody></table>
                 <p class="description"><?php echo esc_html__('Delivery state is read from the server-side log. Settled-payment suppression and retry rules remain enforced by the notification engine.', 'safecontracts'); ?></p>
             </section>
         </div>
         <?php
+    }
+
+    public static function roleLabel(string $role): string
+    {
+        return RuntimeLabels::text(ucwords(str_replace(['safecontracts_', '_'], ['', ' '], $role)));
+    }
+
+    private static function triggerLabel(string $trigger): string
+    {
+        $normalized = strtolower(trim($trigger));
+        $source = match ($normalized) {
+            'before_due', 'due_before' => 'Before due',
+            'due_today', 'on_due' => 'Due today',
+            'overdue', 'after_due' => 'Overdue',
+            default => ucwords(str_replace('_', ' ', $normalized)),
+        };
+        return RuntimeLabels::text($source);
+    }
+
+    private static function stateLabel(string $state): string
+    {
+        return RuntimeLabels::text(ucwords(str_replace('_', ' ', $state)));
     }
 }
