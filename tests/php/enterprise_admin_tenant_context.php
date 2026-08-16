@@ -117,7 +117,7 @@ esc_admin_context_assert(is_string($source) && str_contains($source, 'check_admi
 esc_admin_context_assert(is_string($source) && str_contains($source, 'current_user_can(Capabilities::ACCESS)'), 'admin switch action requires SafeContracts access capability');
 esc_admin_context_assert(is_string($source) && str_contains($source, "admin_url('admin.php')"), 'tenant switch redirect is constructed from local WordPress admin URL');
 esc_admin_context_assert(is_string($source) && str_contains($source, 'wp_safe_redirect'), 'admin switch uses safe WordPress redirect');
-esc_admin_context_assert(is_string($source) && ! str_contains($source, "$_POST['redirect_to']"), 'tenant switch does not accept a caller-supplied redirect URL');
+esc_admin_context_assert(is_string($source) && ! str_contains($source, 'redirect_to'), 'tenant switch does not accept a caller-supplied redirect URL');
 esc_admin_context_assert(is_string($source) && str_contains($source, 'TenantDirectoryRepository'), 'switcher tenant options come from authorized tenant directory');
 esc_admin_context_assert(is_string($source) && str_contains($source, "add_action('admin_init', [self::class, 'resolveRequest'], 1)"), 'admin tenant resolution is wired to admin request lifecycle');
 esc_admin_context_assert(is_string($source) && str_contains($source, "add_action('admin_post_' . self::SELECT_ACTION, [self::class, 'handleSelect'])"), 'tenant switch admin-post handler is wired');
