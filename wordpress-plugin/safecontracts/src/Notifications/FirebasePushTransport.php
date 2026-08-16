@@ -34,16 +34,7 @@ final class FirebasePushTransport implements PushTransport
             return ['success' => false, 'status_code' => 0, 'error_code' => 'firebase_auth_unavailable'];
         }
 
-        $request = [
-            'message' => [
-                'token' => $token,
-                'notification' => [
-                    'title' => $payload['title'],
-                    'body' => $payload['body'],
-                ],
-                'data' => $this->stringifyData($payload['data'] ?? []),
-            ],
-        ];
+        $request = $this->buildRequest($token, $payload);
         $response = wp_remote_post(
             'https://fcm.googleapis.com/v1/projects/' . rawurlencode($projectId) . '/messages:send',
             [
@@ -69,6 +60,33 @@ final class FirebasePushTransport implements PushTransport
             'status_code' => $statusCode,
             'error_code' => $this->firebaseErrorCode($statusCode, $body),
         ];
+    }
+
+    /**
+     * FCM HTTP v1 defines message.data as a JSON object/map. PHP encodes an
+     * empty array as [], which is not a valid map, so omit data entirely when
+     * there are no custom entries.
+     *
+     * @param array<string,mixed> $payload
+     * @return array{message:array<string,mixed>}
+     */
+    private function buildRequest(string $token, array $payload): array
+    {
+        $message = [
+            'token' => $token,
+            'notification' => [
+                'title' => (string) ($payload['title'] ?? ''),
+                'body' => (string) ($payload['body'] ?? ''),
+            ],
+        ];
+
+        $rawData = $payload['data'] ?? [];
+        $data = $this->stringifyData(is_array($rawData) ? $rawData : []);
+        if ($data !== []) {
+            $message['data'] = $data;
+        }
+
+        return ['message' => $message];
     }
 
     /** @param array<string, scalar|null> $data @return array<string, string> */
