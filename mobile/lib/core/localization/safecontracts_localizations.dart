@@ -70,7 +70,7 @@ final class SafeContractsLocalizations {
   String yesNo(bool value) => t(value ? 'Yes' : 'No');
 
   String money(String rawValue, MobileCurrencyConfig currency) {
-    final value = rawValue.trim();
+    final value = _twoDecimalMoney(rawValue);
     final token = currency.displayToken.trim();
     if (token.isEmpty || value.isEmpty || value == '—') return value;
     return isArabic ? '$value $token' : '$token $value';
@@ -109,6 +109,30 @@ final class SafeContractsLocalizations {
       );
 
   String rawMessage(String message) => t(message);
+}
+
+String _twoDecimalMoney(String rawValue) {
+  final value = rawValue.trim();
+  final match = RegExp(r'^([+-]?)(\d+)(?:\.(\d+))?$').firstMatch(value);
+  if (match == null) return value;
+
+  final rawSign = match.group(1) ?? '';
+  var whole = BigInt.parse(match.group(2)!);
+  final fraction = match.group(3) ?? '';
+  final firstTwo = (fraction + '00').substring(0, 2);
+  var cents = int.parse(firstTwo);
+
+  if (fraction.length > 2 && int.parse(fraction[2]) >= 5) {
+    cents += 1;
+    if (cents == 100) {
+      whole += BigInt.one;
+      cents = 0;
+    }
+  }
+
+  final isZero = whole == BigInt.zero && cents == 0;
+  final sign = rawSign == '-' && !isZero ? '-' : rawSign == '+' ? '+' : '';
+  return '$sign$whole.${cents.toString().padLeft(2, '0')}';
 }
 
 extension SafeContractsLocalizationContext on BuildContext {
