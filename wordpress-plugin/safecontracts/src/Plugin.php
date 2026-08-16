@@ -119,6 +119,7 @@ final class Plugin
         add_action('admin_post_' . CustomersPage::SAVE_ACTION, [CustomersPage::class, 'handleSave']);
         add_action('admin_post_' . CustomersPage::DELETE_ACTION, [CustomersPage::class, 'handleDelete']);
         add_action('admin_post_' . ContractsPage::SAVE_ACTION, [ContractsPage::class, 'handleSave']);
+        add_action('admin_post_' . ContractsPage::BULK_ASSIGN_ACTION, [ContractsPage::class, 'handleBulkAssign']);
         add_action('admin_post_' . ContractsPage::DELETE_ACTION, [ContractsPage::class, 'handleDelete']);
         add_action('admin_post_' . DashboardPage::ARCHIVE_ACTION, [DashboardPage::class, 'handleArchive']);
         add_action('admin_post_' . PaymentsPage::SAVE_ACTION, [PaymentsPage::class, 'handleSave']);
