@@ -112,9 +112,8 @@ final class SafeContractsSession {
     }
 
     final rawTenant = data['tenant'];
-    final tenant = rawTenant == null
-        ? null
-        : EnterpriseTenantIdentity.fromData(rawTenant);
+    final tenant =
+        rawTenant == null ? null : EnterpriseTenantIdentity.fromData(rawTenant);
 
     return SafeContractsSession(
       userId: userId,
