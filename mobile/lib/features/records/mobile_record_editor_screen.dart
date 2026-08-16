@@ -216,7 +216,8 @@ final class _MobileRecordEditorScreenState
       ),
       if (editing)
         DropdownButtonFormField<int>(
-          value: _customerId,
+          key: ValueKey('customer-edit-$_customerId'),
+          initialValue: _customerId,
           decoration: InputDecoration(
             labelText: _t(context, 'Customer', 'العميل'),
           ),
@@ -316,7 +317,8 @@ final class _MobileRecordEditorScreenState
       ),
       if (editing)
         DropdownButtonFormField<int>(
-          value: _contractId,
+          key: ValueKey('contract-edit-$_contractId'),
+          initialValue: _contractId,
           decoration: InputDecoration(
             labelText: _t(context, 'Contract', 'العقد'),
           ),
@@ -338,7 +340,10 @@ final class _MobileRecordEditorScreenState
         ),
       ),
       DropdownButtonFormField<int>(
-        value: _contractCustomerId,
+        key: ValueKey(
+          'contract-customer-${_contractMode}-$_contractId-$_contractCustomerId',
+        ),
+        initialValue: _contractCustomerId,
         decoration: InputDecoration(
           labelText: _t(context, 'Customer *', 'العميل *'),
         ),
@@ -356,7 +361,10 @@ final class _MobileRecordEditorScreenState
       ),
       if (_canAssignContracts)
         DropdownButtonFormField<int>(
-          value: _contractAccountantId,
+          key: ValueKey(
+            'contract-accountant-${_contractMode}-$_contractId-$_contractAccountantId',
+          ),
+          initialValue: _contractAccountantId,
           decoration: InputDecoration(
             labelText: _t(context, 'Responsible accountant', 'المحاسب المسؤول'),
           ),
@@ -439,7 +447,8 @@ final class _MobileRecordEditorScreenState
       ),
       if (editing)
         DropdownButtonFormField<int>(
-          value: _paymentId,
+          key: ValueKey('payment-edit-$_paymentId'),
+          initialValue: _paymentId,
           decoration: InputDecoration(
             labelText: _t(context, 'Payment', 'الدفعة'),
           ),
@@ -456,7 +465,10 @@ final class _MobileRecordEditorScreenState
           onChanged: _saving ? null : _selectPayment,
         ),
       DropdownButtonFormField<int>(
-        value: _paymentContractId,
+        key: ValueKey(
+          'payment-contract-${_paymentMode}-$_paymentId-$_paymentContractId',
+        ),
+        initialValue: _paymentContractId,
         decoration: InputDecoration(
           labelText: _t(context, 'Contract *', 'العقد *'),
         ),
@@ -618,6 +630,7 @@ final class _MobileRecordEditorScreenState
       } else {
         await widget.client.post('mobile/customers/create', body: body);
       }
+      if (!mounted) return;
       _message(
         editing
             ? _t(context, 'Customer updated.', 'تم تعديل العميل.')
@@ -673,6 +686,7 @@ final class _MobileRecordEditorScreenState
       } else {
         await widget.client.post('mobile/contracts/create', body: body);
       }
+      if (!mounted) return;
       _message(
         editing
             ? _t(context, 'Contract updated.', 'تم تعديل العقد.')
@@ -722,6 +736,7 @@ final class _MobileRecordEditorScreenState
       } else {
         await widget.client.post('mobile/payments/create', body: body);
       }
+      if (!mounted) return;
       _message(
         editing
             ? _t(context, 'Payment updated.', 'تم تعديل الدفعة.')
