@@ -25,10 +25,12 @@ final class LoginBranding
             [],
             SAFECONTRACTS_VERSION
         );
-        wp_add_inline_style(
-            self::STYLE_HANDLE,
-            'body.login h1 a{background-image:url("' . Brand::iconDataUri() . '") !important;}'
-        );
+        if (function_exists('wp_add_inline_style')) {
+            wp_add_inline_style(
+                self::STYLE_HANDLE,
+                'body.login h1 a{background-image:url("' . Brand::iconDataUri() . '") !important;}'
+            );
+        }
     }
 
     public static function headerUrl(string $url): string
