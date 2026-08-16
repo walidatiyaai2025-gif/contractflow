@@ -25,6 +25,11 @@ void main() {
 
     expect(ar.t('Dashboard'), 'لوحة التحكم');
     expect(ar.t('Contracts'), 'العقود');
+    expect(ar.t('Responsible accountant'), 'المحاسب المسؤول');
+    expect(
+      ar.t('Enter a positive amount with up to 2 decimal places.'),
+      'أدخل مبلغاً موجباً بحد أقصى منزلتين عشريتين.',
+    );
     expect(ar.status('overdue'), 'متأخر');
     expect(ar.status('partially_paid'), 'مدفوع جزئياً');
     expect(en.t('Dashboard'), 'Dashboard');
@@ -74,6 +79,15 @@ void main() {
       expect(en.money('12.3449', config.currency), 'د.ك 12.34');
       expect(en.money('7', config.currency), 'د.ك 7.00');
       expect(en.money('-0.0049', config.currency), 'د.ك 0.00');
+
+      final collectionSource =
+          File('lib/features/payments/collection_entry_dialog.dart')
+              .readAsStringSync();
+      expect(collectionSource, contains(r'\.\d{1,2}'));
+      expect(
+        collectionSource,
+        contains('Enter a positive amount with up to 2 decimal places.'),
+      );
 
       controller.dispose();
       restored.dispose();
