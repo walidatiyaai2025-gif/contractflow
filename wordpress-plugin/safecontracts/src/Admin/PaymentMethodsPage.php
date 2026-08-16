@@ -123,7 +123,7 @@ final class PaymentMethodsPage
                                             <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
                                             <input type="hidden" name="payment_method_id" value="<?php echo esc_attr((string) $method['id']); ?>">
                                             <?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $method['id']); ?>
-                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?> / حذف</button>
+                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
                                         </form>
                                     </div>
                                 </td>
