@@ -25,8 +25,8 @@ function esc_rest_assert(bool $condition, string $message): void
 $GLOBALS['sc_test_current_caps']['safecontracts_access'] = true;
 $GLOBALS['sc_test_current_caps']['safecontracts_view_assigned'] = true;
 
-do_action('rest_api_init');
-esc_rest_assert(isset($GLOBALS['sc_test_routes']['safecontracts/v1/tenants']), 'tenant directory route is registered');
+Router::register();
+esc_rest_assert(isset($GLOBALS['sc_test_routes']['safecontracts/v1/tenants']), 'tenant directory route is registered through Router');
 esc_rest_assert(TenantRequestContext::HEADER === 'X-ESC-Tenant-ID', 'tenant selection header is stable');
 
 unset($_SERVER['HTTP_X_ESC_TENANT_ID']);
