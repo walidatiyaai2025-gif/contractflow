@@ -4,18 +4,23 @@ declare(strict_types=1);
 
 namespace SafeContracts\Notifications;
 
+use DomainException;
 use InvalidArgumentException;
+use SafeContracts\Tenancy\NonCoreTenantScope;
+use SafeContracts\Tenancy\TenantMembershipRepository;
 
 final class DirectNotificationService
 {
     public function __construct(
         private ?DeviceTokenRepository $tokens = null,
         private ?DeliveryLogRepository $deliveries = null,
-        private ?EmailSettings $emailSettings = null
+        private ?EmailSettings $emailSettings = null,
+        private ?TenantMembershipRepository $memberships = null
     ) {
         $this->tokens ??= new DeviceTokenRepository();
         $this->deliveries ??= new DeliveryLogRepository();
         $this->emailSettings ??= new EmailSettings();
+        $this->memberships ??= new TenantMembershipRepository();
     }
 
     /** @return array{push_sent:int,push_failed:int,email_sent:int,email_failed:int} */
@@ -24,6 +29,11 @@ final class DirectNotificationService
         if ($userId <= 0 || (! $push && ! $email)) {
             throw new InvalidArgumentException('Direct notification requires a user and at least one delivery channel.');
         }
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId !== null && ! $this->memberships->isActiveMember($tenantId, $userId)) {
+            throw new DomainException('Direct notification recipient is not an active member of the current Enterprise tenant.');
+        }
+
         $title = trim(sanitize_text_field($title));
         $body = trim(sanitize_textarea_field($body));
         if ($title === '' || strlen($title) > 191 || $body === '' || strlen($body) > 4000) {
