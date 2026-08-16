@@ -21,10 +21,25 @@ use SafeContracts\Tenancy\TenantMembershipAdminService;
 use SafeContracts\Tenancy\TenantMembershipRepository;
 use SafeContracts\Tenancy\TenantRolePolicy;
 
-final class ESC_P2_Membership_Wpdb extends SC_Test_Wpdb
+final class ESC_P2_Membership_Wpdb
 {
+    public string $prefix = 'wp_';
+    public int $insert_id = 0;
+
+    /** @var list<string> */
+    public array $queries = [];
+
     /** @var list<int|false> */
     public array $forcedQueryResults = [];
+
+    public function prepare(string $query, mixed ...$args): string
+    {
+        $prepared = array_map(
+            static fn (mixed $value): mixed => is_int($value) ? $value : "'" . addslashes((string) $value) . "'",
+            $args
+        );
+        return vsprintf($query, $prepared);
+    }
 
     public function query(string $sql): int|false
     {
@@ -33,6 +48,17 @@ final class ESC_P2_Membership_Wpdb extends SC_Test_Wpdb
             return array_shift($this->forcedQueryResults);
         }
         return 1;
+    }
+
+    public function get_results(string $sql, mixed $output = null): array
+    {
+        unset($output);
+        $GLOBALS['sc_test_read_queries'][] = $sql;
+        if ($GLOBALS['sc_test_result_queue'] !== []) {
+            $rows = array_shift($GLOBALS['sc_test_result_queue']);
+            return is_array($rows) ? $rows : [];
+        }
+        return $GLOBALS['sc_test_results'];
     }
 }
 
