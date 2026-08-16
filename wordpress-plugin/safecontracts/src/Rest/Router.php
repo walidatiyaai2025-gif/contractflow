@@ -37,6 +37,7 @@ final class Router
         }
 
         TenantsController::register();
+        TenantMembersController::register();
         PaymentMethodsController::register();
         DataController::register();
         DashboardController::register();
