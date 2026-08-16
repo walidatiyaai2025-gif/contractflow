@@ -28,6 +28,7 @@ use SafeContracts\Admin\TranslationsPage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Audit\AuditRecorder;
 use SafeContracts\Audit\ContractArchiveAuditRecorder;
+use SafeContracts\Audit\NotificationScheduleAuditRecorder;
 use SafeContracts\Audit\SafeDeletionAuditRecorder;
 use SafeContracts\Auth\MobileBearerAuthentication;
 use SafeContracts\Contracts\ContractHistoryRecorder;
@@ -71,6 +72,7 @@ final class Plugin
         ContractHistoryRecorder::register();
         AuditRecorder::register();
         ContractArchiveAuditRecorder::register();
+        NotificationScheduleAuditRecorder::register();
         SafeDeletionAuditRecorder::register();
         LoginBranding::register();
         NavigationCleanup::register();
