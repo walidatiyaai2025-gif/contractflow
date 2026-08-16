@@ -30,6 +30,7 @@ final class _SafeContractsLoginScreenState
   final _username = TextEditingController();
   final _password = TextEditingController();
   bool _obscurePassword = true;
+  bool _bootstrapping = false;
 
   @override
   void dispose() {
@@ -39,20 +40,34 @@ final class _SafeContractsLoginScreenState
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_bootstrapping || !_formKey.currentState!.validate()) return;
     final success = await widget.controller.submit(
       username: _username.text,
       password: _password.text,
     );
     if (!success || !mounted) return;
     _password.clear();
-    await widget.onAuthenticated();
+    setState(() => _bootstrapping = true);
+    try {
+      await widget.onAuthenticated();
+    } finally {
+      if (mounted) {
+        setState(() => _bootstrapping = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     final scheme = Theme.of(context).colorScheme;
+    if (_bootstrapping) {
+      return _BlockingBootstrapSplash(
+        label: l10n.t('Loading'),
+        scheme: scheme,
+      );
+    }
+
     final selectedLanguage = widget.languageCode == 'ar' ? 'ar' : 'en';
     return Scaffold(
       body: DecoratedBox(
@@ -280,6 +295,78 @@ final class _SafeContractsLoginScreenState
                       ],
                     );
                   },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _BlockingBootstrapSplash extends StatelessWidget {
+  const _BlockingBootstrapSplash({
+    required this.label,
+    required this.scheme,
+  });
+
+  final String label;
+  final ColorScheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: <Color>[
+                scheme.primaryContainer.withValues(alpha: 0.78),
+                scheme.surface,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
+              child: Semantics(
+                liveRegion: true,
+                label: label,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 82,
+                      height: 82,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: scheme.primary,
+                        borderRadius: BorderRadius.circular(26),
+                      ),
+                      child: Icon(
+                        Icons.shield_outlined,
+                        size: 42,
+                        color: scheme.onPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Text(
+                      'SafeContracts',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 18),
+                    const SizedBox.square(
+                      dimension: 34,
+                      child: CircularProgressIndicator(strokeWidth: 3),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(label),
+                  ],
                 ),
               ),
             ),
