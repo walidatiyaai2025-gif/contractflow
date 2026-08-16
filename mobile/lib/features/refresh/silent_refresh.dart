@@ -18,6 +18,22 @@ extension DashboardSilentRefresh on DashboardController {
       overview = nextOverview;
       lists = nextLists;
       availableContracts = nextOverview.contracts;
+      if (filters.customerId != null) {
+        for (final customer in nextOverview.customers) {
+          if (customer.id == filters.customerId) {
+            selectedCustomerName = customer.name;
+            break;
+          }
+        }
+      }
+      if (filters.contractId != null) {
+        for (final contract in availableContracts) {
+          if (contract.id == filters.contractId) {
+            selectedContractNumber = contract.contractNumber;
+            break;
+          }
+        }
+      }
       errorMessage = null;
       state = DashboardLoadState.ready;
       // ChangeNotifier exposes this publicly; this extension intentionally
