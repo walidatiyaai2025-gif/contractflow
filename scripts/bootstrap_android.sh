@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
 FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
-BRAND_SOURCE="$ROOT/mobile/assets/brand/safe_contracts_identity.jpg"
+ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.xml"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
 
 if ! command -v flutter >/dev/null 2>&1; then
@@ -13,7 +13,7 @@ if ! command -v flutter >/dev/null 2>&1; then
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$BRAND_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
@@ -45,7 +45,7 @@ cd "$MOBILE"
 # Flutter owns the platform boilerplate version. Recreate it from the exact
 # Flutter stable toolchain used by CI, then restore the repository's release
 # signing, networking, Firebase, notification presentation, and Safe Contracts
-# identity contracts.
+# runtime contracts. The launcher icon is the approved Alkenzy Advertising mark.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -76,18 +76,22 @@ if plugin not in text:
 path.write_text(text, encoding="utf-8")
 PY
 
-BRAND_ICON="android/app/src/main/res/drawable-nodpi/safe_contracts_brand.jpg"
-mkdir -p "$(dirname "$BRAND_ICON")"
-python3 - "$BRAND_SOURCE" "$BRAND_ICON" <<'PY'
-from pathlib import Path
-import sys
+LAUNCHER_ICON="android/app/src/main/res/drawable/alkenzy_launcher.xml"
+mkdir -p "$(dirname "$LAUNCHER_ICON")"
+cp "$ALKENZY_ICON_SOURCE" "$LAUNCHER_ICON"
 
-source = Path(sys.argv[1])
-image = source.read_bytes()
-if not image.startswith(b"\xff\xd8\xff") or len(image) < 1024:
-    raise SystemExit("FAIL: Safe Contracts packaged brand source is not a usable JPEG")
-Path(sys.argv[2]).write_bytes(image)
-PY
+grep -Fq '<vector' "$LAUNCHER_ICON" || {
+  echo "FAIL: Alkenzy launcher icon is not a valid Android vector resource" >&2
+  exit 1
+}
+grep -Fq '#FFFFE173' "$LAUNCHER_ICON" || {
+  echo "FAIL: Alkenzy launcher icon is missing the approved yellow brand field" >&2
+  exit 1
+}
+grep -Fq '#FF7BC1CD' "$LAUNCHER_ICON" || {
+  echo "FAIL: Alkenzy launcher icon is missing the approved blue Advertising mark" >&2
+  exit 1
+}
 
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [[ ! -f "$MANIFEST" ]]; then
@@ -104,13 +108,13 @@ text = path.read_text(encoding="utf-8")
 text = text.replace('android:label="safecontracts_mobile"', 'android:label="Safe Contracts"')
 text = re.sub(
     r'android:icon="@[^"]+"',
-    'android:icon="@drawable/safe_contracts_brand"',
+    'android:icon="@drawable/alkenzy_launcher"',
     text,
     count=1,
 )
 text = re.sub(
     r'android:roundIcon="@[^"]+"',
-    'android:roundIcon="@drawable/safe_contracts_brand"',
+    'android:roundIcon="@drawable/alkenzy_launcher"',
     text,
     count=1,
 )
@@ -148,8 +152,8 @@ for permission in permissions:
         raise SystemExit(f"FAIL: Android release manifest is missing {permission}")
 if 'android:label="Safe Contracts"' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Safe Contracts label")
-if 'android:icon="@drawable/safe_contracts_brand"' not in text:
-    raise SystemExit("FAIL: Android release manifest is missing Safe Contracts launcher icon")
+if 'android:icon="@drawable/alkenzy_launcher"' not in text:
+    raise SystemExit("FAIL: Android release manifest is missing Alkenzy launcher icon")
 if 'safe_contracts_alerts' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Safe Contracts notification channel metadata")
 
@@ -164,7 +168,7 @@ for required in \
   android/app/google-services.json \
   android/app/src/main/AndroidManifest.xml \
   "$MAIN_ACTIVITY_TARGET" \
-  "$BRAND_ICON"; do
+  "$LAUNCHER_ICON"; do
   if [[ ! -e "$required" ]]; then
     echo "FAIL: generated Android scaffold missing $required" >&2
     exit 1
@@ -183,8 +187,8 @@ grep -Fq 'android:label="Safe Contracts"' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing Safe Contracts label" >&2
   exit 1
 }
-grep -Fq 'android:icon="@drawable/safe_contracts_brand"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing Safe Contracts launcher icon" >&2
+grep -Fq 'android:icon="@drawable/alkenzy_launcher"' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing Alkenzy launcher icon" >&2
   exit 1
 }
 grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
@@ -204,4 +208,4 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "Safe Contracts Android scaffold bootstrapped with branded launcher icon, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
+echo "Safe Contracts Android scaffold bootstrapped with Alkenzy launcher icon, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
