@@ -21,15 +21,11 @@ $required = [
         'Invalid username or password.',
         'no-store',
     ],
-    'wordpress-plugin/safecontracts/src/Rest/DevicesController.php' => [
-        "'/devices/register'",
-        "'/devices/revoke'",
-        'DeviceTokenService',
-    ],
     'mobile/lib/features/auth/login_screen.dart' => [
-        "labelText: 'Username'",
-        "labelText: 'Password'",
+        "l10n.t('Username')",
+        "l10n.t('Password')",
         "'Sign in'",
+        'context.scL10n',
     ],
     'mobile/lib/core/auth/mobile_token_store.dart' => [
         'FlutterSecureStorage',

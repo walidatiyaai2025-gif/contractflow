@@ -3,17 +3,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/localization/safecontracts_localizations.dart';
+import '../config/mobile_config.dart';
 import 'payments.dart';
 
 final class CollectionEntryDialog extends StatefulWidget {
   const CollectionEntryDialog({
     required this.repository,
     required this.payment,
+    required this.currency,
     super.key,
   });
 
   final PaymentsRepository repository;
   final SafeContractsPayment payment;
+  final MobileCurrencyConfig currency;
 
   @override
   State<CollectionEntryDialog> createState() => _CollectionEntryDialogState();
@@ -142,31 +146,44 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final token = widget.currency.displayToken;
     return AlertDialog(
-      title: Text('Record collection · Payment #${widget.payment.id}'),
+      title: Text(
+          '${l10n.t('Record collection')} · ${l10n.paymentNumber(widget.payment.id)}'),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'The server validates scope, payment balance, settlement status and audit history. Mobile performs input-shape checks only.',
+              Text(
+                l10n.t(
+                  'The server validates scope, payment balance, settlement status and audit history. Mobile performs input-shape checks only.',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${l10n.t('Remaining')}: ${l10n.money(widget.payment.remainingAmount, widget.currency)}',
+                style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _amount,
                 enabled: !_submitting,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: token.isEmpty
+                      ? l10n.t('Amount')
+                      : '${l10n.t('Amount')} ($token)',
                 ),
-                decoration: const InputDecoration(labelText: 'Amount'),
               ),
               TextField(
                 controller: _date,
                 enabled: !_submitting,
-                decoration: const InputDecoration(
-                  labelText: 'Collection date YYYY-MM-DD',
+                decoration: InputDecoration(
+                  labelText: l10n.t('Collection date YYYY-MM-DD'),
                 ),
               ),
               if (_loadingMethods)
@@ -179,15 +196,13 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
                   initialValue: _methodId,
                   isExpanded: true,
                   decoration:
-                      const InputDecoration(labelText: 'Payment method'),
+                      InputDecoration(labelText: l10n.t('Payment method')),
                   items: _methods
                       .map(
                         (method) => DropdownMenuItem<int>(
                           value: method.id,
-                          child: Text(
-                            method.name,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          child: Text(method.name,
+                              overflow: TextOverflow.ellipsis),
                         ),
                       )
                       .toList(growable: false),
@@ -199,21 +214,21 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
                 controller: _reference,
                 enabled: !_submitting,
                 maxLength: 191,
-                decoration: const InputDecoration(
-                  labelText: 'Reference (optional)',
+                decoration: InputDecoration(
+                  labelText: l10n.t('Reference (optional)'),
                 ),
               ),
               TextField(
                 controller: _proof,
                 enabled: !_submitting,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Proof media ID (optional)',
+                decoration: InputDecoration(
+                  labelText: l10n.t('Proof media ID (optional)'),
                 ),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 8),
-                Text(_error!, textAlign: TextAlign.center),
+                Text(l10n.rawMessage(_error!), textAlign: TextAlign.center),
               ],
             ],
           ),
@@ -223,11 +238,11 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
         if (!_loadingMethods && _methods.isEmpty)
           TextButton(
             onPressed: _submitting ? null : () => unawaited(_loadMethods()),
-            child: const Text('Retry methods'),
+            child: Text(l10n.t('Retry methods')),
           ),
         TextButton(
           onPressed: _submitting ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.t('Cancel')),
         ),
         FilledButton(
           onPressed: _submitting || _loadingMethods || _methods.isEmpty
@@ -238,7 +253,7 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
                   dimension: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Record'),
+              : Text(l10n.t('Record')),
         ),
       ],
     );

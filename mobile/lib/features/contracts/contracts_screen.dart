@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/localization/safecontracts_localizations.dart';
+import '../config/mobile_config.dart';
 import '../dashboard/dashboard_models.dart';
 import 'contracts.dart';
 
@@ -9,12 +11,14 @@ final class ContractsScreen extends StatefulWidget {
   const ContractsScreen({
     required this.controller,
     required this.customers,
+    this.currency = const MobileCurrencyConfig.defaults(),
     required this.onOpenContract,
     super.key,
   });
 
   final ContractsController controller;
   final List<CustomerOption> customers;
+  final MobileCurrencyConfig currency;
   final ValueChanged<int> onOpenContract;
 
   @override
@@ -51,6 +55,7 @@ final class _ContractsScreenState extends State<ContractsScreen> {
             Expanded(
               child: _ContractsContent(
                 controller: widget.controller,
+                currency: widget.currency,
                 onOpenContract: widget.onOpenContract,
               ),
             ),
@@ -72,6 +77,7 @@ final class _ContractsToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final busy = controller.state == ContractsLoadState.loading;
     final selectedCustomer = controller.filters.customerId ?? 0;
     final customerExists = selectedCustomer == 0 ||
@@ -86,22 +92,25 @@ final class _ContractsToolbar extends StatelessWidget {
         runSpacing: 10,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text('Contracts', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            l10n.t('Contracts'),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           SizedBox(
             width: 210,
             child: DropdownButtonFormField<int>(
               key: ValueKey<int>(safeCustomer),
               initialValue: safeCustomer,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Customer',
+              decoration: InputDecoration(
+                labelText: l10n.t('Customer'),
                 isDense: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               items: <DropdownMenuItem<int>>[
-                const DropdownMenuItem<int>(
+                DropdownMenuItem<int>(
                   value: 0,
-                  child: Text('All customers'),
+                  child: Text(l10n.t('All customers')),
                 ),
                 ...customers.map(
                   (customer) => DropdownMenuItem<int>(
@@ -128,29 +137,26 @@ final class _ContractsToolbar extends StatelessWidget {
               key: ValueKey<String>(selectedStatus),
               initialValue: selectedStatus,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Status',
+              decoration: InputDecoration(
+                labelText: l10n.t('Status'),
                 isDense: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
-              items: const <DropdownMenuItem<String>>[
+              items: <DropdownMenuItem<String>>[
                 DropdownMenuItem<String>(
                   value: '',
-                  child: Text('All statuses'),
+                  child: Text(l10n.t('All statuses')),
                 ),
-                DropdownMenuItem<String>(value: 'draft', child: Text('Draft')),
-                DropdownMenuItem<String>(
-                  value: 'active',
-                  child: Text('Active'),
-                ),
-                DropdownMenuItem<String>(
-                  value: 'completed',
-                  child: Text('Completed'),
-                ),
-                DropdownMenuItem<String>(
-                  value: 'cancelled',
-                  child: Text('Cancelled'),
-                ),
+                for (final status in const <String>[
+                  'draft',
+                  'active',
+                  'completed',
+                  'cancelled',
+                ])
+                  DropdownMenuItem<String>(
+                    value: status,
+                    child: Text(l10n.status(status)),
+                  ),
               ],
               onChanged: busy
                   ? null
@@ -169,17 +175,17 @@ final class _ContractsToolbar extends StatelessWidget {
               ),
               initialValue: controller.sort,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Sort',
+              decoration: InputDecoration(
+                labelText: l10n.t('Sort'),
                 isDense: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               items: ContractSortOption.values
                   .map(
                     (option) => DropdownMenuItem<ContractSortOption>(
                       value: option,
                       child: Text(
-                        option.label,
+                        l10n.t(option.label),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -195,14 +201,16 @@ final class _ContractsToolbar extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Refresh contracts',
+            tooltip: l10n.t('Refresh contracts'),
             onPressed: busy ? null : () => unawaited(controller.refresh()),
             icon: const Icon(Icons.refresh),
           ),
           if (controller.currentPage != null)
             Text(
-              'Page ${controller.currentPage!.page} • '
-              '${controller.currentPage!.contracts.length} shown',
+              l10n.pageShown(
+                controller.currentPage!.page,
+                controller.currentPage!.contracts.length,
+              ),
               style: Theme.of(context).textTheme.bodySmall,
             ),
         ],
@@ -214,37 +222,44 @@ final class _ContractsToolbar extends StatelessWidget {
 final class _ContractsContent extends StatelessWidget {
   const _ContractsContent({
     required this.controller,
+    required this.currency,
     required this.onOpenContract,
   });
 
   final ContractsController controller;
+  final MobileCurrencyConfig currency;
   final ValueChanged<int> onOpenContract;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final page = controller.currentPage;
     if (controller.state == ContractsLoadState.loading && page == null) {
       return const Center(child: CircularProgressIndicator());
     }
     if (controller.state == ContractsLoadState.error && page == null) {
       return _ContractsError(
-        message: controller.errorMessage ?? 'Unable to load contracts.',
+        message: l10n.rawMessage(
+          controller.errorMessage ?? 'Unable to load contracts.',
+        ),
         onRetry: () => unawaited(controller.loadPage(1)),
       );
     }
     if (page == null) {
-      return const Center(child: Text('Contracts are not loaded yet.'));
+      return Center(child: Text(l10n.t('Contracts are not loaded yet.')));
     }
     if (page.contracts.isEmpty) {
       return RefreshIndicator(
         onRefresh: controller.refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 120),
-            Icon(Icons.description_outlined, size: 48),
-            SizedBox(height: 12),
-            Center(child: Text('No contracts match the current filters.')),
+          children: <Widget>[
+            const SizedBox(height: 120),
+            const Icon(Icons.description_outlined, size: 48),
+            const SizedBox(height: 12),
+            Center(
+              child: Text(l10n.t('No contracts match the current filters.')),
+            ),
           ],
         ),
       );
@@ -256,7 +271,9 @@ final class _ContractsContent extends StatelessWidget {
           const LinearProgressIndicator(),
         if (controller.state == ContractsLoadState.error)
           _InlineContractsError(
-            message: controller.errorMessage ?? 'Contract refresh failed.',
+            message: l10n.rawMessage(
+              controller.errorMessage ?? 'Contract refresh failed.',
+            ),
           ),
         Expanded(
           child: RefreshIndicator(
@@ -274,6 +291,7 @@ final class _ContractsContent extends StatelessWidget {
                     final contract = page.contracts[index];
                     return _ContractTile(
                       contract: contract,
+                      currency: currency,
                       wide: wide,
                       onTap: () => onOpenContract(contract.id),
                     );
@@ -292,24 +310,29 @@ final class _ContractsContent extends StatelessWidget {
 final class _ContractTile extends StatelessWidget {
   const _ContractTile({
     required this.contract,
+    required this.currency,
     required this.wide,
     required this.onTap,
   });
 
   final SafeContractsContract contract;
+  final MobileCurrencyConfig currency;
   final bool wide;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final dates = <String>[
-      if (contract.startDate != null) 'Start ${contract.startDate}',
-      if (contract.endDate != null) 'End ${contract.endDate}',
+      if (contract.startDate != null)
+        '${l10n.t('Start')} ${contract.startDate}',
+      if (contract.endDate != null) '${l10n.t('End')} ${contract.endDate}',
     ].join(' • ');
     final secondary = <String>[
       if (contract.customerName != null) contract.customerName!,
       if (dates.isNotEmpty) dates,
-      if (contract.baseValue != null) 'Value ${contract.baseValue}',
+      if (contract.baseValue != null)
+        '${l10n.t('Value')} ${l10n.money(contract.baseValue!, currency)}',
     ].join(' • ');
 
     return ListTile(
@@ -322,11 +345,11 @@ final class _ContractTile extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           if (contract.isArchived)
-            const Chip(
-              avatar: Icon(Icons.archive_outlined, size: 16),
-              label: Text('Archived'),
+            Chip(
+              avatar: const Icon(Icons.archive_outlined, size: 16),
+              label: Text(l10n.t('Archived')),
             ),
-          Chip(label: Text(contract.status)),
+          Chip(label: Text(l10n.status(contract.status))),
           const Icon(Icons.chevron_right),
         ],
       ),
@@ -343,6 +366,7 @@ final class _ContractPagination extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final busy = controller.state == ContractsLoadState.loading;
     return SafeArea(
       top: false,
@@ -356,7 +380,7 @@ final class _ContractPagination extends StatelessWidget {
                   ? null
                   : () => unawaited(controller.previousPage()),
               icon: const Icon(Icons.chevron_left),
-              label: const Text('Previous'),
+              label: Text(l10n.t('Previous')),
             ),
             const SizedBox(width: 12),
             Text('${page.page} / 5'),
@@ -366,7 +390,7 @@ final class _ContractPagination extends StatelessWidget {
                   ? null
                   : () => unawaited(controller.nextPage()),
               icon: const Icon(Icons.chevron_right),
-              label: const Text('Next'),
+              label: Text(l10n.t('Next')),
             ),
           ],
         ),
@@ -393,7 +417,10 @@ final class _ContractsError extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            FilledButton(
+              onPressed: onRetry,
+              child: Text(context.scL10n.t('Retry')),
+            ),
           ],
         ),
       ),

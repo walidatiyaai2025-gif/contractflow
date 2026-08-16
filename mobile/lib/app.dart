@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/api/api_client.dart';
 import 'core/api/io_api_transport.dart';
 import 'core/auth/mobile_token_store.dart';
 import 'core/config/app_environment.dart';
+import 'core/localization/mobile_locale_controller.dart';
+import 'core/localization/safecontracts_localizations.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/mobile_auth.dart';
 import 'features/bootstrap/mobile_bootstrap_controller.dart';
@@ -39,10 +42,15 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   late final MobileLoginController _loginController;
   late final MobileBootstrapController _bootstrap;
   late final MobilePushRegistration _pushRegistration;
+  late final MobileLocaleController _localeController;
 
   @override
   void initState() {
     super.initState();
+    _localeController = MobileLocaleController(
+      initialLanguageCode: widget.languageCode,
+    );
+    unawaited(_localeController.load());
     _tokenStore = widget.tokenStore ??
         (widget.client == null
             ? SecureMobileTokenStore()
@@ -101,6 +109,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   @override
   void dispose() {
     unawaited(_pushRegistration.dispose());
+    _localeController.dispose();
     _loginController.dispose();
     _bootstrap.dispose();
     super.dispose();
@@ -108,25 +117,38 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SafeContracts',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF173B65)),
-        useMaterial3: true,
-      ),
-      builder: (context, child) => SafeContractsDirectionScope(
-        languageCode: widget.languageCode,
-        child: child ?? const SizedBox.shrink(),
-      ),
-      home: _BootstrapView(
-        environment: widget.environment,
-        controller: _bootstrap,
-        loginController: _loginController,
-        pushRegistration: _pushRegistration,
-        onAuthenticated: _afterAuthenticated,
-        onReady: _startPushIfNeeded,
-        onLogout: _logout,
+    return AnimatedBuilder(
+      animation: _localeController,
+      builder: (context, child) => MaterialApp(
+        title: 'SafeContracts',
+        debugShowCheckedModeBanner: false,
+        locale: _localeController.locale,
+        supportedLocales: SafeContractsLocalizations.supportedLocales,
+        localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+          SafeContractsLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF173B65)),
+          useMaterial3: true,
+        ),
+        builder: (context, child) => SafeContractsDirectionScope(
+          languageCode: _localeController.languageCode,
+          child: child ?? const SizedBox.shrink(),
+        ),
+        home: _BootstrapView(
+          environment: widget.environment,
+          controller: _bootstrap,
+          loginController: _loginController,
+          pushRegistration: _pushRegistration,
+          languageCode: _localeController.languageCode,
+          onLanguageChanged: _localeController.setLanguageCode,
+          onAuthenticated: _afterAuthenticated,
+          onReady: _startPushIfNeeded,
+          onLogout: _logout,
+        ),
       ),
     );
   }
@@ -138,6 +160,8 @@ final class _BootstrapView extends StatelessWidget {
     required this.controller,
     required this.loginController,
     required this.pushRegistration,
+    required this.languageCode,
+    required this.onLanguageChanged,
     required this.onAuthenticated,
     required this.onReady,
     required this.onLogout,
@@ -147,12 +171,15 @@ final class _BootstrapView extends StatelessWidget {
   final MobileBootstrapController controller;
   final MobileLoginController loginController;
   final MobilePushRegistration pushRegistration;
+  final String languageCode;
+  final ValueChanged<String> onLanguageChanged;
   final Future<void> Function() onAuthenticated;
   final Future<void> Function() onReady;
   final Future<void> Function() onLogout;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     return AnimatedBuilder(
       animation: controller,
       builder: (context, child) {
@@ -187,6 +214,8 @@ final class _BootstrapView extends StatelessWidget {
               profileController: profile,
               excelExportController: excelExport,
               pushRegistration: pushRegistration,
+              languageCode: languageCode,
+              onLanguageChanged: onLanguageChanged,
               usingConfigDefaults: controller.usingConfigDefaults,
               onClearSession: () => unawaited(onLogout()),
             );
@@ -216,21 +245,23 @@ final class _BootstrapView extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 8),
-                    Text('Environment: ${environment.name.name}'),
+                    Text('${l10n.t('Environment')}: ${environment.name.name}'),
                     const SizedBox(height: 16),
                     if (controller.state == MobileBootstrapState.idle ||
                         controller.state == MobileBootstrapState.loading)
                       const CircularProgressIndicator()
                     else ...[
                       Text(
-                        controller.message ??
-                            'SafeContracts mobile is unavailable.',
+                        l10n.rawMessage(
+                          controller.message ??
+                              'SafeContracts mobile is unavailable.',
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
                       FilledButton(
                         onPressed: () => unawaited(controller.bootstrap()),
-                        child: const Text('Retry session'),
+                        child: Text(l10n.t('Retry session')),
                       ),
                     ],
                   ],

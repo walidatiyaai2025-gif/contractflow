@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/localization/safecontracts_localizations.dart';
 import 'mobile_auth.dart';
 
 final class SafeContractsLoginScreen extends StatefulWidget {
@@ -50,6 +51,7 @@ final class _SafeContractsLoginScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -81,7 +83,9 @@ final class _SafeContractsLoginScreenState
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Sign in with your WordPress username and password',
+                                l10n.t(
+                                  'Sign in with your WordPress username and password',
+                                ),
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
@@ -96,14 +100,14 @@ final class _SafeContractsLoginScreenState
                                 textInputAction: TextInputAction.next,
                                 autocorrect: false,
                                 enableSuggestions: false,
-                                decoration: const InputDecoration(
-                                  labelText: 'Username',
-                                  prefixIcon: Icon(Icons.person_outline),
-                                  border: OutlineInputBorder(),
+                                decoration: InputDecoration(
+                                  labelText: l10n.t('Username'),
+                                  prefixIcon: const Icon(Icons.person_outline),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 validator: (value) =>
                                     value == null || value.trim().isEmpty
-                                        ? 'Enter your username.'
+                                        ? l10n.t('Enter your username.')
                                         : null,
                               ),
                               const SizedBox(height: 16),
@@ -117,7 +121,7 @@ final class _SafeContractsLoginScreenState
                                     ? null
                                     : (_) => unawaited(_submit()),
                                 decoration: InputDecoration(
-                                  labelText: 'Password',
+                                  labelText: l10n.t('Password'),
                                   prefixIcon: const Icon(Icons.lock_outline),
                                   border: const OutlineInputBorder(),
                                   suffixIcon: IconButton(
@@ -136,7 +140,7 @@ final class _SafeContractsLoginScreenState
                                 ),
                                 validator: (value) =>
                                     value == null || value.isEmpty
-                                        ? 'Enter your password.'
+                                        ? l10n.t('Enter your password.')
                                         : null,
                               ),
                               if (widget.controller.errorMessage != null) ...[
@@ -144,7 +148,9 @@ final class _SafeContractsLoginScreenState
                                 Semantics(
                                   liveRegion: true,
                                   child: Text(
-                                    widget.controller.errorMessage!,
+                                    l10n.rawMessage(
+                                      widget.controller.errorMessage!,
+                                    ),
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color:
@@ -162,11 +168,15 @@ final class _SafeContractsLoginScreenState
                                     ? const SizedBox.square(
                                         dimension: 18,
                                         child: CircularProgressIndicator(
-                                            strokeWidth: 2),
+                                          strokeWidth: 2,
+                                        ),
                                       )
                                     : const Icon(Icons.login),
                                 label: Text(
-                                    submitting ? 'Signing in…' : 'Sign in'),
+                                  l10n.t(
+                                    submitting ? 'Signing in…' : 'Sign in',
+                                  ),
+                                ),
                               ),
                             ],
                           ),

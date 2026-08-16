@@ -6,8 +6,10 @@ require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
 use SafeContracts\Rest\ContractMutationController;
+use SafeContracts\Rest\MobileConfigController;
 use SafeContracts\Rest\Router;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Settings\GeneralSettings;
 
 $tests = 0;
 function sc_p9_013_015_assert(bool $ok, string $message): void
@@ -90,6 +92,49 @@ sc_p9_013_015_assert(
 sc_p9_013_015_assert(
     str_contains($source, '409'),
     'SC-P9-013 archived contract conflicts are surfaced distinctly'
+);
+
+// #396 — the backend remains the single source of truth for display currency.
+$GLOBALS['sc_test_current_caps'] = [Capabilities::MANAGE_SYSTEM => true];
+$settings = (new GeneralSettings())->save([
+    'organization_name' => 'SafeContracts',
+    'currency_code' => 'kwd',
+    'currency_symbol' => 'د.ك',
+    'admin_page_size' => 50,
+]);
+sc_p9_013_015_assert(
+    $settings['currency_code'] === 'KWD' && $settings['currency_symbol'] === 'د.ك',
+    '#396 currency code and symbol normalize and persist together'
+);
+$stored = (new GeneralSettings())->read();
+sc_p9_013_015_assert(
+    $stored['currency_code'] === 'KWD' && $stored['currency_symbol'] === 'د.ك',
+    '#396 currency metadata round-trips through GeneralSettings'
+);
+
+$GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true];
+$configResponse = MobileConfigController::show(new WP_REST_Request());
+sc_p9_013_015_assert(
+    $configResponse instanceof WP_REST_Response,
+    '#396 authenticated mobile config returns a REST response'
+);
+$configCurrency = $configResponse->data['data']['currency'] ?? null;
+sc_p9_013_015_assert(
+    is_array($configCurrency)
+        && ($configCurrency['code'] ?? null) === 'KWD'
+        && ($configCurrency['symbol'] ?? null) === 'د.ك',
+    '#396 mobile config exposes the configured currency code and symbol'
+);
+
+$mobileConfigSource = file_get_contents(
+    dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Rest/MobileConfigController.php'
+) ?: '';
+sc_p9_013_015_assert(
+    str_contains($mobileConfigSource, "'currency'")
+        && str_contains($mobileConfigSource, "'symbol'")
+        && ! str_contains($mobileConfigSource, 'KWD')
+        && ! str_contains($mobileConfigSource, 'د.ك'),
+    '#396 mobile config reads currency metadata from settings instead of hard-coding a business currency'
 );
 
 fwrite(STDOUT, "SafeContracts P9 SC-P9-013..015 checks passed ({$tests}).\n");

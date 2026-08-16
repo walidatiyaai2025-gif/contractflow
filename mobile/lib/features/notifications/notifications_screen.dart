@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/localization/safecontracts_localizations.dart';
 import '../ui/mobile_layout.dart';
 import '../ui/mobile_states.dart';
 import 'deep_link.dart';
@@ -30,6 +31,7 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
@@ -37,9 +39,9 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
         final page = controller.currentPage;
         if (controller.state == NotificationsLoadState.loading &&
             page == null) {
-          return const SafeContractsStateView(
+          return SafeContractsStateView(
             kind: MobileStateKind.loading,
-            message: 'Loading notifications…',
+            message: l10n.t('Loading notifications…'),
           );
         }
         if (controller.state == NotificationsLoadState.error) {
@@ -49,14 +51,14 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
               message.toLowerCase().contains('timed out');
           return SafeContractsStateView(
             kind: offline ? MobileStateKind.offline : MobileStateKind.error,
-            message: message,
+            message: l10n.rawMessage(message),
             onRetry: () => unawaited(controller.refresh()),
           );
         }
         if (page == null || page.notifications.isEmpty) {
           return SafeContractsStateView(
             kind: MobileStateKind.empty,
-            message: 'No notifications are available for this account.',
+            message: l10n.t('No notifications are available for this account.'),
             onRetry: () => unawaited(controller.refresh()),
           );
         }
@@ -82,13 +84,13 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                   title: Text(notification.templateCode),
                   subtitle: Text(
-                    'Payment #${notification.paymentId}\n'
+                    '${l10n.paymentNumber(notification.paymentId)}\n'
                     '${notification.scheduledFor}',
                   ),
                   isThreeLine: true,
                   trailing: read
-                      ? const Text('Read')
-                      : const Badge(label: Text('New')),
+                      ? Text(l10n.t('Read'))
+                      : Badge(label: Text(l10n.t('New'))),
                   onTap: () => unawaited(_openNotification(notification)),
                 );
               },
@@ -103,9 +105,7 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
     SafeContractsNotification notification,
   ) async {
     final link = await widget.controller.openNotification(notification);
-    if (!mounted || link == null) {
-      return;
-    }
+    if (!mounted || link == null) return;
     widget.onOpenDeepLink?.call(link);
   }
 }
@@ -117,10 +117,9 @@ final class _PagingControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     final page = controller.currentPage;
-    if (page == null) {
-      return const SizedBox.shrink();
-    }
+    if (page == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Wrap(
@@ -134,14 +133,14 @@ final class _PagingControls extends StatelessWidget {
                 ? () => unawaited(controller.previousPage())
                 : null,
             icon: const Icon(Icons.chevron_left),
-            label: const Text('Previous'),
+            label: Text(l10n.t('Previous')),
           ),
-          Text('Page ${page.page}'),
+          Text(l10n.pageNumber(page.page)),
           OutlinedButton.icon(
             onPressed:
                 page.hasMore ? () => unawaited(controller.nextPage()) : null,
             icon: const Icon(Icons.chevron_right),
-            label: const Text('Next'),
+            label: Text(l10n.t('Next')),
           ),
         ],
       ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
 import '../contracts/contract_details_screen.dart';
 import '../contracts/contract_edit_screen.dart';
@@ -39,6 +40,8 @@ final class SafeContractsShell extends StatefulWidget {
     required this.profileController,
     required this.excelExportController,
     required this.pushRegistration,
+    required this.languageCode,
+    required this.onLanguageChanged,
     required this.usingConfigDefaults,
     required this.onClearSession,
     super.key,
@@ -54,6 +57,8 @@ final class SafeContractsShell extends StatefulWidget {
   final ProfileController profileController;
   final MobileExcelExportController excelExportController;
   final MobilePushRegistration pushRegistration;
+  final String languageCode;
+  final ValueChanged<String> onLanguageChanged;
   final bool usingConfigDefaults;
   final VoidCallback onClearSession;
 
@@ -66,6 +71,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     if (!widget.policy.destinations.contains(_selected)) {
       _selected = widget.policy.destinations.first;
     }
@@ -77,7 +83,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           children: [
             const Text('SafeContracts'),
             Text(
-              _label(_selected),
+              _label(l10n, _selected),
               style: Theme.of(context).textTheme.labelMedium,
             ),
           ],
@@ -99,7 +105,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           ...widget.policy.destinations.map(
             (destination) => NavigationDrawerDestination(
               icon: Icon(_icon(destination)),
-              label: Text(_label(destination)),
+              label: Text(_label(l10n, destination)),
             ),
           ),
         ],
@@ -108,8 +114,10 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
         children: [
           if (widget.usingConfigDefaults)
             MaterialBanner(
-              content: const Text(
-                'Remote mobile configuration is unavailable. Safe defaults are active.',
+              content: Text(
+                l10n.t(
+                  'Remote mobile configuration is unavailable. Safe defaults are active.',
+                ),
               ),
               actions: const <Widget>[SizedBox.shrink()],
             ),
@@ -124,6 +132,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
     return switch (_selected) {
       MobileDestination.dashboard => DashboardScreen(
           controller: widget.dashboardController,
+          currency: widget.config.currency,
         ),
       MobileDestination.customers => CustomersScreen(
           controller: widget.customersController,
@@ -132,12 +141,14 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           controller: widget.contractsController,
           customers: widget.dashboardController.overview?.customers ??
               const <CustomerOption>[],
+          currency: widget.config.currency,
           onOpenContract: _openContract,
         ),
       MobileDestination.payments => PaymentsScreen(
           repository: PaymentsRepository(apiClient),
           pageSize: widget.config.defaultPageSize,
           filters: widget.dashboardController.filters,
+          currency: widget.config.currency,
           canManagePayments:
               widget.session.can('safecontracts_manage_payments'),
           canEnterCollection: widget.policy.canEnterCollection,
@@ -146,6 +157,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           repository: FollowUpsRepository(apiClient),
           pageSize: widget.config.defaultPageSize,
           filters: widget.dashboardController.filters,
+          currency: widget.config.currency,
           canManage: widget.policy.canManageFollowUps,
         ),
       MobileDestination.notifications => NotificationsScreen(
@@ -160,6 +172,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
           config: widget.config,
           controller: widget.profileController,
           pushRegistration: widget.pushRegistration,
+          languageCode: widget.languageCode,
+          onLanguageChanged: widget.onLanguageChanged,
           onClearSession: widget.onClearSession,
         ),
       _ => _PlannedDestination(destination: _selected),
@@ -172,6 +186,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell> {
         builder: (context) => ContractDetailsScreen(
           controller: widget.contractsController,
           contractId: contractId,
+          currency: widget.config.currency,
           onEditContract: widget.contractsController.canEditContract
               ? _openContractEdit
               : null,
@@ -223,12 +238,14 @@ final class _PlannedDestination extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          '${_label(destination)} navigation is authorized. '
-          'Its dedicated mobile screen is implemented in the corresponding roadmap task.',
+          l10n.isArabic
+              ? 'تم السماح بالتنقل إلى ${_label(l10n, destination)}. شاشة الموبايل المخصصة لها تُنفذ ضمن مهمة خارطة الطريق المقابلة.'
+              : '${_label(l10n, destination)} navigation is authorized. Its dedicated mobile screen is implemented in the corresponding roadmap task.',
           textAlign: TextAlign.center,
         ),
       ),
@@ -236,8 +253,8 @@ final class _PlannedDestination extends StatelessWidget {
   }
 }
 
-String _label(MobileDestination destination) {
-  return switch (destination) {
+String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
+  return l10n.t(switch (destination) {
     MobileDestination.dashboard => 'Dashboard',
     MobileDestination.customers => 'Customers',
     MobileDestination.contracts => 'Contracts',
@@ -247,7 +264,7 @@ String _label(MobileDestination destination) {
     MobileDestination.notifications => 'Notifications',
     MobileDestination.export => 'Excel export',
     MobileDestination.profile => 'Profile',
-  };
+  });
 }
 
 IconData _icon(MobileDestination destination) {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
 import '../notifications/push_registration.dart';
 import '../session/session_controller.dart';
@@ -15,6 +16,8 @@ final class ProfileScreen extends StatefulWidget {
     required this.config,
     required this.controller,
     required this.pushRegistration,
+    required this.languageCode,
+    required this.onLanguageChanged,
     required this.onClearSession,
     super.key,
   });
@@ -23,6 +26,8 @@ final class ProfileScreen extends StatefulWidget {
   final SafeContractsMobileConfig config;
   final ProfileController controller;
   final MobilePushRegistration pushRegistration;
+  final String languageCode;
+  final ValueChanged<String> onLanguageChanged;
   final VoidCallback onClearSession;
 
   @override
@@ -38,31 +43,83 @@ final class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.scL10n;
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
         return SafeContractsAdaptiveBody(
           child: ListView(
             children: [
-              Text('Session', style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                l10n.t('Language'),
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const SizedBox(height: 12),
-              Text('User ID: ${widget.session.userId}'),
-              Text('Data scope: ${widget.session.scope.name}'),
-              Text('Page size: ${widget.config.defaultPageSize}'),
+              DropdownButtonFormField<String>(
+                key: ValueKey(widget.languageCode),
+                initialValue: widget.languageCode,
+                decoration: InputDecoration(
+                  labelText: l10n.t('Language'),
+                  border: const OutlineInputBorder(),
+                ),
+                items: <DropdownMenuItem<String>>[
+                  DropdownMenuItem(
+                    value: 'ar',
+                    child: Text(l10n.t('Arabic')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'en',
+                    child: Text(l10n.t('English')),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) widget.onLanguageChanged(value);
+                },
+              ),
+              const SizedBox(height: 24),
+              Text(
+                l10n.t('Currency'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.currency_exchange),
+                  title: Text(
+                    '${l10n.t('Currency code')}: '
+                    '${widget.config.currency.code.isEmpty ? l10n.t('Not configured') : widget.config.currency.code}',
+                  ),
+                  subtitle: Text(
+                    '${l10n.t('Currency symbol')}: '
+                    '${widget.config.currency.symbol.isEmpty ? l10n.t('Not configured') : widget.config.currency.symbol}',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                l10n.t('Session'),
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              Text('${l10n.t('User ID')}: ${widget.session.userId}'),
+              Text('${l10n.t('Data scope')}: ${widget.session.scope.name}'),
+              Text(
+                '${l10n.t('Default page size')}: ${widget.config.defaultPageSize}',
+              ),
               if (widget.config.supportText.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(widget.config.supportText),
               ],
               const SizedBox(height: 24),
               Text(
-                'Push registration',
+                l10n.t('Push registration'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              _pushSection(),
+              _pushSection(context),
               const SizedBox(height: 24),
               Text(
-                'Granted capabilities',
+                l10n.t('Granted capabilities'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -74,15 +131,15 @@ final class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Registered devices',
+                l10n.t('Registered devices'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              _deviceSection(),
+              _deviceSection(context),
               const SizedBox(height: 24),
               FilledButton.tonal(
                 onPressed: widget.onClearSession,
-                child: const Text('Clear local session state'),
+                child: Text(l10n.t('Clear local session state')),
               ),
             ],
           ),
@@ -91,15 +148,21 @@ final class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _pushSection() {
+  Widget _pushSection(BuildContext context) {
+    final l10n = context.scL10n;
     if (!widget.config.features.pushNotifications) {
-      return const Card(
+      return Card(
         child: ListTile(
-          leading: Icon(Icons.notifications_off_outlined),
-          title:
-              Text('Push notifications are disabled by mobile configuration.'),
+          leading: const Icon(Icons.notifications_off_outlined),
+          title: Text(
+            l10n.t(
+              'Push notifications are disabled by mobile configuration.',
+            ),
+          ),
           subtitle: Text(
-            'Enable Push notifications in SafeContracts → Mobile Configuration.',
+            l10n.t(
+              'Enable Push notifications in SafeContracts → Mobile Configuration.',
+            ),
           ),
         ),
       );
@@ -125,9 +188,11 @@ final class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        registered
-                            ? 'Device registered with SafeContracts'
-                            : 'Device registration is not complete',
+                        l10n.t(
+                          registered
+                              ? 'Device registered with SafeContracts'
+                              : 'Device registration is not complete',
+                        ),
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                     ),
@@ -135,17 +200,25 @@ final class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                    'Notification permission: ${_permissionLabel(status.permission)}'),
+                  '${l10n.t('Notification permission')}: '
+                  '${l10n.t(_permissionLabel(status.permission))}',
+                ),
                 Text(
-                    'FCM token acquired: ${status.tokenAcquired ? 'Yes' : 'No'}'),
+                  '${l10n.t('FCM token acquired')}: '
+                  '${l10n.yesNo(status.tokenAcquired)}',
+                ),
                 Text(
-                    'Backend registration: ${_backendLabel(status.backendState)}'),
+                  '${l10n.t('Backend registration')}: '
+                  '${l10n.t(_backendLabel(status.backendState))}',
+                ),
                 if (status.errorCode != null)
-                  Text('Diagnostic code: ${status.errorCode}'),
+                  Text('${l10n.t('Diagnostic code')}: ${status.errorCode}'),
                 if (status.permission == MobilePushPermissionState.denied) ...[
                   const SizedBox(height: 8),
-                  const Text(
-                    'Android notification permission is denied. The device can still register, but notification display remains blocked until permission is enabled.',
+                  Text(
+                    l10n.t(
+                      'Android notification permission is denied. The device can still register, but notification display remains blocked until permission is enabled.',
+                    ),
                   ),
                 ],
                 if (!registered) ...[
@@ -156,7 +229,7 @@ final class _ProfileScreenState extends State<ProfileScreen> {
                         ? null
                         : () => unawaited(_retryPushRegistration()),
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Retry device registration'),
+                    label: Text(l10n.t('Retry device registration')),
                   ),
                 ],
               ],
@@ -174,29 +247,32 @@ final class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Widget _deviceSection() {
+  Widget _deviceSection(BuildContext context) {
+    final l10n = context.scL10n;
     final controller = widget.controller;
     if (controller.state == ProfileDeviceLoadState.loading &&
         controller.snapshot == null) {
-      return const SizedBox(
+      return SizedBox(
         height: 120,
         child: SafeContractsStateView(
           kind: MobileStateKind.loading,
-          message: 'Loading device state…',
+          message: l10n.t('Loading device state…'),
         ),
       );
     }
     if (controller.state == ProfileDeviceLoadState.error) {
       return SafeContractsStateView(
         kind: MobileStateKind.error,
-        message: controller.errorMessage ?? 'Device state is unavailable.',
+        message: l10n.rawMessage(
+          controller.errorMessage ?? 'Device state is unavailable.',
+        ),
         onRetry: () => unawaited(controller.load()),
       );
     }
     final devices =
         controller.snapshot?.devices ?? const <SafeContractsDevice>[];
     if (devices.isEmpty) {
-      return const Text('No registered devices are currently visible.');
+      return Text(l10n.t('No registered devices are currently visible.'));
     }
     return Column(
       children: devices
@@ -207,10 +283,12 @@ final class _ProfileScreenState extends State<ProfileScreen> {
               title: Text(device.platform.toUpperCase()),
               subtitle: Text(
                 device.lastSeenAt == null
-                    ? 'No last-seen timestamp'
-                    : 'Last seen: ${device.lastSeenAt}',
+                    ? l10n.t('No last-seen timestamp')
+                    : '${l10n.t('Last seen')}: ${device.lastSeenAt}',
               ),
-              trailing: Text(device.isActive ? 'Active' : 'Inactive'),
+              trailing: Text(
+                l10n.status(device.isActive ? 'active' : 'inactive'),
+              ),
             ),
           )
           .toList(growable: false),
