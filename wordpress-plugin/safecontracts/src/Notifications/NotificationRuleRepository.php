@@ -6,7 +6,7 @@ namespace SafeContracts\Notifications;
 
 final class NotificationRuleRepository
 {
-    private const SELECT_FIELDS = 'id, code, name, trigger_type, days_before, days_after, repeat_interval_days, max_repeats, recipient_roles_json, escalation_roles_json, target_assigned_accountant, template_code, is_active, created_by, updated_by, created_at, updated_at';
+    private const SELECT_FIELDS = 'id, code, name, trigger_type, days_before, days_after, repeat_interval_days, max_repeats, recipient_roles_json, recipient_user_ids_json, escalation_roles_json, target_assigned_accountant, push_enabled, email_enabled, template_code, is_active, created_by, updated_by, created_at, updated_at';
 
     /** @return list<array<string, mixed>> */
     public function all(bool $activeOnly = false): array
@@ -28,10 +28,7 @@ final class NotificationRuleRepository
         global $wpdb;
         $table = $wpdb->prefix . 'safecontracts_notification_rules';
         $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                'SELECT ' . self::SELECT_FIELDS . " FROM {$table} WHERE code = %s LIMIT 1",
-                $code
-            ),
+            $wpdb->prepare('SELECT ' . self::SELECT_FIELDS . " FROM {$table} WHERE code = %s LIMIT 1", $code),
             ARRAY_A
         );
         if (! is_array($rows) || $rows === []) {
@@ -46,10 +43,7 @@ final class NotificationRuleRepository
         global $wpdb;
         $table = $wpdb->prefix . 'safecontracts_notification_rules';
         $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                'SELECT ' . self::SELECT_FIELDS . " FROM {$table} WHERE id = %d LIMIT 1",
-                $id
-            ),
+            $wpdb->prepare('SELECT ' . self::SELECT_FIELDS . " FROM {$table} WHERE id = %d LIMIT 1", $id),
             ARRAY_A
         );
         if (! is_array($rows) || $rows === []) {
@@ -63,14 +57,15 @@ final class NotificationRuleRepository
     {
         global $wpdb;
         $table = $wpdb->prefix . 'safecontracts_notification_rules';
-        $rolesJson = $this->encodeRoles($rule['recipient_roles']);
-        $escalationRolesJson = $this->encodeRoles($rule['escalation_roles']);
+        $rolesJson = $this->encodeList($rule['recipient_roles']);
+        $usersJson = $this->encodeList($rule['recipient_user_ids']);
+        $escalationRolesJson = $this->encodeList($rule['escalation_roles']);
         $now = gmdate('Y-m-d H:i:s');
 
         $wpdb->query($wpdb->prepare(
             "INSERT INTO {$table}
-                (code, name, trigger_type, days_before, days_after, repeat_interval_days, max_repeats, recipient_roles_json, escalation_roles_json, target_assigned_accountant, template_code, is_active, created_by, updated_by, created_at, updated_at)
-             VALUES (%s, %s, %s, %d, %d, %d, %d, %s, %s, %d, %s, %d, %d, %d, %s, %s)
+                (code, name, trigger_type, days_before, days_after, repeat_interval_days, max_repeats, recipient_roles_json, recipient_user_ids_json, escalation_roles_json, target_assigned_accountant, push_enabled, email_enabled, template_code, is_active, created_by, updated_by, created_at, updated_at)
+             VALUES (%s, %s, %s, %d, %d, %d, %d, %s, %s, %s, %d, %d, %d, %s, %d, %d, %d, %s, %s)
              ON DUPLICATE KEY UPDATE
                 name = VALUES(name),
                 trigger_type = VALUES(trigger_type),
@@ -79,8 +74,11 @@ final class NotificationRuleRepository
                 repeat_interval_days = VALUES(repeat_interval_days),
                 max_repeats = VALUES(max_repeats),
                 recipient_roles_json = VALUES(recipient_roles_json),
+                recipient_user_ids_json = VALUES(recipient_user_ids_json),
                 escalation_roles_json = VALUES(escalation_roles_json),
                 target_assigned_accountant = VALUES(target_assigned_accountant),
+                push_enabled = VALUES(push_enabled),
+                email_enabled = VALUES(email_enabled),
                 template_code = VALUES(template_code),
                 is_active = VALUES(is_active),
                 updated_by = VALUES(updated_by),
@@ -93,8 +91,11 @@ final class NotificationRuleRepository
             $rule['repeat_interval_days'],
             $rule['max_repeats'],
             $rolesJson,
+            $usersJson,
             $escalationRolesJson,
             $rule['target_assigned_accountant'] ? 1 : 0,
+            $rule['push_enabled'] ? 1 : 0,
+            $rule['email_enabled'] ? 1 : 0,
             $rule['template_code'],
             $rule['is_active'] ? 1 : 0,
             $actorId,
@@ -145,9 +146,9 @@ final class NotificationRuleRepository
         return array_map(static fn (array $row): array => NotificationRule::fromRow($row), is_array($rows) ? $rows : []);
     }
 
-    private function encodeRoles(mixed $roles): string
+    private function encodeList(mixed $items): string
     {
-        $json = json_encode(is_array($roles) ? $roles : [], JSON_UNESCAPED_SLASHES);
+        $json = json_encode(is_array($items) ? array_values($items) : [], JSON_UNESCAPED_SLASHES);
         return is_string($json) ? $json : '[]';
     }
 }
