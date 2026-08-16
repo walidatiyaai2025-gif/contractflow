@@ -248,7 +248,7 @@ final class _ReadyContractDetails extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             l10n.t(
-              'Status and financial values are displayed exactly as returned by the SafeContracts server. The mobile app does not recalculate them.',
+              'Financial values are formatted to two decimal places for display. Status and amounts remain server-authoritative; the mobile app does not recalculate them.',
             ),
             style: Theme.of(context).textTheme.bodySmall,
           ),

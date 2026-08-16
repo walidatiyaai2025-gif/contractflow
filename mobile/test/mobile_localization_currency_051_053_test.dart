@@ -25,6 +25,11 @@ void main() {
 
     expect(ar.t('Dashboard'), 'لوحة التحكم');
     expect(ar.t('Contracts'), 'العقود');
+    expect(ar.t('Responsible accountant'), 'المحاسب المسؤول');
+    expect(
+      ar.t('Enter a positive amount with up to 2 decimal places.'),
+      'أدخل مبلغاً موجباً بحد أقصى منزلتين عشريتين.',
+    );
     expect(ar.status('overdue'), 'متأخر');
     expect(ar.status('partially_paid'), 'مدفوع جزئياً');
     expect(en.t('Dashboard'), 'Dashboard');
@@ -35,6 +40,10 @@ void main() {
       ),
       containsAll(<String>['ar', 'en']),
     );
+
+    final appSource = File('lib/app.dart').readAsStringSync();
+    expect(appSource, contains('GoogleFonts.cairo'));
+    expect(appSource, contains('_theme(_localeController.languageCode)'));
   });
 
   test(
@@ -64,8 +73,21 @@ void main() {
 
       const ar = SafeContractsLocalizations(Locale('ar'));
       const en = SafeContractsLocalizations(Locale('en'));
-      expect(ar.money('100.0000', config.currency), '100.0000 د.ك');
-      expect(en.money('100.0000', config.currency), 'د.ك 100.0000');
+      expect(ar.money('100.0000', config.currency), '100.00 د.ك');
+      expect(en.money('100.0000', config.currency), 'د.ك 100.00');
+      expect(en.money('12.3456', config.currency), 'د.ك 12.35');
+      expect(en.money('12.3449', config.currency), 'د.ك 12.34');
+      expect(en.money('7', config.currency), 'د.ك 7.00');
+      expect(en.money('-0.0049', config.currency), 'د.ك 0.00');
+
+      final collectionSource =
+          File('lib/features/payments/collection_entry_dialog.dart')
+              .readAsStringSync();
+      expect(collectionSource, contains(r'\.\d{1,2}'));
+      expect(
+        collectionSource,
+        contains('Enter a positive amount with up to 2 decimal places.'),
+      );
 
       controller.dispose();
       restored.dispose();
