@@ -111,13 +111,17 @@ $assertContains('MobileNotificationPresenter.start()', $main, 'foreground notifi
 $assertContains('default_notification_channel_id', $bootstrap, 'release Android manifest must declare the default FCM channel');
 
 $plugin = $read('wordpress-plugin/safecontracts/src/Plugin.php');
-foreach (['NotificationCenterPage::class', 'ArchivePage::class', 'ActiveUsersPage::class', 'AdminPageSummaryInjector::register()', 'PresenceService::register()', 'NotificationCenterArabicDefaults::register()'] as $wire) {
+foreach (['NotificationCenterPage::class', 'ArchivePage::class', 'ActiveUsersPage::class', 'AdminPageSummaryInjector::register()', 'PresenceService::register()', 'NotificationCenterArabicDefaults::register()', 'NotificationCenterAuditRecorder::register()'] as $wire) {
     $assertContains($wire, $plugin, 'plugin must wire ' . $wire);
 }
 
-$audit = $read('wordpress-plugin/safecontracts/src/Audit/AuditRecorder.php');
+$criticalAudit = $read('wordpress-plugin/safecontracts/src/Audit/AuditRecorder.php');
+$newAudit = $read('wordpress-plugin/safecontracts/src/Audit/NotificationCenterAuditRecorder.php');
 foreach (['safecontracts_notification_rule_saved', 'safecontracts_notification_suppression_changed', 'safecontracts_direct_notification_sent', 'safecontracts_role_capabilities_changed', 'safecontracts_user_role_changed'] as $event) {
-    $assertContains($event, $audit, 'audit must record ' . $event);
+    $assertContains($event, $newAudit, 'notification-center audit must record ' . $event);
+    $assertNotContains($event, $criticalAudit, 'P10 critical audit registry must remain unchanged for ' . $event);
 }
+$assertNotContains('token_hash', $newAudit, 'notification-center audit must not record device-token material');
+$assertNotContains('authorization', strtolower($newAudit), 'notification-center audit must not record authorization material');
 
 echo "Admin notification center/archive/presence regression checks passed.\n";
