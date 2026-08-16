@@ -136,7 +136,7 @@ final class NotificationCenterAuditRecorder
         $clean = [];
         foreach ($context as $key => $value) {
             $name = strtolower((string) $key);
-            if (preg_match('/token|secret|password|credential|authorization|private[_-]?key|service[_-]?account|storage[_-]?key|sha256|tmp[_-]?name/', $name)) {
+            if (preg_match('/token|secret|password|credential|auth(?:orization)?|private[_-]?key|service[_-]?account|storage[_-]?key|sha256|tmp[_-]?name/', $name)) {
                 continue;
             }
             $clean[$key] = is_array($value) ? self::sanitize($value) : $value;
