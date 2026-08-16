@@ -15,7 +15,7 @@ final class NotificationTemplateService
         $this->repository ??= new NotificationTemplateRepository();
     }
 
-    /** @return array{code:string,title_template:string,body_template:string,is_active:bool} */
+    /** @return array<string,mixed> */
     public function save(array $input): array
     {
         $this->requireManage();
@@ -26,7 +26,7 @@ final class NotificationTemplateService
         return $template;
     }
 
-    /** @return array{title:string,body:string} */
+    /** @return array{title:string,body:string,email_subject:string,email_body:string,icon_key:string} */
     public function render(string $code, array $context): array
     {
         $template = $this->repository->findActiveByCode(NotificationRule::normalizeCode($code));
