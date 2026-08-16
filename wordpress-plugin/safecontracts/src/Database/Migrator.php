@@ -24,11 +24,12 @@ use SafeContracts\Database\Migrations\Migration0016EnterpriseTenancy;
 use SafeContracts\Database\Migrations\Migration0017CoreTenantOwnershipExpand;
 use SafeContracts\Database\Migrations\Migration0018NonCoreTenantOwnershipExpand;
 use SafeContracts\Database\Migrations\Migration0019EnterpriseRateLimits;
+use SafeContracts\Database\Migrations\Migration0020EnterpriseParties;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.18.0';
+    public const LATEST_VERSION = '1.19.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -51,6 +52,7 @@ final class Migrator
         '1.16.0' => Migration0017CoreTenantOwnershipExpand::class,
         '1.17.0' => Migration0018NonCoreTenantOwnershipExpand::class,
         '1.18.0' => Migration0019EnterpriseRateLimits::class,
+        '1.19.0' => Migration0020EnterpriseParties::class,
     ];
 
     public function maybeMigrate(): void
