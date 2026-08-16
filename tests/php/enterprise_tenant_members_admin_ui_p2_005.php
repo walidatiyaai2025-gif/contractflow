@@ -29,6 +29,7 @@ $pluginSource = (string) file_get_contents($pluginPath);
 $globalRolesSource = (string) file_get_contents($globalRolesPath);
 
 esc_p2_members_ui_assert(TenantMembersPage::SLUG === 'safecontracts-tenant-members', 'tenant membership UI has a dedicated tenant-owned slug');
+esc_p2_members_ui_assert(str_contains($pageSource, 'CoreTenantEnforcement::isEnabled()'), 'Tenant Members menu is Enterprise-only and hidden outside core tenant enforcement');
 esc_p2_members_ui_assert(str_contains($pageSource, 'new TenantMembershipAdminService()'), 'tenant membership UI delegates to the P2-004 domain service');
 esc_p2_members_ui_assert(str_contains($pageSource, 'listForCurrentTenant('), 'membership list is loaded through tenant-scoped service');
 esc_p2_members_ui_assert(str_contains($pageSource, '->assignRole('), 'add/reactivate and role changes use the service assignment method');
