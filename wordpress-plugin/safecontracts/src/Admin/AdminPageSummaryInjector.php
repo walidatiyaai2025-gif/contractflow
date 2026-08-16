@@ -44,7 +44,7 @@ final class AdminPageSummaryInjector
     {
         $filters = DashboardFilters::normalize($_GET);
         $repository = new AdminReadRepository();
-        if ($page === AdminShell::SLUG || $page === DashboardPage::SLUG) {
+        if ($page === AdminShell::SLUG) {
             $kpis = $repository->kpis($filters);
             return [
                 ['label' => __('Contracts', 'safecontracts'), 'value' => (string) ($kpis['contract_count'] ?? 0)],
@@ -126,13 +126,15 @@ final class AdminPageSummaryInjector
         if ($page === FollowUpsPage::SLUG) {
             global $wpdb;
             $table = $wpdb->prefix . 'safecontracts_payment_followups';
-            $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
+            $rows = $wpdb->get_results("SELECT COUNT(*) AS total FROM {$table}", ARRAY_A);
+            $count = is_array($rows) && isset($rows[0]['total']) ? (int) $rows[0]['total'] : 0;
             return [['label' => __('Follow-up events', 'safecontracts'), 'value' => $count]];
         }
         if ($page === ImportsPage::SLUG && current_user_can(Capabilities::RUN_IMPORTS)) {
             global $wpdb;
             $table = $wpdb->prefix . 'safecontracts_import_runs';
-            $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
+            $rows = $wpdb->get_results("SELECT COUNT(*) AS total FROM {$table}", ARRAY_A);
+            $count = is_array($rows) && isset($rows[0]['total']) ? (int) $rows[0]['total'] : 0;
             return [['label' => __('Import runs', 'safecontracts'), 'value' => $count]];
         }
         return [];
