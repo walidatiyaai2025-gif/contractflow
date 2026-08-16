@@ -46,9 +46,9 @@ final class PartyRelationshipService
             $targetPartyId,
             $relationshipCode
         );
+        $data = $this->normalizeOptions($options);
         $this->requireParty($sourcePartyId);
         $this->requireParty($targetPartyId);
-        $data = $this->normalizeOptions($options);
 
         $actorId = get_current_user_id();
         $this->relationships->assign(
