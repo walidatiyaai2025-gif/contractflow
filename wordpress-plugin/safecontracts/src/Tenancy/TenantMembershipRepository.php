@@ -160,8 +160,22 @@ final class TenantMembershipRepository
             $tenantId,
             $userId
         ));
-        if ($updated === 1) {
+        if ($updated === false) {
+            return false;
+        }
+        if ($updated > 0) {
             return true;
+        }
+
+        // MySQL legitimately reports zero affected rows when the requested active
+        // role is already stored. Re-read the tenant+user key before deciding that
+        // an INSERT is needed so an idempotent save never turns into a duplicate-key
+        // insert, and an owner race can never be overwritten by the generic flow.
+        $existing = $this->findMembership($tenantId, $userId);
+        if ($existing !== null) {
+            return ! $existing['is_owner']
+                && $existing['status'] === 'active'
+                && TenantRolePolicy::normalize($existing['role_code']) === $roleCode;
         }
 
         $inserted = $wpdb->query($wpdb->prepare(
