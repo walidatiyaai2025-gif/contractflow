@@ -25,6 +25,7 @@ function delete_user_meta(int $userId, string $key): bool
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
+use SafeContracts\Admin\AdminShell;
 use SafeContracts\Tenancy\AdminTenantContext;
 use SafeContracts\Tenancy\TenantContextStore;
 
@@ -107,11 +108,16 @@ esc_admin_context_assert($selected === 18, 'explicit active membership selection
 esc_admin_context_assert((int) get_user_meta($userId, AdminTenantContext::USER_META_KEY, true) === 18, 'authorized selection persists preference');
 esc_admin_context_assert(TenantContextStore::context()->requireTenantId() === 18, 'authorized selection locks tenant context');
 
+esc_admin_context_assert(AdminTenantContext::safePageSlug('safecontracts-contracts') === 'safecontracts-contracts', 'known SafeContracts page slug is retained');
+esc_admin_context_assert(AdminTenantContext::safePageSlug('https://evil.example/path') === AdminShell::SLUG, 'external redirect-shaped input collapses to local SafeContracts dashboard');
+esc_admin_context_assert(AdminTenantContext::safePageSlug('../users.php') === AdminShell::SLUG, 'non-SafeContracts admin slug cannot be used as tenant-switch redirect');
+
 $source = file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Tenancy/AdminTenantContext.php');
 esc_admin_context_assert(is_string($source) && str_contains($source, 'check_admin_referer(self::SELECT_ACTION)'), 'admin switch action requires CSRF nonce verification');
 esc_admin_context_assert(is_string($source) && str_contains($source, 'current_user_can(Capabilities::ACCESS)'), 'admin switch action requires SafeContracts access capability');
-esc_admin_context_assert(is_string($source) && str_contains($source, 'wp_validate_redirect'), 'admin switch validates redirect target');
+esc_admin_context_assert(is_string($source) && str_contains($source, "admin_url('admin.php')"), 'tenant switch redirect is constructed from local WordPress admin URL');
 esc_admin_context_assert(is_string($source) && str_contains($source, 'wp_safe_redirect'), 'admin switch uses safe WordPress redirect');
+esc_admin_context_assert(is_string($source) && ! str_contains($source, "$_POST['redirect_to']"), 'tenant switch does not accept a caller-supplied redirect URL');
 esc_admin_context_assert(is_string($source) && str_contains($source, 'TenantDirectoryRepository'), 'switcher tenant options come from authorized tenant directory');
 esc_admin_context_assert(is_string($source) && str_contains($source, "add_action('admin_init', [self::class, 'resolveRequest'], 1)"), 'admin tenant resolution is wired to admin request lifecycle');
 esc_admin_context_assert(is_string($source) && str_contains($source, "add_action('admin_post_' . self::SELECT_ACTION, [self::class, 'handleSelect'])"), 'tenant switch admin-post handler is wired');
