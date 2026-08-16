@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SafeContracts\Notifications;
 
 use InvalidArgumentException;
+use RuntimeException;
+use SafeContracts\Tenancy\NonCoreTenantScope;
 
 final class DeviceTokenRepository
 {
@@ -14,18 +16,62 @@ final class DeviceTokenRepository
         $table = $wpdb->prefix . 'safecontracts_device_tokens';
         $hash = hash('sha256', $token);
         $now = gmdate('Y-m-d H:i:s');
+        $tenantId = NonCoreTenantScope::tenantId();
 
-        $result = $wpdb->query($wpdb->prepare(
+        if ($tenantId === null) {
+            $result = $wpdb->query($wpdb->prepare(
+                "INSERT INTO {$table}
+                    (user_id, token_hash, token, platform, is_active, last_seen_at, created_at, updated_at)
+                 VALUES (%d, %s, %s, %s, 1, %s, %s, %s)
+                 ON DUPLICATE KEY UPDATE
+                    user_id = VALUES(user_id),
+                    token = VALUES(token),
+                    platform = VALUES(platform),
+                    is_active = 1,
+                    last_seen_at = VALUES(last_seen_at),
+                    updated_at = VALUES(updated_at)",
+                $userId,
+                $hash,
+                $token,
+                $platform,
+                $now,
+                $now,
+                $now
+            ));
+            if ($result === false) {
+                throw new RuntimeException('SafeContracts device token persistence failed.');
+            }
+            return;
+        }
+
+        // Do not use ON DUPLICATE KEY while the legacy global token_hash unique
+        // can still exist. An explicit tenant predicate prevents a duplicate in
+        // another tenant from being updated before schema hardening replaces it.
+        $updated = $wpdb->query($wpdb->prepare(
+            "UPDATE {$table}
+             SET user_id = %d, token = %s, platform = %s, is_active = 1,
+                 last_seen_at = %s, updated_at = %s
+             WHERE tenant_id = %d AND token_hash = %s",
+            $userId,
+            $token,
+            $platform,
+            $now,
+            $now,
+            $tenantId,
+            $hash
+        ));
+        if ($updated === false) {
+            throw new RuntimeException('Enterprise device token update failed.');
+        }
+        if ((int) $updated > 0) {
+            return;
+        }
+
+        $inserted = $wpdb->query($wpdb->prepare(
             "INSERT INTO {$table}
-                (user_id, token_hash, token, platform, is_active, last_seen_at, created_at, updated_at)
-             VALUES (%d, %s, %s, %s, 1, %s, %s, %s)
-             ON DUPLICATE KEY UPDATE
-                user_id = VALUES(user_id),
-                token = VALUES(token),
-                platform = VALUES(platform),
-                is_active = 1,
-                last_seen_at = VALUES(last_seen_at),
-                updated_at = VALUES(updated_at)",
+                (tenant_id, user_id, token_hash, token, platform, is_active, last_seen_at, created_at, updated_at)
+             VALUES (%d, %d, %s, %s, %s, 1, %s, %s, %s)",
+            $tenantId,
             $userId,
             $hash,
             $token,
@@ -34,8 +80,8 @@ final class DeviceTokenRepository
             $now,
             $now
         ));
-        if ($result === false) {
-            throw new \RuntimeException('SafeContracts device token persistence failed.');
+        if ($inserted === false) {
+            throw new RuntimeException('Enterprise device token insert failed; a legacy cross-tenant token collision may require reviewed schema hardening.');
         }
     }
 
@@ -44,13 +90,13 @@ final class DeviceTokenRepository
         global $wpdb;
         $table = $wpdb->prefix . 'safecontracts_device_tokens';
         $result = $wpdb->query($wpdb->prepare(
-            "UPDATE {$table} SET is_active = 0, updated_at = %s WHERE user_id = %d AND token_hash = %s",
+            "UPDATE {$table} SET is_active = 0, updated_at = %s WHERE user_id = %d AND token_hash = %s" . NonCoreTenantScope::condition(),
             gmdate('Y-m-d H:i:s'),
             $userId,
             hash('sha256', $token)
         ));
         if ($result === false) {
-            throw new \RuntimeException('SafeContracts device token revocation failed.');
+            throw new RuntimeException('SafeContracts device token revocation failed.');
         }
     }
 
@@ -62,13 +108,13 @@ final class DeviceTokenRepository
         }
         $table = $wpdb->prefix . 'safecontracts_device_tokens';
         $result = $wpdb->query($wpdb->prepare(
-            "UPDATE {$table} SET is_active = 0, updated_at = %s WHERE user_id = %d AND id = %d AND is_active = 1",
+            "UPDATE {$table} SET is_active = 0, updated_at = %s WHERE user_id = %d AND id = %d AND is_active = 1" . NonCoreTenantScope::condition(),
             gmdate('Y-m-d H:i:s'),
             $userId,
             $deviceId
         ));
         if ($result === false) {
-            throw new \RuntimeException('SafeContracts owned device deactivation failed.');
+            throw new RuntimeException('SafeContracts owned device deactivation failed.');
         }
     }
 
@@ -86,7 +132,7 @@ final class DeviceTokenRepository
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id, user_id, token, platform FROM {$table}
-                 WHERE is_active = 1 AND user_id IN ({$placeholders})
+                 WHERE is_active = 1 AND user_id IN ({$placeholders})" . NonCoreTenantScope::condition() . "
                  ORDER BY user_id ASC, id ASC",
                 ...$ids
             ),
@@ -119,7 +165,7 @@ final class DeviceTokenRepository
         $table = $wpdb->prefix . 'safecontracts_device_tokens';
         $rows = $wpdb->get_results(
             "SELECT user_id, COUNT(*) AS device_count FROM {$table}
-             WHERE is_active = 1
+             WHERE is_active = 1" . NonCoreTenantScope::condition() . "
              GROUP BY user_id
              ORDER BY user_id ASC
              LIMIT 501",
@@ -169,7 +215,7 @@ final class DeviceTokenRepository
             $wpdb->prepare(
                 "SELECT id, platform, is_active, last_seen_at, created_at, updated_at
                  FROM {$table}
-                 WHERE user_id = %d
+                 WHERE user_id = %d" . NonCoreTenantScope::condition() . "
                  ORDER BY is_active DESC, updated_at DESC, id DESC
                  LIMIT 100",
                 $userId
