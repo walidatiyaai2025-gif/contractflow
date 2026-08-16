@@ -32,20 +32,21 @@ final class EmailDeliveryService
             }
             $attempted++;
             $user = function_exists('get_userdata') ? get_userdata($userId) : false;
-            $email = is_object($user) ? sanitize_email((string) ($user->user_email ?? '')) : '';
+            $rawEmail = is_object($user) ? (string) ($user->user_email ?? '') : '';
+            $email = function_exists('sanitize_email') ? sanitize_email($rawEmail) : trim($rawEmail);
             $success = false;
             $error = null;
 
             if (! $config['enabled']) {
                 $error = 'email_channel_disabled';
-            } elseif ($email === '' || ! is_email($email)) {
+            } elseif (! EmailSettings::validEmail($email)) {
                 $error = 'recipient_email_unavailable';
             } else {
                 $headers = [];
-                if ($config['from_address'] !== '' && is_email($config['from_address'])) {
+                if (EmailSettings::validEmail($config['from_address'])) {
                     $headers[] = 'From: ' . $config['from_name'] . ' <' . $config['from_address'] . '>';
                 }
-                $success = (bool) wp_mail(
+                $success = function_exists('wp_mail') && (bool) wp_mail(
                     $email,
                     (string) ($plan['email_subject'] ?? $plan['payload']['title'] ?? ''),
                     (string) ($plan['email_body'] ?? $plan['payload']['body'] ?? ''),
