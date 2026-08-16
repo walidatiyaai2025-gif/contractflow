@@ -74,6 +74,42 @@ The dedicated `Enterprise Tenant` selector is a control-plane page. It uses the 
 
 `ArchivePage` historically queried core archive tables directly instead of going through repositories. Under ESC enforcement those direct reads now require `CoreTenantScope` and add `tenant_id` predicates to customers, contracts, scheduled payments and collections. The platform-global payment-method archive is omitted from the tenant archive. Outside ESC enforcement the legacy Safe Contract query shape is unchanged.
 
+## P2-004 — membership administration invariants
+
+P2-004 introduces the tenant membership mutation domain layer before any membership-management UI or REST endpoint is exposed.
+
+### Recognized versus assignable roles
+
+`member` remains a recognized compatibility role because older Enterprise memberships were created before the explicit role matrix existed. Deliberate new/reactivated assignments may use only `tenant_admin`, `manager`, `accountant`, or `viewer`. The generic membership administration flow therefore cannot create new legacy `member` assignments.
+
+### Actor boundary
+
+Every membership administration operation requires all of the following:
+
+- the actor is the currently authenticated WordPress user;
+- the actor has the global `MANAGE_USERS` SafeContracts capability;
+- a tenant context is already locked;
+- the actor remains an active member of that tenant;
+- the actor's tenant role ceiling allows `MANAGE_USERS`.
+
+This preserves the global WordPress capability ceiling while independently enforcing tenant membership and tenant role authorization.
+
+### Mutation ownership
+
+Membership lookups and mutations use the composite tenant/user ownership key. Role updates include `tenant_id + user_id + is_owner = 0`; deactivation includes `tenant_id + user_id`. A user ID by itself is never sufficient to mutate a membership in another tenant.
+
+New memberships are created only for an existing WordPress user, are explicitly `active`, and hard-code `is_owner = 0`. P2-004 exposes no operation that can grant ownership.
+
+### Owner safety
+
+The generic role-assignment flow treats owner memberships as immutable. It cannot demote an owner or change an owner's tenant role. Deactivating an owner additionally requires the actor to be an active owner in the same tenant.
+
+The database deactivation statement contains an atomic same-tenant active-owner count guard. An owner row can be deactivated only when more than one active owner remains, so the last active owner cannot be removed even if concurrent requests race between application-level reads and the write.
+
+### Idempotent role saves
+
+MySQL can report zero affected rows when an active non-owner already has the requested role. A zero-row role update is therefore reconciled by re-reading the same `tenant_id + user_id` key. If the requested non-owner active role is already stored, the operation succeeds idempotently and does not fall through to a duplicate INSERT. An owner or mismatched existing row still fails closed.
+
 ## Security regressions
 
 `tests/php/enterprise_tenant_authorization_p2_001.php` verifies:
@@ -107,3 +143,20 @@ The dedicated `Enterprise Tenant` selector is a control-plane page. It uses the 
 - Enterprise archive direct SQL is tenant-scoped on every tenant-owned table and excludes platform-global payment-method archive rows;
 - Safe Contract legacy archive behavior remains unchanged when ESC enforcement is disabled;
 - the central capability filter and dedicated tenant selector are wired into runtime.
+
+`tests/php/enterprise_tenant_membership_admin_p2_004.php` verifies:
+
+- compatibility `member` is recognized but not deliberately assignable;
+- the four explicit tenant roles are assignable;
+- new/reactivated membership writes are scoped to the locked tenant and hard-code `is_owner = 0`;
+- non-owner role changes use tenant+user+non-owner predicates;
+- generic role assignment cannot mutate owners;
+- invalid roles and unknown WordPress users produce no writes;
+- deactivation uses tenant+user predicates plus an atomic same-tenant owner-count guard;
+- a non-owner actor cannot deactivate an owner;
+- the final active owner cannot be deactivated;
+- an additional owner may be deactivated only when the guarded write succeeds;
+- a manager tenant role cannot administer memberships merely because WordPress granted `MANAGE_USERS` globally;
+- repository source exposes no ownership-grant mutation.
+
+`tests/php/enterprise_tenant_membership_idempotency_p2_004.php` verifies that a zero-row UPDATE for an already-correct active role performs no INSERT and reconciles only against the same tenant+user key.
