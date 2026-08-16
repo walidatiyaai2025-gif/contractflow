@@ -140,9 +140,8 @@ final class _MobileRecordEditorScreenState
           data['accountants'],
           'reference-data.accountants',
         );
-        accountants = rows
-            .map(_AccountantOption.fromData)
-            .toList(growable: false);
+        accountants =
+            rows.map(_AccountantOption.fromData).toList(growable: false);
       }
       if (!mounted) return;
       setState(() {
@@ -378,14 +377,16 @@ final class _MobileRecordEditorScreenState
           controller: _contractStart,
           enabled: enabled,
           decoration: InputDecoration(
-            labelText: _t(context, 'Start date YYYY-MM-DD', 'تاريخ البداية YYYY-MM-DD'),
+            labelText: _t(
+                context, 'Start date YYYY-MM-DD', 'تاريخ البداية YYYY-MM-DD'),
           ),
         ),
         TextField(
           controller: _contractEnd,
           enabled: enabled,
           decoration: InputDecoration(
-            labelText: _t(context, 'End date YYYY-MM-DD', 'تاريخ النهاية YYYY-MM-DD'),
+            labelText:
+                _t(context, 'End date YYYY-MM-DD', 'تاريخ النهاية YYYY-MM-DD'),
           ),
         ),
         TextField(
@@ -399,7 +400,8 @@ final class _MobileRecordEditorScreenState
         ),
       ],
       FilledButton.icon(
-        onPressed: _saving || !enabled ? null : () => unawaited(_saveContract()),
+        onPressed:
+            _saving || !enabled ? null : () => unawaited(_saveContract()),
         icon: Icon(editing ? Icons.save_outlined : Icons.post_add_outlined),
         label: Text(
           editing
@@ -489,14 +491,16 @@ final class _MobileRecordEditorScreenState
         controller: _paymentDue,
         enabled: enabled,
         decoration: InputDecoration(
-          labelText: _t(context, 'Due date YYYY-MM-DD *', 'تاريخ الاستحقاق YYYY-MM-DD *'),
+          labelText: _t(
+              context, 'Due date YYYY-MM-DD *', 'تاريخ الاستحقاق YYYY-MM-DD *'),
         ),
       ),
       TextField(
         controller: _paymentExpected,
         enabled: enabled,
         decoration: InputDecoration(
-          labelText: _t(context, 'Expected date YYYY-MM-DD', 'تاريخ الدفع المتوقع YYYY-MM-DD'),
+          labelText: _t(context, 'Expected date YYYY-MM-DD',
+              'تاريخ الدفع المتوقع YYYY-MM-DD'),
         ),
       ),
       TextField(
@@ -588,12 +592,15 @@ final class _MobileRecordEditorScreenState
     final editing = _customerMode == 'edit';
     final name = _customerName.text.trim();
     if (name.isEmpty || name.length > 191) {
-      _message(_t(context, 'Enter a valid customer name.', 'أدخل اسم عميل صحيح.'));
+      _message(
+          _t(context, 'Enter a valid customer name.', 'أدخل اسم عميل صحيح.'));
       return;
     }
     final email = _customerEmail.text.trim();
-    if (email.isNotEmpty && !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      _message(_t(context, 'Enter a valid email.', 'أدخل بريدًا إلكترونيًا صحيحًا.'));
+    if (email.isNotEmpty &&
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      _message(_t(
+          context, 'Enter a valid email.', 'أدخل بريدًا إلكترونيًا صحيحًا.'));
       return;
     }
     await _runSave(() async {
@@ -606,7 +613,8 @@ final class _MobileRecordEditorScreenState
         'is_active': _customerActive,
       };
       if (editing) {
-        await widget.client.patch('mobile/customers/$_customerId/edit', body: body);
+        await widget.client
+            .patch('mobile/customers/$_customerId/edit', body: body);
       } else {
         await widget.client.post('mobile/customers/create', body: body);
       }
@@ -625,22 +633,29 @@ final class _MobileRecordEditorScreenState
     final editing = _contractMode == 'edit';
     final number = _contractNumber.text.trim();
     if (number.isEmpty || number.length > 100 || _contractCustomerId == null) {
-      _message(_t(context, 'Contract number and customer are required.', 'رقم العقد والعميل مطلوبان.'));
+      _message(_t(context, 'Contract number and customer are required.',
+          'رقم العقد والعميل مطلوبان.'));
       return;
     }
     final start = _contractStart.text.trim();
     final end = _contractEnd.text.trim();
     final base = _contractBase.text.trim();
-    if (_canEditContracts && (!_validNullableDate(start) || !_validNullableDate(end))) {
-      _message(_t(context, 'Contract dates are invalid.', 'تواريخ العقد غير صحيحة.'));
+    if (_canEditContracts &&
+        (!_validNullableDate(start) || !_validNullableDate(end))) {
+      _message(_t(
+          context, 'Contract dates are invalid.', 'تواريخ العقد غير صحيحة.'));
       return;
     }
     if (start.isNotEmpty && end.isNotEmpty && start.compareTo(end) > 0) {
-      _message(_t(context, 'End date cannot precede start date.', 'تاريخ النهاية لا يمكن أن يسبق تاريخ البداية.'));
+      _message(_t(context, 'End date cannot precede start date.',
+          'تاريخ النهاية لا يمكن أن يسبق تاريخ البداية.'));
       return;
     }
-    if (_canEditContracts && base.isNotEmpty && !_validMoney(base, allowZero: true)) {
-      _message(_t(context, 'Enter a valid amount with up to 2 decimals.', 'أدخل مبلغًا صحيحًا حتى رقمين عشريين.'));
+    if (_canEditContracts &&
+        base.isNotEmpty &&
+        !_validMoney(base, allowZero: true)) {
+      _message(_t(context, 'Enter a valid amount with up to 2 decimals.',
+          'أدخل مبلغًا صحيحًا حتى رقمين عشريين.'));
       return;
     }
     await _runSave(() async {
@@ -653,7 +668,8 @@ final class _MobileRecordEditorScreenState
         if (_canEditContracts && base.isNotEmpty) 'base_value': base,
       };
       if (editing) {
-        await widget.client.patch('mobile/contracts/$_contractId/edit', body: body);
+        await widget.client
+            .patch('mobile/contracts/$_contractId/edit', body: body);
       } else {
         await widget.client.post('mobile/contracts/create', body: body);
       }
@@ -674,16 +690,21 @@ final class _MobileRecordEditorScreenState
     final due = _paymentDue.text.trim();
     final expected = _paymentExpected.text.trim();
     final amount = _paymentAmount.text.trim();
-    if ((!editing && _paymentContractId == null) || sequence == null || sequence <= 0) {
-      _message(_t(context, 'Contract and positive sequence are required.', 'العقد وترتيب موجب مطلوبان.'));
+    if ((!editing && _paymentContractId == null) ||
+        sequence == null ||
+        sequence <= 0) {
+      _message(_t(context, 'Contract and positive sequence are required.',
+          'العقد وترتيب موجب مطلوبان.'));
       return;
     }
     if (!_validRequiredDate(due) || !_validNullableDate(expected)) {
-      _message(_t(context, 'Payment dates are invalid.', 'تواريخ الدفعة غير صحيحة.'));
+      _message(_t(
+          context, 'Payment dates are invalid.', 'تواريخ الدفعة غير صحيحة.'));
       return;
     }
     if (!_validMoney(amount, allowZero: false)) {
-      _message(_t(context, 'Enter a positive amount with up to 2 decimals.', 'أدخل مبلغًا موجبًا حتى رقمين عشريين.'));
+      _message(_t(context, 'Enter a positive amount with up to 2 decimals.',
+          'أدخل مبلغًا موجبًا حتى رقمين عشريين.'));
       return;
     }
     await _runSave(() async {
@@ -696,7 +717,8 @@ final class _MobileRecordEditorScreenState
         'original_amount': amount,
       };
       if (editing) {
-        await widget.client.patch('mobile/payments/$_paymentId/edit', body: body);
+        await widget.client
+            .patch('mobile/payments/$_paymentId/edit', body: body);
       } else {
         await widget.client.post('mobile/payments/create', body: body);
       }
@@ -718,7 +740,8 @@ final class _MobileRecordEditorScreenState
       await operation();
     } on SafeContractsApiException catch (error) {
       if (mounted) {
-        _message('${_t(context, 'Request failed', 'فشل الطلب')}: ${context.scL10n.rawMessage(error.message)}');
+        _message(
+            '${_t(context, 'Request failed', 'فشل الطلب')}: ${context.scL10n.rawMessage(error.message)}');
       }
     } on Object catch (error) {
       if (mounted) _message(error.toString());
