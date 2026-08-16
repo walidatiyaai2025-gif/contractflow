@@ -43,7 +43,7 @@ final class DirectNotificationService
                     'title' => $title,
                     'body' => $body,
                     'icon_key' => $iconKey,
-                    'data' => ['rule_code' => 'manual_message', 'attempt_no' => 0],
+                    'data' => ['rule_code' => 'manual_message', 'attempt_no' => 0, 'icon_key' => $iconKey],
                 ]);
                 $success = ! empty($delivery['success']);
                 $success ? $result['push_sent']++ : $result['push_failed']++;
@@ -53,20 +53,21 @@ final class DirectNotificationService
 
         if ($email) {
             $user = function_exists('get_userdata') ? get_userdata($userId) : false;
-            $address = is_object($user) ? sanitize_email((string) ($user->user_email ?? '')) : '';
+            $rawAddress = is_object($user) ? (string) ($user->user_email ?? '') : '';
+            $address = function_exists('sanitize_email') ? sanitize_email($rawAddress) : trim($rawAddress);
             $settings = $this->emailSettings->get();
             $success = false;
             $error = null;
             if (! $settings['enabled']) {
                 $error = 'email_channel_disabled';
-            } elseif ($address === '' || ! is_email($address)) {
+            } elseif (! EmailSettings::validEmail($address)) {
                 $error = 'recipient_email_unavailable';
             } else {
                 $headers = ['Content-Type: text/plain; charset=UTF-8'];
-                if ($settings['from_address'] !== '' && is_email($settings['from_address'])) {
+                if (EmailSettings::validEmail($settings['from_address'])) {
                     $headers[] = 'From: ' . $settings['from_name'] . ' <' . $settings['from_address'] . '>';
                 }
-                $success = (bool) wp_mail($address, $title, $body, $headers);
+                $success = function_exists('wp_mail') && (bool) wp_mail($address, $title, $body, $headers);
                 if (! $success) {
                     $error = 'wp_mail_failed';
                 }
