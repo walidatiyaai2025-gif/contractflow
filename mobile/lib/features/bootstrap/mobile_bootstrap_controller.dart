@@ -62,7 +62,8 @@ final class MobileBootstrapController extends ChangeNotifier {
       final nextConfigController = MobileConfigController(client);
       await nextConfigController.load();
       configController = nextConfigController;
-      usingConfigDefaults = nextConfigController.state == MobileConfigState.error;
+      usingConfigDefaults =
+          nextConfigController.state == MobileConfigState.error;
 
       final config = nextConfigController.config;
       final policy = MobileNavigationPolicy.resolve(session, config);
@@ -91,7 +92,8 @@ final class MobileBootstrapController extends ChangeNotifier {
       final notifications = NotificationsController(
         repository: NotificationsRepository(client),
         pageSize: config.defaultPageSize,
-        canAccess: policy.destinations.contains(MobileDestination.notifications),
+        canAccess:
+            policy.destinations.contains(MobileDestination.notifications),
       );
       notificationsController = notifications;
       final profile = ProfileController(ProfileRepository(client));
