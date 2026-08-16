@@ -116,6 +116,43 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('SC-P9-012 exposes responsible accountant action for assign-only',
+      (tester) async {
+    final controller = _controller(
+      FakeApiTransport(_detailHandler),
+      canEdit: false,
+    );
+    int? actionContractId;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ContractDetailsScreen(
+          controller: controller,
+          contractId: 70,
+          onEditContract: (id) => actionContractId = id,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit contract'), findsNothing);
+    expect(find.text('Responsible accountant'), findsOneWidget);
+    expect(
+      find.text('This contract is read-only for the current session.'),
+      findsNothing,
+    );
+
+    await tester.ensureVisible(find.text('Responsible accountant'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Responsible accountant'));
+    await tester.pump();
+    expect(actionContractId, 70);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    controller.dispose();
+  });
+
   testWidgets('SC-P9-012 hides edit mutation action without capability',
       (tester) async {
     final controller = _controller(
@@ -135,6 +172,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Edit contract'), findsNothing);
+    expect(find.text('Responsible accountant'), findsNothing);
     expect(
       find.text('This contract is read-only for the current session.'),
       findsOneWidget,

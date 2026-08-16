@@ -58,6 +58,10 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
             controller.detailState == ContractDetailLoadState.ready &&
                 controller.selectedContractId == widget.contractId &&
                 contract != null;
+        final canOpenContractAction = widget.onEditContract != null;
+        final contractActionLabel = controller.canEditContract
+            ? l10n.t('Edit contract')
+            : l10n.t('Responsible accountant');
 
         return Scaffold(
           appBar: AppBar(
@@ -67,13 +71,15 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
                   : l10n.t('Contract details'),
             ),
             actions: [
-              if (readyForCurrent &&
-                  controller.canEditContract &&
-                  widget.onEditContract != null)
+              if (readyForCurrent && canOpenContractAction)
                 IconButton(
-                  tooltip: l10n.t('Edit contract'),
+                  tooltip: contractActionLabel,
                   onPressed: () => widget.onEditContract!(contract.id),
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: Icon(
+                    controller.canEditContract
+                        ? Icons.edit_outlined
+                        : Icons.assignment_ind_outlined,
+                  ),
                 ),
             ],
           ),
@@ -170,6 +176,8 @@ final class _ReadyContractDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
+    final contractActionLabel =
+        canEdit ? l10n.t('Edit contract') : l10n.t('Responsible accountant');
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -253,11 +261,13 @@ final class _ReadyContractDetails extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 24),
-          if (canEdit && onEditContract != null)
+          if (onEditContract != null)
             FilledButton.tonalIcon(
               onPressed: () => onEditContract!(contract.id),
-              icon: const Icon(Icons.edit_outlined),
-              label: Text(l10n.t('Edit contract')),
+              icon: Icon(
+                canEdit ? Icons.edit_outlined : Icons.assignment_ind_outlined,
+              ),
+              label: Text(contractActionLabel),
             )
           else
             Text(
