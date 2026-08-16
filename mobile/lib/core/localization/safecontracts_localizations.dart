@@ -119,7 +119,7 @@ String _twoDecimalMoney(String rawValue) {
   final rawSign = match.group(1) ?? '';
   var whole = BigInt.parse(match.group(2)!);
   final fraction = match.group(3) ?? '';
-  final firstTwo = (fraction + '00').substring(0, 2);
+  final firstTwo = '${fraction}00'.substring(0, 2);
   var cents = int.parse(firstTwo);
 
   if (fraction.length > 2 && int.parse(fraction[2]) >= 5) {
