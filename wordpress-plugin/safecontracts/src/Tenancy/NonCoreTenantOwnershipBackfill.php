@@ -27,6 +27,7 @@ final class NonCoreTenantOwnershipBackfill
         'rules' => 'notification_rules',
         'templates' => 'notification_templates',
         'devices' => 'device_tokens',
+        'deliveries' => 'notification_deliveries',
         'imports' => 'import_runs',
         'suppressions' => 'notification_suppressions',
         'audit' => 'audit_log',
@@ -88,14 +89,14 @@ final class NonCoreTenantOwnershipBackfill
             'delivery_rule' => $this->count($wpdb, "SELECT COUNT(*) AS total FROM {$deliveries} d INNER JOIN {$rules} r ON r.id = d.rule_id WHERE d.rule_id IS NOT NULL AND d.tenant_id IS NOT NULL AND r.tenant_id IS NOT NULL AND d.tenant_id <> r.tenant_id"),
             'schedule_payment' => $this->count($wpdb, "SELECT COUNT(*) AS total FROM {$schedule} s INNER JOIN {$payments} p ON p.id = s.payment_id WHERE s.tenant_id IS NOT NULL AND p.tenant_id IS NOT NULL AND s.tenant_id <> p.tenant_id"),
             'schedule_rule' => $this->count($wpdb, "SELECT COUNT(*) AS total FROM {$schedule} s INNER JOIN {$rules} r ON r.id = s.rule_id WHERE s.tenant_id IS NOT NULL AND r.tenant_id IS NOT NULL AND s.tenant_id <> r.tenant_id"),
-            'suppression_payment' => $this->count($wpdb, "SELECT COUNT(*) AS total FROM {$suppressions} s INNER JOIN {$payments} p ON p.id = s.payment_id WHERE s.payment_id IS NOT NULL AND s.tenant_id IS NOT NULL AND p.tenant_id IS NOT NULL AND s.tenant_id <> p.tenant_id"),
-            'suppression_rule' => $this->count($wpdb, "SELECT COUNT(*) AS total FROM {$suppressions} s INNER JOIN {$rules} r ON r.id = s.rule_id WHERE s.rule_id IS NOT NULL AND s.tenant_id IS NOT NULL AND r.tenant_id IS NOT NULL AND s.tenant_id <> r.tenant_id"),
-            'import_error_run' => $this->count($wpdb, "SELECT COUNT(*) AS total FROM {$errors} e INNER JOIN {$runs} r ON r.id = e.run_id WHERE e.tenant_id IS NOT NULL AND r.tenant_id IS NOT NULL AND e.tenant_id <> r.tenant_id"),
+            'suppression_payment_scope' => $this->count($wpdb, "SELECT COUNT(*) AS total FROM {$suppressions} s INNER JOIN {$payments} p ON p.id = s.scope_id WHERE s.scope_type = 'payment' AND s.tenant_id IS NOT NULL AND p.tenant_id IS NOT NULL AND s.tenant_id <> p.tenant_id"),
+            'suppression_contract_scope' => $this->count($wpdb, "SELECT COUNT(*) AS total FROM {$suppressions} s INNER JOIN {$contracts} c ON c.id = s.scope_id WHERE s.scope_type = 'contract' AND s.tenant_id IS NOT NULL AND c.tenant_id IS NOT NULL AND s.tenant_id <> c.tenant_id"),
+            'import_error_run' => $this->count($wpdb, "SELECT COUNT(*) AS total FROM {$errors} e INNER JOIN {$runs} r ON r.id = e.import_run_id WHERE e.tenant_id IS NOT NULL AND r.tenant_id IS NOT NULL AND e.tenant_id <> r.tenant_id"),
             'audit_customer' => $this->auditMismatch($wpdb, $audit, $customers, 'customer'),
             'audit_contract' => $this->auditMismatch($wpdb, $audit, $contracts, 'contract'),
             'audit_payment' => $this->auditMismatch($wpdb, $audit, $payments, 'payment'),
             'audit_collection' => $this->auditMismatch($wpdb, $audit, $collections, 'collection'),
-            'audit_import' => $this->auditMismatch($wpdb, $audit, $runs, 'import'),
+            'audit_import_run' => $this->auditMismatch($wpdb, $audit, $runs, 'import_run'),
             'audit_notification_schedule' => $this->auditMismatch($wpdb, $audit, $schedule, 'notification_schedule'),
         ];
 
@@ -109,7 +110,7 @@ final class NonCoreTenantOwnershipBackfill
 
     /**
      * Derive child ownership only from already-owned authoritative parents.
-     * No root notification configuration, device, import-run or unresolved audit row is guessed.
+     * No root notification configuration, device, import-run or unresolved direct delivery/audit row is guessed.
      *
      * @return array{unowned:array<string,int>,mismatches:array<string,int>,platform_global:array<string,int>,ready:bool}
      */
@@ -218,12 +219,14 @@ final class NonCoreTenantOwnershipBackfill
         $errors = $wpdb->prefix . self::TABLES['import_errors'];
         $audit = $wpdb->prefix . self::TABLES['audit_log'];
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
 
         $wpdb->query("UPDATE {$schedule} s INNER JOIN {$payments} p ON p.id = s.payment_id SET s.tenant_id = p.tenant_id WHERE s.tenant_id IS NULL AND p.tenant_id IS NOT NULL");
         $wpdb->query("UPDATE {$deliveries} d INNER JOIN {$payments} p ON p.id = d.payment_id SET d.tenant_id = p.tenant_id WHERE d.tenant_id IS NULL AND d.payment_id IS NOT NULL AND p.tenant_id IS NOT NULL");
-        $wpdb->query("UPDATE {$errors} e INNER JOIN {$runs} r ON r.id = e.run_id SET e.tenant_id = r.tenant_id WHERE e.tenant_id IS NULL AND r.tenant_id IS NOT NULL");
-        $wpdb->query("UPDATE {$suppressions} s INNER JOIN {$payments} p ON p.id = s.payment_id SET s.tenant_id = p.tenant_id WHERE s.tenant_id IS NULL AND s.payment_id IS NOT NULL AND p.tenant_id IS NOT NULL");
-        $wpdb->query("UPDATE {$suppressions} s INNER JOIN {$rules} r ON r.id = s.rule_id SET s.tenant_id = r.tenant_id WHERE s.tenant_id IS NULL AND s.rule_id IS NOT NULL AND r.tenant_id IS NOT NULL");
+        $wpdb->query("UPDATE {$deliveries} d INNER JOIN {$rules} r ON r.id = d.rule_id SET d.tenant_id = r.tenant_id WHERE d.tenant_id IS NULL AND d.rule_id IS NOT NULL AND r.tenant_id IS NOT NULL");
+        $wpdb->query("UPDATE {$errors} e INNER JOIN {$runs} r ON r.id = e.import_run_id SET e.tenant_id = r.tenant_id WHERE e.tenant_id IS NULL AND r.tenant_id IS NOT NULL");
+        $wpdb->query("UPDATE {$suppressions} s INNER JOIN {$payments} p ON p.id = s.scope_id SET s.tenant_id = p.tenant_id WHERE s.tenant_id IS NULL AND s.scope_type = 'payment' AND p.tenant_id IS NOT NULL");
+        $wpdb->query("UPDATE {$suppressions} s INNER JOIN {$contracts} c ON c.id = s.scope_id SET s.tenant_id = c.tenant_id WHERE s.tenant_id IS NULL AND s.scope_type = 'contract' AND c.tenant_id IS NOT NULL");
 
         foreach ($this->auditParentMap($wpdb) as $entityType => $parentTable) {
             $wpdb->query(
@@ -243,7 +246,7 @@ final class NonCoreTenantOwnershipBackfill
             'contract' => $wpdb->prefix . 'safecontracts_contracts',
             'payment' => $wpdb->prefix . 'safecontracts_scheduled_payments',
             'collection' => $wpdb->prefix . 'safecontracts_payment_collections',
-            'import' => $wpdb->prefix . self::TABLES['import_runs'],
+            'import_run' => $wpdb->prefix . self::TABLES['import_runs'],
             'notification_schedule' => $wpdb->prefix . self::TABLES['notification_schedule'],
         ];
     }
