@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
 FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
-ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.xml"
+ALKENZY_ICON_SOURCE="$ROOT/mobile/assets/brand/alkenzy_adv.png"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
 
 if ! command -v flutter >/dev/null 2>&1; then
@@ -40,12 +40,24 @@ if "com.safecontracts.safecontracts_mobile" not in packages:
     raise SystemExit("FAIL: Firebase Android package does not match SafeContracts applicationId")
 PY
 
+python3 - "$ALKENZY_ICON_SOURCE" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+data = path.read_bytes()
+if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+    raise SystemExit("FAIL: supplied Alkenzy ADV icon is not a valid PNG")
+if len(data) < 1024:
+    raise SystemExit("FAIL: supplied Alkenzy ADV icon is unexpectedly small")
+PY
+
 cd "$MOBILE"
 
 # Flutter owns the platform boilerplate version. Recreate it from the exact
 # Flutter stable toolchain used by CI, then restore the repository's release
-# signing, networking, Firebase, notification presentation, and Safe Contracts
-# runtime contracts. The launcher icon is the approved Alkenzy Advertising mark.
+# signing, networking, Firebase, notification presentation, and production
+# runtime contracts. The launcher icon uses the exact supplied Alkenzy ADV PNG.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -76,22 +88,19 @@ if plugin not in text:
 path.write_text(text, encoding="utf-8")
 PY
 
-LAUNCHER_ICON="android/app/src/main/res/drawable/alkenzy_launcher.xml"
+LAUNCHER_ICON="android/app/src/main/res/drawable/alkenzy_adv.png"
 mkdir -p "$(dirname "$LAUNCHER_ICON")"
 cp "$ALKENZY_ICON_SOURCE" "$LAUNCHER_ICON"
 
-grep -Fq '<vector' "$LAUNCHER_ICON" || {
-  echo "FAIL: Alkenzy launcher icon is not a valid Android vector resource" >&2
-  exit 1
-}
-grep -Fq '#FFFFE173' "$LAUNCHER_ICON" || {
-  echo "FAIL: Alkenzy launcher icon is missing the approved yellow brand field" >&2
-  exit 1
-}
-grep -Fq '#FF7BC1CD' "$LAUNCHER_ICON" || {
-  echo "FAIL: Alkenzy launcher icon is missing the approved blue Advertising mark" >&2
-  exit 1
-}
+python3 - "$LAUNCHER_ICON" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+data = path.read_bytes()
+if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+    raise SystemExit("FAIL: packaged Alkenzy ADV launcher icon is not the supplied PNG")
+PY
 
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [[ ! -f "$MANIFEST" ]]; then
@@ -105,16 +114,16 @@ import sys
 
 path = Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-text = text.replace('android:label="safecontracts_mobile"', 'android:label="Safe Contracts"')
+text = text.replace('android:label="safecontracts_mobile"', 'android:label="Alkenzy ADV"')
 text = re.sub(
     r'android:icon="@[^"]+"',
-    'android:icon="@drawable/alkenzy_launcher"',
+    'android:icon="@drawable/alkenzy_adv"',
     text,
     count=1,
 )
 text = re.sub(
     r'android:roundIcon="@[^"]+"',
-    'android:roundIcon="@drawable/alkenzy_launcher"',
+    'android:roundIcon="@drawable/alkenzy_adv"',
     text,
     count=1,
 )
@@ -150,10 +159,10 @@ if 'com.google.firebase.messaging.default_notification_channel_id' not in text:
 for permission in permissions:
     if permission not in text:
         raise SystemExit(f"FAIL: Android release manifest is missing {permission}")
-if 'android:label="Safe Contracts"' not in text:
-    raise SystemExit("FAIL: Android release manifest is missing Safe Contracts label")
-if 'android:icon="@drawable/alkenzy_launcher"' not in text:
-    raise SystemExit("FAIL: Android release manifest is missing Alkenzy launcher icon")
+if 'android:label="Alkenzy ADV"' not in text:
+    raise SystemExit("FAIL: Android release manifest is missing Alkenzy ADV label")
+if 'android:icon="@drawable/alkenzy_adv"' not in text:
+    raise SystemExit("FAIL: Android release manifest is missing supplied Alkenzy ADV launcher icon")
 if 'safe_contracts_alerts' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Safe Contracts notification channel metadata")
 
@@ -183,12 +192,12 @@ grep -Fq 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing POST_NOTIFICATIONS permission" >&2
   exit 1
 }
-grep -Fq 'android:label="Safe Contracts"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing Safe Contracts label" >&2
+grep -Fq 'android:label="Alkenzy ADV"' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing Alkenzy ADV label" >&2
   exit 1
 }
-grep -Fq 'android:icon="@drawable/alkenzy_launcher"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing Alkenzy launcher icon" >&2
+grep -Fq 'android:icon="@drawable/alkenzy_adv"' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing supplied Alkenzy ADV launcher icon" >&2
   exit 1
 }
 grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
@@ -208,4 +217,4 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "Safe Contracts Android scaffold bootstrapped with Alkenzy launcher icon, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
+echo "Alkenzy ADV Android scaffold bootstrapped with the supplied launcher icon, app label, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
