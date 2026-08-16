@@ -17,6 +17,7 @@ final class ContractsPage
     public const SLUG = 'safecontracts-contracts';
     public const SAVE_ACTION = 'safecontracts_save_contract_admin';
     public const DELETE_ACTION = 'safecontracts_delete_contract_admin';
+    public const BULK_ASSIGN_ACTION = 'safecontracts_bulk_assign_accountant_admin';
 
     public static function register(): void
     {
@@ -71,6 +72,53 @@ final class ContractsPage
         exit;
     }
 
+    public static function handleBulkAssign(): void
+    {
+        if (! current_user_can(Capabilities::ASSIGN_CONTRACTS)) {
+            wp_die(__('You do not have permission to assign contracts.', 'safecontracts'));
+        }
+
+        check_admin_referer(self::BULK_ASSIGN_ACTION);
+        $accountantId = max(0, (int) ($_POST['accountant_user_id'] ?? 0));
+        $rawContractIds = $_POST['contract_ids'] ?? [];
+        $contractIds = is_array($rawContractIds)
+            ? array_values(array_unique(array_filter(array_map('absint', $rawContractIds), static fn (int $id): bool => $id > 0)))
+            : [];
+
+        $status = 'bulk_assigned';
+        $assigned = 0;
+        $skipped = 0;
+        if ($accountantId <= 0 || $contractIds === [] || ! user_can($accountantId, Capabilities::ACCESS) || ! user_can($accountantId, Capabilities::CREATE_CONTRACTS) || ! user_can($accountantId, Capabilities::VIEW_ASSIGNED)) {
+            $status = 'bulk_invalid';
+        } else {
+            $read = new AdminReadRepository();
+            $service = new ContractService();
+            foreach ($contractIds as $contractId) {
+                try {
+                    $rows = $read->contracts(['contract_id' => $contractId]);
+                    $contract = $rows[0] ?? null;
+                    if ($contract === null || ! empty($contract['is_archived']) || ! empty($contract['accountant_user_id'])) {
+                        $skipped++;
+                        continue;
+                    }
+                    $service->assignAccountant($contractId, $accountantId);
+                    $assigned++;
+                } catch (Throwable $error) {
+                    unset($error);
+                    $skipped++;
+                }
+            }
+        }
+
+        wp_safe_redirect(add_query_arg([
+            'page' => self::SLUG,
+            'safecontracts_status' => $status,
+            'safecontracts_assigned' => $assigned,
+            'safecontracts_skipped' => $skipped,
+        ], admin_url('admin.php')));
+        exit;
+    }
+
     public static function handleDelete(): void
     {
         if (! current_user_can(Capabilities::MANAGE_SYSTEM)) {
@@ -104,10 +152,14 @@ final class ContractsPage
             $accountantLabels[$accountant['id']] = $accountant['label'];
         }
         $canAssignContracts = current_user_can(Capabilities::ASSIGN_CONTRACTS);
-        $unassignedCount = count(array_filter(
+        $unassignedContracts = array_values(array_filter(
             $contracts,
             static fn (array $contract): bool => empty($contract['accountant_user_id']) && empty($contract['is_archived'])
         ));
+        $unassignedCount = count($unassignedContracts);
+        $status = isset($_GET['safecontracts_status']) && is_scalar($_GET['safecontracts_status']) ? sanitize_key((string) $_GET['safecontracts_status']) : '';
+        $bulkAssigned = max(0, (int) ($_GET['safecontracts_assigned'] ?? 0));
+        $bulkSkipped = max(0, (int) ($_GET['safecontracts_skipped'] ?? 0));
         $selected = null;
         $reconciliation = null;
         $selectedId = max(0, (int) ($_GET['contract_id'] ?? 0));
@@ -127,8 +179,26 @@ final class ContractsPage
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Contract operations', 'safecontracts'); ?></p><h1><?php echo esc_html__('Contracts', 'safecontracts'); ?></h1></div></div>
             <?php AdminPeriodFilter::render(self::SLUG, $filters, $selectedId > 0 ? ['contract_id' => $selectedId] : []); ?>
             <p class="description"><?php echo esc_html__('Contract period filtering uses the contract start date, falling back to the record creation date when no start date exists.', 'safecontracts'); ?></p>
+            <?php if ($status === 'bulk_assigned') : ?>
+                <div class="notice notice-success inline"><p><?php echo esc_html(sprintf(__('Responsible accountant assigned to %1$d contract(s). %2$d contract(s) were skipped because they were no longer eligible.', 'safecontracts'), $bulkAssigned, $bulkSkipped)); ?></p></div>
+            <?php elseif ($status === 'bulk_invalid') : ?>
+                <div class="notice notice-error inline"><p><?php echo esc_html__('Bulk assignment was not applied. Select an eligible SafeContracts Accountant and at least one unassigned contract.', 'safecontracts'); ?></p></div>
+            <?php endif; ?>
             <?php if ($canAssignContracts && $unassignedCount > 0) : ?>
                 <div class="notice notice-warning inline"><p><?php echo esc_html(sprintf(_n('%d active contract has no responsible accountant. Assigned-scope users will not see it on mobile until it is assigned.', '%d active contracts have no responsible accountant. Assigned-scope users will not see them on mobile until they are assigned.', $unassignedCount, 'safecontracts'), $unassignedCount)); ?></p></div>
+                <?php if ($accountants !== []) : ?>
+                    <section class="safecontracts-admin-card safecontracts-settings-card">
+                        <h2><?php echo esc_html__('Assign existing unassigned contracts', 'safecontracts'); ?></h2>
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                            <input type="hidden" name="action" value="<?php echo esc_attr(self::BULK_ASSIGN_ACTION); ?>">
+                            <?php foreach ($unassignedContracts as $contract) : ?><input type="hidden" name="contract_ids[]" value="<?php echo esc_attr((string) $contract['id']); ?>"><?php endforeach; ?>
+                            <?php wp_nonce_field(self::BULK_ASSIGN_ACTION); ?>
+                            <p><label><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?><select class="widefat" name="accountant_user_id" required><option value=""><?php echo esc_html__('Select responsible accountant', 'safecontracts'); ?></option><?php foreach ($accountants as $accountant) : ?><option value="<?php echo esc_attr((string) $accountant['id']); ?>"><?php echo esc_html($accountant['label']); ?></option><?php endforeach; ?></select></label></p>
+                            <p class="description"><?php echo esc_html__('This assigns only the currently visible active contracts that are still unassigned. Contracts assigned by another user before submission are skipped and never overwritten.', 'safecontracts'); ?></p>
+                            <?php submit_button(sprintf(_n('Assign %d visible contract', 'Assign %d visible contracts', $unassignedCount, 'safecontracts'), $unassignedCount), 'secondary'); ?>
+                        </form>
+                    </section>
+                <?php endif; ?>
             <?php endif; ?>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
