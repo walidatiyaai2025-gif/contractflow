@@ -22,6 +22,11 @@ final class ContractMutationController
             'callback' => [self::class, 'editContract'],
             'permission_callback' => [self::class, 'canEditContracts'],
         ]);
+        register_rest_route(Router::NAMESPACE, '/contracts/(?P<id>\\d+)/accountant', [
+            'methods' => 'PATCH',
+            'callback' => [self::class, 'assignAccountant'],
+            'permission_callback' => [self::class, 'canAssignContracts'],
+        ]);
     }
 
     public static function canEditContracts(): bool|WP_Error
@@ -36,6 +41,21 @@ final class ContractMutationController
         return RequestGuard::forbidden(
             'safecontracts_contract_light_edit_forbidden',
             __('You do not have permission to edit SafeContracts contracts.', 'safecontracts')
+        );
+    }
+
+    public static function canAssignContracts(): bool|WP_Error
+    {
+        $access = Router::canAccess();
+        if ($access !== true) {
+            return $access;
+        }
+        if (current_user_can(Capabilities::ASSIGN_CONTRACTS)) {
+            return true;
+        }
+        return RequestGuard::forbidden(
+            'safecontracts_contract_accountant_assign_forbidden',
+            __('You do not have permission to assign SafeContracts contracts.', 'safecontracts')
         );
     }
 
@@ -109,6 +129,52 @@ final class ContractMutationController
             return RequestGuard::domain($error, 'safecontracts_contract_light_edit_forbidden');
         } catch (Throwable $error) {
             return RequestGuard::failure($error, 'safecontracts_contract_light_edit_failed');
+        }
+    }
+
+    public static function assignAccountant(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        $permission = self::canAssignContracts();
+        if ($permission instanceof WP_Error) {
+            return $permission;
+        }
+
+        try {
+            $contractId = ApiRequest::routeId($request, 'id');
+            $body = $request->get_json_params();
+            if (! is_array($body) || count($body) !== 1 || ! array_key_exists('accountant_user_id', $body)) {
+                throw new InvalidArgumentException('Responsible accountant assignment requires accountant_user_id only.');
+            }
+            $value = $body['accountant_user_id'];
+            if (is_array($value) || is_object($value) || is_bool($value) || $value === null) {
+                throw new InvalidArgumentException('accountant_user_id must be a positive integer.');
+            }
+            if (is_string($value)) {
+                $value = trim($value);
+                if ($value === '' || ! ctype_digit($value)) {
+                    throw new InvalidArgumentException('accountant_user_id must be a positive integer.');
+                }
+            } elseif (! is_int($value)) {
+                throw new InvalidArgumentException('accountant_user_id must be a positive integer.');
+            }
+            $accountantUserId = (int) $value;
+            if ($accountantUserId <= 0) {
+                throw new InvalidArgumentException('accountant_user_id must be a positive integer.');
+            }
+
+            (new ContractService())->assignAccountant($contractId, $accountantUserId);
+
+            return RequestGuard::response([
+                'id' => $contractId,
+                'accountant_user_id' => $accountantUserId,
+                'updated' => true,
+            ]);
+        } catch (InvalidArgumentException $error) {
+            return RequestGuard::invalid($error, 'safecontracts_contract_accountant_assign_invalid');
+        } catch (DomainException $error) {
+            return RequestGuard::domain($error, 'safecontracts_contract_accountant_assign_forbidden');
+        } catch (Throwable $error) {
+            return RequestGuard::failure($error, 'safecontracts_contract_accountant_assign_failed');
         }
     }
 
