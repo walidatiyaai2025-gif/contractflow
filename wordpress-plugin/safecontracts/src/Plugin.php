@@ -37,6 +37,7 @@ use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Rest\Router;
 use SafeContracts\Translations\AdminArabicDefaults;
+use SafeContracts\Translations\NotificationScheduleArabicDefaults;
 use SafeContracts\Translations\RuntimeLabels;
 use SafeContracts\Translations\TranslationCatalog;
 
@@ -64,6 +65,7 @@ final class Plugin
 
         TranslationCatalog::register();
         AdminArabicDefaults::register();
+        NotificationScheduleArabicDefaults::register();
         RuntimeLabels::register();
         MobileBearerAuthentication::register();
         FirebaseAccessTokenProvider::register();
