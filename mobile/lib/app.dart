@@ -135,13 +135,15 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         color: scheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.62)),
+          side:
+              BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.62)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerLowest,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
@@ -152,7 +154,8 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
@@ -160,7 +163,8 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 48),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -296,7 +300,8 @@ final class _BootstrapView extends StatelessWidget {
           }
         }
 
-        if (controller.sessionController?.state == SessionState.unauthenticated) {
+        if (controller.sessionController?.state ==
+            SessionState.unauthenticated) {
           return SafeContractsLoginScreen(
             controller: loginController,
             languageCode: languageCode,
@@ -319,12 +324,16 @@ final class _BootstrapView extends StatelessWidget {
                       const SizedBox(height: 16),
                       Text(
                         'SafeContracts',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
                       ),
                       const SizedBox(height: 8),
-                      Text('${l10n.t('Environment')}: ${environment.name.name}'),
+                      Text(
+                          '${l10n.t('Environment')}: ${environment.name.name}'),
                       const SizedBox(height: 18),
                       if (controller.state == MobileBootstrapState.idle ||
                           controller.state == MobileBootstrapState.loading)
