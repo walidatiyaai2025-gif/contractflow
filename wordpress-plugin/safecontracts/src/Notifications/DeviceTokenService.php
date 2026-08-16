@@ -7,12 +7,17 @@ namespace SafeContracts\Notifications;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Tenancy\NonCoreTenantScope;
+use SafeContracts\Tenancy\TenantMembershipRepository;
 
 final class DeviceTokenService
 {
-    public function __construct(private ?DeviceTokenRepository $repository = null)
-    {
+    public function __construct(
+        private ?DeviceTokenRepository $repository = null,
+        private ?TenantMembershipRepository $memberships = null
+    ) {
         $this->repository ??= new DeviceTokenRepository();
+        $this->memberships ??= new TenantMembershipRepository();
     }
 
     public function register(mixed $token, mixed $platform): void
@@ -58,6 +63,11 @@ final class DeviceTokenService
         $userId = get_current_user_id();
         if ($userId <= 0) {
             throw new DomainException('Device registration requires an authenticated SafeContracts user.');
+        }
+
+        $tenantId = NonCoreTenantScope::tenantId();
+        if ($tenantId !== null && ! $this->memberships->isActiveMember($tenantId, $userId)) {
+            throw new DomainException('Device registration requires an active membership in the current Enterprise tenant.');
         }
         return $userId;
     }
