@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/localization/runtime_translation_overrides.dart';
 
 final class MobileFeatureFlags {
   const MobileFeatureFlags({
@@ -46,13 +47,21 @@ final class SafeContractsMobileConfig {
     required this.defaultPageSize,
     this.currency = const MobileCurrencyConfig.defaults(),
     required this.features,
+    this.translationOverrides = const {
+      'en': <String, String>{},
+      'ar': <String, String>{},
+    },
   });
 
   const SafeContractsMobileConfig.defaults()
       : supportText = '',
         defaultPageSize = 25,
         currency = const MobileCurrencyConfig.defaults(),
-        features = const MobileFeatureFlags.defaults();
+        features = const MobileFeatureFlags.defaults(),
+        translationOverrides = const {
+          'en': <String, String>{},
+          'ar': <String, String>{},
+        };
 
   static const maxSupportTextLength = 500;
 
@@ -60,12 +69,17 @@ final class SafeContractsMobileConfig {
   final int defaultPageSize;
   final MobileCurrencyConfig currency;
   final MobileFeatureFlags features;
+  final Map<String, Map<String, String>> translationOverrides;
 
   factory SafeContractsMobileConfig.fromData(Object? value) {
     final data = apiObjectMap(value, 'mobile_config.data');
     final features =
         _optionalObjectMap(data['features'], 'mobile_config.features');
     final configuredPageSize = _pageSize(data['default_page_size']);
+    final translationData = _optionalObjectMap(
+      data['translation_overrides'],
+      'mobile_config.translation_overrides',
+    );
 
     return SafeContractsMobileConfig(
       supportText: _supportText(data['support_text']),
@@ -76,6 +90,14 @@ final class SafeContractsMobileConfig {
         pushNotifications: features['push_notifications'] == true,
         collectionEntry: features['collection_entry'] == true,
       ),
+      translationOverrides: <String, Map<String, String>>{
+        'en': SafeContractsRuntimeTranslations.parseLanguage(
+          translationData['en'],
+        ),
+        'ar': SafeContractsRuntimeTranslations.parseLanguage(
+          translationData['ar'],
+        ),
+      },
     );
   }
 }
@@ -99,9 +121,11 @@ final class MobileConfigController extends ChangeNotifier {
     try {
       final envelope = await client.get('mobile-config');
       config = SafeContractsMobileConfig.fromData(envelope.data);
+      SafeContractsRuntimeTranslations.replace(config.translationOverrides);
       state = MobileConfigState.ready;
     } on Object catch (error) {
       config = const SafeContractsMobileConfig.defaults();
+      SafeContractsRuntimeTranslations.clear();
       errorMessage = error.toString();
       state = MobileConfigState.error;
     }
