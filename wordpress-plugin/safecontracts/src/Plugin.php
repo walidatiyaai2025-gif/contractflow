@@ -22,6 +22,7 @@ use SafeContracts\Admin\LoginBranding;
 use SafeContracts\Admin\MobileConfigurationPage;
 use SafeContracts\Admin\NavigationCleanup;
 use SafeContracts\Admin\NotificationCenterPage;
+use SafeContracts\Admin\NotificationEmailTestControl;
 use SafeContracts\Admin\NotificationSchedulePage;
 use SafeContracts\Admin\NotificationSettingsPage;
 use SafeContracts\Admin\NotificationsPage;
@@ -89,6 +90,7 @@ final class Plugin
         LoginBranding::register();
         NavigationCleanup::register();
         AdminPageSummaryInjector::register();
+        NotificationEmailTestControl::register();
 
         add_action('rest_api_init', [Router::class, 'register']);
         add_action('admin_menu', [AdminShell::class, 'register'], 5);

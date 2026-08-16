@@ -111,12 +111,29 @@ foreach ([
     $assertContains($emailContract, $email, 'email delivery must use WordPress user email, configured sender identity and delivery logging: ' . $emailContract);
 }
 
+$emailTest = $read('wordpress-plugin/safecontracts/src/Admin/NotificationEmailTestControl.php');
+foreach ([
+    "public const ACTION = 'safecontracts_notification_email_test'",
+    "add_action('admin_post_' . self::ACTION, [self::class, 'handle'])",
+    'check_admin_referer(self::ACTION)',
+    'Capabilities::MANAGE_NOTIFICATIONS',
+    '(new DirectNotificationService())->send(',
+    'false,',
+    'true,',
+    'EmailSettings::validEmail($email)',
+    'Send test email',
+    'safecontracts_email_test',
+] as $emailTestContract) {
+    $assertContains($emailTestContract, $emailTest, 'one-click email test must use the real guarded email path: ' . $emailTestContract);
+}
+
 $plugin = $read('wordpress-plugin/safecontracts/src/Plugin.php');
 foreach ([
     'ContractsPage::BULK_ASSIGN_ACTION',
     'ContractsPage::class, \'handleBulkAssign\'',
     'NotificationCenterPage::SAVE_EMAIL_ACTION',
     'NotificationCenterPage::DIRECT_SEND_ACTION',
+    'NotificationEmailTestControl::register()',
 ] as $wireContract) {
     $assertContains($wireContract, $plugin, 'plugin bootstrap must keep responsible-accountant/email handlers wired: ' . $wireContract);
 }
