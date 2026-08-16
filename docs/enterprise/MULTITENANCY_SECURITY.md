@@ -44,6 +44,21 @@ ESC authorization combines:
 
 Menu visibility is UX only; server-side capability + tenant scope is mandatory.
 
+### WordPress Admin tenant selection
+When core runtime tenant enforcement is enabled, SafeContracts Admin requests resolve exactly one authorized tenant before tenant-owned repositories run.
+
+- A user with one active tenant membership may have that tenant selected automatically.
+- A user with multiple active tenant memberships must choose explicitly; the server must never choose one arbitrarily.
+- The selected tenant ID stored in WordPress user meta is a convenience preference only. It is revalidated against active tenant + active membership on every SafeContracts Admin request before `TenantContext` is locked.
+- A stale, inactive or unauthorized stored tenant is deleted. If the remaining memberships are ambiguous, the request remains without a tenant context and tenant-owned repositories fail closed.
+- Switching tenant requires SafeContracts access capability, a WordPress nonce, and successful server-side membership resolution before the preference is persisted.
+- The switch form lists tenants from the authorized tenant directory only.
+- Tenant switching accepts only a SafeContracts page slug for the return location; the server constructs the local WordPress Admin URL and does not accept a caller-supplied redirect URL.
+- Tenant context is reset before request resolution so one Admin request cannot leak context into another.
+- When runtime tenant enforcement is disabled, the Admin resolver does not change legacy behavior.
+
+A tenant preference, REST header, query parameter, form field or cached identifier is never authorization by itself.
+
 ## Operational safety
 - No tenant context may be inferred from untrusted client payload alone.
 - Tenant switching for platform administrators must be explicit, auditable and protected.
