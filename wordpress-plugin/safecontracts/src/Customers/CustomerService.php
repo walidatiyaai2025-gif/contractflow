@@ -28,10 +28,18 @@ final class CustomerService
 
     public function save(array $input): int
     {
-        if (! current_user_can(Capabilities::MANAGE_REFERENCE_DATA)) {
-            throw new DomainException('You do not have permission to manage SafeContracts customers.');
-        }
         $customerId = max(0, (int) ($input['id'] ?? 0));
+        $requiredCapability = $customerId > 0
+            ? Capabilities::EDIT_CUSTOMERS
+            : Capabilities::CREATE_CUSTOMERS;
+        if (! current_user_can($requiredCapability) && ! current_user_can(Capabilities::MANAGE_REFERENCE_DATA)) {
+            throw new DomainException(
+                $customerId > 0
+                    ? 'You do not have permission to edit SafeContracts customers.'
+                    : 'You do not have permission to create SafeContracts customers.'
+            );
+        }
+
         $data = $this->normalize($input);
         if ($customerId > 0) {
             if ($this->repository->find($customerId) === null) {
