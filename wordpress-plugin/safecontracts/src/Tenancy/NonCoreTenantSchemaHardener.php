@@ -24,7 +24,7 @@ final class NonCoreTenantSchemaHardener
 
     private const AUDIT_SUFFIX = 'safecontracts_audit_log';
 
-    /** @var array<string,array{legacy:string,new:string,definition:string}> */
+    /** @var array<string, array{legacy:string,new:string,definition:string}> */
     private const SCOPED_UNIQUES = [
         'safecontracts_notification_rules' => [
             'legacy' => 'code',
@@ -41,20 +41,20 @@ final class NonCoreTenantSchemaHardener
             'new' => 'esc_tenant_token_hash',
             'definition' => 'UNIQUE KEY esc_tenant_token_hash (tenant_id, token_hash)',
         ],
-        'safecontracts_notification_deliveries' => [
-            'legacy' => 'idempotency_key',
-            'new' => 'esc_tenant_idempotency_key',
-            'definition' => 'UNIQUE KEY esc_tenant_idempotency_key (tenant_id, idempotency_key)',
-        ],
         'safecontracts_notification_schedule' => [
             'legacy' => 'rule_payment_attempt',
             'new' => 'esc_tenant_rule_payment_attempt',
             'definition' => 'UNIQUE KEY esc_tenant_rule_payment_attempt (tenant_id, rule_id, payment_id, attempt_no)',
         ],
         'safecontracts_notification_suppressions' => [
-            'legacy' => 'suppression_unique',
-            'new' => 'esc_tenant_suppression_unique',
-            'definition' => 'UNIQUE KEY esc_tenant_suppression_unique (tenant_id, user_id, scope, rule_id, payment_id)',
+            'legacy' => 'scope',
+            'new' => 'esc_tenant_suppression_scope',
+            'definition' => 'UNIQUE KEY esc_tenant_suppression_scope (tenant_id, scope_type, scope_id)',
+        ],
+        'safecontracts_import_runs' => [
+            'legacy' => 'storage_key',
+            'new' => 'esc_tenant_storage_key',
+            'definition' => 'UNIQUE KEY esc_tenant_storage_key (tenant_id, storage_key)',
         ],
     ];
 
@@ -64,29 +64,29 @@ final class NonCoreTenantSchemaHardener
             'esc_tenant_rule_active' => 'KEY esc_tenant_rule_active (tenant_id, is_active, id)',
         ],
         'safecontracts_notification_templates' => [
-            'esc_tenant_template_active' => 'KEY esc_tenant_template_active (tenant_id, is_active, channel, id)',
+            'esc_tenant_template_active' => 'KEY esc_tenant_template_active (tenant_id, is_active, code, id)',
         ],
         'safecontracts_device_tokens' => [
-            'esc_tenant_user_enabled' => 'KEY esc_tenant_user_enabled (tenant_id, user_id, enabled, id)',
-            'esc_tenant_platform_enabled' => 'KEY esc_tenant_platform_enabled (tenant_id, platform, enabled, id)',
+            'esc_tenant_user_active' => 'KEY esc_tenant_user_active (tenant_id, user_id, is_active, id)',
+            'esc_tenant_platform_active' => 'KEY esc_tenant_platform_active (tenant_id, platform, is_active, id)',
         ],
         'safecontracts_notification_deliveries' => [
             'esc_tenant_payment_created' => 'KEY esc_tenant_payment_created (tenant_id, payment_id, created_at, id)',
             'esc_tenant_user_channel_status' => 'KEY esc_tenant_user_channel_status (tenant_id, user_id, channel, status, created_at, id)',
         ],
         'safecontracts_notification_schedule' => [
-            'esc_tenant_status_due' => 'KEY esc_tenant_status_due (tenant_id, status, scheduled_for_utc, id)',
-            'esc_tenant_payment_due' => 'KEY esc_tenant_payment_due (tenant_id, payment_id, scheduled_for_utc, id)',
+            'esc_tenant_status_due' => 'KEY esc_tenant_status_due (tenant_id, status, scheduled_for, id)',
+            'esc_tenant_payment_due' => 'KEY esc_tenant_payment_due (tenant_id, payment_id, scheduled_for, id)',
         ],
         'safecontracts_notification_suppressions' => [
-            'esc_tenant_user_scope_active' => 'KEY esc_tenant_user_scope_active (tenant_id, user_id, scope, is_active, id)',
+            'esc_tenant_scope_active' => 'KEY esc_tenant_scope_active (tenant_id, scope_type, scope_id, is_active, id)',
         ],
         'safecontracts_import_runs' => [
             'esc_tenant_run_created' => 'KEY esc_tenant_run_created (tenant_id, created_at, id)',
             'esc_tenant_run_status' => 'KEY esc_tenant_run_status (tenant_id, status, created_at, id)',
         ],
         'safecontracts_import_errors' => [
-            'esc_tenant_run_row' => 'KEY esc_tenant_run_row (tenant_id, run_id, row_number, id)',
+            'esc_tenant_run_row' => 'KEY esc_tenant_run_row (tenant_id, import_run_id, row_number, id)',
         ],
         'safecontracts_audit_log' => [
             'esc_tenant_audit_created' => 'KEY esc_tenant_audit_created (tenant_id, created_at, id)',
@@ -110,9 +110,9 @@ final class NonCoreTenantSchemaHardener
             'rule_codes' => $this->duplicateCount($wpdb, 'safecontracts_notification_rules', 'tenant_id, code', "code <> ''"),
             'template_codes' => $this->duplicateCount($wpdb, 'safecontracts_notification_templates', 'tenant_id, code', "code <> ''"),
             'device_tokens' => $this->duplicateCount($wpdb, 'safecontracts_device_tokens', 'tenant_id, token_hash', "token_hash <> ''"),
-            'delivery_idempotency' => $this->duplicateCount($wpdb, 'safecontracts_notification_deliveries', 'tenant_id, idempotency_key', "idempotency_key <> ''"),
             'schedule_attempts' => $this->duplicateCount($wpdb, 'safecontracts_notification_schedule', 'tenant_id, rule_id, payment_id, attempt_no'),
-            'suppressions' => $this->duplicateCount($wpdb, 'safecontracts_notification_suppressions', 'tenant_id, user_id, scope, rule_id, payment_id'),
+            'suppression_scopes' => $this->duplicateCount($wpdb, 'safecontracts_notification_suppressions', 'tenant_id, scope_type, scope_id'),
+            'import_storage_keys' => $this->duplicateCount($wpdb, 'safecontracts_import_runs', 'tenant_id, storage_key', "storage_key <> ''"),
         ];
 
         return [
