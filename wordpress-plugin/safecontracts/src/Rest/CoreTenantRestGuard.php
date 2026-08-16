@@ -46,7 +46,7 @@ final class CoreTenantRestGuard
     public static function isCoreBusinessRoute(string $route): bool
     {
         return preg_match(
-            '#^/safecontracts/v1/(?:customers(?:/|$)|contracts(?:/|$)|payments(?:/|$)|collections(?:/|$)|followups(?:/|$)|filters/contracts(?:/|$)|dashboard(?:/|$)|reports/excel(?:/|$))#',
+            '#^/safecontracts/v1/(?:customers(?:/|$)|contracts(?:/|$)|payments(?:/|$)|collections(?:/|$)|followups(?:/|$)|filters/contracts(?:/|$)|dashboard(?:/|$)|reports/excel(?:/|$)|tenant-members(?:/|$))#',
             $route
         ) === 1;
     }
