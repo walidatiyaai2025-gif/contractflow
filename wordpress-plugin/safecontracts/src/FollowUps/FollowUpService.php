@@ -94,6 +94,9 @@ final class FollowUpService
         $this->requireCapability(Capabilities::MANAGE_FOLLOWUPS, 'You do not have permission to manage follow-up.');
         $payment = $this->requirePayment($paymentId);
         $this->assertScope($payment['accountant_user_id']);
+        if ($payment['is_archived']) {
+            throw new DomainException('Archived payments cannot receive follow-up updates.');
+        }
         if ($payment['contract_is_archived']) {
             throw new DomainException('Archived contracts cannot receive follow-up updates.');
         }
@@ -108,7 +111,7 @@ final class FollowUpService
         return $id;
     }
 
-    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, accountant_user_id:?int, contract_is_archived:bool} */
+    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool} */
     private function requirePayment(int $paymentId): array
     {
         if ($paymentId <= 0) {
