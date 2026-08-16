@@ -10,6 +10,7 @@ use SafeContracts\Notifications\NotificationTemplateRepository;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Roles\RoleRegistrar;
 use SafeContracts\Support\Input;
+use SafeContracts\Translations\RuntimeLabels;
 use Throwable;
 
 final class NotificationSettingsPage
@@ -89,7 +90,7 @@ final class NotificationSettingsPage
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <h2><?php echo esc_html__('Rules', 'safecontracts'); ?></h2>
                     <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Trigger', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th></tr></thead><tbody>
-                    <?php foreach ($rules as $rule) : ?><tr><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'rule' => $rule['code']], admin_url('admin.php'))); ?>"><code><?php echo esc_html((string) $rule['code']); ?></code></a><br><?php echo esc_html((string) $rule['name']); ?></td><td><?php echo esc_html((string) $rule['trigger_type']); ?></td><td><?php echo esc_html((string) $rule['template_code']); ?></td><td><?php echo ! empty($rule['is_active']) ? esc_html__('Active', 'safecontracts') : esc_html__('Disabled', 'safecontracts'); ?></td></tr><?php endforeach; ?>
+                    <?php foreach ($rules as $rule) : ?><tr><td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'rule' => $rule['code']], admin_url('admin.php'))); ?>"><code><?php echo esc_html((string) $rule['code']); ?></code></a><br><?php echo esc_html((string) $rule['name']); ?></td><td><?php echo esc_html(self::triggerLabel((string) $rule['trigger_type'])); ?></td><td><?php echo esc_html((string) $rule['template_code']); ?></td><td><?php echo ! empty($rule['is_active']) ? esc_html__('Active', 'safecontracts') : esc_html__('Disabled', 'safecontracts'); ?></td></tr><?php endforeach; ?>
                     </tbody></table>
                 </section>
                 <section class="safecontracts-admin-card safecontracts-settings-card">
@@ -99,7 +100,7 @@ final class NotificationSettingsPage
                         <input type="hidden" name="original_code" value="<?php echo esc_attr((string) ($selected['code'] ?? '')); ?>">
                         <?php if ($selected) : ?><p><strong><?php echo esc_html__('Stable code', 'safecontracts'); ?>:</strong> <code><?php echo esc_html((string) $selected['code']); ?></code></p><?php else : ?><p><label><?php echo esc_html__('Code', 'safecontracts'); ?><input class="widefat" name="code" maxlength="100" required></label></p><?php endif; ?>
                         <p><label><?php echo esc_html__('Name', 'safecontracts'); ?><input class="widefat" name="name" maxlength="191" required value="<?php echo esc_attr((string) ($selected['name'] ?? '')); ?>"></label></p>
-                        <p><label><?php echo esc_html__('Trigger', 'safecontracts'); ?><select class="widefat" name="trigger_type"><?php foreach (NotificationRule::allowedTriggers() as $trigger) : ?><option value="<?php echo esc_attr($trigger); ?>" <?php selected((string) ($selected['trigger_type'] ?? NotificationRule::TRIGGER_BEFORE_DUE), $trigger); ?>><?php echo esc_html($trigger); ?></option><?php endforeach; ?></select></label></p>
+                        <p><label><?php echo esc_html__('Trigger', 'safecontracts'); ?><select class="widefat" name="trigger_type"><?php foreach (NotificationRule::allowedTriggers() as $trigger) : ?><option value="<?php echo esc_attr($trigger); ?>" <?php selected((string) ($selected['trigger_type'] ?? NotificationRule::TRIGGER_BEFORE_DUE), $trigger); ?>><?php echo esc_html(self::triggerLabel($trigger)); ?></option><?php endforeach; ?></select></label></p>
                         <div class="safecontracts-field-row"><label><?php echo esc_html__('Days before', 'safecontracts'); ?><input type="number" min="0" max="365" name="days_before" value="<?php echo esc_attr((string) ($selected['days_before'] ?? 10)); ?>"></label><label><?php echo esc_html__('Days after', 'safecontracts'); ?><input type="number" min="0" max="365" name="days_after" value="<?php echo esc_attr((string) ($selected['days_after'] ?? 0)); ?>"></label></div>
                         <div class="safecontracts-field-row"><label><?php echo esc_html__('Repeat interval days', 'safecontracts'); ?><input type="number" min="0" max="365" name="repeat_interval_days" value="<?php echo esc_attr((string) ($selected['repeat_interval_days'] ?? 0)); ?>"></label><label><?php echo esc_html__('Max repeats', 'safecontracts'); ?><input type="number" min="0" max="50" name="max_repeats" value="<?php echo esc_attr((string) ($selected['max_repeats'] ?? 0)); ?>"></label></div>
                         <fieldset><legend><?php echo esc_html__('Recipients', 'safecontracts'); ?></legend><?php foreach ($roles as $slug => $label) : ?><label class="safecontracts-check-row"><input type="checkbox" name="recipient_roles[]" value="<?php echo esc_attr($slug); ?>" <?php checked(in_array($slug, $selectedRecipients, true)); ?>><?php echo esc_html($label); ?></label><?php endforeach; ?><label class="safecontracts-check-row"><input type="checkbox" name="target_assigned_accountant" value="1" <?php checked(! empty($selected['target_assigned_accountant'])); ?>><?php echo esc_html__('Assigned Accountant', 'safecontracts'); ?></label></fieldset>
@@ -126,5 +127,17 @@ final class NotificationSettingsPage
             static fn (mixed $role): string => sanitize_key(Input::string($role, 'Notification recipient role')),
             $value
         );
+    }
+
+    private static function triggerLabel(string $trigger): string
+    {
+        $normalized = strtolower(trim($trigger));
+        $source = match ($normalized) {
+            'before_due', 'due_before' => 'Before due',
+            'due_today', 'on_due' => 'Due today',
+            'overdue', 'after_due' => 'Overdue',
+            default => ucwords(str_replace('_', ' ', $normalized)),
+        };
+        return RuntimeLabels::text($source);
     }
 }
