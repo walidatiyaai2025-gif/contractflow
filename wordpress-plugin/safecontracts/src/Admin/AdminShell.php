@@ -88,10 +88,10 @@ final class AdminShell
         ?>
         <div class="wrap safecontracts-admin-shell" dir="auto">
             <header class="safecontracts-admin-shell__hero">
-                <img class="safecontracts-admin-shell__brand-image" src="<?php echo esc_attr(Brand::iconDataUri()); ?>" alt="" aria-hidden="true">
+                <img class="safecontracts-admin-shell__brand-image" src="<?php echo Brand::iconDataUri(); // Trusted embedded brand constant. ?>" alt="" aria-hidden="true">
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Contract Operations', 'safecontracts'); ?></p>
-                    <h1><?php echo esc_html(Brand::NAME); ?></h1>
+                    <h1><?php echo Brand::NAME; // Trusted constant. ?></h1>
                     <p><?php echo esc_html__('Secure contract, receivable, collection, follow-up and notification operations from one workspace.', 'safecontracts'); ?></p>
                 </div>
             </header>
