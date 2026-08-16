@@ -170,12 +170,12 @@ foreach ([
     esc_recipient_assert(str_contains($schedulerSource, $marker), 'tenant-owned scheduler option is tenant-qualified: ' . $marker);
 }
 $storageSource = esc_recipient_source('wordpress-plugin/safecontracts/src/Import/PrivateImportStorage.php');
-esc_recipient_assert(str_contains($storageSource, "'tenant-' . $tenantId . '/' . $sha256"), 'new import storage keys include tenant identity');
+esc_recipient_assert(str_contains($storageSource, "'tenant-' . \$tenantId . '/' . \$sha256"), 'new import storage keys include tenant identity');
 esc_recipient_assert(str_contains($storageSource, 'currentTenantId !== $keyTenantId'), 'foreign tenant import storage key is rejected');
 
 $readStateSource = esc_recipient_source('wordpress-plugin/safecontracts/src/Notifications/NotificationReadStateRepository.php');
 esc_recipient_assert(str_contains($readStateSource, 'NonCoreTenantScope::tenantId()'), 'notification read state resolves the active tenant');
-esc_recipient_assert(str_contains($readStateSource, "self::META_KEY . '_tenant_' . $tenantId"), 'notification read-state user meta key includes tenant identity');
+esc_recipient_assert(str_contains($readStateSource, "self::META_KEY . '_tenant_' . \$tenantId"), 'notification read-state user meta key includes tenant identity');
 
 $firebaseSource = esc_recipient_source('wordpress-plugin/safecontracts/src/Notifications/FirebaseAccessTokenProvider.php');
 esc_recipient_assert(str_contains($firebaseSource, 'self::$cache[$projectId]'), 'Firebase access-token cache stays keyed by environment-global project identity');
