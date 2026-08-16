@@ -87,6 +87,10 @@ jobs:
         run: |
           python3 scripts/package_plugin.py build --output dist/SafeContracts-plugin-candidate.zip
           python3 scripts/package_plugin.py check dist/SafeContracts-plugin-candidate.zip
+      - name: Build deterministic theme ZIP
+        run: |
+          python3 wordpress-theme/package_theme.py build --output dist/SafeContracts-theme-candidate.zip
+          python3 wordpress-theme/package_theme.py check dist/SafeContracts-theme-candidate.zip
       - name: Verify production SafeContracts health
         run: python3 scripts/verify_production_health.py "$SC_PRODUCTION_API_BASE_URL"
       - name: Bootstrap Android release platform
@@ -138,10 +142,12 @@ jobs:
           cp "$APK" dist/SafeContracts-apk-release-candidate.apk
           sha256sum \
             dist/SafeContracts-plugin-candidate.zip \
+            dist/SafeContracts-theme-candidate.zip \
             dist/SafeContracts-apk-release-candidate.apk \
             > dist/SHA256SUMS.txt
           cat > dist/CANDIDATE-NOTICE.txt <<EOF
           These files are release-engineering candidates from the exact CI source.
+          The plugin and theme ZIPs are deterministic, validated install packages from the tested head.
           The APK targets the real production SafeContracts API at:
           $SC_PRODUCTION_API_BASE_URL
           The final APK manifest has android.permission.INTERNET and POST_NOTIFICATIONS.

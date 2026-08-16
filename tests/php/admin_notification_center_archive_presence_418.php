@@ -40,9 +40,17 @@ $assertContains('email_enabled', $rule, 'rules must support Email channel select
 $assertContains('specificUsers', $resolver, 'recipient resolution must include explicit users');
 
 $email = $read('wordpress-plugin/safecontracts/src/Notifications/EmailDeliveryService.php');
+$smtp = $read('wordpress-plugin/safecontracts/src/Notifications/DirectSmtpTransport.php');
+$smtpSettings = $read('wordpress-plugin/safecontracts/src/Notifications/SmtpSettings.php');
 $delivery = $read('wordpress-plugin/safecontracts/src/Notifications/NotificationDeliveryService.php');
 $logs = $read('wordpress-plugin/safecontracts/src/Notifications/DeliveryLogRepository.php');
-$assertContains('wp_mail(', $email, 'email notification delivery must use WordPress mail transport');
+$assertContains('DirectSmtpTransport', $email, 'email notification delivery must use the direct SMTP transport');
+$assertContains('stream_socket_client(', $smtp, 'direct SMTP transport must open its own SMTP connection');
+$assertContains('STARTTLS', $smtp, 'direct SMTP transport must support STARTTLS');
+$assertContains('AUTH LOGIN', $smtp, 'direct SMTP transport must support authenticated SMTP');
+$assertContains('aes-256-gcm', $smtpSettings, 'SMTP password must be encrypted at rest');
+$assertNotContains('wp_mail(', $email, 'email notification delivery must bypass WordPress wp_mail');
+$assertNotContains('wp_mail(', $smtp, 'direct SMTP transport must not depend on WordPress wp_mail');
 $assertContains("'email'", $email, 'email attempts must be channel-labelled in delivery logs');
 $assertContains('PushDeliveryService', $delivery, 'unified delivery service must retain Push');
 $assertContains('EmailDeliveryService', $delivery, 'unified delivery service must include Email');
@@ -62,6 +70,11 @@ foreach (['check_admin_referer(self::SAVE_RULE_ACTION)', 'check_admin_referer(se
     $assertContains($nonceContract, $center, 'notification center write must be nonce protected');
 }
 $assertContains('Capabilities::MANAGE_NOTIFICATIONS', $center, 'notification center must be permission gated');
+
+$smtpControl = $read('wordpress-plugin/safecontracts/src/Admin/DirectSmtpSettingsControl.php');
+foreach (['Direct SMTP connection', 'SMTP host', 'SMTP port', 'SMTP username', 'SMTP password', 'Save Direct SMTP Settings', 'check_admin_referer(self::ACTION)', 'Capabilities::MANAGE_NOTIFICATIONS'] as $smtpUiContract) {
+    $assertContains($smtpUiContract, $smtpControl, 'notification center direct SMTP control must expose ' . $smtpUiContract);
+}
 
 $roles = $read('wordpress-plugin/safecontracts/src/Admin/UsersRolesPage.php');
 $assertContains('SAVE_CAPABILITIES_ACTION', $roles, 'role capabilities must be editable');
