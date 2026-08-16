@@ -1,0 +1,256 @@
+:root {
+  --sc-admin-navy-950:#031d3c;
+  --sc-admin-navy-900:#062d5b;
+  --sc-admin-navy-800:#0a3b72;
+  --sc-admin-blue:#1477e8;
+  --sc-admin-teal:#11bdb5;
+  --sc-admin-soft:#f5f9fd;
+  --sc-admin-line:#dbe7f2;
+  --sc-admin-text:#10233f;
+  --sc-admin-muted:#607086;
+  --sc-admin-radius:14px;
+  --sc-admin-shadow:0 10px 26px rgba(6,45,91,.08);
+}
+
+body.safecontracts-admin-ui {
+  background:var(--sc-admin-soft);
+  color:var(--sc-admin-text);
+}
+
+.safecontracts-admin-ui #wpadminbar {
+  background:linear-gradient(90deg,var(--sc-admin-navy-950),var(--sc-admin-navy-900));
+  box-shadow:0 1px 0 rgba(255,255,255,.06);
+}
+
+.safecontracts-admin-ui #wpadminbar .ab-item,
+.safecontracts-admin-ui #wpadminbar a.ab-item,
+.safecontracts-admin-ui #wpadminbar > #wp-toolbar span.ab-label,
+.safecontracts-admin-ui #wpadminbar > #wp-toolbar span.noticon {
+  color:#d9e8f7;
+}
+
+.safecontracts-admin-ui #wpadminbar .ab-top-menu>li.hover>.ab-item,
+.safecontracts-admin-ui #wpadminbar.nojq .quicklinks .ab-top-menu>li>.ab-item:focus,
+.safecontracts-admin-ui #wpadminbar .ab-top-menu>li>.ab-item:focus,
+.safecontracts-admin-ui #wpadminbar .ab-top-menu>li>.ab-item:hover {
+  color:#fff;
+  background:#0a3b72;
+}
+
+.safecontracts-adminbar-brand .ab-item {
+  display:flex!important;
+  align-items:center;
+  gap:7px;
+  font-weight:700!important;
+}
+
+.sc-adminbar-brand-mark {
+  width:22px;
+  height:22px;
+  display:inline-block;
+  background:url('../images/logo-mark.svg') center/contain no-repeat;
+}
+
+.sc-adminbar-brand-text {color:#fff}
+
+.safecontracts-admin-ui #adminmenuwrap,
+.safecontracts-admin-ui #adminmenuback,
+.safecontracts-admin-ui #adminmenu {
+  background:var(--sc-admin-navy-950);
+}
+
+.safecontracts-admin-ui #adminmenu a {color:#c8d8ea}
+.safecontracts-admin-ui #adminmenu div.wp-menu-image:before {color:#8fb0cf}
+.safecontracts-admin-ui #adminmenu li.menu-top:hover,
+.safecontracts-admin-ui #adminmenu li.opensub>a.menu-top,
+.safecontracts-admin-ui #adminmenu li>a.menu-top:focus {
+  color:#fff;
+  background:#0a3b72;
+}
+.safecontracts-admin-ui #adminmenu li.wp-has-current-submenu a.wp-has-current-submenu,
+.safecontracts-admin-ui #adminmenu li.current a.menu-top {
+  color:#fff;
+  background:linear-gradient(90deg,#0b5cc7,#0a4e92);
+}
+.safecontracts-admin-ui #adminmenu .wp-submenu {background:#05284e}
+.safecontracts-admin-ui #adminmenu .wp-submenu a {color:#b8cce1}
+.safecontracts-admin-ui #adminmenu .wp-submenu a:focus,
+.safecontracts-admin-ui #adminmenu .wp-submenu a:hover,
+.safecontracts-admin-ui #adminmenu .wp-submenu li.current a {color:#fff}
+.safecontracts-admin-ui #collapse-menu {color:#9db5cd}
+
+.safecontracts-admin-ui #wpcontent,
+.safecontracts-admin-ui #wpfooter {background:var(--sc-admin-soft)}
+
+.safecontracts-admin-ui .wrap h1,
+.safecontracts-admin-ui .wrap .wp-heading-inline,
+.safecontracts-admin-ui h1.wp-heading-inline {
+  color:var(--sc-admin-navy-950);
+  font-weight:700;
+  letter-spacing:-.02em;
+}
+
+.safecontracts-admin-ui .page-title-action,
+.safecontracts-admin-ui .wp-core-ui .button,
+.safecontracts-admin-ui .button {
+  border-radius:9px;
+  border-color:#bfd1e3;
+  color:var(--sc-admin-navy-900);
+  background:#fff;
+  box-shadow:none;
+}
+
+.safecontracts-admin-ui .page-title-action:hover,
+.safecontracts-admin-ui .wp-core-ui .button:hover,
+.safecontracts-admin-ui .button:hover {
+  border-color:#8eb5db;
+  color:var(--sc-admin-blue);
+  background:#f8fbff;
+}
+
+.safecontracts-admin-ui .wp-core-ui .button-primary,
+.safecontracts-admin-ui .button.button-primary,
+.safecontracts-admin-ui input[type=submit].button-primary {
+  border-color:transparent;
+  color:#fff;
+  background:linear-gradient(135deg,#1477e8,#062d5b);
+  box-shadow:0 7px 16px rgba(20,119,232,.18);
+}
+
+.safecontracts-admin-ui .wp-core-ui .button-primary:hover,
+.safecontracts-admin-ui .button.button-primary:hover,
+.safecontracts-admin-ui input[type=submit].button-primary:hover {
+  color:#fff;
+  border-color:transparent;
+  background:linear-gradient(135deg,#0b68d4,#05284e);
+}
+
+.safecontracts-admin-ui input[type=text],
+.safecontracts-admin-ui input[type=password],
+.safecontracts-admin-ui input[type=email],
+.safecontracts-admin-ui input[type=url],
+.safecontracts-admin-ui input[type=number],
+.safecontracts-admin-ui input[type=search],
+.safecontracts-admin-ui select,
+.safecontracts-admin-ui textarea {
+  border-color:#c9d8e7;
+  border-radius:9px;
+  background:#fff;
+  color:var(--sc-admin-text);
+  box-shadow:none;
+}
+
+.safecontracts-admin-ui input:focus,
+.safecontracts-admin-ui select:focus,
+.safecontracts-admin-ui textarea:focus {
+  border-color:var(--sc-admin-blue);
+  box-shadow:0 0 0 1px var(--sc-admin-blue);
+}
+
+.safecontracts-admin-ui .postbox,
+.safecontracts-admin-ui .stuffbox,
+.safecontracts-admin-ui .card,
+.safecontracts-admin-ui .notice,
+.safecontracts-admin-ui .widefat,
+.safecontracts-admin-ui .wp-list-table,
+.safecontracts-admin-ui .health-check-accordion,
+.safecontracts-admin-ui .plugin-card {
+  border-color:var(--sc-admin-line);
+  border-radius:var(--sc-admin-radius);
+  box-shadow:var(--sc-admin-shadow);
+  overflow:hidden;
+  background:#fff;
+}
+
+.safecontracts-admin-ui .postbox .hndle,
+.safecontracts-admin-ui .postbox-header,
+.safecontracts-admin-ui .stuffbox .hndle {
+  color:var(--sc-admin-navy-900);
+  font-weight:700;
+}
+
+.safecontracts-admin-ui .widefat thead td,
+.safecontracts-admin-ui .widefat thead th,
+.safecontracts-admin-ui .widefat tfoot td,
+.safecontracts-admin-ui .widefat tfoot th {
+  color:var(--sc-admin-navy-900);
+  background:#f3f8fd;
+  border-bottom-color:var(--sc-admin-line);
+}
+
+.safecontracts-admin-ui .widefat td,
+.safecontracts-admin-ui .widefat th {border-bottom-color:#edf2f7}
+.safecontracts-admin-ui .striped>tbody>:nth-child(odd) {background:#fbfdff}
+
+.safecontracts-admin-ui .subsubsub a,
+.safecontracts-admin-ui .nav-tab {color:#48617d}
+.safecontracts-admin-ui .subsubsub a.current {color:var(--sc-admin-blue);font-weight:700}
+.safecontracts-admin-ui .nav-tab-wrapper {border-bottom-color:#cbd9e7}
+.safecontracts-admin-ui .nav-tab {
+  border-radius:10px 10px 0 0;
+  border-color:#d8e4ef;
+  background:#eef5fb;
+}
+.safecontracts-admin-ui .nav-tab-active,
+.safecontracts-admin-ui .nav-tab-active:focus,
+.safecontracts-admin-ui .nav-tab-active:hover {
+  color:var(--sc-admin-navy-900);
+  background:#fff;
+  border-bottom-color:#fff;
+}
+
+.safecontracts-admin-ui .notice {
+  border-left-width:4px;
+  box-shadow:0 5px 14px rgba(6,45,91,.05);
+}
+.safecontracts-admin-ui .notice-success {border-left-color:var(--sc-admin-teal)}
+.safecontracts-admin-ui .notice-info {border-left-color:var(--sc-admin-blue)}
+
+.safecontracts-admin-ui #dashboard-widgets .postbox-container {padding-right:10px}
+.safecontracts-admin-ui #dashboard-widgets-wrap .postbox {margin-bottom:18px}
+.safecontracts-admin-ui #safecontracts_dashboard_overview .inside {padding:0;margin:0}
+
+.sc-dashboard-welcome {
+  padding:22px;
+  background:
+    radial-gradient(circle at 90% 10%,rgba(17,189,181,.12),transparent 30%),
+    linear-gradient(135deg,#f7fbff,#fff 62%);
+}
+.sc-dashboard-welcome-head {display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.sc-dashboard-shield {
+  width:46px;height:46px;flex:0 0 auto;
+  background:url('../images/logo-mark.svg') center/contain no-repeat;
+}
+.sc-dashboard-welcome-head div {display:grid;gap:3px}
+.sc-dashboard-welcome-head strong {font-size:18px;color:var(--sc-admin-navy-900)}
+.sc-dashboard-welcome-head span {font-size:12px;color:var(--sc-admin-muted)}
+.sc-dashboard-welcome p {color:#52667d;line-height:1.7;margin:0 0 16px}
+.sc-dashboard-actions {display:flex;gap:9px;flex-wrap:wrap}
+
+.safecontracts-admin-ui #wpfooter {color:#71849a}
+.safecontracts-admin-ui #footer-left strong {color:var(--sc-admin-navy-900)}
+
+.safecontracts-admin-ui .update-nag,
+.safecontracts-admin-ui .updated,
+.safecontracts-admin-ui .error,
+.safecontracts-admin-ui .is-dismissible {border-radius:10px}
+
+.safecontracts-admin-ui .wp-pointer-content h3,
+.safecontracts-admin-ui .media-frame-menu-heading,
+.safecontracts-admin-ui .media-frame-title h1 {color:var(--sc-admin-navy-900)}
+
+@media screen and (max-width:782px) {
+  .safecontracts-admin-ui #wpadminbar {background:var(--sc-admin-navy-950)}
+  .safecontracts-admin-ui #wpbody {padding-top:0}
+  .sc-adminbar-brand-text {display:none}
+  .safecontracts-admin-ui .wrap {margin-right:12px;margin-left:12px}
+  .safecontracts-admin-ui .postbox,
+  .safecontracts-admin-ui .widefat,
+  .safecontracts-admin-ui .wp-list-table {border-radius:10px}
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .safecontracts-admin-ui *,
+  .safecontracts-admin-ui *:before,
+  .safecontracts-admin-ui *:after {transition:none!important;animation:none!important}
+}
