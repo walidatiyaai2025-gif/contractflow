@@ -52,7 +52,7 @@ final class PaymentRepository
                         c.accountant_user_id, c.is_archived AS contract_is_archived
                  FROM {$payments} p
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
-                 WHERE p.id = %d LIMIT 1",
+                 WHERE p.id = %d AND p.is_archived = 0 LIMIT 1",
                 $paymentId
             ),
             ARRAY_A
