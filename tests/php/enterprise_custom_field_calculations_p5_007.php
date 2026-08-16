@@ -323,7 +323,8 @@ esc_p5_calc_assert(str_contains($lockSql, "status = 'active'") && str_contains($
 $ruleSql = (string) ($GLOBALS['sc_test_queries'][1] ?? '');
 esc_p5_calc_assert(str_contains($ruleSql, 'INSERT INTO wp_safecontracts_custom_field_calculation_rules'), 'calculation rule persists in dedicated table');
 esc_p5_calc_assert(str_contains($ruleSql, 'id = LAST_INSERT_ID(id)'), 'calculation rule upsert returns stable existing ID');
-esc_p5_calc_assert(str_contains($ruleSql, '"kind":"add"'), 'canonical AST JSON is persisted');
+$expectedExpressionSql = addslashes(CustomFieldCalculationPolicy::normalizeExpression($expression)['expression_json']);
+esc_p5_calc_assert(str_contains($ruleSql, $expectedExpressionSql), 'canonical AST JSON is persisted');
 $deleteSql = (string) ($GLOBALS['sc_test_queries'][2] ?? '');
 esc_p5_calc_assert(str_contains($deleteSql, 'DELETE FROM wp_safecontracts_custom_field_calculation_dependencies'), 'replacement removes old dedicated dependencies inside transaction');
 esc_p5_calc_assert(str_contains((string) ($GLOBALS['sc_test_queries'][3] ?? ''), "d.data_type IN ('integer','decimal')"), 'source dependency insert atomically revalidates numeric type');
