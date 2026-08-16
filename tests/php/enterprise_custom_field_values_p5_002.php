@@ -133,7 +133,7 @@ esc_p5_value_assert(str_contains($schema, 'data_type_snapshot varchar(30) NOT NU
 esc_p5_value_assert(str_contains($schema, 'definition_config_hash char(64) NOT NULL'), 'value keeps definition configuration hash');
 esc_p5_value_assert(str_contains($schema, 'UNIQUE KEY tenant_contract_definition (tenant_id, contract_id, definition_id)'), 'one current value row per tenant contract definition');
 esc_p5_value_assert(str_contains($schema, 'KEY tenant_contract_set (tenant_id, contract_id, is_set, definition_id)'), 'contract value listing index is tenant-first');
-esc_p5_value_assert(Migrator::LATEST_VERSION === '1.29.0', 'P5-002 is latest schema version');
+esc_p5_value_assert(version_compare(Migrator::LATEST_VERSION, '1.29.0', '>='), 'P5-002 schema version remains reachable after later migrations');
 esc_p5_value_assert(str_contains($migratorSource, "'1.29.0' => Migration0030EnterpriseCustomFieldValues::class"), 'P5-002 migration is registered at 1.29.0');
 
 $text = esc_p5_value_definition('text')[0];
