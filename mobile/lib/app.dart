@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/api/api_client.dart';
 import 'core/api/io_api_transport.dart';
 import 'core/auth/mobile_token_store.dart';
+import 'core/branding/safe_contracts_brand.dart';
 import 'core/config/app_environment.dart';
 import 'core/localization/mobile_locale_controller.dart';
 import 'core/localization/safecontracts_localizations.dart';
@@ -201,7 +202,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
     return AnimatedBuilder(
       animation: _localeController,
       builder: (context, child) => MaterialApp(
-        title: 'SafeContracts',
+        title: SafeContractsBrand.name,
         debugShowCheckedModeBanner: false,
         locale: _localeController.locale,
         supportedLocales: SafeContractsLocalizations.supportedLocales,
@@ -320,10 +321,13 @@ final class _BootstrapView extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.shield_outlined, size: 56),
+                      const SafeContractsBrandMark(
+                        size: 72,
+                        borderRadius: 20,
+                      ),
                       const SizedBox(height: 16),
                       Text(
-                        'SafeContracts',
+                        SafeContractsBrand.name,
                         style: Theme.of(context)
                             .textTheme
                             .headlineMedium
