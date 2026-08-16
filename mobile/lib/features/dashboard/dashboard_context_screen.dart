@@ -56,7 +56,8 @@ final class DashboardContextScreen extends StatelessWidget {
     final remembered = controller.selectedCustomerName?.trim();
     if (remembered != null && remembered.isNotEmpty) return remembered;
 
-    final customers = controller.overview?.customers ?? const <CustomerOption>[];
+    final customers =
+        controller.overview?.customers ?? const <CustomerOption>[];
     for (final customer in customers) {
       if (customer.id == customerId) return customer.name;
     }
