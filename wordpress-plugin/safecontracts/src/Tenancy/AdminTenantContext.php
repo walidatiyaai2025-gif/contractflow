@@ -12,13 +12,32 @@ use Throwable;
 final class AdminTenantContext
 {
     public const SELECT_ACTION = 'safecontracts_esc_select_tenant';
+    public const SELECT_PAGE = 'safecontracts-enterprise-tenant';
     public const USER_META_KEY = 'safecontracts_esc_selected_tenant_id';
 
     public static function register(): void
     {
         add_action('admin_init', [self::class, 'resolveRequest'], 1);
+        add_action('admin_menu', [self::class, 'registerSelectorPage'], 6);
         add_action('admin_notices', [self::class, 'renderSwitcher'], 5);
         add_action('admin_post_' . self::SELECT_ACTION, [self::class, 'handleSelect']);
+    }
+
+    public static function registerSelectorPage(): void
+    {
+        if (! CoreTenantEnforcement::isEnabled()) {
+            return;
+        }
+
+        add_submenu_page(
+            AdminShell::SLUG,
+            __('Enterprise Tenant', 'safecontracts'),
+            __('Enterprise Tenant', 'safecontracts'),
+            Capabilities::ACCESS,
+            self::SELECT_PAGE,
+            [self::class, 'renderSelectorPage'],
+            6
+        );
     }
 
     public static function resolveRequest(): void
@@ -116,6 +135,35 @@ final class AdminTenantContext
         exit;
     }
 
+    public static function renderSelectorPage(): void
+    {
+        if (! TenantCapabilityFilter::globalCapabilityGranted(Capabilities::ACCESS)) {
+            wp_die(__('You do not have permission to select an Enterprise tenant.', 'safecontracts'));
+        }
+
+        $userId = get_current_user_id();
+        if ($userId <= 0) {
+            wp_die(__('Authentication is required to select an Enterprise tenant.', 'safecontracts'));
+        }
+
+        $tenants = (new TenantDirectoryRepository())->forUser($userId);
+        $selectedTenantId = self::storedTenantId($userId);
+        ?>
+        <div class="wrap safecontracts-settings" dir="auto">
+            <div class="safecontracts-section-heading">
+                <div>
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Enterprise control plane', 'safecontracts'); ?></p>
+                    <h1><?php echo esc_html__('Enterprise Tenant', 'safecontracts'); ?></h1>
+                </div>
+            </div>
+            <section class="safecontracts-admin-card">
+                <p><?php echo esc_html__('Choose the active tenant used by tenant-owned SafeContracts pages and actions. This selector remains outside tenant authorization so a stale or invalid previous tenant role cannot lock you out of switching.', 'safecontracts'); ?></p>
+                <?php self::renderSelectorForm($tenants, $selectedTenantId, AdminShell::SLUG); ?>
+            </section>
+        </div>
+        <?php
+    }
+
     public static function renderSwitcher(): void
     {
         if (
@@ -143,28 +191,7 @@ final class AdminTenantContext
         $page = self::safePageSlug((string) ($_GET['page'] ?? AdminShell::SLUG));
         ?>
         <div class="notice notice-info safecontracts-tenant-switcher">
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;">
-                <input type="hidden" name="action" value="<?php echo esc_attr(self::SELECT_ACTION); ?>">
-                <input type="hidden" name="return_page" value="<?php echo esc_attr($page); ?>">
-                <?php wp_nonce_field(self::SELECT_ACTION); ?>
-                <strong><?php echo esc_html__('Enterprise tenant', 'safecontracts'); ?></strong>
-                <label class="screen-reader-text" for="safecontracts-esc-tenant-select"><?php echo esc_html__('Select Enterprise tenant', 'safecontracts'); ?></label>
-                <select id="safecontracts-esc-tenant-select" name="tenant_id" required>
-                    <?php if ($currentTenantId === null && count($tenants) > 1) : ?>
-                        <option value=""><?php echo esc_html__('Select a tenant', 'safecontracts'); ?></option>
-                    <?php endif; ?>
-                    <?php foreach ($tenants as $tenant) : ?>
-                        <?php $tenantId = (int) ($tenant['id'] ?? 0); ?>
-                        <option value="<?php echo esc_attr((string) $tenantId); ?>" <?php selected($currentTenantId, $tenantId); ?>>
-                            <?php echo esc_html((string) ($tenant['name'] ?? $tenant['slug'] ?? ('Tenant ' . $tenantId))); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php submit_button(__('Switch tenant', 'safecontracts'), 'secondary', 'submit', false); ?>
-                <?php if ($currentTenantId === null && count($tenants) > 1) : ?>
-                    <span><?php echo esc_html__('Choose a tenant before opening tenant-owned business data.', 'safecontracts'); ?></span>
-                <?php endif; ?>
-            </form>
+            <?php self::renderSelectorForm($tenants, $currentTenantId, $page); ?>
         </div>
         <?php
     }
@@ -186,5 +213,38 @@ final class AdminTenantContext
             return $page;
         }
         return AdminShell::SLUG;
+    }
+
+    /** @param list<array<string,mixed>> $tenants */
+    private static function renderSelectorForm(array $tenants, ?int $currentTenantId, string $returnPage): void
+    {
+        if ($tenants === []) {
+            echo '<p>' . esc_html__('No active Enterprise tenant membership is available for this account.', 'safecontracts') . '</p>';
+            return;
+        }
+        ?>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;">
+            <input type="hidden" name="action" value="<?php echo esc_attr(self::SELECT_ACTION); ?>">
+            <input type="hidden" name="return_page" value="<?php echo esc_attr(self::safePageSlug($returnPage)); ?>">
+            <?php wp_nonce_field(self::SELECT_ACTION); ?>
+            <strong><?php echo esc_html__('Enterprise tenant', 'safecontracts'); ?></strong>
+            <label class="screen-reader-text" for="safecontracts-esc-tenant-select"><?php echo esc_html__('Select Enterprise tenant', 'safecontracts'); ?></label>
+            <select id="safecontracts-esc-tenant-select" name="tenant_id" required>
+                <?php if ($currentTenantId === null && count($tenants) > 1) : ?>
+                    <option value=""><?php echo esc_html__('Select a tenant', 'safecontracts'); ?></option>
+                <?php endif; ?>
+                <?php foreach ($tenants as $tenant) : ?>
+                    <?php $tenantId = (int) ($tenant['id'] ?? 0); ?>
+                    <option value="<?php echo esc_attr((string) $tenantId); ?>" <?php selected($currentTenantId, $tenantId); ?>>
+                        <?php echo esc_html((string) ($tenant['name'] ?? $tenant['slug'] ?? ('Tenant ' . $tenantId))); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <?php submit_button(__('Switch tenant', 'safecontracts'), 'secondary', 'submit', false); ?>
+            <?php if ($currentTenantId === null && count($tenants) > 1) : ?>
+                <span><?php echo esc_html__('Choose a tenant before opening tenant-owned business data.', 'safecontracts'); ?></span>
+            <?php endif; ?>
+        </form>
+        <?php
     }
 }
