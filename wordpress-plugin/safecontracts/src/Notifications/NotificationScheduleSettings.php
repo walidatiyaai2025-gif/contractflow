@@ -7,6 +7,7 @@ namespace SafeContracts\Notifications;
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
+use SafeContracts\Tenancy\NonCoreTenantScope;
 
 final class NotificationScheduleSettings
 {
@@ -15,7 +16,11 @@ final class NotificationScheduleSettings
 
     public function dispatchTime(): string
     {
-        $value = trim((string) get_option(self::DISPATCH_TIME_OPTION, self::DEFAULT_DISPATCH_TIME));
+        $tenantId = NonCoreTenantScope::tenantId();
+        $option = $tenantId === null
+            ? self::DISPATCH_TIME_OPTION
+            : self::DISPATCH_TIME_OPTION . '_tenant_' . $tenantId;
+        $value = trim((string) get_option($option, self::DEFAULT_DISPATCH_TIME));
         try {
             return $this->normalizeTime($value);
         } catch (InvalidArgumentException $error) {
@@ -27,15 +32,20 @@ final class NotificationScheduleSettings
     public function saveDispatchTime(mixed $value): string
     {
         $time = $this->normalizeTime($value);
-        update_option(self::DISPATCH_TIME_OPTION, $time, false);
+        $tenantId = NonCoreTenantScope::tenantId();
+        $option = $tenantId === null
+            ? self::DISPATCH_TIME_OPTION
+            : self::DISPATCH_TIME_OPTION . '_tenant_' . $tenantId;
+        update_option($option, $time, false);
         return $time;
     }
 
     public function scheduledUtc(string $date): string
     {
         $timezone = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
-        $local = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $date . ' ' . $this->dispatchTime(), $timezone);
-        if (! $local || $local->format('Y-m-d H:i') !== $date . ' ' . $this->dispatchTime()) {
+        $dispatchTime = $this->dispatchTime();
+        $local = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $date . ' ' . $dispatchTime, $timezone);
+        if (! $local || $local->format('Y-m-d H:i') !== $date . ' ' . $dispatchTime) {
             throw new InvalidArgumentException('Notification schedule date is invalid.');
         }
         return $local->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
