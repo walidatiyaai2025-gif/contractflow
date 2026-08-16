@@ -41,7 +41,9 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
       - name: Enforce Flutter formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+        run: |
+          dart format lib test
+          git diff --exit-code -- lib test
       - name: Analyze Flutter client
         run: flutter analyze
       - name: Test Flutter client
