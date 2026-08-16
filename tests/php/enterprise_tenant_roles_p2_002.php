@@ -56,7 +56,7 @@ esc_p2_role_membership(TenantRolePolicy::VIEWER);
 esc_p2_role_assert(AccessScope::current() === AccessScope::ASSIGNED, 'viewer narrows a global all-data grant to assigned scope');
 esc_p2_role_assert(Permission::capability(Capabilities::VIEW_REPORTS) === true, 'viewer may use globally granted reporting capability');
 esc_p2_role_assert(Permission::capability(Capabilities::EDIT_CONTRACTS) instanceof WP_Error, 'viewer cannot edit contracts even when WordPress grants edit globally');
-esc_p2_role_assert(Permission::capability(Capabilities::MANAGE_REFERENCE_DATA) === true, 'platform-global reference administration is not silently converted into tenant business authorization');
+esc_p2_role_assert(Permission::capability(Capabilities::MANAGE_REFERENCE_DATA) instanceof WP_Error, 'a shared global capability is narrowed when it is evaluated inside locked tenant context');
 
 esc_p2_role_membership(TenantRolePolicy::ACCOUNTANT);
 esc_p2_role_assert(AccessScope::current() === AccessScope::ASSIGNED, 'accountant remains assigned scope even with global VIEW_ALL');
@@ -71,6 +71,7 @@ esc_p2_role_assert(Permission::capability(Capabilities::MANAGE_NOTIFICATIONS) in
 esc_p2_role_membership(TenantRolePolicy::TENANT_ADMIN);
 esc_p2_role_assert(AccessScope::current() === AccessScope::ALL, 'tenant admin may retain globally granted all-data scope');
 esc_p2_role_assert(Permission::capability(Capabilities::MANAGE_NOTIFICATIONS) === true, 'tenant admin may use globally granted notification administration');
+esc_p2_role_assert(Permission::capability(Capabilities::MANAGE_REFERENCE_DATA) === true, 'tenant admin may use a matching shared capability inside tenant context');
 
 esc_p2_role_membership(TenantRolePolicy::MEMBER);
 esc_p2_role_assert(AccessScope::current() === AccessScope::ALL, 'legacy member role inherits existing global data scope for compatibility');
