@@ -11,11 +11,15 @@ final class DirectNotificationService
     public function __construct(
         private ?DeviceTokenRepository $tokens = null,
         private ?DeliveryLogRepository $deliveries = null,
-        private ?EmailSettings $emailSettings = null
+        private ?EmailSettings $emailSettings = null,
+        private ?SmtpSettings $smtpSettings = null,
+        private ?DirectSmtpTransport $smtpTransport = null
     ) {
         $this->tokens ??= new DeviceTokenRepository();
         $this->deliveries ??= new DeliveryLogRepository();
         $this->emailSettings ??= new EmailSettings();
+        $this->smtpSettings ??= new SmtpSettings();
+        $this->smtpTransport ??= new DirectSmtpTransport();
     }
 
     /** @return array{push_sent:int,push_failed:int,email_sent:int,email_failed:int} */
@@ -56,6 +60,7 @@ final class DirectNotificationService
             $rawAddress = is_object($user) ? (string) ($user->user_email ?? '') : '';
             $address = function_exists('sanitize_email') ? sanitize_email($rawAddress) : trim($rawAddress);
             $settings = $this->emailSettings->get();
+            $smtp = $this->smtpSettings->get();
             $success = false;
             $error = null;
             if (! $settings['enabled']) {
@@ -63,14 +68,16 @@ final class DirectNotificationService
             } elseif (! EmailSettings::validEmail($address)) {
                 $error = 'recipient_email_unavailable';
             } else {
-                $headers = ['Content-Type: text/plain; charset=UTF-8'];
-                if (EmailSettings::validEmail($settings['from_address'])) {
-                    $headers[] = 'From: ' . $settings['from_name'] . ' <' . $settings['from_address'] . '>';
-                }
-                $success = function_exists('wp_mail') && (bool) wp_mail($address, $title, $body, $headers);
-                if (! $success) {
-                    $error = 'wp_mail_failed';
-                }
+                $delivery = $this->smtpTransport->send(
+                    $address,
+                    $title,
+                    $body,
+                    $smtp,
+                    (string) $settings['from_name'],
+                    (string) $settings['from_address']
+                );
+                $success = ! empty($delivery['success']);
+                $error = isset($delivery['error_code']) && is_string($delivery['error_code']) ? $delivery['error_code'] : null;
             }
             $success ? $result['email_sent']++ : $result['email_failed']++;
             $this->deliveries->append(null, 0, $userId, null, 'manual_message', $today, 0, $success ? 'sent' : 'failed', null, $error, 'email');
