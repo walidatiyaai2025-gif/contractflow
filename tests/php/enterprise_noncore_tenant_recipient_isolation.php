@@ -5,7 +5,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
-use DomainException;
 use SafeContracts\Notifications\DeviceTokenService;
 use SafeContracts\Notifications\DirectNotificationService;
 use SafeContracts\Notifications\RecipientResolver;
@@ -75,7 +74,7 @@ $GLOBALS['sc_test_result_queue'] = [[]];
 $directBlocked = false;
 try {
     (new DirectNotificationService())->send(999, 'Tenant notice', 'Should not leave tenant 17.', false, true);
-} catch (DomainException $error) {
+} catch (\DomainException $error) {
     $directBlocked = str_contains($error->getMessage(), 'not an active member');
 }
 esc_recipient_assert($directBlocked, 'direct notification rejects foreign/stale recipient before delivery transport');
@@ -87,7 +86,7 @@ $GLOBALS['sc_test_result_queue'] = [[]];
 $deviceBlocked = false;
 try {
     (new DeviceTokenService())->register(str_repeat('t', 32), 'android');
-} catch (DomainException $error) {
+} catch (\DomainException $error) {
     $deviceBlocked = str_contains($error->getMessage(), 'active membership');
 }
 esc_recipient_assert($deviceBlocked, 'stale member cannot register a device token in the tenant');
@@ -104,8 +103,27 @@ foreach ([
     esc_recipient_assert(str_contains($deliverySource, $marker), 'delivery membership defense marker is present: ' . $marker);
 }
 
-// Tenant-owned operational keys/storage are namespaced. Firebase OAuth token cache
-// is intentionally environment-global and keyed by Firebase project identity.
+// Push and email revalidate membership at the final transport boundary. A stale
+// schedule/plan cannot rely on membership state captured earlier in the pipeline.
+$pushSource = esc_recipient_source('wordpress-plugin/safecontracts/src/Notifications/PushDeliveryService.php');
+foreach ([
+    'NonCoreTenantScope::tenantId()',
+    'filterActiveUserIds($tenantId, $recipientIds)',
+    '$this->tokens->activeForUsers($recipientIds)',
+] as $marker) {
+    esc_recipient_assert(str_contains($pushSource, $marker), 'push final-hop membership marker is present: ' . $marker);
+}
+$emailSource = esc_recipient_source('wordpress-plugin/safecontracts/src/Notifications/EmailDeliveryService.php');
+foreach ([
+    'NonCoreTenantScope::tenantId()',
+    'filterActiveUserIds($tenantId, $recipients)',
+    'foreach ($recipients as $userId)',
+] as $marker) {
+    esc_recipient_assert(str_contains($emailSource, $marker), 'email final-hop membership marker is present: ' . $marker);
+}
+
+// Tenant-owned operational keys/storage/read-state are namespaced. Firebase OAuth
+// token cache is intentionally environment-global and keyed by Firebase project.
 $schedulerSource = esc_recipient_source('wordpress-plugin/safecontracts/src/Notifications/NotificationScheduler.php');
 foreach ([
     'safecontracts_notification_schedule_seeded_tenant_',
@@ -116,6 +134,11 @@ foreach ([
 $storageSource = esc_recipient_source('wordpress-plugin/safecontracts/src/Import/PrivateImportStorage.php');
 esc_recipient_assert(str_contains($storageSource, "'tenant-' . $tenantId . '/' . $sha256"), 'new import storage keys include tenant identity');
 esc_recipient_assert(str_contains($storageSource, 'currentTenantId !== $keyTenantId'), 'foreign tenant import storage key is rejected');
+
+$readStateSource = esc_recipient_source('wordpress-plugin/safecontracts/src/Notifications/NotificationReadStateRepository.php');
+esc_recipient_assert(str_contains($readStateSource, 'NonCoreTenantScope::tenantId()'), 'notification read state resolves the active tenant');
+esc_recipient_assert(str_contains($readStateSource, "self::META_KEY . '_tenant_' . $tenantId"), 'notification read-state user meta key includes tenant identity');
+
 $firebaseSource = esc_recipient_source('wordpress-plugin/safecontracts/src/Notifications/FirebaseAccessTokenProvider.php');
 esc_recipient_assert(str_contains($firebaseSource, 'self::$cache[$projectId]'), 'Firebase access-token cache stays keyed by environment-global project identity');
 esc_recipient_assert(! str_contains($firebaseSource, 'NonCoreTenantScope'), 'Firebase environment credential cache is not incorrectly converted into business-tenant state');
