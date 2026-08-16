@@ -132,7 +132,7 @@ esc_p5_tfs_assert(str_contains($schema, 'required_override tinyint(1) NULL'), 'r
 esc_p5_tfs_assert(str_contains($schema, 'definition_config_hash char(64) NOT NULL'), 'configuration hash is snapshotted');
 esc_p5_tfs_assert(str_contains($schema, 'UNIQUE KEY tenant_version_definition (tenant_id, template_version_id, definition_id)'), 'definition uniqueness is tenant/version scoped');
 esc_p5_tfs_assert(str_contains($schema, 'UNIQUE KEY tenant_version_position (tenant_id, template_version_id, position_no)'), 'position uniqueness is tenant/version scoped');
-esc_p5_tfs_assert(Migrator::LATEST_VERSION === '1.30.0', 'P5-004 is current schema version');
+esc_p5_tfs_assert(version_compare(Migrator::LATEST_VERSION, '1.30.0', '>='), 'P5-004 schema version remains reachable after later migrations');
 esc_p5_tfs_assert(str_contains($migratorSource, "'1.30.0' => Migration0031EnterpriseTemplateFieldSets::class"), 'P5-004 migration is registered');
 esc_p5_tfs_assert(! str_contains($migrationSource, 'ALTER TABLE'), 'P5-004 migration is additive');
 
