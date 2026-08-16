@@ -34,11 +34,12 @@ use SafeContracts\Database\Migrations\Migration0026EnterpriseContractTypes;
 use SafeContracts\Database\Migrations\Migration0027EnterpriseContractTemplates;
 use SafeContracts\Database\Migrations\Migration0028EnterpriseContractConfigurationBindings;
 use SafeContracts\Database\Migrations\Migration0029EnterpriseCustomFieldDefinitions;
+use SafeContracts\Database\Migrations\Migration0030EnterpriseCustomFieldValues;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.28.0';
+    public const LATEST_VERSION = '1.29.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -71,6 +72,7 @@ final class Migrator
         '1.26.0' => Migration0027EnterpriseContractTemplates::class,
         '1.27.0' => Migration0028EnterpriseContractConfigurationBindings::class,
         '1.28.0' => Migration0029EnterpriseCustomFieldDefinitions::class,
+        '1.29.0' => Migration0030EnterpriseCustomFieldValues::class,
     ];
 
     public function maybeMigrate(): void
