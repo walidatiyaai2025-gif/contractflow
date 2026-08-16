@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
 import '../notifications/push_registration.dart';
+import '../records/mobile_record_editor_screen.dart';
 import '../session/session_controller.dart';
 import '../ui/mobile_layout.dart';
 import '../ui/mobile_states.dart';
@@ -50,6 +51,38 @@ final class _ProfileScreenState extends State<ProfileScreen> {
         return SafeContractsAdaptiveBody(
           child: ListView(
             children: [
+              if (_canManageRecords(widget.session)) ...[
+                Text(
+                  l10n.isArabic ? 'إدارة البيانات' : 'Data management',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.edit_note_outlined),
+                    title: Text(
+                      l10n.isArabic
+                          ? 'إضافة / تعديل العملاء والعقود والدفعات'
+                          : 'Add / edit customers, contracts and payments',
+                    ),
+                    subtitle: Text(
+                      l10n.isArabic
+                          ? 'الأزرار والعمليات المتاحة تتحدد بصلاحيات الدور من لوحة التحكم.'
+                          : 'Available actions are controlled by the role permissions configured in the dashboard.',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => MobileRecordEditorScreen(
+                          client: widget.controller.repository.client,
+                          session: widget.session,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
               Text(
                 l10n.t('Language'),
                 style: Theme.of(context).textTheme.headlineSmall,
@@ -292,6 +325,17 @@ final class _ProfileScreenState extends State<ProfileScreen> {
           .toList(growable: false),
     );
   }
+}
+
+bool _canManageRecords(SafeContractsSession session) {
+  return const <String>[
+    'safecontracts_create_customers',
+    'safecontracts_edit_customers',
+    'safecontracts_create_contracts',
+    'safecontracts_edit_contracts',
+    'safecontracts_create_payments',
+    'safecontracts_edit_payments',
+  ].any(session.can);
 }
 
 String _permissionLabel(MobilePushPermissionState permission) {
