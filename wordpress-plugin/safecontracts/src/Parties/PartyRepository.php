@@ -90,7 +90,11 @@ final class PartyRepository
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to create Enterprise party.');
         }
-        return (int) $wpdb->insert_id;
+        $partyId = (int) $wpdb->insert_id;
+        if ($partyId <= 0) {
+            throw new RuntimeException('Enterprise party insert returned no identifier.');
+        }
+        return $partyId;
     }
 
     public function update(int $partyId, array $data, int $actorId): void
