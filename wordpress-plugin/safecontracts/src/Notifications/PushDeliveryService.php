@@ -11,7 +11,7 @@ use Throwable;
 final class PushDeliveryService
 {
     public const MAX_TRANSPORT_RETRIES = 3;
-    private const ALLOWED_DATA_KEYS = ['payment_id', 'rule_code', 'attempt_no'];
+    private const ALLOWED_DATA_KEYS = ['payment_id', 'rule_code', 'attempt_no', 'icon_key'];
 
     public function __construct(
         private PushTransport $transport,
@@ -68,7 +68,8 @@ final class PushDeliveryService
                 $attemptNo,
                 $status,
                 isset($result['status_code']) ? (int) $result['status_code'] : null,
-                isset($result['error_code']) ? (string) $result['error_code'] : null
+                isset($result['error_code']) ? (string) $result['error_code'] : null,
+                'push'
             );
             do_action(
                 'safecontracts_notification_delivery_attempted',
@@ -114,6 +115,13 @@ final class PushDeliveryService
             throw new InvalidArgumentException('Notification push title/body are invalid.');
         }
         $normalized = ['title' => $title, 'body' => $body];
+        if (isset($payload['icon_key'])) {
+            $icon = sanitize_key((string) $payload['icon_key']);
+            if (! in_array($icon, NotificationTemplate::allowedIconKeys(), true)) {
+                throw new InvalidArgumentException('Notification icon metadata is invalid.');
+            }
+            $normalized['icon_key'] = $icon;
+        }
         if (isset($payload['data'])) {
             if (! is_array($payload['data']) || count($payload['data']) > count(self::ALLOWED_DATA_KEYS)) {
                 throw new InvalidArgumentException('Notification push data is invalid or exceeds the metadata limit.');
@@ -134,7 +142,7 @@ final class PushDeliveryService
                     }
                 } else {
                     if (! is_string($value) || $value === '' || strlen($value) > 100 || ! preg_match('/^[a-z0-9_.-]+$/', $value)) {
-                        throw new InvalidArgumentException('Notification rule metadata is invalid.');
+                        throw new InvalidArgumentException('Notification string metadata is invalid.');
                     }
                 }
                 $data[$key] = $value;
