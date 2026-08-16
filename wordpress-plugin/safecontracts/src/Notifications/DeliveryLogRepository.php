@@ -7,6 +7,7 @@ namespace SafeContracts\Notifications;
 use InvalidArgumentException;
 use RuntimeException;
 use SafeContracts\Tenancy\NonCoreTenantScope;
+use SafeContracts\Tenancy\TenantMembershipRepository;
 
 final class DeliveryLogRepository
 {
@@ -36,7 +37,7 @@ final class DeliveryLogRepository
         $tenantId = NonCoreTenantScope::tenantId();
 
         if ($tenantId !== null) {
-            $this->assertTenantParents($tenantId, $ruleId, $paymentId, $deviceTokenId);
+            $this->assertTenantParents($tenantId, $ruleId, $paymentId, $deviceTokenId, $userId);
             $sql = $wpdb->prepare(
                 "INSERT INTO {$table}
                     (tenant_id, rule_id, payment_id, user_id, device_token_id, channel, template_code, scheduled_for, attempt_no, status, response_code, error_code, created_at)
@@ -193,12 +194,17 @@ final class DeliveryLogRepository
         return $result;
     }
 
-    private function assertTenantParents(int $tenantId, ?int $ruleId, int $paymentId, ?int $deviceTokenId): void
+    private function assertTenantParents(int $tenantId, ?int $ruleId, int $paymentId, ?int $deviceTokenId, int $userId): void
     {
         global $wpdb;
-        $checks = [
-            [$wpdb->prefix . 'safecontracts_scheduled_payments', $paymentId, 'payment'],
-        ];
+        if (! (new TenantMembershipRepository())->isActiveMember($tenantId, $userId)) {
+            throw new RuntimeException('Notification recipient is not an active member of the current Enterprise tenant.');
+        }
+
+        $checks = [];
+        if ($paymentId > 0) {
+            $checks[] = [$wpdb->prefix . 'safecontracts_scheduled_payments', $paymentId, 'payment'];
+        }
         if ($ruleId !== null && $ruleId > 0) {
             $checks[] = [$wpdb->prefix . 'safecontracts_notification_rules', $ruleId, 'rule'];
         }
