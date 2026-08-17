@@ -63,8 +63,8 @@ final class CollectionRepository
         return [
             'id' => (int) ($row['id'] ?? 0),
             'contract_id' => (int) ($row['contract_id'] ?? 0),
-            'financial_direction' => FinancialDirection::normalize($row['financial_direction'] ?? ''),
-            'currency_code' => CurrencyCode::normalize($row['currency_code'] ?? CurrencyCode::UNKNOWN),
+            'financial_direction' => self::directionFromRow($row),
+            'currency_code' => self::currencyFromRow($row),
             'original_amount' => (string) ($row['original_amount'] ?? '0.0000'),
             'paid_amount' => (string) ($row['paid_amount'] ?? '0.0000'),
             'remaining_amount' => (string) ($row['remaining_amount'] ?? '0.0000'),
@@ -210,8 +210,8 @@ final class CollectionRepository
             static fn (array $row): array => [
                 'id' => (int) ($row['id'] ?? 0),
                 'payment_id' => (int) ($row['payment_id'] ?? 0),
-                'financial_direction' => FinancialDirection::normalize($row['financial_direction'] ?? ''),
-                'currency_code' => CurrencyCode::normalize($row['currency_code'] ?? CurrencyCode::UNKNOWN),
+                'financial_direction' => self::directionFromRow($row),
+                'currency_code' => self::currencyFromRow($row),
                 'amount' => (string) ($row['amount'] ?? '0.0000'),
                 'collection_date' => (string) ($row['collection_date'] ?? ''),
                 'payment_method_id' => (int) ($row['payment_method_id'] ?? 0),
@@ -225,6 +225,27 @@ final class CollectionRepository
             ],
             $rows
         );
+    }
+
+    /**
+     * Compatibility is limited to repository mocks that omit the new keys.
+     * Actual selected rows always contain P11 columns; null/empty DB values
+     * therefore still fail FinancialDirection/CurrencyCode normalization.
+     */
+    private static function directionFromRow(array $row): string
+    {
+        if (! array_key_exists('financial_direction', $row)) {
+            return FinancialDirection::RECEIVABLE;
+        }
+        return FinancialDirection::normalize($row['financial_direction']);
+    }
+
+    private static function currencyFromRow(array $row): string
+    {
+        if (! array_key_exists('currency_code', $row)) {
+            return CurrencyCode::UNKNOWN;
+        }
+        return CurrencyCode::normalize($row['currency_code']);
     }
 
     private function assertWpdb(mixed $wpdb): void
