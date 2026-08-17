@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import copy
 from pathlib import Path
 import sys
 import unittest
@@ -13,6 +12,7 @@ from validate_esc_android_coexistence_evidence import (  # noqa: E402
     ESC_APPLICATION_ID,
     SAFE_APPLICATION_ID,
     EvidenceError,
+    canonical_record_sha256,
     validate_record,
 )
 
@@ -76,6 +76,14 @@ class AndroidCoexistenceEvidenceTests(unittest.TestCase):
         }
         self.assertEqual(validate_record(record, SOURCE_SHA, expected), expected)
 
+    def test_record_digest_is_canonical(self) -> None:
+        record = valid_record()
+        reordered = dict(reversed(list(record.items())))
+        self.assertEqual(
+            canonical_record_sha256(record),
+            canonical_record_sha256(reordered),
+        )
+
     def test_fail_decision_is_rejected(self) -> None:
         record = valid_record()
         record["decision"] = "FAIL"
@@ -123,6 +131,29 @@ class AndroidCoexistenceEvidenceTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(EvidenceError, "does not match the publish input"):
             validate_record(record, SOURCE_SHA, expected)
+
+    def test_release_policy_cannot_drop_machine_readable_gate(self) -> None:
+        workflow = (ROOT / ".github/workflows/publish-mobile-latest.yml").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            "coexistence_record_base64",
+            "validate_esc_android_coexistence_evidence.py",
+            "--source-sha \"$GITHUB_SHA\"",
+            "--uat-record \"$ESC_UAT_RECORD\"",
+        ):
+            self.assertIn(marker, workflow)
+
+        policy = (ROOT / "scripts/enterprise_verified_artifacts.py").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            "coexistence_uat_record_sha256",
+            "coexistence_uat_record",
+            "validate_record",
+            'apk.add_argument("--uat-record", required=True)',
+        ):
+            self.assertIn(marker, policy)
 
 
 if __name__ == "__main__":
