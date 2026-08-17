@@ -81,10 +81,17 @@ sc_payment_assert(str_contains($schema, 'remaining_amount decimal(20,4) NOT NULL
 sc_payment_assert(str_contains($schema, 'UNIQUE KEY contract_sequence (contract_id, sequence_no)'), 'SC-P3-001 duplicate sequence within a contract is prevented');
 sc_payment_assert(str_contains($schema, 'KEY contract_status_due (contract_id, status, due_date)'), 'SC-P3-001 contract/status/due reporting is indexed');
 
-sc_payment_assert(PaymentStatus::all() === ['upcoming', 'due_soon', 'due', 'overdue', 'partially_paid', 'paid'], 'SC-P3-002 controlled lifecycle matches approved baseline');
+sc_payment_assert(
+    PaymentStatus::all() === [
+        'upcoming', 'due_soon', 'due', 'overdue',
+        'partially_paid', 'paid', 'partially_received', 'received',
+    ],
+    'SC-P3-002 controlled lifecycle preserves the approved timing/AP states and explicitly adds AR settlement states'
+);
 sc_payment_assert(PaymentStatus::normalize(' DUE_SOON ') === 'due_soon', 'SC-P3-002 lifecycle input is normalized');
 sc_payment_expect(InvalidArgumentException::class, fn () => PaymentStatus::normalize('cancelled'), 'SC-P3-002 unsupported lifecycle state is rejected');
 sc_payment_expect(DomainException::class, fn () => PaymentStatus::assertTransition('paid', 'overdue'), 'SC-P3-002 paid state is terminal without explicit reversal');
+sc_payment_expect(DomainException::class, fn () => PaymentStatus::assertTransition('received', 'overdue'), 'SC-P11 received state is terminal without explicit reversal');
 PaymentStatus::assertTransition('overdue', 'upcoming');
 sc_payment_assert(true, 'SC-P3-002 temporal lifecycle can move after due-date recalculation');
 
