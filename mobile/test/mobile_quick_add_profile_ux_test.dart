@@ -1,6 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:safecontracts_mobile/core/api/api_client.dart';
+import 'package:safecontracts_mobile/core/api/api_transport.dart';
+import 'package:safecontracts_mobile/core/config/app_environment.dart';
 import 'package:safecontracts_mobile/features/records/mobile_quick_add_screen.dart';
 import 'package:safecontracts_mobile/features/session/session_controller.dart';
 
@@ -80,20 +85,39 @@ void main() {
     expect(source, contains('AnimatedScale'));
   });
 
-  test('quick add reaches bounded reference pages beyond the first 100', () {
-    final source = File('lib/features/records/mobile_quick_add_screen.dart')
-        .readAsStringSync();
+  testWidgets('contract quick add can reach an authorized customer on page 2',
+      (tester) async {
+    final transport = _PagedReferenceTransport();
+    final client = SafeContractsApiClient(
+      environment: AppEnvironment.fromValues(
+        name: 'local',
+        apiBaseUrl: 'http://example.test/wp-json/safecontracts/v1/',
+      ),
+      transport: transport,
+    );
 
-    expect(source, contains('static const _pageSize = 100'));
-    expect(source, contains('static const _maxPage = 5'));
-    expect(source, contains('result.hasMore'));
-    expect(source, contains('_loadCustomerPage(_customerPage!.page + 1)'));
-    expect(source, contains('_loadContractPage(_contractPage!.page + 1)'));
-    expect(source, contains('_PinnedReferenceTransport'));
-    expect(
-        source,
-        contains(
-            "export 'mobile_quick_add_flow.dart' hide MobileQuickAddScreen"));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MobileQuickAddScreen(
+          client: client,
+          session: _session(<String, bool>{
+            'safecontracts_create_contracts': true,
+          }),
+          type: MobileQuickAddType.contract,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('First page customer'), findsOneWidget);
+    expect(find.text('Second page customer'), findsNothing);
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('First page customer'), findsNothing);
+    expect(find.text('Second page customer'), findsOneWidget);
+    expect(transport.customerPages, <int>[1, 2]);
   });
 }
 
@@ -103,4 +127,53 @@ SafeContractsSession _session(Map<String, bool> capabilities) {
     scope: SafeContractsDataScope.assigned,
     capabilities: Map<String, bool>.unmodifiable(capabilities),
   );
+}
+
+final class _PagedReferenceTransport implements SafeContractsTransport {
+  final List<int> customerPages = <int>[];
+
+  @override
+  Future<ApiTransportResponse> send({
+    required Uri uri,
+    required String method,
+    Map<String, String> headers = const <String, String>{},
+    String? body,
+  }) async {
+    if (method != 'GET' || !uri.path.endsWith('/customers')) {
+      throw StateError('Unexpected request: $method $uri');
+    }
+
+    final page = int.parse(uri.queryParameters['page']!);
+    customerPages.add(page);
+    final secondPage = page == 2;
+    return ApiTransportResponse(
+      statusCode: 200,
+      headers: const <String, String>{
+        'content-type': 'application/json; charset=utf-8',
+      },
+      body: jsonEncode(<String, Object?>{
+        'data': <Object?>[
+          <String, Object?>{
+            'id': secondPage ? 202 : 101,
+            'name': secondPage ? 'Second page customer' : 'First page customer',
+            'internal_code': secondPage ? 'P2' : 'P1',
+            'contact_name': null,
+            'email': null,
+            'phone': null,
+            'is_active': true,
+          },
+        ],
+        'meta': <String, Object?>{
+          'api_version': SafeContractsApiClient.apiVersion,
+          'page': page,
+          'per_page': 100,
+          'sort': 'name',
+          'order': 'asc',
+          'has_more': !secondPage,
+          'bounded_window': 500,
+          'scope': 'assigned',
+        },
+      }),
+    );
+  }
 }
