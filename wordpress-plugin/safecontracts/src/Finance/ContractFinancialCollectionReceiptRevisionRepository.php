@@ -448,6 +448,7 @@ final class ContractFinancialCollectionReceiptRevisionRepository
         global $wpdb;
         $tenantId = $this->tenantId();
         $receipts = $wpdb->prefix . 'safecontracts_contract_financial_collection_receipt_revisions';
+        $reversals = $wpdb->prefix . 'safecontracts_contract_financial_collection_reversal_revisions';
         $limit = ContractFinancialCollectionReceiptPolicy::MAX_RECEIPTS + 1;
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT " . self::RECEIPT_COLUMNS_UNALIASED . " FROM {$receipts} r
@@ -481,33 +482,200 @@ final class ContractFinancialCollectionReceiptRevisionRepository
             throw new UnexpectedValueException('Enterprise Contract collection capacity requires a positive scheduled amount.');
         }
 
-        $used = Money::of('0', $profile['currency']);
-        $seen = [];
+        $currentReceipts = [];
         foreach ($rows as $row) {
             if (! is_array($row)) {
                 throw new UnexpectedValueException('Enterprise Contract collection capacity receipt row is invalid.');
             }
             $receipt = $this->normalizeReceipt($row, $contractId);
             $receiptUuid = (string) $receipt['receipt_uuid'];
-            if (isset($seen[$receiptUuid])) {
+            if (isset($currentReceipts[$receiptUuid])) {
                 throw new UnexpectedValueException('Enterprise Contract collection capacity contains duplicate latest receipt identities.');
             }
-            $seen[$receiptUuid] = true;
             $this->assertReceiptProfile($receipt, $profile);
             $this->assertReceiptSchedule($receipt, $scheduleEntryUuid, $scheduleSequence);
+            $currentReceipts[$receiptUuid] = $receipt;
+        }
 
+        $reversalLimit = ContractFinancialCollectionReversalPolicy::MAX_REVERSALS + 1;
+        $reversalRows = $wpdb->get_results($wpdb->prepare(
+            "SELECT r.id, r.revision_uuid, r.contract_id, r.financial_currency_profile_id, r.reversal_uuid,
+                    r.revision_number, r.receipt_uuid, r.schedule_entry_uuid, r.schedule_sequence_no,
+                    r.external_reference, r.reversal_date, r.amount, r.currency_code, r.reversal_state,
+                    r.created_by, r.created_at
+             FROM {$reversals} r
+             WHERE r.tenant_id = %d AND r.contract_id = %d AND r.schedule_entry_uuid = %s
+               AND NOT EXISTS (
+                    SELECT 1 FROM {$reversals} newer
+                    WHERE newer.tenant_id = r.tenant_id
+                      AND newer.contract_id = r.contract_id
+                      AND newer.reversal_uuid = r.reversal_uuid
+                      AND (
+                           newer.revision_number > r.revision_number
+                           OR (newer.revision_number = r.revision_number AND newer.id > r.id)
+                      )
+               )
+             ORDER BY r.reversal_uuid ASC
+             LIMIT %d FOR UPDATE",
+            $tenantId,
+            $contractId,
+            $scheduleEntryUuid,
+            $reversalLimit
+        ), ARRAY_A);
+        if (! is_array($reversalRows)) {
+            throw new RuntimeException('Enterprise Contract collection capacity could not read current reversal evidence.');
+        }
+        if (count($reversalRows) > ContractFinancialCollectionReversalPolicy::MAX_REVERSALS) {
+            throw new RuntimeException('Enterprise Contract collection capacity reversal limit was exceeded.');
+        }
+
+        $zero = Money::of('0', $profile['currency']);
+        $reversedByReceipt = [];
+        $seenReversals = [];
+        foreach ($reversalRows as $row) {
+            if (! is_array($row)) {
+                throw new UnexpectedValueException('Enterprise Contract collection capacity reversal row is invalid.');
+            }
+            $reversal = $this->normalizeCapacityReversal(
+                $row,
+                $contractId,
+                $profile,
+                $scheduleEntryUuid,
+                $scheduleSequence
+            );
+            $reversalUuid = (string) $reversal['reversal_uuid'];
+            if (isset($seenReversals[$reversalUuid])) {
+                throw new UnexpectedValueException('Enterprise Contract collection capacity contains duplicate latest reversal identities.');
+            }
+            $seenReversals[$reversalUuid] = true;
+
+            $receiptUuid = (string) $reversal['receipt_uuid'];
+            if (! isset($currentReceipts[$receiptUuid])) {
+                throw new UnexpectedValueException('Enterprise Contract collection capacity reversal references an orphan or different-schedule receipt.');
+            }
+            $receipt = $currentReceipts[$receiptUuid];
+            if ((int) $receipt['financial_currency_profile_id'] !== (int) $reversal['financial_currency_profile_id']
+                || (string) $receipt['schedule_entry_uuid'] !== (string) $reversal['schedule_entry_uuid']
+                || (int) $receipt['schedule_sequence_no'] !== (int) $reversal['schedule_sequence_no']
+                || (string) $receipt['currency_code'] !== (string) $reversal['currency_code']) {
+                throw new UnexpectedValueException('Enterprise Contract collection capacity reversal linkage differs from its recorded receipt evidence.');
+            }
+
+            if ((string) $reversal['reversal_state'] !== ContractFinancialCollectionReversalPolicy::STATE_RECORDED) {
+                continue;
+            }
+            $currentReversed = $reversedByReceipt[$receiptUuid] ?? $zero;
+            $currentReversed = $currentReversed->add(Money::of((string) $reversal['amount'], $profile['currency']));
+            $grossReceipt = Money::of((string) $receipt['amount'], $profile['currency']);
+            if ($currentReversed->compare($grossReceipt) > 0) {
+                throw new UnexpectedValueException('Enterprise Contract collection reversal aggregate exceeds its recorded receipt amount.');
+            }
+            $reversedByReceipt[$receiptUuid] = $currentReversed;
+        }
+
+        $used = $zero;
+        $targetReversed = $zero;
+        $targetFound = $excludeReceiptUuid === null;
+        foreach ($currentReceipts as $receiptUuid => $receipt) {
+            $reversed = $reversedByReceipt[$receiptUuid] ?? $zero;
             if ($excludeReceiptUuid !== null && $receiptUuid === $excludeReceiptUuid) {
+                $targetFound = true;
+                if ((string) $receipt['receipt_state'] !== ContractFinancialCollectionReceiptPolicy::STATE_RECORDED) {
+                    throw new UnexpectedValueException('Enterprise Contract collection capacity revise target is no longer recorded.');
+                }
+                $targetReversed = $reversed;
                 continue;
             }
             if ((string) $receipt['receipt_state'] !== ContractFinancialCollectionReceiptPolicy::STATE_RECORDED) {
                 continue;
             }
-            $used = $used->add(Money::of((string) $receipt['amount'], $profile['currency']));
+            $grossReceipt = Money::of((string) $receipt['amount'], $profile['currency']);
+            $used = $used->add($grossReceipt->subtract($reversed));
         }
 
-        if ($used->add($proposedAmount)->compare($scheduledMoney) > 0) {
+        if (! $targetFound) {
+            throw new UnexpectedValueException('Enterprise Contract collection capacity revise target is missing from current schedule receipts.');
+        }
+
+        if ($excludeReceiptUuid === null) {
+            if ($used->add($proposedAmount)->compare($scheduledMoney) > 0) {
+                throw new RuntimeException('Enterprise Contract collection receipt would exceed the linked payment schedule amount.');
+            }
+            return;
+        }
+
+        if ($targetReversed->compare($proposedAmount) > 0) {
+            throw new RuntimeException('Enterprise Contract revised receipt amount cannot be below its recorded reversal aggregate.');
+        }
+        $effectiveProposedAmount = $proposedAmount->subtract($targetReversed);
+        if ($used->add($effectiveProposedAmount)->compare($scheduledMoney) > 0) {
             throw new RuntimeException('Enterprise Contract collection receipt would exceed the linked payment schedule amount.');
         }
+    }
+
+    /**
+     * @param array<string,mixed> $row
+     * @param array{id:int,currency:CurrencyCode} $profile
+     * @return array<string,mixed>
+     */
+    private function normalizeCapacityReversal(
+        array $row,
+        int $expectedContractId,
+        array $profile,
+        string $expectedScheduleUuid,
+        int $expectedScheduleSequence
+    ): array {
+        $id = (int) ($row['id'] ?? 0);
+        $contractId = (int) ($row['contract_id'] ?? 0);
+        $profileId = (int) ($row['financial_currency_profile_id'] ?? 0);
+        $revisionNumber = (int) ($row['revision_number'] ?? 0);
+        $createdBy = (int) ($row['created_by'] ?? 0);
+        if ($id <= 0
+            || $contractId !== $expectedContractId
+            || $profileId !== (int) $profile['id']
+            || $revisionNumber <= 0
+            || $revisionNumber > ContractFinancialCollectionReversalPolicy::MAX_REVISION
+            || $createdBy <= 0) {
+            throw new UnexpectedValueException('Enterprise Contract collection capacity reversal has invalid identity or revision metadata.');
+        }
+
+        try {
+            $revisionUuid = ContractFinancialCollectionReversalPolicy::normalizeUuid($row['revision_uuid'] ?? null, 'revision UUID');
+            $reversalUuid = ContractFinancialCollectionReversalPolicy::normalizeUuid($row['reversal_uuid'] ?? null, 'reversal UUID');
+            $receiptUuid = ContractFinancialCollectionReversalPolicy::normalizeUuid($row['receipt_uuid'] ?? null, 'receipt UUID');
+            $scheduleUuid = ContractFinancialCollectionReversalPolicy::normalizeUuid($row['schedule_entry_uuid'] ?? null, 'schedule entry UUID');
+            $sequence = ContractFinancialPaymentSchedulePolicy::normalizeSequence($row['schedule_sequence_no'] ?? null);
+            $reference = ContractFinancialCollectionReversalPolicy::normalizeReference($row['external_reference'] ?? null);
+            $date = ContractFinancialCollectionReversalPolicy::normalizeReversalDate($row['reversal_date'] ?? null);
+            $currency = $this->currencyFromStorage($row['currency_code'] ?? null);
+            $money = Money::of($row['amount'] ?? null, $currency);
+            $state = ContractFinancialCollectionReversalPolicy::normalizeState($row['reversal_state'] ?? null);
+        } catch (Throwable $error) {
+            throw new UnexpectedValueException('Enterprise Contract collection capacity reversal contains invalid persisted data.', 0, $error);
+        }
+        if ($scheduleUuid !== $expectedScheduleUuid
+            || $sequence !== $expectedScheduleSequence
+            || ! $currency->equals($profile['currency'])
+            || $money->compare(Money::of('0', $currency)) <= 0) {
+            throw new UnexpectedValueException('Enterprise Contract collection capacity reversal schedule/profile/currency/amount is invalid.');
+        }
+
+        $row['id'] = $id;
+        $row['revision_uuid'] = $revisionUuid;
+        $row['contract_id'] = $contractId;
+        $row['financial_currency_profile_id'] = $profileId;
+        $row['reversal_uuid'] = $reversalUuid;
+        $row['revision_number'] = $revisionNumber;
+        $row['receipt_uuid'] = $receiptUuid;
+        $row['schedule_entry_uuid'] = $scheduleUuid;
+        $row['schedule_sequence_no'] = $sequence;
+        $row['external_reference'] = $reference;
+        $row['reversal_date'] = $date;
+        $row['amount'] = $money->amount();
+        $row['currency_code'] = $money->currencyCode();
+        $row['reversal_state'] = $state;
+        $row['created_by'] = $createdBy;
+        return $row;
     }
 
     /** @param array<string,mixed> $receipt @param array{id:int,currency:CurrencyCode} $profile */
