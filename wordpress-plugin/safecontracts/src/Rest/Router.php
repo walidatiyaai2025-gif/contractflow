@@ -48,6 +48,7 @@ final class Router
         DevicesController::register();
         ContractMutationController::register();
         MobileMutationController::register();
+        ApprovalController::register(self::NAMESPACE);
     }
 
     public static function health(WP_REST_Request $request): WP_REST_Response
