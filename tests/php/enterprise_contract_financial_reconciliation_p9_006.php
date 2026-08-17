@@ -81,6 +81,7 @@ $root = dirname(__DIR__, 2);
 $migratorSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Database/Migrator.php');
 $repositorySource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Finance/ContractFinancialReconciliationRepository.php');
 $serviceSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Finance/ContractFinancialReconciliationService.php');
+$calculatorSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Finance/ContractFinancialReconciliationCalculator.php');
 $routerSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/Router.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
@@ -97,14 +98,16 @@ esc_p9_006_assert(str_contains($repositorySource, 'NOT EXISTS ('), 'only latest 
 esc_p9_006_assert(str_contains($repositorySource, 'ORDER BY revision_number DESC, id DESC') && str_contains($repositorySource, 'LIMIT 1'), 'latest base revision is selected deterministically');
 $financialWritePattern = '/\b(?:INSERT\s+INTO|DELETE\s+FROM|UPDATE\s+[A-Za-z0-9_`{}.]+\s+SET)\b/i';
 esc_p9_006_assert(! preg_match($financialWritePattern, $repositorySource), 'reconciliation repository contains no financial write statement');
-esc_p9_006_assert(! preg_match($financialWritePattern, $serviceSource), 'reconciliation service contains no write statement');
+esc_p9_006_assert(! preg_match($financialWritePattern, $serviceSource) && ! preg_match($financialWritePattern, $calculatorSource), 'reconciliation service/calculator contain no write statement');
 foreach (['safecontracts_contracts.base_value', 'safecontracts_contract_adjustments', 'financialTotals', 'ContractMoney', 'exchange_rate', 'currency_convert'] as $forbidden) {
-    esc_p9_006_assert(! str_contains($repositorySource, $forbidden) && ! str_contains($serviceSource, $forbidden), 'P9-006 avoids legacy/FX coupling: ' . $forbidden);
+    esc_p9_006_assert(! str_contains($repositorySource, $forbidden) && ! str_contains($serviceSource, $forbidden) && ! str_contains($calculatorSource, $forbidden), 'P9-006 avoids legacy/FX coupling: ' . $forbidden);
 }
 esc_p9_006_assert(str_contains($serviceSource, 'authorize(Capabilities::ACCESS)'), 'reconciliation requires ACCESS');
 esc_p9_006_assert(str_contains($serviceSource, 'TenantAuthorization::allowsCapability'), 'tenant role narrows the global capability grant');
 esc_p9_006_assert(str_contains($serviceSource, 'Capabilities::VIEW_ALL') && str_contains($serviceSource, 'Capabilities::VIEW_ASSIGNED'), 'locked Contract scope preserves VIEW_ALL / own VIEW_ASSIGNED');
-esc_p9_006_assert(str_contains($serviceSource, '$gross->subtract($discounts)'), 'net uses signed P9-001 Money subtraction');
+// P9-019 extracts the original P9-006 arithmetic without changing the authoritative formula.
+esc_p9_006_assert(str_contains($calculatorSource, '$gross = $base->add($additions)') && str_contains($calculatorSource, '$net = $gross->subtract($discounts)'), 'shared calculator preserves signed P9-001 Money arithmetic');
+esc_p9_006_assert(str_contains($serviceSource, 'ContractFinancialReconciliationCalculator::reconcile($lockedSnapshot)'), 'P9-006 service delegates only the arithmetic to the shared calculator');
 esc_p9_006_assert(! str_contains($routerSource, 'ContractFinancialReconciliation'), 'P9-006 exposes no REST route');
 
 $GLOBALS['sc_test_options'][CoreTenantEnforcement::OPTION] = '1';
