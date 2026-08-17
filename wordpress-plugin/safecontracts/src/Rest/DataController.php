@@ -8,6 +8,7 @@ use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Admin\AdminReadRepository;
 use SafeContracts\Collections\CollectionReadRepository;
+use SafeContracts\Counterparties\CounterpartyReadRepository;
 use SafeContracts\FollowUps\FollowUpService;
 use SafeContracts\Payments\PaymentRepository;
 use SafeContracts\Roles\Capabilities;
@@ -24,6 +25,7 @@ final class DataController
         foreach ([
             '/customers' => 'customers', '/contracts' => 'contracts', '/payments' => 'payments',
             '/collections' => 'collections', '/followups' => 'followUps', '/filters/contracts' => 'contractOptions',
+            '/finance/summary' => 'financeSummary',
         ] as $route => $callback) {
             register_rest_route(Router::NAMESPACE, $route, [
                 'methods' => WP_REST_Server::READABLE,
@@ -77,12 +79,12 @@ final class DataController
         return self::guard(function () use ($request): WP_REST_Response {
             $query = ApiListQuery::parse(
                 $request,
-                ['customer_id', 'contract_id', 'accountant_user_id', 'status'],
-                ['id', 'contract_number', 'customer_name', 'status', 'start_date', 'end_date'],
+                ['customer_id', 'counterparty_type', 'counterparty_id', 'financial_direction', 'currency_code', 'contract_id', 'accountant_user_id', 'status'],
+                ['id', 'contract_number', 'customer_name', 'counterparty_name', 'financial_direction', 'currency_code', 'status', 'start_date', 'end_date'],
                 'id',
                 'desc'
             );
-            $rows = array_map([self::class, 'contractView'], (new AdminReadRepository())->contracts($query['filters']));
+            $rows = array_map([self::class, 'contractView'], (new CounterpartyReadRepository())->contracts($query['filters']));
             return self::page($rows, $query);
         });
     }
@@ -90,7 +92,7 @@ final class DataController
     public static function contract(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response|WP_Error {
-            $rows = (new AdminReadRepository())->contracts(['contract_id' => ApiRequest::routeId($request)]);
+            $rows = (new CounterpartyReadRepository())->contracts(['contract_id' => ApiRequest::routeId($request)]);
             return $rows === [] ? ApiResponse::notFound('Contract') : ApiResponse::ok(self::contractView($rows[0]));
         });
     }
@@ -100,11 +102,11 @@ final class DataController
         return self::guard(function () use ($request): WP_REST_Response {
             $query = ApiListQuery::parse(
                 $request,
-                ['customer_id', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to'],
-                ['id', 'due_date', 'expected_payment_date', 'remaining_amount', 'status', 'contract_number'],
+                ['customer_id', 'counterparty_type', 'counterparty_id', 'financial_direction', 'currency_code', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to'],
+                ['id', 'due_date', 'expected_payment_date', 'remaining_amount', 'financial_direction', 'currency_code', 'status', 'contract_number', 'counterparty_name'],
                 'due_date'
             );
-            $rows = array_map([self::class, 'paymentListView'], (new AdminReadRepository())->payments($query['filters']));
+            $rows = array_map([self::class, 'paymentListView'], (new CounterpartyReadRepository())->payments($query['filters']));
             return self::page($rows, $query);
         });
     }
@@ -126,12 +128,12 @@ final class DataController
         return self::guard(function () use ($request): WP_REST_Response {
             $query = ApiListQuery::parse(
                 $request,
-                ['customer_id', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to'],
-                ['id', 'collection_date', 'amount', 'due_date', 'remaining_amount'],
+                ['customer_id', 'counterparty_type', 'counterparty_id', 'financial_direction', 'currency_code', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to'],
+                ['id', 'collection_date', 'amount', 'financial_direction', 'currency_code', 'due_date', 'remaining_amount', 'counterparty_name'],
                 'collection_date',
                 'desc'
             );
-            $rows = array_map([self::class, 'collectionListView'], (new AdminReadRepository())->collections($query['filters']));
+            $rows = array_map([self::class, 'collectionListView'], (new CounterpartyReadRepository())->settlements($query['filters']));
             return self::page($rows, $query);
         });
     }
@@ -145,6 +147,27 @@ final class DataController
             }
             ApiScope::assertAccountant($row['accountant_user_id']);
             return ApiResponse::ok(self::collectionView($row));
+        });
+    }
+
+    public static function financeSummary(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        return self::guard(function () use ($request): WP_REST_Response {
+            if (! current_user_can(Capabilities::VIEW_FINANCE) && ! current_user_can(Capabilities::MANAGE_FINANCE)) {
+                throw new DomainException('You do not have permission to view SafeContracts finance data.');
+            }
+            $query = ApiListQuery::parse(
+                $request,
+                ['customer_id', 'counterparty_type', 'counterparty_id', 'financial_direction', 'currency_code', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to'],
+                ['financial_direction', 'currency_code'],
+                'financial_direction'
+            );
+            $rows = (new CounterpartyReadRepository())->financialSummary($query['filters']);
+            return ApiResponse::ok($rows, [
+                'scope' => ApiScope::mode(),
+                'grouped_by' => ['financial_direction', 'currency_code'],
+                'currency_safe' => true,
+            ]);
         });
     }
 
@@ -256,11 +279,11 @@ final class DataController
     }
 
     private static function customerView(array $row): array { return self::pick($row, ['id','internal_code','name','contact_name','email','phone','is_active']); }
-    private static function contractView(array $row): array { return self::pick($row, ['id','contract_number','customer_id','customer_name','accountant_user_id','status','start_date','end_date','base_value','is_archived']); }
-    private static function paymentListView(array $row): array { return self::pick($row, ['id','contract_id','contract_number','customer_id','customer_name','accountant_user_id','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','contract_is_archived']); }
-    private static function paymentView(array $row): array { return self::pick($row, ['id','contract_id','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','accountant_user_id','contract_is_archived']); }
-    private static function collectionListView(array $row): array { return self::pick($row, ['id','payment_id','amount','collection_date','payment_method_id','payment_method_name','reference','proof_media_id','created_by','created_at','payment_reference','sequence_no','due_date','payment_status','remaining_amount','contract_id','contract_number','accountant_user_id','customer_id','customer_name']); }
-    private static function collectionView(array $row): array { return self::pick($row, ['id','payment_id','contract_id','amount','collection_date','payment_method_id','payment_method_name','reference','proof_media_id','created_by','created_at','updated_at']); }
+    private static function contractView(array $row): array { return self::pick($row, ['id','contract_number','customer_id','customer_name','supplier_id','supplier_name','counterparty_type','counterparty_id','counterparty_name','financial_direction','currency_code','accountant_user_id','status','start_date','end_date','base_value','is_archived']); }
+    private static function paymentListView(array $row): array { return self::pick($row, ['id','contract_id','contract_number','customer_id','customer_name','supplier_id','supplier_name','counterparty_type','counterparty_id','counterparty_name','accountant_user_id','financial_direction','currency_code','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','contract_is_archived']); }
+    private static function paymentView(array $row): array { return self::pick($row, ['id','contract_id','counterparty_type','counterparty_id','financial_direction','currency_code','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','accountant_user_id','contract_is_archived']); }
+    private static function collectionListView(array $row): array { return self::pick($row, ['id','payment_id','financial_direction','currency_code','amount','collection_date','payment_method_id','payment_method_name','reference','proof_media_id','created_by','created_at','payment_reference','sequence_no','due_date','payment_status','remaining_amount','contract_id','contract_number','accountant_user_id','customer_id','customer_name','supplier_id','supplier_name','counterparty_type','counterparty_id','counterparty_name']); }
+    private static function collectionView(array $row): array { return self::pick($row, ['id','payment_id','contract_id','financial_direction','currency_code','amount','collection_date','payment_method_id','payment_method_name','reference','proof_media_id','created_by','created_at','updated_at']); }
     private static function followUpQueueView(array $row): array { return self::pick($row, ['payment_id','contract_id','customer_id','accountant_user_id','contract_status','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','followup_state']); }
     private static function followUpHistoryView(array $row): array { return self::pick($row, ['id','payment_id','state','note','promised_date','deferred_until','created_by','created_at']); }
 
