@@ -84,10 +84,9 @@ $serviceSource = (string) file_get_contents($root . '/wordpress-plugin/safecontr
 $routerSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/Router.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-// P9-006 is code-only and preserves the P9-005 schema boundary.
-esc_p9_006_assert(Migrator::LATEST_VERSION === '1.49.0', 'P9-006 does not advance the Enterprise schema');
+// P9-006 is code-only and preserves the historical P9-005 schema boundary.
+esc_p9_006_assert(version_compare(Migrator::LATEST_VERSION, '1.49.0', '>='), 'current Enterprise schema is at or beyond the P9-006 1.49.0 boundary');
 esc_p9_006_assert(str_contains($migratorSource, "'1.49.0' => Migration0050EnterpriseContractFinancialAdjustmentRevisions::class"), 'Migration0050 remains the historical 1.49.0 schema mapping');
-esc_p9_006_assert(! str_contains($migratorSource, 'Migration0051'), 'P9-006 introduces no migration');
 
 // Architecture: one Contract-first read transaction, bounded latest lines, no writes or legacy coupling.
 esc_p9_006_assert(str_contains($repositorySource, "query('START TRANSACTION')"), 'reconciliation opens one transaction');

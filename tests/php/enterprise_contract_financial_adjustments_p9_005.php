@@ -77,7 +77,7 @@ $pluginSource = (string) file_get_contents($root . '/wordpress-plugin/safecontra
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
 // Schema and historical migration boundaries.
-esc_p9_005_assert(Migrator::LATEST_VERSION === '1.49.0', 'P9-005 advances Enterprise schema to 1.49.0');
+esc_p9_005_assert(version_compare(Migrator::LATEST_VERSION, '1.49.0', '>='), 'current Enterprise schema is at or beyond the P9-005 1.49.0 boundary');
 esc_p9_005_assert(str_contains($migratorSource, "'1.48.0' => Migration0049EnterpriseContractFinancialBaseValueRevisions::class"), 'Migration0049 remains historically mapped to 1.48.0');
 esc_p9_005_assert(str_contains($migratorSource, "'1.49.0' => Migration0050EnterpriseContractFinancialAdjustmentRevisions::class"), 'Migration0050 is mapped to 1.49.0');
 esc_p9_005_assert(str_contains($pluginSource, 'Version: 0.1.0'), 'schema migration does not alter plugin release version');
