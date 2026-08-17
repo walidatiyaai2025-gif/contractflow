@@ -106,18 +106,28 @@ final class PaymentRepository
         string $dueDate,
         ?string $expectedPaymentDate,
         string $amount,
-        int $actorId
+        int $actorId,
+        ?string $financialDirection = null,
+        ?string $currencyCode = null
     ): int {
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
-        $contract = $this->contractContext($contractId);
-        if ($contract === null) {
-            throw new RuntimeException('Unable to resolve payment contract context.');
-        }
-        $direction = trim((string) ($contract['financial_direction'] ?? ''));
-        $currency = strtoupper(trim((string) ($contract['currency_code'] ?? '')));
 
+        // PaymentService already resolves and authorizes the contract context. Reuse
+        // that validated context when supplied so creation remains one read + one
+        // mutation and does not introduce a redundant contract query.
+        if ($financialDirection === null || $currencyCode === null) {
+            $contract = $this->contractContext($contractId);
+            if ($contract === null) {
+                throw new RuntimeException('Unable to resolve payment contract context.');
+            }
+            $financialDirection ??= (string) ($contract['financial_direction'] ?? '');
+            $currencyCode ??= (string) ($contract['currency_code'] ?? '');
+        }
+
+        $direction = trim($financialDirection);
+        $currency = strtoupper(trim($currencyCode));
         $referenceSql = $reference === null ? 'NULL' : '%s';
         $expectedSql = $expectedPaymentDate === null ? 'NULL' : '%s';
         $directionSql = $direction === '' ? 'NULL' : '%s';
