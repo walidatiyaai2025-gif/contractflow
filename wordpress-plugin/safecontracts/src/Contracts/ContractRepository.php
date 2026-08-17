@@ -5,36 +5,74 @@ declare(strict_types=1);
 namespace SafeContracts\Contracts;
 
 use RuntimeException;
+use SafeContracts\Payments\CurrencyCode;
+use SafeContracts\Payments\FinancialDirection;
 
 final class ContractRepository
 {
     public function customerIsActive(int $customerId): bool
     {
+        return $this->counterpartyIsActive(Counterparty::CUSTOMER, $customerId);
+    }
+
+    public function counterpartyIsActive(string $type, int $counterpartyId): bool
+    {
         global $wpdb;
         $this->assertWpdb($wpdb);
-        $table = $wpdb->prefix . 'safecontracts_customers';
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT id FROM {$table} WHERE id = %d AND is_active = 1 LIMIT 1", $customerId), ARRAY_A);
+        $type = Counterparty::normalize($type);
+        $table = $type === Counterparty::SUPPLIER
+            ? $wpdb->prefix . 'safecontracts_suppliers'
+            : $wpdb->prefix . 'safecontracts_customers';
+        $archive = $type === Counterparty::SUPPLIER ? ' AND is_archived = 0' : '';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT id FROM {$table} WHERE id = %d AND is_active = 1{$archive} LIMIT 1",
+            $counterpartyId
+        ), ARRAY_A);
         return is_array($rows) && $rows !== [];
     }
 
-    /** @return array{id:int, contract_number:string, customer_id:int, accountant_user_id:?int, status:string, start_date:?string, end_date:?string, base_value:string, notes:string, is_archived:bool}|null */
+    /** @return array{id:int, contract_number:string, customer_id:?int, counterparty_type:string, counterparty_id:int, financial_direction:string, currency_code:string, accountant_user_id:?int, status:string, start_date:?string, end_date:?string, base_value:string, notes:string, is_archived:bool}|null */
     public function find(int $contractId): ?array
     {
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_contracts';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, contract_number, customer_id, accountant_user_id, status, start_date, end_date, base_value, notes, is_archived FROM {$table} WHERE id = %d LIMIT 1",
+            "SELECT id, contract_number, customer_id, counterparty_type, counterparty_id, financial_direction, currency_code,
+                    accountant_user_id, status, start_date, end_date, base_value, notes, is_archived
+             FROM {$table} WHERE id = %d LIMIT 1",
             $contractId
         ), ARRAY_A);
         if (! is_array($rows) || $rows === []) {
             return null;
         }
         $row = $rows[0];
+        $customerId = isset($row['customer_id']) && $row['customer_id'] !== null ? (int) $row['customer_id'] : null;
+        $type = trim((string) ($row['counterparty_type'] ?? ''));
+        if ($type === '') {
+            $type = $customerId !== null && $customerId > 0 ? Counterparty::CUSTOMER : '';
+        }
+        $type = Counterparty::normalize($type);
+        $counterpartyId = (int) ($row['counterparty_id'] ?? 0);
+        if ($counterpartyId <= 0 && $type === Counterparty::CUSTOMER && $customerId !== null) {
+            $counterpartyId = $customerId;
+        }
+        $direction = trim((string) ($row['financial_direction'] ?? ''));
+        if ($direction === '') {
+            $direction = Counterparty::defaultFinancialDirection($type);
+        }
+        $currency = strtoupper(trim((string) ($row['currency_code'] ?? '')));
+        if ($currency === '') {
+            $currency = CurrencyCode::UNKNOWN;
+        }
         return [
             'id' => (int) ($row['id'] ?? 0),
             'contract_number' => (string) ($row['contract_number'] ?? ''),
-            'customer_id' => (int) ($row['customer_id'] ?? 0),
+            'customer_id' => $customerId,
+            'counterparty_type' => $type,
+            'counterparty_id' => $counterpartyId,
+            'financial_direction' => FinancialDirection::normalize($direction),
+            'currency_code' => CurrencyCode::normalize($currency),
             'accountant_user_id' => isset($row['accountant_user_id']) && $row['accountant_user_id'] !== null ? (int) $row['accountant_user_id'] : null,
             'status' => (string) ($row['status'] ?? ContractStatus::DRAFT),
             'start_date' => isset($row['start_date']) && $row['start_date'] !== null ? (string) $row['start_date'] : null,
@@ -47,15 +85,56 @@ final class ContractRepository
 
     public function create(string $contractNumber, int $customerId, ?int $accountantUserId, string $notes, int $actorId): int
     {
+        return $this->createForCounterparty(
+            $contractNumber,
+            Counterparty::CUSTOMER,
+            $customerId,
+            FinancialDirection::RECEIVABLE,
+            CurrencyCode::UNKNOWN,
+            $accountantUserId,
+            $notes,
+            $actorId
+        );
+    }
+
+    public function createForCounterparty(
+        string $contractNumber,
+        string $counterpartyType,
+        int $counterpartyId,
+        string $financialDirection,
+        string $currencyCode,
+        ?int $accountantUserId,
+        string $notes,
+        int $actorId
+    ): int {
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_contracts';
-        if ($accountantUserId === null) {
-            $sql = $wpdb->prepare("INSERT INTO {$table} (contract_number, customer_id, accountant_user_id, status, notes, created_by, updated_by, created_at, updated_at) VALUES (%s, %d, NULL, %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())", $contractNumber, $customerId, ContractStatus::DRAFT, $notes, $actorId, $actorId);
-        } else {
-            $sql = $wpdb->prepare("INSERT INTO {$table} (contract_number, customer_id, accountant_user_id, status, notes, created_by, updated_by, created_at, updated_at) VALUES (%s, %d, %d, %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())", $contractNumber, $customerId, $accountantUserId, ContractStatus::DRAFT, $notes, $actorId, $actorId);
+        $counterpartyType = Counterparty::normalize($counterpartyType);
+        $financialDirection = FinancialDirection::normalize($financialDirection);
+        $currencyCode = CurrencyCode::normalize($currencyCode);
+        $customerId = $counterpartyType === Counterparty::CUSTOMER ? $counterpartyId : null;
+        $customerSql = $customerId === null ? 'NULL' : '%d';
+        $accountantSql = $accountantUserId === null ? 'NULL' : '%d';
+        $query = "INSERT INTO {$table}
+            (contract_number, customer_id, counterparty_type, counterparty_id, financial_direction, currency_code, accountant_user_id, status, notes, created_by, updated_by, created_at, updated_at)
+            VALUES (%s, {$customerSql}, %s, %d, %s, %s, {$accountantSql}, %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
+        $args = [$contractNumber];
+        if ($customerId !== null) {
+            $args[] = $customerId;
         }
-        if ($wpdb->query($sql) === false) {
+        $args[] = $counterpartyType;
+        $args[] = $counterpartyId;
+        $args[] = $financialDirection;
+        $args[] = $currencyCode;
+        if ($accountantUserId !== null) {
+            $args[] = $accountantUserId;
+        }
+        $args[] = ContractStatus::DRAFT;
+        $args[] = $notes;
+        $args[] = $actorId;
+        $args[] = $actorId;
+        if ($wpdb->query($wpdb->prepare($query, ...$args)) === false) {
             throw new RuntimeException('Unable to create contract.');
         }
         return (int) $wpdb->insert_id;
@@ -159,10 +238,28 @@ final class ContractRepository
 
     public function assignCustomer(int $contractId, int $customerId, int $actorId): void
     {
+        $this->assignCounterparty($contractId, Counterparty::CUSTOMER, $customerId, $actorId);
+    }
+
+    public function assignCounterparty(int $contractId, string $type, int $counterpartyId, int $actorId): void
+    {
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_contracts';
-        $this->executeMutation($wpdb, $wpdb->prepare("UPDATE {$table} SET customer_id = %d, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d", $customerId, $actorId, $contractId), 'Unable to assign contract customer.');
+        $type = Counterparty::normalize($type);
+        $direction = Counterparty::defaultFinancialDirection($type);
+        if ($type === Counterparty::CUSTOMER) {
+            $sql = $wpdb->prepare(
+                "UPDATE {$table} SET customer_id = %d, counterparty_type = %s, counterparty_id = %d, financial_direction = %s, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d",
+                $counterpartyId, $type, $counterpartyId, $direction, $actorId, $contractId
+            );
+        } else {
+            $sql = $wpdb->prepare(
+                "UPDATE {$table} SET customer_id = NULL, counterparty_type = %s, counterparty_id = %d, financial_direction = %s, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d",
+                $type, $counterpartyId, $direction, $actorId, $contractId
+            );
+        }
+        $this->executeMutation($wpdb, $sql, 'Unable to assign contract counterparty.');
     }
 
     public function assignAccountant(int $contractId, ?int $accountantUserId, int $actorId): void
