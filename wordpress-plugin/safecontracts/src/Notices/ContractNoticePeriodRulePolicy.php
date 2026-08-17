@@ -87,7 +87,10 @@ final class ContractNoticePeriodRulePolicy
 
     public static function normalizeActive(bool|int $active): int
     {
-        return (int) ((bool) $active);
+        if (is_int($active) && $active !== 0 && $active !== 1) {
+            throw new InvalidArgumentException('Contract notice period active flag must be boolean or integer 0/1.');
+        }
+        return $active ? 1 : 0;
     }
 
     public static function normalizeNotes(?string $notes): ?string
