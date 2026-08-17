@@ -26,14 +26,39 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
 
-      - name: Require protected exact-head ESC integration branch
+      - name: Require live schema-v2 ESC branch enforcement and exact head
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_ADMIN_READ_TOKEN: ${{ secrets.ESC_GITHUB_ADMIN_READ_TOKEN }}
         run: |
           set -euo pipefail
-          PROTECTED="$(gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" --jq '.protected')"
-          BRANCH_HEAD="$(gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" --jq '.commit.sha')"
+          if [[ -z "${GH_ADMIN_READ_TOKEN:-}" ]]; then
+            echo "FAIL: ESC_GITHUB_ADMIN_READ_TOKEN is required to verify the full #522 branch-protection contract" >&2
+            exit 1
+          fi
+
+          export GH_TOKEN="$GH_ADMIN_READ_TOKEN"
+          AUDIT_DIR="$RUNNER_TEMP/esc-branch-protection-audit"
+          mkdir -p "$AUDIT_DIR"
+
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" \
+            > "$AUDIT_DIR/branch.json"
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/${GITHUB_REPOSITORY}/rules/branches/enterprise-safecontracts" \
+            > "$AUDIT_DIR/rules.json"
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts/protection" \
+            > "$AUDIT_DIR/protection.json"
+
+          PROTECTED="$(jq -r '.protected' "$AUDIT_DIR/branch.json")"
+          BRANCH_HEAD="$(jq -r '.commit.sha' "$AUDIT_DIR/branch.json")"
           if [[ "$PROTECTED" != "true" ]]; then
             echo "FAIL: enterprise-safecontracts must be protected before production signing material may be used" >&2
             exit 1
@@ -42,6 +67,48 @@ jobs:
             echo "FAIL: enterprise-safecontracts advanced after this UAT-candidate dispatch; dispatch a new exact-head candidate" >&2
             exit 1
           fi
+
+          AUDIT_PATH="$AUDIT_DIR/esc-branch-protection-audit.json"
+          python3 scripts/audit_esc_branch_protection.py \
+            --branch-json "$AUDIT_DIR/branch.json" \
+            --rules-json "$AUDIT_DIR/rules.json" \
+            --protection-json "$AUDIT_DIR/protection.json" \
+            --break-glass-note 'No routine bypass is configured. Emergency protection changes require repository-owner approval and must be recorded in #522.' \
+            --output "$AUDIT_PATH"
+
+          python3 - "$AUDIT_PATH" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          record = json.loads(path.read_text(encoding='utf-8'))
+          if record.get('schema_version') != 2:
+              raise SystemExit('FAIL: ESC branch-protection audit must use schema version 2')
+          if record.get('decision') != 'PASS':
+              raise SystemExit('FAIL: ESC branch-protection audit did not return PASS')
+          checks = record.get('checks')
+          if not isinstance(checks, dict) or not checks or not all(value is True for value in checks.values()):
+              raise SystemExit('FAIL: ESC branch-protection audit has a missing/false control')
+          required = {
+              'administrator_enforcement_verified',
+              'conversation_resolution_required',
+              'protected_branch',
+              'pull_request_required',
+              'required_status_checks_present',
+              'strict_up_to_date_status_checks',
+              'force_push_blocked',
+              'branch_deletion_blocked',
+              'break_glass_documented',
+          }
+          missing = sorted(required - set(checks))
+          if missing:
+              raise SystemExit('FAIL: ESC branch-protection audit is missing controls: ' + ', '.join(missing))
+          PY
+
+          AUDIT_SHA256="$(sha256sum "$AUDIT_PATH" | awk '{print $1}')"
+          echo "ESC_BRANCH_PROTECTION_AUDIT_PATH=$AUDIT_PATH" >> "$GITHUB_ENV"
+          echo "ESC_BRANCH_PROTECTION_AUDIT_SHA256=$AUDIT_SHA256" >> "$GITHUB_ENV"
 
       - uses: subosito/flutter-action@v2
         with:
@@ -186,11 +253,18 @@ jobs:
           SOURCE_APK="mobile/build/app/outputs/flutter-apk/app-production-release.apk"
           OUT="$RUNNER_TEMP/esc-uat-candidate"
           APK_NAME="EnterpriseSafeContracts-UAT-CANDIDATE-${GITHUB_SHA}.apk"
+          AUDIT_NAME="ESC_BRANCH_PROTECTION_AUDIT.json"
           mkdir -p "$OUT"
           cp "$SOURCE_APK" "$OUT/$APK_NAME"
+          cp "$ESC_BRANCH_PROTECTION_AUDIT_PATH" "$OUT/$AUDIT_NAME"
           APK_SHA256="$(sha256sum "$OUT/$APK_NAME" | awk '{print $1}')"
+          ACTUAL_AUDIT_SHA256="$(sha256sum "$OUT/$AUDIT_NAME" | awk '{print $1}')"
+          if [[ "$ACTUAL_AUDIT_SHA256" != "$ESC_BRANCH_PROTECTION_AUDIT_SHA256" ]]; then
+            echo "FAIL: retained branch-protection audit digest changed after live gate validation" >&2
+            exit 1
+          fi
           printf '%s  %s\n' "$APK_SHA256" "$APK_NAME" > "$OUT/$APK_NAME.sha256"
-          export APK_NAME APK_SHA256
+          export APK_NAME APK_SHA256 AUDIT_NAME ACTUAL_AUDIT_SHA256
           python3 - <<'PY'
           import json
           import os
@@ -201,7 +275,7 @@ jobs:
           out = Path(os.environ['RUNNER_TEMP']) / 'esc-uat-candidate'
           parsed = urlparse(os.environ['API_BASE_URL'].strip())
           record = {
-              'schema_version': 1,
+              'schema_version': 2,
               'state': 'UAT_CANDIDATE_NOT_RELEASED',
               'release_eligible': False,
               'repository': os.environ['GITHUB_REPOSITORY'],
@@ -212,6 +286,10 @@ jobs:
               'apk_file': os.environ['APK_NAME'],
               'apk_sha256': os.environ['APK_SHA256'],
               'signer_certificate_sha256': os.environ['ESC_UAT_SIGNER_SHA256'],
+              'branch_protection_audit_file': os.environ['AUDIT_NAME'],
+              'branch_protection_audit_schema_version': 2,
+              'branch_protection_audit_decision': 'PASS',
+              'branch_protection_audit_sha256': os.environ['ACTUAL_AUDIT_SHA256'],
               'api_origin': f'{parsed.scheme}://{parsed.netloc}',
               'api_path': parsed.path,
               'created_at_utc': datetime.now(timezone.utc).isoformat(),
@@ -225,6 +303,7 @@ jobs:
           PY
           test -s "$OUT/$APK_NAME"
           test -s "$OUT/$APK_NAME.sha256"
+          test -s "$OUT/$AUDIT_NAME"
           test -s "$OUT/ESC_UAT_CANDIDATE.json"
 
       - name: Upload short-lived ESC UAT candidate artifact
