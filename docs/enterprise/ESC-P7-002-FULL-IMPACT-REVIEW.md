@@ -4,6 +4,8 @@
 
 ESC-P7-002 adds the first runtime Approval Engine object: a tenant-owned immutable Approval Request snapshot created from the exact published P7-001 Approval Route for the contract's current P6 Workflow Transition. The task intentionally stops before approval decisions, stage advancement, transition release, rejection handling, delegation, reminders, escalation, or final P6 state movement.
 
+This task is Enterprise Safe Contracts only and does not change Safe Contract/main.
+
 ## Database impact
 
 Migration `1.39.0` adds four dedicated tenant-owned tables:
@@ -22,6 +24,8 @@ The request snapshots exact contract, Workflow Instance, immutable Workflow/Vers
 Approval Request idempotency is deliberately independent from P6 transition-history idempotency because P7-002 does not move Workflow state or create P6 transition history.
 
 A bounded client request key is normalized server-side and only its SHA-256 hash is persisted. The unique tenant + Workflow Instance + request-key identity provides retry safety.
+
+The SHA-256 request identity is internal-only. `listRequests()` uses a public projection that excludes `request_key_hash`; exact retry uses an internal projection for matching and strips the hash before returning the immutable request; newly created request responses also omit it. The raw request key is never persisted.
 
 Inside the locked transaction:
 
@@ -67,21 +71,24 @@ P7-002 supports the P7-001 selector set only:
 Candidate users are de-duplicated within each stage, then sorted deterministically. Bounds are fail-closed:
 
 - maximum 256 distinct candidates per stage;
-- maximum 1024 distinct candidate rows per request.
+- maximum 1024 candidate memberships/request;
+- maximum 1024 total candidate snapshots/request.
 
 A stage resolving to zero active candidates fails closed. For `quorum`, the stored threshold must not exceed the distinct resolved candidate count after de-duplication. This prevents overlapping explicit-user and role selectors from artificially inflating quorum capacity.
 
-The resulting candidate set is snapshotted. Later membership/role changes do not silently reinterpret the already-open request.
+The hardened regression explicitly proves that 1025 matching membership rows fail at the request-wide sentinel boundary before any Approval Request insert. The resulting valid candidate set is snapshotted; later membership/role changes do not silently reinterpret an already-open request.
 
 ## P6-004 guard impact
 
 A routed request is not persisted until P6-004 guards pass on the same locked contract/instance/Transition identity. This prevents opening an approval process for a Transition that is already invalid under current declarative readiness rules.
 
+The guard evaluator reuses the P5 transition-only locked readiness snapshot under the already-active Approval Request transaction; no nested transaction is introduced. The P4 binding plus bounded active-definition/value ranges remain locked through commit/rollback, preventing check-then-race readiness drift.
+
 Exact Approval Request retries do not re-run guards after the original request committed; they return the immutable request. A later task that actually releases the approved Transition must re-evaluate P6-004 guards before final P6 state mutation because contract readiness may have changed during the approval period.
 
 ## No-route behavior
 
-When the exact current Transition has no published P7-001 Approval Route, P7-002 returns an explicit `approval_required = false` result and commits without creating Approval Request snapshot rows.
+When the exact current Transition has no published P7-001 Approval Route, P7-002 returns an explicit `approval_required = false` result and commits without creating Approval Request snapshot rows or evaluating the routed-request guard callback.
 
 This service does **not** silently execute the P6 Transition. Direct transition execution remains owned by P6; orchestration between no-route transitions, approval creation, decisions, and final release belongs to later integration work.
 
@@ -103,37 +110,48 @@ P6 current State and transition history therefore remain unchanged while an Appr
 
 The contract + exact Workflow Instance lock serializes request creation with other P6/P7 operations acting on the same runtime object. The pending-request check is performed while that lock is held, so a second idempotency key cannot create another pending approval process for the same Transition/source State.
 
-All runtime snapshots are written after candidate and guard validation. Any selector-resolution failure, invalid quorum, candidate overflow, guard failure, insert error, or concurrent identity drift rolls back before a partial request can become visible.
+Candidate membership rows are acquired in ascending `user_id` order. All runtime snapshots are written after candidate and guard validation. Any selector-resolution failure, invalid quorum, candidate overflow, guard failure, insert error, or concurrent identity drift rolls back before a partial request can become visible.
 
 ## Security and privacy
 
 The runtime schema stores IDs, canonical route snapshots, candidate user IDs, status, and hashed idempotency identity only. It stores no executable code, credentials, arbitrary SQL, raw client idempotency key, or generic expression language.
 
-Candidate user IDs are internal tenant runtime identities. P7-002 adds no public API/UI surface that exposes them.
+The hashed idempotency identity is not exposed by the Approval Request public/list model. Candidate user IDs remain internal tenant runtime identities. P7-002 adds no public API/UI surface.
 
 ## API / admin / mobile / notifications / landing impact
 
-No REST endpoint, WordPress admin Approval UI, Flutter Approval UI, notification dispatch, reminders, escalation, report/export surface, plan entitlement, or public landing-page claim is added here. Future surfaces must use the service/repository boundary and must not write runtime snapshot tables directly.
+No REST endpoint, WordPress admin Approval UI, Flutter Approval UI, notification dispatch, reminders, escalation, report/export surface, plan entitlement, or public landing-page claim is added here. Future surfaces must use the service/repository boundary and must not write runtime snapshot tables directly or expose internal `request_key_hash`.
 
 ## Test and Gate evidence
 
 The first fully wired head was `7e638e64863753844948944bf16e0cc252093c32`. Gate #421 reached the backend but stopped in the older P7-001 regression because that test incorrectly required the global schema version to equal `1.38.0` after P7-002 legitimately advanced it to `1.39.0`.
 
-The P7-001 regression was made forward-compatible without weakening registration checks. Final implementation head for this stage is `6e6066063c5a70c327191b4a361cd7e1ff3216bf`.
+The P7-001 regression was made forward-compatible without weakening its exact Migration0039 registration check in `6e6066063c5a70c327191b4a361cd7e1ff3216bf`. Gate #422 then passed with P7-002 at 60/60 assertions.
 
-ESC Foundation Gate #422 passed fully on that head:
+Additional P7-002 hardening added:
 
-- ESC foundation validation;
-- Android identity/release isolation;
-- Enterprise artifact isolation;
-- full backend and Enterprise tenancy regressions;
+- future-compatible P7-002 migration-version assertion while preserving exact `1.39.0` registration evidence;
+- explicit 1025-member request-wide candidate overflow failure before any request insert;
+- schema proof that only the SHA-256 request identity, not the raw key, is persisted;
+- internal/public request projection separation so `request_key_hash` cannot leak through list/create/retry results;
+- a dedicated explicitly wired internal-identity regression.
+
+Internal identity source hardening landed in `c3530c53cc9efde1635bb49f4278547fbd496fae`; the dedicated identity regression was wired by `bc9fb6c9e00ccfa1f1a1182da01c300ff2f2a574`.
+
+ESC Foundation Gate #431 passed fully on exact head `bc9fb6c9e00ccfa1f1a1182da01c300ff2f2a574`:
+
+- ESC foundation validation green;
+- Android identity/release isolation green (15 check groups);
+- Enterprise artifact isolation green (11 checks);
+- full backend and Enterprise tenancy regressions green;
 - P6-003: 77/77 assertions;
 - P6-004: 60/60 assertions;
-- hardened P7-001: 65/65 assertions;
-- P7-002: 60/60 assertions;
-- Flutter formatting, analysis, and tests.
+- P7-001: 65/65 assertions;
+- P7-002 primary regression: 64/64 assertions;
+- P7-002 internal identity regression: 8/8 assertions;
+- Flutter formatting, analysis, and tests green.
 
-P7-002 regression coverage includes schema/version registration, request-key normalization, happy-path immutable snapshots, deterministic candidate locking/resolution, candidate de-duplication, no-route semantics, exact retry, idempotency conflict, duplicate pending-process prevention, stale route rejection, zero candidates, quorum after de-duplication, candidate overflow, guard failure rollback, authorization denial, and explicit absence of P6 state/history mutation.
+P7-002 regression coverage includes schema/version registration, request-key normalization, happy-path immutable snapshots, deterministic candidate locking/resolution, candidate de-duplication, no-route semantics, exact retry, idempotency conflict, duplicate pending-process prevention, stale route rejection, zero candidates, quorum after de-duplication, stage and request-wide candidate overflow, guard failure rollback, authorization denial, internal idempotency identity privacy, and explicit absence of P6 state/history mutation.
 
 ## Explicit non-goals / next boundary
 
@@ -151,3 +169,7 @@ P7-002 does not include:
 - Safe Contract/main changes.
 
 The next Approval task must define immutable decision records and sequential-stage evaluation, including exactly who may decide, duplicate/conflicting decision idempotency, `all`/`quorum` completion semantics, rejection semantics, and the boundary for eventually releasing P6 state movement only after the request is fully approved and guards are revalidated.
+
+## Completion boundary
+
+Source is frozen at/after the Gate #431 validated head `bc9fb6c9e00ccfa1f1a1182da01c300ff2f2a574`. Issue #471 must remain open until the Master Plan and completion record point to this hardened evidence and the final exact-head Gate is green for both `esc-foundation` and `esc-mobile`.
