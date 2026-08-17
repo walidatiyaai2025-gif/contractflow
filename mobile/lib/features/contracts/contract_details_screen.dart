@@ -211,7 +211,7 @@ final class _ReadyContractDetails extends StatelessWidget {
           _section(context, l10n.t('Financial values'), [
             _row(
               l10n.t('Base value'),
-              contract.baseValue ?? '—',
+              _displayMoney(contract.baseValue),
             ),
           ]),
           const SizedBox(height: 12),
@@ -270,4 +270,17 @@ final class _ReadyContractDetails extends StatelessWidget {
           ],
         ),
       );
+}
+
+String _displayMoney(String? value) {
+  if (value == null) return '—';
+  final parts = value.split('.');
+  if (parts.length == 1) return '${parts[0]}.00';
+  final whole = parts[0];
+  var fraction = parts[1];
+  while (fraction.length > 2 && fraction.endsWith('0')) {
+    fraction = fraction.substring(0, fraction.length - 1);
+  }
+  if (fraction.length == 1) fraction = '${fraction}0';
+  return '$whole.$fraction';
 }
