@@ -86,13 +86,25 @@ final class Migration0018SupplierFinanceReconciliation implements Migration
                 continue;
             }
 
-            if ($role->has_cap(Capabilities::VIEW_FINANCE) || $role->has_cap(Capabilities::MANAGE_FINANCE)) {
+            if ($this->roleHasCapability($role, Capabilities::VIEW_FINANCE)
+                || $this->roleHasCapability($role, Capabilities::MANAGE_FINANCE)) {
                 $role->add_cap(Capabilities::VIEW_PAYABLES);
                 $role->add_cap(Capabilities::VIEW_RECEIVABLES);
             }
-            if ($role->has_cap(Capabilities::EDIT_SUPPLIERS) || $role->has_cap(Capabilities::MANAGE_SUPPLIERS)) {
+            if ($this->roleHasCapability($role, Capabilities::EDIT_SUPPLIERS)
+                || $this->roleHasCapability($role, Capabilities::MANAGE_SUPPLIERS)) {
                 $role->add_cap(Capabilities::ARCHIVE_SUPPLIERS);
             }
         }
+    }
+
+    private function roleHasCapability(object $role, string $capability): bool
+    {
+        if (method_exists($role, 'has_cap')) {
+            return (bool) $role->has_cap($capability);
+        }
+        return isset($role->capabilities)
+            && is_array($role->capabilities)
+            && ! empty($role->capabilities[$capability]);
     }
 }
