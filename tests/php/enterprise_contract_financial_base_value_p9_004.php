@@ -5,15 +5,12 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
-use RuntimeException;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Database\Migrations\Migration0049EnterpriseContractFinancialBaseValueRevisions;
 use SafeContracts\Finance\ContractFinancialBaseValueRevisionRepository;
 use SafeContracts\Finance\Money;
 use SafeContracts\Tenancy\CoreTenantEnforcement;
 use SafeContracts\Tenancy\TenantContextStore;
-use Throwable;
-use UnexpectedValueException;
 
 $assertions = 0;
 function esc_p9_004_assert(bool $condition, string $message): void
@@ -144,6 +141,7 @@ esc_p9_004_expect_throw(
 // First append locks parent/profile/latest and writes revision 1 in the profile currency.
 $GLOBALS['sc_test_results'] = [];
 $GLOBALS['sc_test_queries'] = [];
+$GLOBALS['sc_test_read_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [
     [['id' => '55', 'status' => 'draft', 'is_archived' => '0']],
     [['id' => '31', 'contract_id' => '55', 'contract_currency' => 'USD']],
@@ -157,11 +155,12 @@ $firstId = $repository->appendOrGetLatest(
     42
 );
 esc_p9_004_assert($firstId === 1001, 'first base-value append returns inserted revision identifier');
-$firstSql = implode("\n", array_map('strval', $GLOBALS['sc_test_queries']));
-esc_p9_004_assert(str_contains($firstSql, 'START TRANSACTION') && str_contains($firstSql, 'COMMIT'), 'first append is transactional');
-esc_p9_004_assert(substr_count($firstSql, 'FOR UPDATE') >= 3, 'first append acquires all required row locks');
-esc_p9_004_assert(str_contains($firstSql, "SELECT 7, '22222222-2222-4222-8222-222222222222', c.id, p.id, 1, '100.0000', p.contract_currency, 42, UTC_TIMESTAMP()"), 'first append persists revision 1 amount and server-derived profile currency');
-esc_p9_004_assert(! str_contains($firstSql, 'UPDATE '), 'first append never rewrites an existing financial value');
+$firstMutationSql = implode("\n", array_map('strval', $GLOBALS['sc_test_queries']));
+$firstReadSql = implode("\n", array_map('strval', $GLOBALS['sc_test_read_queries']));
+esc_p9_004_assert(str_contains($firstMutationSql, 'START TRANSACTION') && str_contains($firstMutationSql, 'COMMIT'), 'first append is transactional');
+esc_p9_004_assert(substr_count($firstReadSql, 'FOR UPDATE') >= 3, 'first append acquires all required row locks');
+esc_p9_004_assert(str_contains($firstMutationSql, "SELECT 7, '22222222-2222-4222-8222-222222222222', c.id, p.id, 1, '100.0000', p.contract_currency, 42, UTC_TIMESTAMP()"), 'first append persists revision 1 amount and server-derived profile currency');
+esc_p9_004_assert(! str_contains($firstMutationSql, 'UPDATE '), 'first append never rewrites an existing financial value');
 
 // Exact same-amount retry returns the immutable latest revision with no INSERT.
 $GLOBALS['sc_test_queries'] = [];
