@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Workflows;
 
 use RuntimeException;
+use SafeContracts\Approvals\ApprovalRouteRepository;
 use SafeContracts\Tenancy\CoreTenantEnforcement;
 use SafeContracts\Tenancy\TenantContextStore;
 
@@ -398,6 +399,7 @@ final class WorkflowDefinitionRepository
             }
             WorkflowDefinitionPolicy::normalizeGraph($graph['states'], $graph['transitions']);
             $this->assertTransitionGuardsPublishable($wpdb, $tenantId, $workflowId, $versionId);
+            (new ApprovalRouteRepository())->assertVersionPublishable($workflowId, $versionId);
             $result = $wpdb->query($wpdb->prepare(
                 "UPDATE {$versions}
                  SET version_status = 'published', published_by = %d, published_at = UTC_TIMESTAMP(), updated_by = %d, updated_at = UTC_TIMESTAMP()
