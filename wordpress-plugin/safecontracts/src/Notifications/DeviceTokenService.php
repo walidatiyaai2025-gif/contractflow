@@ -22,7 +22,7 @@ final class DeviceTokenService
         $this->memberships ??= new TenantMembershipRepository();
     }
 
-    public function register(mixed $token, mixed $platform, mixed $applicationId = null): string
+    public function register(mixed $token, mixed $platform, mixed $applicationId = self::APPLICATION_ID): string
     {
         $userId = $this->requireAuthenticatedAccess();
         $normalizedApplicationId = $this->normalizeApplicationId($applicationId);
@@ -39,7 +39,7 @@ final class DeviceTokenService
         return $normalizedApplicationId;
     }
 
-    public function revoke(mixed $token, mixed $applicationId = null): string
+    public function revoke(mixed $token, mixed $applicationId = self::APPLICATION_ID): string
     {
         $userId = $this->requireAuthenticatedAccess();
         $normalizedApplicationId = $this->normalizeApplicationId($applicationId);
