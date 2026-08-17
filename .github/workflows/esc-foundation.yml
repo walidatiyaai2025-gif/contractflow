@@ -40,6 +40,20 @@ jobs:
         run: python3 tests/python/esc_android_coexistence_uat_session_test.py
       - name: Test ESC Windows physical-device UAT runner contract
         run: python3 tests/python/esc_android_coexistence_windows_runner_contract_test.py
+      - name: Parse ESC Windows physical-device UAT runner
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/run_esc_android_coexistence_uat_windows.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
       - name: Test ESC Android coexistence evidence bundle
         run: python3 tests/python/esc_android_coexistence_evidence_bundle_test.py
       - name: Test ESC Android coexistence evidence finalizer
