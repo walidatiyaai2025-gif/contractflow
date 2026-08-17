@@ -217,7 +217,9 @@ esc_p9_016_assert(str_contains($serviceSource, 'TenantAuthorization::allowsCapab
 esc_p9_016_assert(! str_contains($routerSource, 'ContractFinancialCollectionReversalRevision'), 'P9-016 exposes no REST surface');
 esc_p9_016_assert(! str_contains($receiptRepositorySource, 'ContractFinancialCollectionReversal'), 'P9-013 receipt repository has no reverse coupling to reversals');
 esc_p9_016_assert(! str_contains($scheduleRepositorySource, 'ContractFinancialCollectionReversal'), 'P9-012 schedule repository has no reverse coupling to reversals');
-esc_p9_016_assert(! str_contains($settlementRepositorySource, 'collection_reversal'), 'P9-014 settlement remains unchanged by P9-016 foundation');
+// P9-016 remains a historical foundation boundary: later read-only settlement stages may consume reversal evidence,
+// but the P9-016 mutation repository itself must never depend on settlement semantics.
+esc_p9_016_assert(! str_contains($repositorySource, 'ContractFinancialScheduleSettlement'), 'P9-016 reversal mutation repository has no reverse settlement coupling');
 esc_p9_016_assert(! str_contains($legacyPaymentSource, 'ContractFinancialCollectionReversal') && ! str_contains($legacyCollectionSource, 'ContractFinancialCollectionReversal'), 'legacy Payments/Collections remain isolated');
 
 $GLOBALS['sc_test_options'][CoreTenantEnforcement::OPTION] = '1';

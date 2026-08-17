@@ -27,6 +27,7 @@ final class ContractFinancialScheduleSettlementRepository
         $tenantId = $this->tenantId();
         $schedules = $wpdb->prefix . 'safecontracts_contract_financial_payment_schedule_entry_revisions';
         $receipts = $wpdb->prefix . 'safecontracts_contract_financial_collection_receipt_revisions';
+        $reversals = $wpdb->prefix . 'safecontracts_contract_financial_collection_reversal_revisions';
         if ($wpdb->query('START TRANSACTION') === false) {
             throw new RuntimeException('Unable to start Enterprise Contract schedule settlement read transaction.');
         }
@@ -91,6 +92,34 @@ final class ContractFinancialScheduleSettlementRepository
                 throw new RuntimeException('Enterprise Contract schedule settlement receipt limit was exceeded.');
             }
 
+            $reversalLimit = ContractFinancialCollectionReversalPolicy::MAX_REVERSALS + 1;
+            $reversalRows = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, revision_uuid, contract_id, financial_currency_profile_id, reversal_uuid, revision_number, receipt_uuid, schedule_entry_uuid, schedule_sequence_no, external_reference, reversal_date, amount, currency_code, reversal_state, created_by, created_at
+                 FROM {$reversals} rv
+                 WHERE rv.tenant_id = %d AND rv.contract_id = %d
+                   AND NOT EXISTS (
+                        SELECT 1 FROM {$reversals} newer
+                        WHERE newer.tenant_id = rv.tenant_id
+                          AND newer.contract_id = rv.contract_id
+                          AND newer.reversal_uuid = rv.reversal_uuid
+                          AND (
+                               newer.revision_number > rv.revision_number
+                               OR (newer.revision_number = rv.revision_number AND newer.id > rv.id)
+                          )
+                   )
+                 ORDER BY rv.receipt_uuid ASC, rv.reversal_date ASC, rv.reversal_uuid ASC
+                 LIMIT %d",
+                $tenantId,
+                $contractId,
+                $reversalLimit
+            ), ARRAY_A);
+            if (! is_array($reversalRows)) {
+                throw new RuntimeException('Enterprise Contract schedule settlement reversals could not be read.');
+            }
+            if (count($reversalRows) > ContractFinancialCollectionReversalPolicy::MAX_REVERSALS) {
+                throw new RuntimeException('Enterprise Contract schedule settlement reversal limit was exceeded.');
+            }
+
             $currency = $profile['currency'];
             $zero = Money::of('0', $currency);
             $schedulesByUuid = [];
@@ -114,18 +143,16 @@ final class ContractFinancialScheduleSettlementRepository
                 $seenSequences[$sequence] = true;
             }
 
-            $collectedBySchedule = [];
-            $seenReceipts = [];
+            $receiptsByUuid = [];
             foreach ($receiptRows as $row) {
                 if (! is_array($row)) {
                     throw new UnexpectedValueException('Enterprise Contract schedule settlement receipt row is invalid.');
                 }
                 $receipt = $this->normalizeReceipt($row, $contractId, $profile);
                 $receiptUuid = (string) $receipt['receipt_uuid'];
-                if (isset($seenReceipts[$receiptUuid])) {
+                if (isset($receiptsByUuid[$receiptUuid])) {
                     throw new UnexpectedValueException('Enterprise Contract schedule settlement contains duplicate latest receipt identities.');
                 }
-                $seenReceipts[$receiptUuid] = true;
 
                 $scheduleUuid = (string) $receipt['schedule_entry_uuid'];
                 if (! isset($schedulesByUuid[$scheduleUuid])) {
@@ -135,24 +162,84 @@ final class ContractFinancialScheduleSettlementRepository
                 if ((int) $receipt['schedule_sequence_no'] !== (int) $schedule['sequence_no']) {
                     throw new UnexpectedValueException('Enterprise Contract schedule settlement receipt sequence snapshot differs from the current schedule.');
                 }
-                if ((string) $receipt['receipt_state'] !== ContractFinancialCollectionReceiptPolicy::STATE_RECORDED) {
+                $receiptsByUuid[$receiptUuid] = $receipt;
+            }
+
+            $reversedByReceipt = [];
+            $seenReversals = [];
+            foreach ($reversalRows as $row) {
+                if (! is_array($row)) {
+                    throw new UnexpectedValueException('Enterprise Contract schedule settlement reversal row is invalid.');
+                }
+                $reversal = $this->normalizeReversal($row, $contractId, $profile);
+                $reversalUuid = (string) $reversal['reversal_uuid'];
+                if (isset($seenReversals[$reversalUuid])) {
+                    throw new UnexpectedValueException('Enterprise Contract schedule settlement contains duplicate latest reversal identities.');
+                }
+                $seenReversals[$reversalUuid] = true;
+
+                $receiptUuid = (string) $reversal['receipt_uuid'];
+                if (! isset($receiptsByUuid[$receiptUuid])) {
+                    throw new UnexpectedValueException('Enterprise Contract schedule settlement reversal references a missing current receipt identity.');
+                }
+                $receipt = $receiptsByUuid[$receiptUuid];
+                if ((string) $reversal['schedule_entry_uuid'] !== (string) $receipt['schedule_entry_uuid']
+                    || (int) $reversal['schedule_sequence_no'] !== (int) $receipt['schedule_sequence_no']) {
+                    throw new UnexpectedValueException('Enterprise Contract schedule settlement reversal linkage differs from the current receipt.');
+                }
+                if (! isset($schedulesByUuid[(string) $reversal['schedule_entry_uuid']])) {
+                    throw new UnexpectedValueException('Enterprise Contract schedule settlement reversal references a missing current schedule identity.');
+                }
+                $schedule = $schedulesByUuid[(string) $reversal['schedule_entry_uuid']];
+                if ((int) $reversal['schedule_sequence_no'] !== (int) $schedule['sequence_no']) {
+                    throw new UnexpectedValueException('Enterprise Contract schedule settlement reversal sequence snapshot differs from the current schedule.');
+                }
+                if ((string) $reversal['reversal_state'] !== ContractFinancialCollectionReversalPolicy::STATE_RECORDED) {
                     continue;
                 }
 
+                $reversalMoney = Money::of((string) $reversal['amount'], $currency);
+                $reversed = ($reversedByReceipt[$receiptUuid] ?? $zero)->add($reversalMoney);
                 $receiptMoney = Money::of((string) $receipt['amount'], $currency);
-                $collectedBySchedule[$scheduleUuid] = ($collectedBySchedule[$scheduleUuid] ?? $zero)->add($receiptMoney);
+                if ($reversed->compare($receiptMoney) > 0) {
+                    throw new UnexpectedValueException('Enterprise Contract schedule settlement recorded reversals exceed the linked receipt amount.');
+                }
+                $reversedByReceipt[$receiptUuid] = $reversed;
+            }
+
+            $grossCollectedBySchedule = [];
+            $reversedBySchedule = [];
+            $collectedBySchedule = [];
+            foreach ($receiptsByUuid as $receiptUuid => $receipt) {
+                if ((string) $receipt['receipt_state'] !== ContractFinancialCollectionReceiptPolicy::STATE_RECORDED) {
+                    continue;
+                }
+                $scheduleUuid = (string) $receipt['schedule_entry_uuid'];
+                $receiptMoney = Money::of((string) $receipt['amount'], $currency);
+                $reversedMoney = $reversedByReceipt[$receiptUuid] ?? $zero;
+                $netMoney = $receiptMoney->subtract($reversedMoney);
+
+                $grossCollectedBySchedule[$scheduleUuid] = ($grossCollectedBySchedule[$scheduleUuid] ?? $zero)->add($receiptMoney);
+                $reversedBySchedule[$scheduleUuid] = ($reversedBySchedule[$scheduleUuid] ?? $zero)->add($reversedMoney);
+                $collectedBySchedule[$scheduleUuid] = ($collectedBySchedule[$scheduleUuid] ?? $zero)->add($netMoney);
             }
 
             $scheduledTotal = $zero;
+            $grossCollectedTotal = $zero;
+            $reversedTotal = $zero;
             $collectedTotal = $zero;
             $remainingTotal = $zero;
             $overCollectedTotal = $zero;
+            $voidedScheduleGrossCollectedTotal = $zero;
+            $voidedScheduleReversedTotal = $zero;
             $voidedScheduleCollectedTotal = $zero;
             $entries = [];
 
             foreach ($scheduleOrder as $scheduleUuid) {
                 $schedule = $schedulesByUuid[$scheduleUuid];
                 $scheduledMoney = Money::of((string) $schedule['amount'], $currency);
+                $grossCollectedMoney = $grossCollectedBySchedule[$scheduleUuid] ?? $zero;
+                $reversedMoney = $reversedBySchedule[$scheduleUuid] ?? $zero;
                 $collectedMoney = $collectedBySchedule[$scheduleUuid] ?? $zero;
                 $state = ContractFinancialScheduleSettlementPolicy::derive(
                     (string) $schedule['schedule_entry_state'],
@@ -163,9 +250,13 @@ final class ContractFinancialScheduleSettlementRepository
                 $remaining = $zero;
                 $overCollected = $zero;
                 if ((string) $schedule['schedule_entry_state'] === ContractFinancialPaymentSchedulePolicy::STATE_VOIDED) {
+                    $voidedScheduleGrossCollectedTotal = $voidedScheduleGrossCollectedTotal->add($grossCollectedMoney);
+                    $voidedScheduleReversedTotal = $voidedScheduleReversedTotal->add($reversedMoney);
                     $voidedScheduleCollectedTotal = $voidedScheduleCollectedTotal->add($collectedMoney);
                 } else {
                     $scheduledTotal = $scheduledTotal->add($scheduledMoney);
+                    $grossCollectedTotal = $grossCollectedTotal->add($grossCollectedMoney);
+                    $reversedTotal = $reversedTotal->add($reversedMoney);
                     $collectedTotal = $collectedTotal->add($collectedMoney);
                     $comparison = $collectedMoney->compare($scheduledMoney);
                     if ($comparison <= 0) {
@@ -185,6 +276,8 @@ final class ContractFinancialScheduleSettlementRepository
                     'schedule_state' => (string) $schedule['schedule_entry_state'],
                     'settlement_state' => $state,
                     'scheduled_amount' => $scheduledMoney->amount(),
+                    'gross_collected_amount' => $grossCollectedMoney->amount(),
+                    'reversed_amount' => $reversedMoney->amount(),
                     'collected_amount' => $collectedMoney->amount(),
                     'remaining_amount' => $remaining->amount(),
                     'over_collected_amount' => $overCollected->amount(),
@@ -198,9 +291,13 @@ final class ContractFinancialScheduleSettlementRepository
                 'summary' => [
                     'currency_code' => $currency->value(),
                     'scheduled_total' => $scheduledTotal->amount(),
+                    'gross_collected_total' => $grossCollectedTotal->amount(),
+                    'reversed_total' => $reversedTotal->amount(),
                     'collected_total' => $collectedTotal->amount(),
                     'remaining_total' => $remainingTotal->amount(),
                     'over_collected_total' => $overCollectedTotal->amount(),
+                    'voided_schedule_gross_collected_total' => $voidedScheduleGrossCollectedTotal->amount(),
+                    'voided_schedule_reversed_total' => $voidedScheduleReversedTotal->amount(),
                     'voided_schedule_collected_total' => $voidedScheduleCollectedTotal->amount(),
                 ],
             ];
@@ -322,6 +419,47 @@ final class ContractFinancialScheduleSettlementRepository
         $row['amount'] = $money->amount();
         $row['currency_code'] = $currency->value();
         $row['receipt_state'] = $state;
+        return $row;
+    }
+
+    /** @param array<string,mixed> $row @param array{id:int,currency:CurrencyCode} $profile @return array<string,mixed> */
+    private function normalizeReversal(array $row, int $expectedContractId, array $profile): array
+    {
+        $id = (int) ($row['id'] ?? 0);
+        $contractId = (int) ($row['contract_id'] ?? 0);
+        $profileId = (int) ($row['financial_currency_profile_id'] ?? 0);
+        $revision = (int) ($row['revision_number'] ?? 0);
+        $createdBy = (int) ($row['created_by'] ?? 0);
+        if ($id <= 0 || $contractId !== $expectedContractId || $profileId !== (int) $profile['id'] || $revision <= 0 || $createdBy <= 0) {
+            throw new UnexpectedValueException('Enterprise Contract schedule settlement reversal metadata is invalid.');
+        }
+        try {
+            $revisionUuid = ContractFinancialCollectionReversalPolicy::normalizeUuid($row['revision_uuid'] ?? null, 'revision UUID');
+            $reversalUuid = ContractFinancialCollectionReversalPolicy::normalizeUuid($row['reversal_uuid'] ?? null, 'reversal UUID');
+            $receiptUuid = ContractFinancialCollectionReversalPolicy::normalizeUuid($row['receipt_uuid'] ?? null, 'receipt UUID');
+            $scheduleUuid = ContractFinancialCollectionReversalPolicy::normalizeUuid($row['schedule_entry_uuid'] ?? null, 'schedule entry UUID');
+            $sequence = ContractFinancialPaymentSchedulePolicy::normalizeSequence($row['schedule_sequence_no'] ?? null);
+            $reference = ContractFinancialCollectionReversalPolicy::normalizeReference($row['external_reference'] ?? null);
+            $reversalDate = ContractFinancialCollectionReversalPolicy::normalizeReversalDate($row['reversal_date'] ?? null);
+            $state = ContractFinancialCollectionReversalPolicy::normalizeState($row['reversal_state'] ?? null);
+            $currency = $this->currencyFromStorage($row['currency_code'] ?? null);
+            $money = Money::of($row['amount'] ?? null, $currency);
+        } catch (Throwable $error) {
+            throw new UnexpectedValueException('Enterprise Contract schedule settlement reversal data is invalid.', 0, $error);
+        }
+        if (! $currency->equals($profile['currency']) || $money->compare(Money::of('0', $currency)) <= 0) {
+            throw new UnexpectedValueException('Enterprise Contract schedule settlement reversal currency or amount is invalid.');
+        }
+        $row['revision_uuid'] = $revisionUuid;
+        $row['reversal_uuid'] = $reversalUuid;
+        $row['receipt_uuid'] = $receiptUuid;
+        $row['schedule_entry_uuid'] = $scheduleUuid;
+        $row['schedule_sequence_no'] = $sequence;
+        $row['external_reference'] = $reference;
+        $row['reversal_date'] = $reversalDate;
+        $row['amount'] = $money->amount();
+        $row['currency_code'] = $currency->value();
+        $row['reversal_state'] = $state;
         return $row;
     }
 

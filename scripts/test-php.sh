@@ -125,6 +125,7 @@ php "$ROOT/tests/php/enterprise_contract_financial_collection_receipts_p9_013.ph
 php "$ROOT/tests/php/enterprise_contract_financial_schedule_settlement_p9_014.php"
 php "$ROOT/tests/php/enterprise_contract_financial_collection_capacity_p9_015.php"
 php "$ROOT/tests/php/enterprise_contract_financial_collection_reversals_p9_016.php"
+php "$ROOT/tests/php/enterprise_contract_financial_reversal_aware_settlement_p9_017.php"
 php "$ROOT/tests/php/enterprise_tenant_rest_context.php"
 php "$ROOT/tests/php/enterprise_tenant_ownership_expand.php"
 php "$ROOT/tests/php/enterprise_core_tenant_enforcement.php"
