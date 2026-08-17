@@ -283,7 +283,9 @@ final class _BootstrapView extends StatelessWidget {
           final policy = controller.navigationPolicy;
           final dashboard = controller.dashboardController;
           final customers = controller.customersController;
+          final suppliers = controller.suppliersController;
           final contracts = controller.contractsController;
+          final finance = controller.financeController;
           final notifications = controller.notificationsController;
           final profile = controller.profileController;
           final excelExport = controller.excelExportController;
@@ -292,7 +294,9 @@ final class _BootstrapView extends StatelessWidget {
               policy != null &&
               dashboard != null &&
               customers != null &&
+              suppliers != null &&
               contracts != null &&
+              finance != null &&
               notifications != null &&
               profile != null &&
               excelExport != null) {
@@ -303,7 +307,9 @@ final class _BootstrapView extends StatelessWidget {
               policy: policy,
               dashboardController: dashboard,
               customersController: customers,
+              suppliersController: suppliers,
               contractsController: contracts,
+              financeController: finance,
               notificationsController: notifications,
               profileController: profile,
               excelExportController: excelExport,
