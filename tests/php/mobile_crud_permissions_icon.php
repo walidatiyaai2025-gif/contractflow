@@ -22,7 +22,6 @@ $assert = static function (bool $condition, string $message) use (&$checks): voi
 
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE];
 $activate();
-
 do_action('plugins_loaded');
 do_action('rest_api_init');
 
@@ -93,26 +92,17 @@ foreach ([
     Capabilities::CREATE_PAYMENTS => [MobileCrudController::class, 'canCreatePayments'],
     Capabilities::EDIT_PAYMENTS => [MobileCrudController::class, 'canEditPayments'],
 ] as $capability => $callback) {
-    $GLOBALS['sc_test_current_caps'] = [
-        Capabilities::ACCESS => true,
-        Capabilities::VIEW_ALL => true,
-        $capability => true,
-    ];
+    $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_ALL => true, $capability => true];
     $assert($callback() === true, "{$capability} authorizes only its matching mobile operation");
 }
 
 $root = dirname(__DIR__, 2);
 $editor = (string) file_get_contents($root . '/mobile/lib/features/records/mobile_record_editor_screen.dart');
 foreach ([
-    'safecontracts_create_customers',
-    'safecontracts_edit_customers',
-    'safecontracts_create_contracts',
-    'safecontracts_edit_contracts',
-    'safecontracts_create_payments',
-    'safecontracts_edit_payments',
-    'mobile/customers/create',
-    'mobile/contracts/create',
-    'mobile/payments/create',
+    'safecontracts_create_customers', 'safecontracts_edit_customers',
+    'safecontracts_create_contracts', 'safecontracts_edit_contracts',
+    'safecontracts_create_payments', 'safecontracts_edit_payments',
+    'mobile/customers/create', 'mobile/contracts/create', 'mobile/payments/create',
     "RegExp(r'^\\d+(?:\\.\\d{1,2})?\$')",
 ] as $marker) {
     $assert(str_contains($editor, $marker), "mobile record editor contains {$marker}");
@@ -121,18 +111,26 @@ foreach ([
 $quickAdd = (string) file_get_contents($root . '/mobile/lib/features/records/mobile_quick_add_flow.dart');
 foreach ([
     'safecontracts_create_customers',
+    'safecontracts_create_suppliers',
     'safecontracts_create_contracts',
     'safecontracts_create_payments',
     'mobile/customers/create',
-    'mobile/contracts/create',
+    "SuppliersRepository(widget.client).create",
+    "widget.client.post('contracts/create'",
+    "'counterparty_type': _counterpartyType",
+    "'counterparty_id': _counterpartyId",
+    "'currency_code': currency",
     'mobile/payments/create',
 ] as $marker) {
     $assert(str_contains($quickAdd, $marker), "mobile quick add contains {$marker}");
 }
+$assert(! str_contains($quickAdd, "widget.client.post('mobile/contracts/create'"), 'new quick-add contract flow does not use the legacy customer-only contract endpoint');
 
 $appShell = (string) file_get_contents($root . '/mobile/lib/features/navigation/app_shell.dart');
 $assert(str_contains($appShell, 'availableMobileQuickAdds(widget.session)'), 'app shell filters quick-add actions from session capabilities');
 $assert(str_contains($appShell, 'floatingActionButton:'), 'app shell exposes the permission-aware quick-add FAB');
+$assert(str_contains($appShell, 'MobileDestination.suppliers'), 'app shell exposes the supplier workspace when policy allows it');
+$assert(str_contains($appShell, 'MobileDestination.finance'), 'app shell exposes the AP/AR finance workspace when policy allows it');
 
 $profile = (string) file_get_contents($root . '/mobile/lib/features/profile/profile_screen.dart');
 $profileContent = (string) file_get_contents($root . '/mobile/lib/features/profile/modern_profile_content.dart');
@@ -154,4 +152,4 @@ $inAppIcon = (string) file_get_contents($root . '/mobile/assets/brand/alkenzy_ad
 $assert(strlen($icon) >= 4096 && str_starts_with($icon, "\x89PNG\r\n\x1a\n"), 'Alkenzy launcher is a valid PNG');
 $assert(hash_equals(hash('sha256', $inAppIcon), hash('sha256', $icon)), 'in-app and Android launcher identities use the same supplied Alkenzy logo bytes');
 
-printf("SafeContracts mobile CRUD permissions + modern quick-add/profile UX + Alkenzy ADV identity regression passed (%d checks).\n", $checks);
+printf("SafeContracts mobile CRUD permissions + counterparty quick-add/profile UX + Alkenzy ADV identity regression passed (%d checks).\n", $checks);
