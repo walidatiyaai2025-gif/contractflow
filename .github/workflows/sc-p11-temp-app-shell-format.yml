@@ -23,6 +23,8 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
       - name: Format app shell only
         run: dart format lib/features/navigation/app_shell.dart
       - name: Commit canonical formatting
