@@ -45,8 +45,8 @@ $legacyContractSource = (string) file_get_contents($root . '/wordpress-plugin/sa
 $pluginSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/safecontracts.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-// Migration0049 is additive and preserves the historical P9-003 mapping.
-esc_p9_004_assert(Migrator::LATEST_VERSION === '1.48.0', 'P9-004 advances the Enterprise schema to 1.48.0');
+// Migration0049 is additive and remains a historical P9 schema boundary.
+esc_p9_004_assert(version_compare(Migrator::LATEST_VERSION, '1.48.0', '>='), 'current Enterprise schema is at or beyond the P9-004 1.48.0 boundary');
 esc_p9_004_assert(str_contains($migratorSource, "'1.47.0' => Migration0048EnterpriseContractFinancialCurrencyProfiles::class"), 'Migration0048 remains historically mapped to 1.47.0');
 esc_p9_004_assert(str_contains($migratorSource, "'1.48.0' => Migration0049EnterpriseContractFinancialBaseValueRevisions::class"), 'Migration0049 is mapped to schema 1.48.0');
 esc_p9_004_assert(str_contains($pluginSource, 'Version: 0.1.0'), 'database migration does not change the plugin release version');

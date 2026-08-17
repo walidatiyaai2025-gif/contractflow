@@ -54,11 +54,12 @@ use SafeContracts\Database\Migrations\Migration0046EnterpriseContractNoticePerio
 use SafeContracts\Database\Migrations\Migration0047EnterpriseContractDeliverables;
 use SafeContracts\Database\Migrations\Migration0048EnterpriseContractFinancialCurrencyProfiles;
 use SafeContracts\Database\Migrations\Migration0049EnterpriseContractFinancialBaseValueRevisions;
+use SafeContracts\Database\Migrations\Migration0050EnterpriseContractFinancialAdjustmentRevisions;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.48.0';
+    public const LATEST_VERSION = '1.49.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -111,6 +112,7 @@ final class Migrator
         '1.46.0' => Migration0047EnterpriseContractDeliverables::class,
         '1.47.0' => Migration0048EnterpriseContractFinancialCurrencyProfiles::class,
         '1.48.0' => Migration0049EnterpriseContractFinancialBaseValueRevisions::class,
+        '1.49.0' => Migration0050EnterpriseContractFinancialAdjustmentRevisions::class,
     ];
 
     public function maybeMigrate(): void
