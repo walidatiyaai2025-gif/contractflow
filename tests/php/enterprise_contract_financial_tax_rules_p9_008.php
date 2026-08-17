@@ -75,11 +75,10 @@ $reconciliationServiceSource = (string) file_get_contents($root . '/wordpress-pl
 $routerSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/Router.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-// Additive schema boundary.
-esc_p9_008_assert(Migrator::LATEST_VERSION === '1.51.0', 'P9-008 advances Enterprise schema to 1.51.0');
+// Historical schema boundary; later additive migrations may advance the current version.
+esc_p9_008_assert(version_compare(Migrator::LATEST_VERSION, '1.51.0', '>='), 'current Enterprise schema is at or beyond the P9-008 1.51.0 boundary');
 esc_p9_008_assert(str_contains($migratorSource, "'1.50.0' => Migration0051EnterpriseContractFinancialVariationRevisions::class"), 'Migration0051 remains historically mapped to 1.50.0');
-esc_p9_008_assert(str_contains($migratorSource, "'1.51.0' => Migration0052EnterpriseContractFinancialTaxRuleRevisions::class"), 'Migration0052 is mapped to 1.51.0');
-esc_p9_008_assert(! str_contains($migratorSource, 'Migration0053'), 'P9-008 does not invent a later migration');
+esc_p9_008_assert(str_contains($migratorSource, "'1.51.0' => Migration0052EnterpriseContractFinancialTaxRuleRevisions::class"), 'Migration0052 remains historically mapped to 1.51.0');
 
 $GLOBALS['sc_test_dbdelta'] = [];
 (new Migration0052EnterpriseContractFinancialTaxRuleRevisions())->up($GLOBALS['wpdb']);
