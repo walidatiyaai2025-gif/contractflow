@@ -44,6 +44,7 @@ final class Router
         DevicesController::register();
         SuppliersController::register();
         FinanceController::register();
+        CounterpartyContractsController::register();
         ContractMutationController::register();
         MobileMutationController::register();
         MobileCrudController::register();
