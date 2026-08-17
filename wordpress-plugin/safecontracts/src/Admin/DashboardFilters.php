@@ -20,10 +20,10 @@ final class DashboardFilters
         $status = is_scalar($statusValue) && ! is_bool($statusValue)
             ? strtolower(trim((string) $statusValue))
             : '';
-        $allowedStatuses = array_merge(
+        $allowedStatuses = array_values(array_unique(array_merge(
             ['', ContractStatus::DRAFT, ContractStatus::ACTIVE, ContractStatus::COMPLETED, ContractStatus::CANCELLED],
-            [PaymentStatus::UPCOMING, PaymentStatus::DUE_SOON, PaymentStatus::DUE, PaymentStatus::OVERDUE, PaymentStatus::PARTIALLY_PAID, PaymentStatus::PAID]
-        );
+            PaymentStatus::all()
+        )));
         if (! in_array($status, $allowedStatuses, true)) {
             $status = '';
         }
