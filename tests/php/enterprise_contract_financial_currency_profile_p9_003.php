@@ -48,8 +48,8 @@ $generalSettingsSource = (string) file_get_contents($root . '/wordpress-plugin/s
 $pluginSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/safecontracts.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-// Migration0048 is additive and advances only the ESC database schema.
-esc_p9_003_assert(Migrator::LATEST_VERSION === '1.47.0', 'P9-003 advances the Enterprise schema to 1.47.0');
+// Migration0048 is additive and remains a historical ESC database schema boundary.
+esc_p9_003_assert(version_compare(Migrator::LATEST_VERSION, '1.47.0', '>='), 'current Enterprise schema is at or beyond the P9-003 1.47.0 boundary');
 esc_p9_003_assert(str_contains($migratorSource, "'1.46.0' => Migration0047EnterpriseContractDeliverables::class"), 'Migration0047 remains historically mapped to 1.46.0');
 esc_p9_003_assert(str_contains($migratorSource, "'1.47.0' => Migration0048EnterpriseContractFinancialCurrencyProfiles::class"), 'Migration0048 is mapped to schema 1.47.0');
 esc_p9_003_assert(str_contains($pluginSource, 'Version: 0.1.0'), 'database migration does not change the plugin release version');
