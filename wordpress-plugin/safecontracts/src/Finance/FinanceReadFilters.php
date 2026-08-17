@@ -100,6 +100,7 @@ final class FinanceReadFilters
             }
         }
 
+        $strictDates = ['due_from' => null, 'due_to' => null];
         foreach (['due_from', 'due_to'] as $field) {
             if (! array_key_exists($field, $input) || $input[$field] === null || trim(self::strictScalar($input[$field], $field)) === '') {
                 continue;
@@ -109,6 +110,10 @@ final class FinanceReadFilters
             if (! $date || $date->format('Y-m-d') !== $raw) {
                 throw new InvalidArgumentException(str_replace('_', ' ', ucfirst($field)) . ' must use YYYY-MM-DD and be a valid date.');
             }
+            $strictDates[$field] = $raw;
+        }
+        if ($strictDates['due_from'] !== null && $strictDates['due_to'] !== null && $strictDates['due_to'] < $strictDates['due_from']) {
+            throw new InvalidArgumentException('Finance due-to date cannot be earlier than due-from date.');
         }
 
         if (array_key_exists('limit', $input) && $input['limit'] !== null && trim(self::strictScalar($input['limit'], 'limit')) !== '') {
@@ -119,9 +124,6 @@ final class FinanceReadFilters
         }
 
         $normalized = self::normalize($input);
-        if ($normalized['due_from'] !== null && $normalized['due_to'] !== null && $normalized['due_to'] < $normalized['due_from']) {
-            throw new InvalidArgumentException('Finance due-to date cannot be earlier than due-from date.');
-        }
         if ($normalized['customer_id'] > 0 && $normalized['supplier_id'] > 0) {
             throw new InvalidArgumentException('Customer and Supplier selectors cannot be combined.');
         }
