@@ -56,7 +56,7 @@ $kpis = $read->kpis($filters);
 $query = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
 sc_p6core_assert($kpis['contract_count'] === '3' && $kpis['overdue_exposure'] === '125.0000', 'SC-P6-004 KPI read model returns server-side aggregates');
 sc_p6core_assert(str_contains($query, 'p.due_date <') && str_contains($query, 'p.remaining_amount > 0'), 'SC-P6-004 overdue exposure uses contractual due date plus positive remaining balance');
-sc_p6core_assert(str_contains($query, 'c.customer_id = 7') && str_contains($query, 'c.id = 9') && str_contains($query, 'c.accountant_user_id = 88'), 'SC-P6-005 manager filters are applied server-side');
+sc_p6core_assert(str_contains($query, "c.counterparty_type = 'customer'") && str_contains($query, 'c.counterparty_id = 7') && str_contains($query, 'c.id = 9') && str_contains($query, 'c.accountant_user_id = 88'), 'SC-P6-005 manager filters are applied server-side with customer counterparty semantics');
 sc_p6core_assert(str_contains($query, "p.status = 'overdue'") && str_contains($query, "p.due_date >= '2026-09-01'") && str_contains($query, "p.due_date <= '2026-09-30'"), 'SC-P6-005 payment status and due-window filters are server-side');
 
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_ASSIGNED => true];
@@ -65,7 +65,7 @@ $before = count($GLOBALS['sc_test_read_queries']);
 $read->contracts(['accountant_user_id' => 999, 'customer_id' => 4]);
 $scopeQuery = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
 sc_p6core_assert(str_contains($scopeQuery, 'c.accountant_user_id = 42') && ! str_contains($scopeQuery, 'accountant_user_id = 999'), 'SC-P6-005 assigned scope cannot be widened by requested accountant filter');
-sc_p6core_assert(str_contains($scopeQuery, 'c.customer_id = 4'), 'SC-P6-005 assigned scope can still narrow by customer');
+sc_p6core_assert(str_contains($scopeQuery, "c.counterparty_type = 'customer'") && str_contains($scopeQuery, 'c.counterparty_id = 4'), 'SC-P6-005 assigned scope can still narrow by customer counterparty');
 
 $GLOBALS['sc_test_result_queue'] = [[]];
 $before = count($GLOBALS['sc_test_read_queries']);
@@ -78,7 +78,7 @@ $before = count($GLOBALS['sc_test_read_queries']);
 $options = $read->contractOptions(4);
 $dependentQuery = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
 sc_p6core_assert(count($options) === 1 && $options[0]['customer_id'] === 4, 'SC-P6-005 dependent contract options preserve customer relationship');
-sc_p6core_assert(str_contains($dependentQuery, 'c.customer_id = 4'), 'SC-P6-005 dependent contract dropdown is filtered in SQL');
+sc_p6core_assert(str_contains($dependentQuery, "c.counterparty_type = 'customer'") && str_contains($dependentQuery, 'c.counterparty_id = 4'), 'SC-P6-005 dependent contract dropdown is filtered by customer counterparty in SQL');
 
 // SC-P6-006 — customer mutation boundary and optional internal code semantics.
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true];
