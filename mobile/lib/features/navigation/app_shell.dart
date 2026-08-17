@@ -16,6 +16,8 @@ import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_models.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
+import '../finance/finance.dart';
+import '../finance/finance_screen.dart';
 import '../followups/followups.dart';
 import '../followups/followups_screen.dart';
 import '../notifications/deep_link.dart';
@@ -29,6 +31,8 @@ import '../profile/profile_screen.dart';
 import '../records/mobile_quick_add_screen.dart';
 import '../refresh/silent_refresh.dart';
 import '../session/session_controller.dart';
+import '../suppliers/suppliers.dart';
+import '../suppliers/suppliers_screen.dart';
 import '../ui/safecontracts_design.dart';
 import 'navigation_policy.dart';
 
@@ -39,7 +43,9 @@ final class SafeContractsShell extends StatefulWidget {
     required this.policy,
     required this.dashboardController,
     required this.customersController,
+    required this.suppliersController,
     required this.contractsController,
+    required this.financeController,
     required this.notificationsController,
     required this.profileController,
     required this.excelExportController,
@@ -56,7 +62,9 @@ final class SafeContractsShell extends StatefulWidget {
   final MobileNavigationPolicy policy;
   final DashboardController dashboardController;
   final CustomersController customersController;
+  final SuppliersController suppliersController;
   final ContractsController contractsController;
+  final FinanceController financeController;
   final NotificationsController notificationsController;
   final ProfileController profileController;
   final MobileExcelExportController excelExportController;
@@ -122,8 +130,16 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           await widget.customersController.refreshSilently();
           shellSnapshotChanged = true;
           break;
+        case MobileDestination.suppliers:
+          await widget.suppliersController.refreshSilently();
+          shellSnapshotChanged = true;
+          break;
         case MobileDestination.contracts:
           await widget.contractsController.refreshSilently();
+          shellSnapshotChanged = true;
+          break;
+        case MobileDestination.finance:
+          await widget.financeController.refreshSilently();
           shellSnapshotChanged = true;
           break;
         case MobileDestination.notifications:
@@ -148,9 +164,6 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           break;
       }
       if (shellSnapshotChanged && mounted) {
-        // Rebuild only after the background request has completed. The current
-        // screen stays intact while the request is in flight, so there is no
-        // loading overlay or flicker during automatic refresh.
         setState(() {});
       }
     } on Object {
@@ -332,6 +345,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       MobileDestination.customers => CustomersScreen(
           controller: widget.customersController,
         ),
+      MobileDestination.suppliers => SuppliersScreen(
+          controller: widget.suppliersController,
+        ),
       MobileDestination.contracts => ContractsScreen(
           controller: widget.contractsController,
           customers: widget.dashboardController.overview?.customers ??
@@ -348,6 +364,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               widget.session.can('safecontracts_manage_payments'),
           canEnterCollection: widget.policy.canEnterCollection,
           refreshRevision: _liveRefreshRevision,
+        ),
+      MobileDestination.finance => FinanceScreen(
+          controller: widget.financeController,
         ),
       MobileDestination.followUps => FollowUpsScreen(
           repository: FollowUpsRepository(apiClient),
@@ -420,6 +439,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       case MobileQuickAddType.customer:
         unawaited(widget.customersController.refreshSilently());
         break;
+      case MobileQuickAddType.supplier:
+        unawaited(widget.suppliersController.refreshSilently());
+        break;
       case MobileQuickAddType.contract:
         unawaited(widget.contractsController.refreshSilently());
         break;
@@ -428,6 +450,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
         break;
     }
     unawaited(widget.dashboardController.refreshSilently());
+    if (widget.financeController.canAccess) {
+      unawaited(widget.financeController.refreshSilently());
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -788,8 +813,10 @@ String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
   return l10n.t(switch (destination) {
     MobileDestination.dashboard => 'Dashboard',
     MobileDestination.customers => 'Customers',
+    MobileDestination.suppliers => 'Suppliers',
     MobileDestination.contracts => 'Contracts',
     MobileDestination.payments => 'Payments',
+    MobileDestination.finance => 'Finance',
     MobileDestination.collections => 'Collections',
     MobileDestination.followUps => 'Follow-up',
     MobileDestination.notifications => 'Notifications',
@@ -802,8 +829,10 @@ IconData _icon(MobileDestination destination) {
   return switch (destination) {
     MobileDestination.dashboard => Icons.home_rounded,
     MobileDestination.customers => Icons.people_alt_outlined,
+    MobileDestination.suppliers => Icons.local_shipping_outlined,
     MobileDestination.contracts => Icons.folder_copy_outlined,
     MobileDestination.payments => Icons.receipt_long_outlined,
+    MobileDestination.finance => Icons.account_balance_wallet_outlined,
     MobileDestination.collections => Icons.payments_outlined,
     MobileDestination.followUps => Icons.timeline_outlined,
     MobileDestination.notifications => Icons.notifications_outlined,
