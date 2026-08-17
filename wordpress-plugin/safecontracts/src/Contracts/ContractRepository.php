@@ -90,7 +90,7 @@ final class ContractRepository
             Counterparty::CUSTOMER,
             $customerId,
             FinancialDirection::RECEIVABLE,
-            CurrencyCode::UNKNOWN,
+            CurrencyCode::fromInputOrSettings(null),
             $accountantUserId,
             $notes,
             $actorId
@@ -117,19 +117,19 @@ final class ContractRepository
         $customerSql = $customerId === null ? 'NULL' : '%d';
         $accountantSql = $accountantUserId === null ? 'NULL' : '%d';
         $query = "INSERT INTO {$table}
-            (contract_number, customer_id, counterparty_type, counterparty_id, financial_direction, currency_code, accountant_user_id, status, notes, created_by, updated_by, created_at, updated_at)
-            VALUES (%s, {$customerSql}, %s, %d, %s, %s, {$accountantSql}, %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
+            (contract_number, customer_id, accountant_user_id, counterparty_type, counterparty_id, financial_direction, currency_code, status, notes, created_by, updated_by, created_at, updated_at)
+            VALUES (%s, {$customerSql}, {$accountantSql}, %s, %d, %s, %s, %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
         $args = [$contractNumber];
         if ($customerId !== null) {
             $args[] = $customerId;
+        }
+        if ($accountantUserId !== null) {
+            $args[] = $accountantUserId;
         }
         $args[] = $counterpartyType;
         $args[] = $counterpartyId;
         $args[] = $financialDirection;
         $args[] = $currencyCode;
-        if ($accountantUserId !== null) {
-            $args[] = $accountantUserId;
-        }
         $args[] = ContractStatus::DRAFT;
         $args[] = $notes;
         $args[] = $actorId;
