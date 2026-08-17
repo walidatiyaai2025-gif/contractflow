@@ -8,7 +8,6 @@ use RuntimeException;
 
 final class SupplierRepository
 {
-    /** @return array<string,mixed>|null */
     public function find(int $supplierId, bool $includeArchived = false): ?array
     {
         global $wpdb;
@@ -16,7 +15,9 @@ final class SupplierRepository
         $table = $wpdb->prefix . 'safecontracts_suppliers';
         $archive = $includeArchived ? '' : ' AND is_archived = 0';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, internal_code, name, contact_name, email, phone, notes, is_active, is_archived, archived_by, archived_at, created_by, updated_by, created_at, updated_at
+            "SELECT id, internal_code, name, legal_name, trading_name, contact_name, email, phone, address,
+                    country_code, registration_number, tax_number, default_currency, payment_terms, status, notes,
+                    is_active, is_archived, archived_by, archived_at, created_by, updated_by, created_at, updated_at
              FROM {$table} WHERE id = %d{$archive} LIMIT 1",
             $supplierId
         ), ARRAY_A);
@@ -29,23 +30,43 @@ final class SupplierRepository
     public function activeExists(int $supplierId): bool
     {
         $supplier = $this->find($supplierId);
-        return $supplier !== null && $supplier['is_active'] && ! $supplier['is_archived'];
+        return $supplier !== null && $supplier['is_active'] && ! $supplier['is_archived'] && $supplier['status'] === SupplierStatus::ACTIVE;
     }
 
     /** @return list<array<string,mixed>> */
     public function active(int $limit = 500): array
     {
+        return array_values(array_filter(
+            $this->search('', min(200, max(1, $limit)), false),
+            static fn (array $row): bool => $row['is_active'] && ! $row['is_archived'] && $row['status'] === SupplierStatus::ACTIVE
+        ));
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function search(string $query = '', int $limit = 50, bool $includeArchived = false): array
+    {
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_suppliers';
-        $limit = max(1, min(500, $limit));
-        $rows = $wpdb->get_results(
-            "SELECT id, internal_code, name, contact_name, email, phone, notes, is_active, is_archived, archived_by, archived_at, created_by, updated_by, created_at, updated_at
-             FROM {$table}
-             WHERE is_archived = 0 AND is_active = 1
-             ORDER BY name ASC, id ASC LIMIT {$limit}",
-            ARRAY_A
-        );
+        $limit = max(1, min(200, $limit));
+        $archiveSql = $includeArchived ? '1 = 1' : 'is_archived = 0';
+        $select = "SELECT id, internal_code, name, legal_name, trading_name, contact_name, email, phone, address,
+                          country_code, registration_number, tax_number, default_currency, payment_terms, status, notes,
+                          is_active, is_archived, archived_by, archived_at, created_by, updated_by, created_at, updated_at
+                   FROM {$table}";
+        if ($query === '') {
+            $sql = $wpdb->prepare("{$select} WHERE {$archiveSql} ORDER BY COALESCE(NULLIF(legal_name, ''), name) ASC, id ASC LIMIT %d", $limit);
+        } else {
+            $like = '%' . addcslashes($query, "\\%_") . '%';
+            $sql = $wpdb->prepare(
+                "{$select} WHERE {$archiveSql}
+                 AND (COALESCE(NULLIF(legal_name, ''), name) LIKE %s OR trading_name LIKE %s OR internal_code LIKE %s
+                      OR registration_number LIKE %s OR tax_number LIKE %s)
+                 ORDER BY COALESCE(NULLIF(legal_name, ''), name) ASC, id ASC LIMIT %d",
+                $like, $like, $like, $like, $like, $limit
+            );
+        }
+        $rows = $wpdb->get_results($sql, ARRAY_A);
         if (! is_array($rows)) {
             return [];
         }
@@ -57,18 +78,18 @@ final class SupplierRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_suppliers';
-        $codeSql = $this->nullableStringSql((string) $data['internal_code']);
         $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (internal_code, name, contact_name, email, phone, notes, is_active, is_archived, created_by, updated_by, created_at, updated_at)
-             VALUES ({$codeSql}, %s, %s, %s, %s, %s, %d, 0, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
-            $data['name'],
-            $data['contact_name'],
-            $data['email'],
-            $data['phone'],
-            $data['notes'],
-            $data['is_active'] ? 1 : 0,
-            $actorId,
-            $actorId
+            "INSERT INTO {$table}
+                (internal_code, name, legal_name, trading_name, contact_name, email, phone, address, country_code,
+                 registration_number, tax_number, default_currency, payment_terms, status, notes, is_active, is_archived,
+                 created_by, updated_by, created_at, updated_at)
+             VALUES (NULLIF(%s, ''), %s, %s, NULLIF(%s, ''), NULLIF(%s, ''), NULLIF(%s, ''), NULLIF(%s, ''),
+                     NULLIF(%s, ''), NULLIF(%s, ''), NULLIF(%s, ''), NULLIF(%s, ''), NULLIF(%s, ''),
+                     NULLIF(%s, ''), %s, NULLIF(%s, ''), %d, 0, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())",
+            $data['internal_code'], $data['legal_name'], $data['legal_name'], $data['trading_name'],
+            $data['contact_name'], $data['email'], $data['phone'], $data['address'], $data['country_code'],
+            $data['registration_number'], $data['tax_number'], $data['default_currency'], $data['payment_terms'],
+            $data['status'], $data['notes'], $data['is_active'] ? 1 : 0, $actorId, $actorId
         );
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to create supplier.');
@@ -81,20 +102,18 @@ final class SupplierRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_suppliers';
-        $codeSql = $this->nullableStringSql((string) $data['internal_code']);
         $sql = $wpdb->prepare(
             "UPDATE {$table}
-             SET internal_code = {$codeSql}, name = %s, contact_name = %s, email = %s, phone = %s, notes = %s,
-                 is_active = %d, updated_by = %d, updated_at = UTC_TIMESTAMP()
+             SET internal_code = NULLIF(%s, ''), name = %s, legal_name = %s, trading_name = NULLIF(%s, ''),
+                 contact_name = NULLIF(%s, ''), email = NULLIF(%s, ''), phone = NULLIF(%s, ''), address = NULLIF(%s, ''),
+                 country_code = NULLIF(%s, ''), registration_number = NULLIF(%s, ''), tax_number = NULLIF(%s, ''),
+                 default_currency = NULLIF(%s, ''), payment_terms = NULLIF(%s, ''), status = %s,
+                 notes = NULLIF(%s, ''), is_active = %d, updated_by = %d, updated_at = UTC_TIMESTAMP()
              WHERE id = %d AND is_archived = 0",
-            $data['name'],
-            $data['contact_name'],
-            $data['email'],
-            $data['phone'],
-            $data['notes'],
-            $data['is_active'] ? 1 : 0,
-            $actorId,
-            $supplierId
+            $data['internal_code'], $data['legal_name'], $data['legal_name'], $data['trading_name'],
+            $data['contact_name'], $data['email'], $data['phone'], $data['address'], $data['country_code'],
+            $data['registration_number'], $data['tax_number'], $data['default_currency'], $data['payment_terms'],
+            $data['status'], $data['notes'], $data['is_active'] ? 1 : 0, $actorId, $supplierId
         );
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to update supplier.');
@@ -108,29 +127,79 @@ final class SupplierRepository
         $table = $wpdb->prefix . 'safecontracts_suppliers';
         $sql = $wpdb->prepare(
             "UPDATE {$table}
-             SET is_archived = 1, is_active = 0, archived_by = %d, archived_at = UTC_TIMESTAMP(), updated_by = %d, updated_at = UTC_TIMESTAMP()
+             SET is_archived = 1, is_active = 0, archived_by = %d, archived_at = UTC_TIMESTAMP(),
+                 updated_by = %d, updated_at = UTC_TIMESTAMP()
              WHERE id = %d AND is_archived = 0",
-            $actorId,
-            $actorId,
-            $supplierId
+            $actorId, $actorId, $supplierId
         );
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to archive supplier.');
         }
     }
 
+    public function duplicateId(array $data, ?int $excludeId = null): ?int
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $table = $wpdb->prefix . 'safecontracts_suppliers';
+        foreach (['internal_code', 'registration_number', 'tax_number'] as $column) {
+            $value = (string) ($data[$column] ?? '');
+            if ($value === '') {
+                continue;
+            }
+            $excludeSql = $excludeId === null ? '' : $wpdb->prepare(' AND id <> %d', $excludeId);
+            $rows = $wpdb->get_results($wpdb->prepare(
+                "SELECT id FROM {$table} WHERE {$column} = %s{$excludeSql} LIMIT 1",
+                $value
+            ), ARRAY_A);
+            if (is_array($rows) && $rows !== []) {
+                return (int) ($rows[0]['id'] ?? 0);
+            }
+        }
+        return null;
+    }
+
+    public function hasContractHistory(int $supplierId): bool
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT id FROM {$contracts} WHERE counterparty_type = 'supplier' AND counterparty_id = %d LIMIT 1",
+            $supplierId
+        ), ARRAY_A);
+        return is_array($rows) && $rows !== [];
+    }
+
     /** @return array<string,mixed> */
     private function normalize(array $row): array
     {
+        $legalName = trim((string) ($row['legal_name'] ?? ''));
+        if ($legalName === '') {
+            $legalName = (string) ($row['name'] ?? '');
+        }
+        $status = trim((string) ($row['status'] ?? ''));
+        if ($status === '') {
+            $status = ! empty($row['is_active']) ? SupplierStatus::ACTIVE : SupplierStatus::INACTIVE;
+        }
         return [
             'id' => (int) ($row['id'] ?? 0),
-            'internal_code' => isset($row['internal_code']) && $row['internal_code'] !== null ? (string) $row['internal_code'] : null,
-            'name' => (string) ($row['name'] ?? ''),
-            'contact_name' => isset($row['contact_name']) && $row['contact_name'] !== null ? (string) $row['contact_name'] : '',
-            'email' => isset($row['email']) && $row['email'] !== null ? (string) $row['email'] : '',
-            'phone' => isset($row['phone']) && $row['phone'] !== null ? (string) $row['phone'] : '',
-            'notes' => isset($row['notes']) && $row['notes'] !== null ? (string) $row['notes'] : '',
-            'is_active' => (bool) ($row['is_active'] ?? false),
+            'internal_code' => isset($row['internal_code']) && $row['internal_code'] !== null ? (string) $row['internal_code'] : '',
+            'name' => $legalName,
+            'legal_name' => $legalName,
+            'trading_name' => (string) ($row['trading_name'] ?? ''),
+            'contact_name' => (string) ($row['contact_name'] ?? ''),
+            'email' => (string) ($row['email'] ?? ''),
+            'phone' => (string) ($row['phone'] ?? ''),
+            'address' => (string) ($row['address'] ?? ''),
+            'country_code' => strtoupper((string) ($row['country_code'] ?? '')),
+            'registration_number' => (string) ($row['registration_number'] ?? ''),
+            'tax_number' => (string) ($row['tax_number'] ?? ''),
+            'default_currency' => strtoupper((string) ($row['default_currency'] ?? '')),
+            'payment_terms' => (string) ($row['payment_terms'] ?? ''),
+            'status' => SupplierStatus::normalize($status),
+            'notes' => (string) ($row['notes'] ?? ''),
+            'is_active' => (bool) ($row['is_active'] ?? ($status === SupplierStatus::ACTIVE)),
             'is_archived' => (bool) ($row['is_archived'] ?? false),
             'archived_by' => isset($row['archived_by']) && $row['archived_by'] !== null ? (int) $row['archived_by'] : null,
             'archived_at' => isset($row['archived_at']) && $row['archived_at'] !== null ? (string) $row['archived_at'] : null,
@@ -141,14 +210,9 @@ final class SupplierRepository
         ];
     }
 
-    private function nullableStringSql(string $value): string
-    {
-        return $value === '' ? 'NULL' : "'" . addslashes($value) . "'";
-    }
-
     private function assertWpdb(mixed $wpdb): void
     {
-        if (! is_object($wpdb)) {
+        if (! is_object($wpdb) || ! method_exists($wpdb, 'prepare') || ! method_exists($wpdb, 'query') || ! method_exists($wpdb, 'get_results')) {
             throw new RuntimeException('SafeContracts suppliers require WordPress $wpdb.');
         }
     }
