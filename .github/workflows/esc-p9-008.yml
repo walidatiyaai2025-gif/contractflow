@@ -1,0 +1,39 @@
+name: ESC P9-008 Contract Tax VAT Rules
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-tax-vat-rules:
+    name: contract-tax-vat-rules
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+
+      - name: Validate P9-008 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0052EnterpriseContractFinancialTaxRuleRevisions.php
+          php -l wordpress-plugin/safecontracts/src/Finance/PercentageRate.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialTaxRulePolicy.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialTaxRuleRevisionRepository.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialTaxRuleRevisionService.php
+          php -l tests/php/enterprise_contract_financial_tax_rules_p9_008.php
+
+      - name: Validate P9-008 tax VAT rules
+        run: php tests/php/enterprise_contract_financial_tax_rules_p9_008.php
