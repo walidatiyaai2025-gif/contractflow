@@ -23,8 +23,9 @@ final class FinanceController
     ];
 
     private const READ_FILTERS = [
-        'direction', 'currency_code', 'contract_id', 'counterparty_id',
-        'accountant_user_id', 'status', 'due_from', 'due_to', 'aging_bucket', 'limit',
+        'direction', 'currency_code', 'counterparty_type', 'customer_id', 'supplier_id',
+        'contract_id', 'counterparty_id', 'accountant_user_id', 'status',
+        'due_from', 'due_to', 'aging_bucket', 'limit',
     ];
 
     public static function register(): void
