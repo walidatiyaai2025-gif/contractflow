@@ -339,7 +339,15 @@ esc_p6_transition_assert(str_contains($repositorySource, 'request_key_hash') && 
 esc_p6_transition_assert(str_contains($repositorySource, 'UPDATE {$instances}') && ! str_contains($repositorySource, 'UPDATE {$contracts}'), 'runtime transition updates only dedicated P6-002 instance, never legacy contract');
 esc_p6_transition_assert(! str_contains($repositorySource, 'UPDATE {$workflows}') && ! str_contains($repositorySource, 'UPDATE {$versions}') && ! str_contains($repositorySource, 'UPDATE {$states}') && ! str_contains($repositorySource, 'UPDATE {$transitions}'), 'P6-001 Workflow Definition/history remains immutable during execution');
 esc_p6_transition_assert(! str_contains($repositorySource, 'custom_field') && ! str_contains($serviceSource, 'custom_field'), 'P6-003 does not rewrite P5 data');
-esc_p6_transition_assert(! str_contains($repositorySource, 'approval') && ! str_contains($serviceSource, 'approval'), 'P6-003 introduces no approval routing');
+esc_p6_transition_assert(
+    str_contains($repositorySource, 'approval_route_id')
+        && str_contains($repositorySource, 'allowApprovalRouted')
+        && ! str_contains($repositorySource, 'workflow_approval_decisions')
+        && ! str_contains($repositorySource, 'workflow_approval_releases')
+        && ! str_contains($serviceSource, 'ApprovalDecision')
+        && ! str_contains($serviceSource, 'ApprovalRelease'),
+    'P6 runtime exposes only the P7 route-presence execution gate; Approval Decision/Release orchestration remains outside P6'
+);
 esc_p6_transition_assert(! str_contains($policySource, 'eval(') && ! str_contains($policySource, 'condition') && ! str_contains($policySource, 'expression'), 'P6-003 introduces no condition/expression engine');
 esc_p6_transition_assert(str_contains($statusSource, 'final class ContractStatus') && ! str_contains($statusSource, 'ContractWorkflowTransition'), 'legacy ContractStatus remains separate');
 esc_p6_transition_assert(! str_contains($contractSource, 'ContractWorkflowTransition'), 'legacy ContractService remains untouched');
