@@ -20,7 +20,6 @@ final class CounterpartyReadRepository
         $suppliers = $wpdb->prefix . 'safecontracts_suppliers';
         $where = $this->where($f, 'c', null);
         $where[] = 'c.is_archived = 0';
-        $where[] = $this->activeCounterpartySql('c', 'cu', 'su');
         $sql = "SELECT c.id, c.contract_number, c.customer_id,
                        c.counterparty_type, c.counterparty_id,
                        CASE WHEN c.counterparty_type = 'customer' THEN cu.name ELSE su.name END AS counterparty_name,
@@ -49,7 +48,6 @@ final class CounterpartyReadRepository
         $where = $this->where($f, 'c', 'p');
         $where[] = 'c.is_archived = 0';
         $where[] = 'p.is_archived = 0';
-        $where[] = $this->activeCounterpartySql('c', 'cu', 'su');
         $sql = "SELECT p.id, p.contract_id, p.financial_direction, p.currency_code, p.sequence_no, p.reference,
                        p.due_date, p.expected_payment_date, p.original_amount, p.paid_amount, p.remaining_amount,
                        p.status, p.is_archived, c.contract_number, c.accountant_user_id,
@@ -82,7 +80,6 @@ final class CounterpartyReadRepository
         $where[] = 'c.is_archived = 0';
         $where[] = 'p.is_archived = 0';
         $where[] = 'cl.is_archived = 0';
-        $where[] = $this->activeCounterpartySql('c', 'cu', 'su');
         $sql = "SELECT cl.id, cl.payment_id, cl.financial_direction, cl.currency_code, cl.amount, cl.collection_date,
                        cl.payment_method_id, pm.name AS payment_method_name, cl.reference, cl.details, cl.proof_media_id,
                        cl.created_by, cl.created_at, p.reference AS payment_reference, p.sequence_no, p.due_date,
@@ -184,12 +181,6 @@ final class CounterpartyReadRepository
             }
         }
         return $where;
-    }
-
-    private function activeCounterpartySql(string $contractAlias, string $customerAlias, string $supplierAlias): string
-    {
-        return "(({$contractAlias}.counterparty_type = 'customer' AND {$customerAlias}.id IS NOT NULL AND {$customerAlias}.is_active = 1)
-            OR ({$contractAlias}.counterparty_type = 'supplier' AND {$supplierAlias}.id IS NOT NULL AND {$supplierAlias}.is_active = 1 AND {$supplierAlias}.is_archived = 0))";
     }
 
     /** @return list<array<string,mixed>> */
