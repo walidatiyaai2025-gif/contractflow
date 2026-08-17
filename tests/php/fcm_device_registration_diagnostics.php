@@ -51,7 +51,11 @@ sc_fcm_diag_assert(str_contains($page, 'No FCM token or bearer credential is dis
 
 // ESC-P0-002F: token mutation endpoints must fail before persistence unless the
 // caller explicitly binds the request to the Enterprise Android application.
-$GLOBALS['sc_test_current_caps'][Capabilities::ACCESS] = true;
+// The REST permission layer requires both ACCESS and a non-NONE view scope.
+$GLOBALS['sc_test_current_caps'] = [
+    Capabilities::ACCESS => true,
+    Capabilities::VIEW_ASSIGNED => true,
+];
 $token = 'esc-fcm-token-123456789012345678901234567890';
 $safeApplicationId = 'com.safecontracts.safecontracts_mobile';
 
