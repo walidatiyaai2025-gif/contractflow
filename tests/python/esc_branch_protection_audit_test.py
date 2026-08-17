@@ -28,16 +28,20 @@ def valid_legacy() -> dict:
             "strict": True,
             "contexts": ["esc-foundation", "esc-mobile"],
         },
-        "required_pull_request_reviews": {"required_approving_review_count": 1},
+        "required_pull_request_reviews": {"required_approving_review_count": 0},
         "allow_force_pushes": {"enabled": False},
         "allow_deletions": {"enabled": False},
         "enforce_admins": {"enabled": True},
+        "required_conversation_resolution": {"enabled": True},
     }
 
 
 def valid_rules() -> list[dict]:
     return [
-        {"type": "pull_request"},
+        {
+            "type": "pull_request",
+            "parameters": {"required_review_thread_resolution": True},
+        },
         {
             "type": "required_status_checks",
             "parameters": {
@@ -63,19 +67,18 @@ class EscBranchProtectionAuditTests(unittest.TestCase):
         )
         self.assertEqual("PASS", result["decision"])
         self.assertTrue(all(result["checks"].values()))
+        self.assertEqual(2, result["schema_version"])
 
-    def test_ruleset_protection_passes(self) -> None:
+    def test_ruleset_only_fails_when_admin_enforcement_is_not_verifiable(self) -> None:
         result = audit.evaluate(
             valid_branch(),
             None,
             valid_rules(),
             "Break-glass bypass is restricted and documented in #522.",
         )
-        self.assertEqual("PASS", result["decision"])
-        self.assertEqual(
-            ["deletion", "non_fast_forward", "pull_request", "required_status_checks"],
-            result["sources"]["effective_rule_types"],
-        )
+        self.assertEqual("FAIL", result["decision"])
+        self.assertFalse(result["checks"]["administrator_enforcement_verified"])
+        self.assertEqual("unverified", result["sources"]["administrator_enforcement_source"])
 
     def test_unprotected_branch_fails(self) -> None:
         branch = valid_branch()
@@ -102,15 +105,61 @@ class EscBranchProtectionAuditTests(unittest.TestCase):
         self.assertEqual("FAIL", result["decision"])
 
     def test_non_strict_status_policy_fails(self) -> None:
-        rules = valid_rules()
-        rules[1]["parameters"]["strict_required_status_checks_policy"] = False
+        protection = valid_legacy()
+        protection["required_status_checks"]["strict"] = False
         result = audit.evaluate(
             valid_branch(),
-            None,
-            rules,
+            protection,
+            [],
             "No routine bypass; emergency path is documented.",
         )
         self.assertFalse(result["checks"]["strict_up_to_date_status_checks"])
+
+    def test_admin_enforcement_is_mandatory(self) -> None:
+        for value in ({"enabled": False}, None):
+            with self.subTest(value=value):
+                protection = valid_legacy()
+                if value is None:
+                    protection.pop("enforce_admins")
+                else:
+                    protection["enforce_admins"] = value
+                result = audit.evaluate(
+                    valid_branch(),
+                    protection,
+                    [],
+                    "No routine bypass; emergency path is documented.",
+                )
+                self.assertFalse(result["checks"]["administrator_enforcement_verified"])
+                self.assertEqual("FAIL", result["decision"])
+
+    def test_conversation_resolution_is_mandatory(self) -> None:
+        for value in ({"enabled": False}, None):
+            with self.subTest(value=value):
+                protection = valid_legacy()
+                if value is None:
+                    protection.pop("required_conversation_resolution")
+                else:
+                    protection["required_conversation_resolution"] = value
+                result = audit.evaluate(
+                    valid_branch(),
+                    protection,
+                    [],
+                    "No routine bypass; emergency path is documented.",
+                )
+                self.assertFalse(result["checks"]["conversation_resolution_required"])
+                self.assertEqual("FAIL", result["decision"])
+
+    def test_ruleset_can_supply_conversation_resolution(self) -> None:
+        protection = valid_legacy()
+        protection.pop("required_conversation_resolution")
+        result = audit.evaluate(
+            valid_branch(),
+            protection,
+            valid_rules(),
+            "No routine bypass; emergency path is documented.",
+        )
+        self.assertTrue(result["checks"]["conversation_resolution_required"])
+        self.assertEqual("PASS", result["decision"])
 
     def test_force_push_and_deletion_must_be_blocked(self) -> None:
         protection = valid_legacy()
