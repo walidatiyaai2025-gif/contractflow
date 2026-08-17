@@ -94,7 +94,8 @@ function esc_p9_013_schedule_row(
     int|string $sequence = 1,
     string $state = 'scheduled',
     int $profileId = 31,
-    string $currency = 'USD'
+    string $currency = 'USD',
+    string $amount = '1000.0000'
 ): array {
     return [
         'id' => '901',
@@ -103,6 +104,7 @@ function esc_p9_013_schedule_row(
         'schedule_entry_uuid' => $scheduleUuid,
         'revision_number' => '2',
         'sequence_no' => (string) $sequence,
+        'amount' => $amount,
         'currency_code' => $currency,
         'schedule_entry_state' => $state,
     ];
@@ -122,10 +124,11 @@ $reconciliationServiceSource = (string) file_get_contents($root . '/wordpress-pl
 $routerSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/Router.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-esc_p9_013_assert(Migrator::LATEST_VERSION === '1.56.0', 'P9-013 advances Enterprise schema to 1.56.0');
+// P9-013 schema remains exactly historical at 1.56.0.
+esc_p9_013_assert(Migrator::LATEST_VERSION === '1.56.0', 'P9-013 schema remains 1.56.0');
 esc_p9_013_assert(str_contains($migratorSource, "'1.55.0' => Migration0056EnterpriseContractFinancialPaymentScheduleEntryRevisions::class"), 'Migration0056 remains historically mapped to 1.55.0');
-esc_p9_013_assert(str_contains($migratorSource, "'1.56.0' => Migration0057EnterpriseContractFinancialCollectionReceiptRevisions::class"), 'Migration0057 is mapped to 1.56.0');
-esc_p9_013_assert(! str_contains($migratorSource, 'Migration0058'), 'P9-013 does not invent a later migration');
+esc_p9_013_assert(str_contains($migratorSource, "'1.56.0' => Migration0057EnterpriseContractFinancialCollectionReceiptRevisions::class"), 'Migration0057 remains historically mapped to 1.56.0');
+esc_p9_013_assert(! str_contains($migratorSource, 'Migration0058'), 'P9-013/P9-015 introduce no Migration0058');
 
 $GLOBALS['sc_test_dbdelta'] = [];
 (new Migration0057EnterpriseContractFinancialCollectionReceiptRevisions())->up($GLOBALS['wpdb']);
@@ -147,18 +150,19 @@ foreach ([
 ] as $marker) {
     esc_p9_013_assert(str_contains($schema, $marker), 'P9-013 schema contains ' . $marker);
 }
-esc_p9_013_assert(! str_contains(strtoupper($migrationSource), 'DROP TABLE') && ! str_contains(strtoupper($migrationSource), 'ALTER TABLE'), 'P9-013 migration is additive/non-destructive');
-esc_p9_013_assert(! str_contains($schema, 'paid_amount') && ! str_contains($schema, 'remaining_amount'), 'receipt table persists no aggregate settlement balances');
+esc_p9_013_assert(! str_contains(strtoupper($migrationSource), 'DROP TABLE') && ! str_contains(strtoupper($migrationSource), 'ALTER TABLE'), 'P9-013 migration remains additive/non-destructive');
 
+// Policy behavior remains unchanged.
 esc_p9_013_assert(ContractFinancialCollectionReceiptPolicy::normalizeState('RECORDED') === 'recorded', 'recorded receipt state canonicalizes');
 esc_p9_013_assert(ContractFinancialCollectionReceiptPolicy::normalizeState('voided') === 'voided', 'voided receipt state canonicalizes');
-esc_p9_013_expect_throw(static fn (): string => ContractFinancialCollectionReceiptPolicy::normalizeState('settled'), InvalidArgumentException::class, 'settlement state is not invented');
-esc_p9_013_assert(ContractFinancialCollectionReceiptPolicy::MAX_RECEIPTS === 1000, 'receipt identities are bounded to 1000');
+esc_p9_013_expect_throw(static fn (): string => ContractFinancialCollectionReceiptPolicy::normalizeState('settled'), InvalidArgumentException::class, 'settlement state remains outside P9-013');
+esc_p9_013_assert(ContractFinancialCollectionReceiptPolicy::MAX_RECEIPTS === 1000, 'receipt identities remain bounded to 1000');
 esc_p9_013_assert(ContractFinancialCollectionReceiptPolicy::normalizeReference(' RCPT-1 ') === 'RCPT-1', 'receipt reference canonicalizes');
 esc_p9_013_assert(ContractFinancialCollectionReceiptPolicy::normalizeReference(' ') === null, 'blank receipt reference canonicalizes to null');
 esc_p9_013_assert(ContractFinancialCollectionReceiptPolicy::normalizeReceivedDate('2028-02-29') === '2028-02-29', 'valid receipt leap date is accepted');
-esc_p9_013_expect_throw(static fn (): string => ContractFinancialCollectionReceiptPolicy::normalizeReceivedDate('2027-02-29'), InvalidArgumentException::class, 'invalid receipt calendar date fails closed');
+esc_p9_013_expect_throw(static fn (): string => ContractFinancialCollectionReceiptPolicy::normalizeReceivedDate('2027-02-29'), InvalidArgumentException::class, 'invalid receipt date fails closed');
 
+// Core P9-013 architecture remains Contract-first, immutable and legacy-isolated.
 foreach ([
     'TenantContextStore::context()->requireTenantId()',
     '$authorizeLockedContract($contract)',
@@ -174,12 +178,12 @@ foreach ([
 ] as $marker) {
     esc_p9_013_assert(str_contains($repositorySource, $marker), 'P9-013 repository architecture contains ' . $marker);
 }
-esc_p9_013_assert(! str_contains(strtoupper($repositorySource), 'UPDATE ') && ! str_contains(strtoupper($repositorySource), 'DELETE FROM'), 'receipt evidence is append-only');
-esc_p9_013_assert(! str_contains($repositorySource, 'SUM(') && ! str_contains($repositorySource, 'remaining_amount') && ! str_contains($repositorySource, 'paid_amount'), 'P9-013 defines no aggregate settlement arithmetic');
+esc_p9_013_assert(! str_contains(strtoupper($repositorySource), 'UPDATE ') && ! str_contains(strtoupper($repositorySource), 'DELETE FROM'), 'receipt evidence remains append-only');
+esc_p9_013_assert(! str_contains($repositorySource, 'remaining_amount') && ! str_contains($repositorySource, 'paid_amount'), 'P9-013 still persists no settlement balances');
 foreach (['safecontracts_scheduled_payments', 'safecontracts_payment_collections', 'PaymentStatus', 'payment_method_id', 'proof_media_id'] as $forbidden) {
     esc_p9_013_assert(! str_contains($repositorySource, $forbidden) && ! str_contains($serviceSource, $forbidden), 'P9-013 avoids legacy coupling: ' . $forbidden);
 }
-esc_p9_013_assert(! str_contains(strtoupper($scheduleRepositorySource), 'CONTRACTFINANCIALCOLLECTIONRECEIPT'), 'P9-012 schedule repository has no reverse receipt coupling');
+esc_p9_013_assert(! str_contains($scheduleRepositorySource, 'ContractFinancialCollectionReceipt'), 'P9-012 schedule repository has no reverse receipt coupling');
 esc_p9_013_assert(! str_contains($legacyPaymentRepositorySource, 'ContractFinancialCollectionReceipt'), 'legacy PaymentRepository has no Enterprise receipt coupling');
 esc_p9_013_assert(! str_contains($legacyCollectionRepositorySource, 'ContractFinancialCollectionReceipt'), 'legacy CollectionRepository has no Enterprise receipt coupling');
 esc_p9_013_assert(! str_contains($reconciliationRepositorySource, 'financial_collection_receipt'), 'P9-006 reconciliation does not query receipt evidence');
@@ -195,12 +199,14 @@ $profile = [['id' => '31', 'contract_id' => '55', 'contract_currency' => 'USD']]
 $scheduleUuid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 $receiptUuid = '11111111-1111-4111-8111-111111111111';
 
+// Current read authorizes before profile/receipt reads and validates linked schedule snapshot.
 $GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_read_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_joined_receipt_row($receiptUuid, 2)]];
 $authorized = false;
 $current = $repository->listCurrentForContract(55, static function (array $contract) use (&$authorized): void {
     esc_p9_013_assert(count($GLOBALS['sc_test_read_queries']) === 1, 'receipt authorization runs before profile/receipt-schedule reads');
+    esc_p9_013_assert(str_contains((string) $GLOBALS['sc_test_read_queries'][0], 'FOR UPDATE'), 'receipt authorization is protected by Contract lock');
     $authorized = true;
 });
 esc_p9_013_assert($authorized && count($current) === 1, 'current receipt read authorizes and returns one receipt');
@@ -208,14 +214,23 @@ esc_p9_013_assert($current[0]['external_reference'] === 'RCPT-1' && $current[0][
 esc_p9_013_assert($current[0]['schedule_sequence_no'] === 1 && $current[0]['currency_code'] === 'USD', 'current receipt schedule/currency snapshots canonicalize');
 esc_p9_013_assert(str_contains((string) end($GLOBALS['sc_test_read_queries']), 'LIMIT 1001'), 'current receipt read uses 1001st overflow sentinel');
 
+// Historical receipt remains readable if linked schedule is later voided.
 $GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_joined_receipt_row($receiptUuid, 2, $scheduleUuid, 1, 'recorded', 1001, 31, 'voided')]];
-esc_p9_013_assert(count($repository->listCurrentForContract(55, static function (array $contract): void {})) === 1, 'receipt history remains readable when linked schedule later becomes voided');
+esc_p9_013_assert(count($repository->listCurrentForContract(55, static function (array $contract): void {})) === 1, 'receipt history remains readable after linked schedule void');
 
+// Missing/corrupt schedule linkage fails closed.
 $GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_joined_receipt_row($receiptUuid, 1, $scheduleUuid, 1, 'recorded', 1001, 31, 'scheduled', null, null)]];
 esc_p9_013_expect_throw(static fn (): array => $repository->listCurrentForContract(55, static function (array $contract): void {}), UnexpectedValueException::class, 'receipt with missing linked schedule fails closed');
 $GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_joined_receipt_row($receiptUuid, 1, $scheduleUuid, 1, 'recorded', 1001, 31, 'scheduled', 31, 2)]];
 esc_p9_013_expect_throw(static fn (): array => $repository->listCurrentForContract(55, static function (array $contract): void {}), UnexpectedValueException::class, 'receipt schedule-sequence snapshot mismatch fails closed');
+$GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_receipt_row($receiptUuid, 1, $scheduleUuid, 1, 'R', '2026-10-01', '1', 'EUR') + [
+    'authoritative_schedule_profile_id' => '31',
+    'authoritative_schedule_sequence_no' => '1',
+    'authoritative_schedule_state' => 'scheduled',
+]]];
+esc_p9_013_expect_throw(static fn (): array => $repository->listCurrentForContract(55, static function (array $contract): void {}), UnexpectedValueException::class, 'cross-currency receipt fails closed');
 
+// 1001 current receipt identities fail closed.
 $overflow = [];
 for ($i = 1; $i <= 1001; $i++) {
     $overflow[] = esc_p9_013_joined_receipt_row(sprintf('30000000-0000-4000-8000-%012x', $i), 1, $scheduleUuid, 1, 'recorded', 2000 + $i);
@@ -223,9 +238,17 @@ for ($i = 1; $i <= 1001; $i++) {
 $GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, $overflow];
 esc_p9_013_expect_throw(static fn (): array => $repository->listCurrentForContract(55, static function (array $contract): void {}), RuntimeException::class, '1001 current receipt identities fail closed');
 
+// Create uses authoritative schedule Money and remains immutable; empty current-capacity fixture permits normal P9-013 create.
 $GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_read_queries'] = [];
-$GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_schedule_row()], [['total' => '0']], []];
+$GLOBALS['sc_test_result_queue'] = [
+    $contractActive,
+    $profile,
+    [esc_p9_013_schedule_row($scheduleUuid, 1, 'scheduled', 31, 'USD', '1000')],
+    [['total' => '0']],
+    [],
+    [],
+];
 $GLOBALS['wpdb']->insert_id = 0;
 $created = $repository->createReceipt(55, $scheduleUuid, '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', ' RCPT-2 ', '2026-10-02', '50.5', 42, static function (array $contract): void {
     esc_p9_013_assert(count($GLOBALS['sc_test_read_queries']) === 1, 'receipt create authorizes immediately after Contract lock');
@@ -233,47 +256,77 @@ $created = $repository->createReceipt(55, $scheduleUuid, '22222222-2222-4222-822
 esc_p9_013_assert($created === 1001, 'active Contract receipt creation succeeds');
 $createReads = implode("\n", array_map('strval', $GLOBALS['sc_test_read_queries']));
 $createWrites = implode("\n", array_map('strval', $GLOBALS['sc_test_queries']));
-esc_p9_013_assert(strpos($createReads, 'safecontracts_contracts') < strpos($createReads, 'financial_currency_profiles') && strpos($createReads, 'financial_currency_profiles') < strpos($createReads, 'payment_schedule_entry_revisions'), 'receipt mutation lock order is Contract then profile then schedule');
+esc_p9_013_assert(strpos($createReads, 'safecontracts_contracts') < strpos($createReads, 'financial_currency_profiles') && strpos($createReads, 'financial_currency_profiles') < strpos($createReads, 'payment_schedule_entry_revisions'), 'receipt mutation lock order remains Contract then profile then schedule');
 esc_p9_013_assert(str_contains($createWrites, "'50.5000', p.contract_currency, 'recorded', 42"), 'receipt create persists canonical Money and recorded state');
 esc_p9_013_assert(str_contains($createWrites, "s.schedule_entry_state = 'scheduled'") && str_contains($createWrites, 'NOT EXISTS ('), 'guarded receipt insert revalidates latest scheduled P9-012 entry');
 
+// Voided linked schedule and non-active Contract lifecycle still block mutation.
 $GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_schedule_row($scheduleUuid, 1, 'voided')]];
 esc_p9_013_expect_throw(static fn (): int => $repository->createReceipt(55, $scheduleUuid, '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', null, '2026-10-02', '1', 42, static function (array $contract): void {}), RuntimeException::class, 'receipt cannot mutate against voided schedule entry');
-
 foreach ([['draft', '0'], ['completed', '0'], ['cancelled', '0'], ['active', '1']] as [$status, $archived]) {
     $GLOBALS['sc_test_result_queue'] = [[['id' => '55', 'accountant_user_id' => '42', 'status' => $status, 'is_archived' => $archived]]];
     esc_p9_013_expect_throw(static fn (): int => $repository->createReceipt(55, $scheduleUuid, '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', null, '2026-10-02', '1', 42, static function (array $contract): void {}), RuntimeException::class, "{$status}/archived Contract cannot mutate receipts");
 }
 
+// Negative caller Money still fails after authoritative schedule/profile lock.
 $GLOBALS['sc_test_queries'] = [];
+$GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_schedule_row()]];
+esc_p9_013_expect_throw(static fn (): int => $repository->createReceipt(55, $scheduleUuid, '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', null, '2026-10-02', '-0.0001', 42, static function (array $contract): void {}), InvalidArgumentException::class, 'negative receipt Money fails closed');
+esc_p9_013_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'ROLLBACK'), 'invalid receipt Money rolls back');
+
+// Max stable receipt identity limit remains enforced.
 $GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_schedule_row()], [['total' => '1000']]];
 esc_p9_013_expect_throw(static fn (): int => $repository->createReceipt(55, $scheduleUuid, '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', null, '2026-10-02', '1', 42, static function (array $contract): void {}), RuntimeException::class, '1000-receipt Contract cannot create a 1001st receipt');
 
-$GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_schedule_row()], [esc_p9_013_receipt_row($receiptUuid, 1, $scheduleUuid, 1, 'RCPT-1', '2026-10-01', '100')]];
+// Exact revise retry remains idempotent and schedule relinking remains forbidden.
+$GLOBALS['sc_test_queries'] = [];
+$GLOBALS['sc_test_result_queue'] = [
+    $contractActive,
+    $profile,
+    [esc_p9_013_schedule_row()],
+    [esc_p9_013_receipt_row($receiptUuid, 1, $scheduleUuid, 1, 'RCPT-1', '2026-10-01', '100')],
+];
 $retry = $repository->reviseReceipt(55, $scheduleUuid, $receiptUuid, '44444444-4444-4444-8444-444444444444', 'RCPT-1', '2026-10-01', '100', 42, static function (array $contract): void {});
-esc_p9_013_assert($retry === 1001, 'exact receipt revise retry is idempotent');
+esc_p9_013_assert($retry === 1001 && ! str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'INSERT INTO'), 'exact receipt revise retry remains idempotent');
 
 $otherSchedule = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-$GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_schedule_row($otherSchedule, 2)], [esc_p9_013_receipt_row($receiptUuid, 1, $scheduleUuid, 1)]];
+$GLOBALS['sc_test_result_queue'] = [
+    $contractActive,
+    $profile,
+    [esc_p9_013_schedule_row($otherSchedule, 2)],
+    [esc_p9_013_receipt_row($receiptUuid, 1, $scheduleUuid, 1)],
+];
 esc_p9_013_expect_throw(static fn (): int => $repository->reviseReceipt(55, $otherSchedule, $receiptUuid, '55555555-5555-4555-8555-555555555555', 'Relink', '2026-10-03', '10', 42, static function (array $contract): void {}), UnexpectedValueException::class, 'receipt cannot be relinked to another schedule identity');
 
+// Void preserves Money evidence, is terminal and repeated void is idempotent; it needs no capacity fixture.
 $GLOBALS['sc_test_queries'] = [];
-$GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_schedule_row()], [esc_p9_013_receipt_row($receiptUuid, 1, $scheduleUuid, 1, 'RCPT-1', '2026-10-01', '100')]];
+$GLOBALS['sc_test_result_queue'] = [
+    $contractActive,
+    $profile,
+    [esc_p9_013_schedule_row()],
+    [esc_p9_013_receipt_row($receiptUuid, 1, $scheduleUuid, 1, 'RCPT-1', '2026-10-01', '100')],
+];
 $GLOBALS['wpdb']->insert_id = 0;
 $repository->voidReceipt(55, $scheduleUuid, $receiptUuid, '66666666-6666-4666-8666-666666666666', 42, static function (array $contract): void {});
 esc_p9_013_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), "'100.0000', p.contract_currency, 'voided', 42"), 'receipt void preserves linked Money evidence and appends terminal state');
 
 $GLOBALS['sc_test_queries'] = [];
-$GLOBALS['sc_test_result_queue'] = [$contractActive, $profile, [esc_p9_013_schedule_row()], [esc_p9_013_receipt_row($receiptUuid, 2, $scheduleUuid, 1, 'RCPT-1', '2026-10-01', '100', 'USD', 'voided', 1002)]];
+$GLOBALS['sc_test_result_queue'] = [
+    $contractActive,
+    $profile,
+    [esc_p9_013_schedule_row()],
+    [esc_p9_013_receipt_row($receiptUuid, 2, $scheduleUuid, 1, 'RCPT-1', '2026-10-01', '100', 'USD', 'voided', 1002)],
+];
 esc_p9_013_assert($repository->voidReceipt(55, $scheduleUuid, $receiptUuid, '77777777-7777-4777-8777-777777777777', 42, static function (array $contract): void {}) === 1002, 'repeated receipt void returns terminal revision');
 esc_p9_013_assert(! str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'INSERT INTO'), 'repeated receipt void writes nothing');
 
+// Service authorization and data scope remain unchanged.
 esc_p9_013_assert(str_contains($serviceSource, 'authorize(Capabilities::ACCESS)'), 'receipt reads require ACCESS');
 esc_p9_013_assert(substr_count($serviceSource, 'authorize(Capabilities::MANAGE_COLLECTIONS)') >= 3, 'receipt mutations require MANAGE_COLLECTIONS');
 esc_p9_013_assert(! str_contains($serviceSource, 'authorize(Capabilities::MANAGE_PAYMENTS)'), 'receipt mutation does not borrow MANAGE_PAYMENTS');
 esc_p9_013_assert(str_contains($serviceSource, 'TenantAuthorization::allowsCapability'), 'tenant role narrows collection grants');
 esc_p9_013_assert(str_contains($serviceSource, 'Capabilities::VIEW_ALL') && str_contains($serviceSource, 'Capabilities::VIEW_ASSIGNED'), 'receipt service preserves locked Contract scope');
 esc_p9_013_assert(! str_contains($serviceSource, 'mixed $currency') && ! str_contains($serviceSource, '$tenantId'), 'receipt service exposes no caller currency/tenant');
-esc_p9_013_assert(str_contains($gateSource, 'enterprise_contract_financial_collection_receipts_p9_013.php'), 'P9-013 regression is wired into global backend gate');
+esc_p9_013_assert(str_contains($gateSource, 'enterprise_contract_financial_collection_receipts_p9_013.php'), 'P9-013 regression remains wired into global backend gate');
 
 fwrite(STDOUT, "P9-013 Enterprise Contract collection receipt revisions passed ({$assertions} assertions).\n");

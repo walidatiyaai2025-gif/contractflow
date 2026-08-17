@@ -160,6 +160,16 @@ final class ContractFinancialCollectionReceiptRevisionRepository
                 throw new RuntimeException('Enterprise Contract collection receipt identity already exists or could not be verified.');
             }
 
+            $this->assertCollectionCapacity(
+                $contractId,
+                $scheduleEntryUuid,
+                (int) $schedule['sequence_no'],
+                $profile,
+                (string) $schedule['amount'],
+                $money,
+                null
+            );
+
             $id = $this->insertRevision(
                 $contractId,
                 (int) $profile['id'],
@@ -225,6 +235,16 @@ final class ContractFinancialCollectionReceiptRevisionRepository
                 $this->commit('idempotent Enterprise Contract collection receipt revision');
                 return (int) $latest['id'];
             }
+
+            $this->assertCollectionCapacity(
+                $contractId,
+                $scheduleEntryUuid,
+                (int) $schedule['sequence_no'],
+                $profile,
+                (string) $schedule['amount'],
+                $money,
+                $receiptUuid
+            );
 
             $id = $this->insertRevision(
                 $contractId,
@@ -356,7 +376,7 @@ final class ContractFinancialCollectionReceiptRevisionRepository
         $tenantId = $this->tenantId();
         $schedules = $wpdb->prefix . 'safecontracts_contract_financial_payment_schedule_entry_revisions';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, contract_id, financial_currency_profile_id, schedule_entry_uuid, revision_number, sequence_no, currency_code, schedule_entry_state
+            "SELECT id, contract_id, financial_currency_profile_id, schedule_entry_uuid, revision_number, sequence_no, amount, currency_code, schedule_entry_state
              FROM {$schedules}
              WHERE tenant_id = %d AND contract_id = %d AND schedule_entry_uuid = %s
              ORDER BY revision_number DESC, id DESC LIMIT 1 FOR UPDATE",
@@ -368,19 +388,26 @@ final class ContractFinancialCollectionReceiptRevisionRepository
             throw new RuntimeException('Enterprise Contract collection receipt requires exactly one linked payment schedule entry.');
         }
         $row = $rows[0];
-        $sequence = ContractFinancialPaymentSchedulePolicy::normalizeSequence($row['sequence_no'] ?? null);
-        $state = ContractFinancialPaymentSchedulePolicy::normalizeState($row['schedule_entry_state'] ?? null);
-        $currency = $this->currencyFromStorage($row['currency_code'] ?? null);
+        try {
+            $sequence = ContractFinancialPaymentSchedulePolicy::normalizeSequence($row['sequence_no'] ?? null);
+            $state = ContractFinancialPaymentSchedulePolicy::normalizeState($row['schedule_entry_state'] ?? null);
+            $currency = $this->currencyFromStorage($row['currency_code'] ?? null);
+            $scheduledMoney = Money::of($row['amount'] ?? null, $currency);
+        } catch (Throwable $error) {
+            throw new UnexpectedValueException('Enterprise Contract collection receipt linked schedule contains invalid financial data.', 0, $error);
+        }
         if ((int) ($row['contract_id'] ?? 0) !== $contractId
             || (int) ($row['financial_currency_profile_id'] ?? 0) !== (int) $profile['id']
             || (string) ($row['schedule_entry_uuid'] ?? '') !== $scheduleEntryUuid
-            || ! $currency->equals($profile['currency'])) {
-            throw new UnexpectedValueException('Enterprise Contract collection receipt linked schedule identity/profile/currency is invalid.');
+            || ! $currency->equals($profile['currency'])
+            || $scheduledMoney->compare(Money::of('0', $currency)) <= 0) {
+            throw new UnexpectedValueException('Enterprise Contract collection receipt linked schedule identity/profile/currency/amount is invalid.');
         }
         if ($requireScheduled && $state !== ContractFinancialPaymentSchedulePolicy::STATE_SCHEDULED) {
             throw new RuntimeException('Enterprise Contract collection receipts may only mutate against a scheduled payment entry.');
         }
         $row['sequence_no'] = $sequence;
+        $row['amount'] = $scheduledMoney->amount();
         $row['schedule_entry_state'] = $state;
         $row['currency_code'] = $currency->value();
         return $row;
@@ -404,6 +431,83 @@ final class ContractFinancialCollectionReceiptRevisionRepository
             throw new RuntimeException('Enterprise Contract collection receipt was not found or has invalid cardinality.');
         }
         return $this->normalizeReceipt($rows[0], $contractId, $receiptUuid);
+    }
+
+    /**
+     * @param array{id:int,currency:CurrencyCode} $profile
+     */
+    private function assertCollectionCapacity(
+        int $contractId,
+        string $scheduleEntryUuid,
+        int $scheduleSequence,
+        array $profile,
+        string $scheduledAmount,
+        Money $proposedAmount,
+        ?string $excludeReceiptUuid
+    ): void {
+        global $wpdb;
+        $tenantId = $this->tenantId();
+        $receipts = $wpdb->prefix . 'safecontracts_contract_financial_collection_receipt_revisions';
+        $limit = ContractFinancialCollectionReceiptPolicy::MAX_RECEIPTS + 1;
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT " . self::RECEIPT_COLUMNS_UNALIASED . " FROM {$receipts} r
+             WHERE r.tenant_id = %d AND r.contract_id = %d AND r.schedule_entry_uuid = %s
+               AND NOT EXISTS (
+                    SELECT 1 FROM {$receipts} newer
+                    WHERE newer.tenant_id = r.tenant_id
+                      AND newer.contract_id = r.contract_id
+                      AND newer.receipt_uuid = r.receipt_uuid
+                      AND (
+                           newer.revision_number > r.revision_number
+                           OR (newer.revision_number = r.revision_number AND newer.id > r.id)
+                      )
+               )
+             ORDER BY r.receipt_uuid ASC
+             LIMIT %d FOR UPDATE",
+            $tenantId,
+            $contractId,
+            $scheduleEntryUuid,
+            $limit
+        ), ARRAY_A);
+        if (! is_array($rows)) {
+            throw new RuntimeException('Enterprise Contract collection capacity could not read current receipts.');
+        }
+        if (count($rows) > ContractFinancialCollectionReceiptPolicy::MAX_RECEIPTS) {
+            throw new RuntimeException('Enterprise Contract collection capacity receipt limit was exceeded.');
+        }
+
+        $scheduledMoney = Money::of($scheduledAmount, $profile['currency']);
+        if ($scheduledMoney->compare(Money::of('0', $profile['currency'])) <= 0) {
+            throw new UnexpectedValueException('Enterprise Contract collection capacity requires a positive scheduled amount.');
+        }
+
+        $used = Money::of('0', $profile['currency']);
+        $seen = [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                throw new UnexpectedValueException('Enterprise Contract collection capacity receipt row is invalid.');
+            }
+            $receipt = $this->normalizeReceipt($row, $contractId);
+            $receiptUuid = (string) $receipt['receipt_uuid'];
+            if (isset($seen[$receiptUuid])) {
+                throw new UnexpectedValueException('Enterprise Contract collection capacity contains duplicate latest receipt identities.');
+            }
+            $seen[$receiptUuid] = true;
+            $this->assertReceiptProfile($receipt, $profile);
+            $this->assertReceiptSchedule($receipt, $scheduleEntryUuid, $scheduleSequence);
+
+            if ($excludeReceiptUuid !== null && $receiptUuid === $excludeReceiptUuid) {
+                continue;
+            }
+            if ((string) $receipt['receipt_state'] !== ContractFinancialCollectionReceiptPolicy::STATE_RECORDED) {
+                continue;
+            }
+            $used = $used->add(Money::of((string) $receipt['amount'], $profile['currency']));
+        }
+
+        if ($used->add($proposedAmount)->compare($scheduledMoney) > 0) {
+            throw new RuntimeException('Enterprise Contract collection receipt would exceed the linked payment schedule amount.');
+        }
     }
 
     /** @param array<string,mixed> $receipt @param array{id:int,currency:CurrencyCode} $profile */
