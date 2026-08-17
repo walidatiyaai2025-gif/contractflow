@@ -35,27 +35,62 @@ def enabled(value: Any) -> bool | None:
     return None
 
 
-def legacy_status_checks(protection: dict[str, Any]) -> tuple[set[str], bool]:
+def add_source(
+    sources: dict[str, set[int]],
+    unbound: set[str],
+    context: Any,
+    source_id: Any,
+) -> None:
+    if not isinstance(context, str) or not context:
+        return
+    if isinstance(source_id, int):
+        sources.setdefault(context, set()).add(source_id)
+    else:
+        unbound.add(context)
+
+
+def legacy_status_checks(
+    protection: dict[str, Any],
+) -> tuple[set[str], bool, dict[str, set[int]], set[str]]:
     block = protection.get("required_status_checks")
     if not isinstance(block, dict):
-        return set(), False
+        return set(), False, {}, set()
 
     contexts: set[str] = set()
+    sources: dict[str, set[int]] = {}
+    unbound: set[str] = set()
+
     raw_contexts = block.get("contexts", [])
     if isinstance(raw_contexts, list):
-        contexts.update(item for item in raw_contexts if isinstance(item, str))
+        for item in raw_contexts:
+            if isinstance(item, str):
+                contexts.add(item)
 
     raw_checks = block.get("checks", [])
     if isinstance(raw_checks, list):
         for item in raw_checks:
-            if isinstance(item, dict) and isinstance(item.get("context"), str):
-                contexts.add(item["context"])
+            if not isinstance(item, dict) or not isinstance(item.get("context"), str):
+                continue
+            context = item["context"]
+            contexts.add(context)
+            add_source(sources, unbound, context, item.get("app_id"))
 
-    return contexts, block.get("strict") is True
+    # `contexts` is the legacy name-only representation. If a context has no
+    # source-bearing `checks[]` entry, retain that fact explicitly so the audit
+    # can fail closed instead of treating the name alone as authenticated.
+    for context in contexts:
+        if context not in sources:
+            unbound.add(context)
+
+    return contexts, block.get("strict") is True, sources, unbound
 
 
-def effective_rules_status_checks(rules: list[Any]) -> tuple[set[str], bool]:
+def effective_rules_status_checks(
+    rules: list[Any],
+) -> tuple[set[str], bool, dict[str, set[int]], set[str]]:
     contexts: set[str] = set()
+    sources: dict[str, set[int]] = {}
+    unbound: set[str] = set()
     strict = False
     for rule in rules:
         if not isinstance(rule, dict) or rule.get("type") != "required_status_checks":
@@ -67,9 +102,12 @@ def effective_rules_status_checks(rules: list[Any]) -> tuple[set[str], bool]:
         raw_checks = params.get("required_status_checks", [])
         if isinstance(raw_checks, list):
             for item in raw_checks:
-                if isinstance(item, dict) and isinstance(item.get("context"), str):
-                    contexts.add(item["context"])
-    return contexts, strict
+                if not isinstance(item, dict) or not isinstance(item.get("context"), str):
+                    continue
+                context = item["context"]
+                contexts.add(context)
+                add_source(sources, unbound, context, item.get("integration_id"))
+    return contexts, strict, sources, unbound
 
 
 def effective_pull_request_controls(rules: list[Any]) -> tuple[bool, bool]:
@@ -92,22 +130,40 @@ def has_rule(rules: list[Any], rule_type: str) -> bool:
     return any(isinstance(rule, dict) and rule.get("type") == rule_type for rule in rules)
 
 
+def merge_sources(*source_maps: dict[str, set[int]]) -> dict[str, set[int]]:
+    merged: dict[str, set[int]] = {}
+    for source_map in source_maps:
+        for context, ids in source_map.items():
+            merged.setdefault(context, set()).update(ids)
+    return merged
+
+
 def evaluate(
     branch: dict[str, Any],
     protection: dict[str, Any] | None,
     rules: list[Any],
     break_glass_note: str,
+    expected_status_check_app_id: int,
 ) -> dict[str, Any]:
+    if not isinstance(expected_status_check_app_id, int) or expected_status_check_app_id <= 0:
+        raise ValueError("expected_status_check_app_id must be a positive GitHub App ID")
+
     legacy = protection or {}
-    legacy_checks, legacy_strict = legacy_status_checks(legacy)
-    rule_checks, rule_strict = effective_rules_status_checks(rules)
+    legacy_checks, legacy_strict, legacy_sources, legacy_unbound = legacy_status_checks(legacy)
+    rule_checks, rule_strict, rule_sources, rule_unbound = effective_rules_status_checks(rules)
     rule_pr_required, rule_conversation_resolution = effective_pull_request_controls(rules)
     all_checks = legacy_checks | rule_checks
+    all_sources = merge_sources(legacy_sources, rule_sources)
+    all_unbound = legacy_unbound | rule_unbound
 
     protected = branch.get("name") == TARGET_BRANCH and branch.get("protected") is True
     pr_required = isinstance(legacy.get("required_pull_request_reviews"), dict) or rule_pr_required
     strict_status = legacy_strict or rule_strict
     required_checks = REQUIRED_CHECKS.issubset(all_checks)
+    required_sources_verified = all(
+        expected_status_check_app_id in all_sources.get(context, set())
+        for context in REQUIRED_CHECKS
+    )
 
     admin_enforced = enabled(legacy.get("enforce_admins")) is True
 
@@ -129,6 +185,7 @@ def evaluate(
         "protected_branch": protected,
         "pull_request_required": pr_required,
         "required_status_checks_present": required_checks,
+        "required_status_check_sources_verified": required_sources_verified,
         "strict_up_to_date_status_checks": strict_status,
         "administrator_enforcement_verified": admin_enforced,
         "conversation_resolution_required": conversation_resolution_required,
@@ -139,18 +196,25 @@ def evaluate(
     decision = "PASS" if all(checks.values()) else "FAIL"
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "branch": TARGET_BRANCH,
         "decision": decision,
         "checks": checks,
         "observed_required_checks": sorted(all_checks),
         "required_checks": sorted(REQUIRED_CHECKS),
+        "expected_status_check_app_id": expected_status_check_app_id,
+        "observed_required_check_source_ids": {
+            context: sorted(all_sources.get(context, set()))
+            for context in sorted(REQUIRED_CHECKS)
+        },
+        "unbound_required_check_contexts": sorted(REQUIRED_CHECKS & all_unbound),
         "break_glass_statement": note,
         "sources": {
             "legacy_branch_protection_present": protection is not None,
             "administrator_enforcement_source": (
                 "legacy_branch_protection" if admin_enforced else "unverified"
             ),
+            "status_check_source_contract": "github_app_id",
             "effective_rule_types": sorted(
                 {
                     rule["type"]
@@ -170,12 +234,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rules-json", type=Path, required=True)
     parser.add_argument("--protection-json", type=Path)
     parser.add_argument("--break-glass-note", required=True)
+    parser.add_argument("--expected-status-check-app-id", type=int, required=True)
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.expected_status_check_app_id <= 0:
+        raise SystemExit("FAIL: --expected-status-check-app-id must be a positive GitHub App ID")
+
     branch = load_json(args.branch_json)
     rules = load_json(args.rules_json)
     protection = load_json(args.protection_json) if args.protection_json else None
@@ -187,7 +255,13 @@ def main() -> int:
     if protection is not None and not isinstance(protection, dict):
         raise SystemExit("FAIL: protection JSON must be an object")
 
-    result = evaluate(branch, protection, rules, args.break_glass_note)
+    result = evaluate(
+        branch,
+        protection,
+        rules,
+        args.break_glass_note,
+        args.expected_status_check_app_id,
+    )
     result["captured_input_sha256"] = {
         "branch_json": sha256_file(args.branch_json),
         "rules_json": sha256_file(args.rules_json),
