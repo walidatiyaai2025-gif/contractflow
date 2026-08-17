@@ -23,10 +23,10 @@ void main() {
   });
 
   test('automatic app-shell refresh uses silent refresh paths', () {
-    final shell = File('lib/features/navigation/app_shell.dart')
-        .readAsStringSync();
-    final silent = File('lib/features/refresh/silent_refresh.dart')
-        .readAsStringSync();
+    final shell =
+        File('lib/features/navigation/app_shell.dart').readAsStringSync();
+    final silent =
+        File('lib/features/refresh/silent_refresh.dart').readAsStringSync();
 
     expect(shell, contains('dashboardController.refreshSilently()'));
     expect(shell, contains('customersController.refreshSilently()'));

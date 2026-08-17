@@ -75,9 +75,9 @@ final class ProfileHero extends StatelessWidget {
                 Text(
                   profileCopy(context, 'My profile', 'ملفي الشخصي'),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: SafeContractsVisual.ink,
-                    fontWeight: FontWeight.w900,
-                  ),
+                        color: SafeContractsVisual.ink,
+                        fontWeight: FontWeight.w900,
+                      ),
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -87,9 +87,9 @@ final class ProfileHero extends StatelessWidget {
                     'المستخدم #${session.userId}',
                   ),
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: SafeContractsVisual.muted,
-                    fontWeight: FontWeight.w600,
-                  ),
+                        color: SafeContractsVisual.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
                 const SizedBox(height: 10),
                 Wrap(
@@ -228,7 +228,9 @@ final class ProfileAccount extends StatelessWidget {
                 Expanded(
                   child: Text(
                     config.supportText,
-                    style: Theme.of(context).textTheme.bodyMedium
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
                         ?.copyWith(color: SafeContractsVisual.ink),
                   ),
                 ),
@@ -265,7 +267,9 @@ final class ProfileLocalSession extends StatelessWidget {
               children: [
                 Text(
                   profileCopy(context, 'Local session', 'الجلسة المحلية'),
-                  style: Theme.of(context).textTheme.titleMedium
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 4),
@@ -275,7 +279,9 @@ final class ProfileLocalSession extends StatelessWidget {
                     'Clear saved session data when you need to sign in again.',
                     'امسح بيانات الجلسة عند الحاجة لتسجيل الدخول من جديد.',
                   ),
-                  style: Theme.of(context).textTheme.bodySmall
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
                       ?.copyWith(color: SafeContractsVisual.muted),
                 ),
                 const SizedBox(height: 12),
@@ -343,15 +349,17 @@ final class ProfileInfoRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
                     ?.copyWith(color: SafeContractsVisual.muted),
               ),
               Text(
                 value,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: SafeContractsVisual.ink,
-                  fontWeight: FontWeight.w800,
-                ),
+                      color: SafeContractsVisual.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
               ),
             ],
           ),
@@ -390,7 +398,9 @@ final class ProfilePill extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             text,
-            style: Theme.of(context).textTheme.labelMedium
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
                 ?.copyWith(color: foreground, fontWeight: FontWeight.w800),
           ),
         ],

@@ -134,8 +134,7 @@ final class IoExcelExportSaver implements ExcelExportSaver {
 
   @override
   Future<String> save(MobileExcelExport export) async {
-    final directory =
-        _directory ??
+    final directory = _directory ??
         Directory(
           '${Directory.systemTemp.path}${Platform.pathSeparator}safecontracts_exports',
         );

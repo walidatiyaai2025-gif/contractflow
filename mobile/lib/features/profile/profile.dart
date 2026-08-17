@@ -56,9 +56,8 @@ final class DevicesSnapshot {
         'device payload exceeds the supported bound.',
       );
     }
-    final devices = rows
-        .map(SafeContractsDevice.fromData)
-        .toList(growable: false);
+    final devices =
+        rows.map(SafeContractsDevice.fromData).toList(growable: false);
     final ids = <int>{};
     for (final device in devices) {
       if (!ids.add(device.id)) {

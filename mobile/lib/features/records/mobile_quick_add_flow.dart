@@ -43,29 +43,27 @@ String mobileQuickAddDescription(
 ) {
   final ar = context.scL10n.isArabic;
   return switch (type) {
-    MobileQuickAddType.customer =>
-      ar
-          ? 'أنشئ عميلًا جديدًا ضمن صلاحياتك.'
-          : 'Create a customer inside your authorized scope.',
-    MobileQuickAddType.supplier =>
-      ar
-          ? 'أنشئ موردًا جديدًا ببياناته المالية الأساسية.'
-          : 'Create a supplier with its core finance profile.',
-    MobileQuickAddType.contract =>
-      ar ? 'اربط العقد بعميل أو مورد؛ اتجاه AR/AP يحدده السيرفر.' : 'Link a contract to a customer or supplier; the server derives AR/AP.',
-    MobileQuickAddType.payment =>
-      ar
-          ? 'أضف استحقاقًا إلى عقد متاح في نطاقك.'
-          : 'Add an obligation to an authorized contract.',
+    MobileQuickAddType.customer => ar
+        ? 'أنشئ عميلًا جديدًا ضمن صلاحياتك.'
+        : 'Create a customer inside your authorized scope.',
+    MobileQuickAddType.supplier => ar
+        ? 'أنشئ موردًا جديدًا ببياناته المالية الأساسية.'
+        : 'Create a supplier with its core finance profile.',
+    MobileQuickAddType.contract => ar
+        ? 'اربط العقد بعميل أو مورد؛ اتجاه AR/AP يحدده السيرفر.'
+        : 'Link a contract to a customer or supplier; the server derives AR/AP.',
+    MobileQuickAddType.payment => ar
+        ? 'أضف استحقاقًا إلى عقد متاح في نطاقك.'
+        : 'Add an obligation to an authorized contract.',
   };
 }
 
 IconData mobileQuickAddIcon(MobileQuickAddType type) => switch (type) {
-  MobileQuickAddType.customer => Icons.person_add_alt_1_rounded,
-  MobileQuickAddType.supplier => Icons.local_shipping_rounded,
-  MobileQuickAddType.contract => Icons.note_add_rounded,
-  MobileQuickAddType.payment => Icons.add_card_rounded,
-};
+      MobileQuickAddType.customer => Icons.person_add_alt_1_rounded,
+      MobileQuickAddType.supplier => Icons.local_shipping_rounded,
+      MobileQuickAddType.contract => Icons.note_add_rounded,
+      MobileQuickAddType.payment => Icons.add_card_rounded,
+    };
 
 final class MobileQuickAddScreen extends StatefulWidget {
   const MobileQuickAddScreen({
@@ -168,8 +166,8 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
             .loadPage(page: customerPage, perPage: 100, order: 'asc');
         var suppliers = const <SafeContractsSupplier>[];
         if (_canViewSuppliers) {
-          suppliers = await SuppliersRepository(widget.client)
-              .search(limit: 200);
+          suppliers =
+              await SuppliersRepository(widget.client).search(limit: 200);
         }
         var accountants = const <_AccountantOption>[];
         if (_canAssign) {
@@ -228,27 +226,27 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _loadError != null
-            ? _LoadError(message: _loadError!, onRetry: _loadReferences)
-            : SafeArea(
-                child: ListView(
-                  padding: const EdgeInsets.all(18),
-                  children: [
-                    _QuickAddHeader(type: widget.type),
-                    const SizedBox(height: 16),
-                    SafeContractsSurface(child: _form()),
-                  ],
-                ),
-              ),
+                ? _LoadError(message: _loadError!, onRetry: _loadReferences)
+                : SafeArea(
+                    child: ListView(
+                      padding: const EdgeInsets.all(18),
+                      children: [
+                        _QuickAddHeader(type: widget.type),
+                        const SizedBox(height: 16),
+                        SafeContractsSurface(child: _form()),
+                      ],
+                    ),
+                  ),
       ),
     );
   }
 
   Widget _form() => switch (widget.type) {
-    MobileQuickAddType.customer => _customerForm(),
-    MobileQuickAddType.supplier => _supplierForm(),
-    MobileQuickAddType.contract => _contractForm(),
-    MobileQuickAddType.payment => _paymentForm(),
-  };
+        MobileQuickAddType.customer => _customerForm(),
+        MobileQuickAddType.supplier => _supplierForm(),
+        MobileQuickAddType.contract => _contractForm(),
+        MobileQuickAddType.payment => _paymentForm(),
+      };
 
   Widget _customerForm() {
     final ar = context.scL10n.isArabic;
@@ -286,9 +284,8 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
           contentPadding: EdgeInsets.zero,
           title: Text(ar ? 'عميل نشط' : 'Active customer'),
           value: _customerActive,
-          onChanged: _saving
-              ? null
-              : (v) => setState(() => _customerActive = v),
+          onChanged:
+              _saving ? null : (v) => setState(() => _customerActive = v),
         ),
         _saveButton(
           Icons.person_add_alt_1_rounded,
@@ -390,18 +387,18 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
     ];
     final options = _counterpartyType == 'supplier'
         ? _suppliers
-              .map(
-                (s) => DropdownMenuItem<int>(
-                  value: s.id,
-                  child: Text(s.displayName),
-                ),
-              )
-              .toList()
+            .map(
+              (s) => DropdownMenuItem<int>(
+                value: s.id,
+                child: Text(s.displayName),
+              ),
+            )
+            .toList()
         : customers
-              .map(
-                (c) => DropdownMenuItem<int>(value: c.id, child: Text(c.name)),
-              )
-              .toList();
+            .map(
+              (c) => DropdownMenuItem<int>(value: c.id, child: Text(c.name)),
+            )
+            .toList();
     final selectedExists = options.any((item) => item.value == _counterpartyId);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -425,16 +422,14 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
                   setState(() {
                     _counterpartyType = value;
                     if (value == 'supplier') {
-                      _counterpartyId = _suppliers.isEmpty
-                          ? null
-                          : _suppliers.first.id;
+                      _counterpartyId =
+                          _suppliers.isEmpty ? null : _suppliers.first.id;
                       _currency.text = _suppliers.isEmpty
                           ? ''
                           : (_suppliers.first.defaultCurrency ?? '');
                     } else {
-                      _counterpartyId = customers.isEmpty
-                          ? null
-                          : customers.first.id;
+                      _counterpartyId =
+                          customers.isEmpty ? null : customers.first.id;
                     }
                   });
                 },
@@ -453,9 +448,8 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
                   setState(() {
                     _counterpartyId = value;
                     if (_counterpartyType == 'supplier' && value != null) {
-                      final supplier = _suppliers
-                          .where((s) => s.id == value)
-                          .firstOrNull;
+                      final supplier =
+                          _suppliers.where((s) => s.id == value).firstOrNull;
                       if (supplier?.defaultCurrency != null)
                         _currency.text = supplier!.defaultCurrency!;
                     }
@@ -471,20 +465,21 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
                 onPressed: _saving || _customerPage!.page <= 1
                     ? null
                     : () => unawaited(
-                        _loadReferences(customerPage: _customerPage!.page - 1),
-                      ),
+                          _loadReferences(
+                              customerPage: _customerPage!.page - 1),
+                        ),
                 child: Text(ar ? 'السابق' : 'Previous'),
               ),
               const SizedBox(width: 8),
               OutlinedButton(
-                onPressed:
-                    _saving ||
+                onPressed: _saving ||
                         !_customerPage!.hasMore ||
                         _customerPage!.page >= 5
                     ? null
                     : () => unawaited(
-                        _loadReferences(customerPage: _customerPage!.page + 1),
-                      ),
+                          _loadReferences(
+                              customerPage: _customerPage!.page + 1),
+                        ),
                 child: Text(ar ? 'التالي' : 'Next'),
               ),
             ],
@@ -562,9 +557,8 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
                 ),
               )
               .toList(),
-          onChanged: _saving
-              ? null
-              : (v) => setState(() => _paymentContractId = v),
+          onChanged:
+              _saving ? null : (v) => setState(() => _paymentContractId = v),
         ),
         _gap(),
         _field(
@@ -613,28 +607,32 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
     String label,
     IconData icon, {
     TextInputType? keyboard,
-  }) => TextField(
-    controller: controller,
-    keyboardType: keyboard,
-    decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
-  );
+  }) =>
+      TextField(
+        controller: controller,
+        keyboardType: keyboard,
+        decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+      );
   Widget _gap() => const SizedBox(height: 14);
   Widget _saveButton(
     IconData icon,
     String label,
     Future<void> Function() action,
-  ) => FilledButton.icon(
-    onPressed: _saving ? null : () => unawaited(action()),
-    icon: _saving
-        ? const SizedBox.square(
-            dimension: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-        : Icon(icon),
-    label: Text(
-      _saving ? (context.scL10n.isArabic ? 'جارٍ الحفظ…' : 'Saving…') : label,
-    ),
-  );
+  ) =>
+      FilledButton.icon(
+        onPressed: _saving ? null : () => unawaited(action()),
+        icon: _saving
+            ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(icon),
+        label: Text(
+          _saving
+              ? (context.scL10n.isArabic ? 'جارٍ الحفظ…' : 'Saving…')
+              : label,
+        ),
+      );
 
   Future<void> _saveCustomer() async {
     final name = _name.text.trim();
@@ -820,37 +818,42 @@ final class _QuickAddHeader extends StatelessWidget {
   final MobileQuickAddType type;
   @override
   Widget build(BuildContext context) => Row(
-    children: [
-      Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: SafeContractsVisual.navySoft,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Icon(mobileQuickAddIcon(type), color: SafeContractsVisual.navy),
-      ),
-      const SizedBox(width: 14),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              mobileQuickAddLabel(context, type),
-              style: Theme.of(context).textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: SafeContractsVisual.navySoft,
+              borderRadius: BorderRadius.circular(18),
             ),
-            const SizedBox(height: 3),
-            Text(
-              mobileQuickAddDescription(context, type),
-              style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: SafeContractsVisual.muted),
+            child:
+                Icon(mobileQuickAddIcon(type), color: SafeContractsVisual.navy),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mobileQuickAddLabel(context, type),
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  mobileQuickAddDescription(context, type),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: SafeContractsVisual.muted),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    ],
-  );
+          ),
+        ],
+      );
 }
 
 final class _EmptyReference extends StatelessWidget {
@@ -858,15 +861,15 @@ final class _EmptyReference extends StatelessWidget {
   final String message;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 28),
-    child: Column(
-      children: [
-        const Icon(Icons.folder_off_outlined, size: 42),
-        const SizedBox(height: 12),
-        Text(message, textAlign: TextAlign.center),
-      ],
-    ),
-  );
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        child: Column(
+          children: [
+            const Icon(Icons.folder_off_outlined, size: 42),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+          ],
+        ),
+      );
 }
 
 final class _LoadError extends StatelessWidget {
@@ -875,24 +878,25 @@ final class _LoadError extends StatelessWidget {
   final Future<void> Function({int customerPage}) onRetry;
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.cloud_off_outlined, size: 44),
-          const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 16),
-          FilledButton.tonalIcon(
-            onPressed: () => unawaited(onRetry()),
-            icon: const Icon(Icons.refresh_rounded),
-            label: Text(context.scL10n.isArabic ? 'إعادة المحاولة' : 'Retry'),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined, size: 44),
+              const SizedBox(height: 12),
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              FilledButton.tonalIcon(
+                onPressed: () => unawaited(onRetry()),
+                icon: const Icon(Icons.refresh_rounded),
+                label:
+                    Text(context.scL10n.isArabic ? 'إعادة المحاولة' : 'Retry'),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 final class _AccountantOption {
@@ -903,9 +907,8 @@ final class _AccountantOption {
   String get label => email == null || email!.isEmpty ? name : '$name <$email>';
   factory _AccountantOption.fromData(Object? value) {
     final data = apiObjectMap(value, 'accountant');
-    final id = data['id'] is int
-        ? data['id'] as int
-        : int.tryParse('${data['id']}');
+    final id =
+        data['id'] is int ? data['id'] as int : int.tryParse('${data['id']}');
     if (id == null || id <= 0)
       throw const FormatException('Accountant ID is invalid.');
     final name = data['name'];

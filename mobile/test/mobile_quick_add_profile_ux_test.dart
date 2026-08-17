@@ -69,8 +69,8 @@ void main() {
   test(
     'app shell owns the animated permission-aware quick add entry point',
     () {
-      final source = File('lib/features/navigation/app_shell.dart')
-          .readAsStringSync();
+      final source =
+          File('lib/features/navigation/app_shell.dart').readAsStringSync();
 
       expect(source, contains('availableMobileQuickAdds(widget.session)'));
       expect(source, contains('floatingActionButton:'));

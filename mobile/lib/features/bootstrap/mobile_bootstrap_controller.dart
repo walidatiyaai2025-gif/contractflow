@@ -59,8 +59,7 @@ final class MobileBootstrapController extends ChangeNotifier {
       final session = nextSessionController.session;
       if (nextSessionController.state != SessionState.authenticated ||
           session == null) {
-        message =
-            nextSessionController.errorMessage ??
+        message = nextSessionController.errorMessage ??
             'SafeContracts mobile access requires an authorized session.';
         state = nextSessionController.state == SessionState.error
             ? MobileBootstrapState.error

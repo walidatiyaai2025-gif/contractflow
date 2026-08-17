@@ -21,7 +21,8 @@ void main() {
       expect(
         () => AppEnvironment.fromValues(
           name: 'production',
-          apiBaseUrl: 'https://user:pass@contracts.example.test/wp-json/safecontracts/v1/',
+          apiBaseUrl:
+              'https://user:pass@contracts.example.test/wp-json/safecontracts/v1/',
         ),
         throwsFormatException,
       );
@@ -482,27 +483,29 @@ void main() {
 }
 
 AppEnvironment _environment() => AppEnvironment.fromValues(
-  name: 'local',
-  apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
-);
+      name: 'local',
+      apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
+    );
 
 SafeContractsApiClient _client(
   SafeContractsTransport transport, {
   ApiHeadersProvider? headersProvider,
-}) => SafeContractsApiClient(
-  environment: _environment(),
-  transport: transport,
-  headersProvider: headersProvider,
-);
+}) =>
+    SafeContractsApiClient(
+      environment: _environment(),
+      transport: transport,
+      headersProvider: headersProvider,
+    );
 
 ApiTransportResponse _ok(
   Object? data, {
   Map<String, Object?> meta = const <String, Object?>{'api_version': 'v1'},
-}) => ApiTransportResponse(
-  statusCode: 200,
-  headers: const <String, String>{'content-type': 'application/json'},
-  body: jsonEncode(<String, Object?>{'data': data, 'meta': meta}),
-);
+}) =>
+    ApiTransportResponse(
+      statusCode: 200,
+      headers: const <String, String>{'content-type': 'application/json'},
+      body: jsonEncode(<String, Object?>{'data': data, 'meta': meta}),
+    );
 
 ApiTransportResponse _error(int status, String code, String message) =>
     ApiTransportResponse(
@@ -516,46 +519,45 @@ ApiTransportResponse _error(int status, String code, String message) =>
     );
 
 Map<String, Object?> _sessionData() => <String, Object?>{
-  'authenticated': true,
-  'user_id': 42,
-  'scope': 'assigned',
-  'capabilities': <String, Object?>{
-    'safecontracts_access': true,
-    'safecontracts_view_assigned': true,
-    'safecontracts_view_all': false,
-    'safecontracts_view_reports': true,
-    'safecontracts_export_reports': true,
-  },
-};
+      'authenticated': true,
+      'user_id': 42,
+      'scope': 'assigned',
+      'capabilities': <String, Object?>{
+        'safecontracts_access': true,
+        'safecontracts_view_assigned': true,
+        'safecontracts_view_all': false,
+        'safecontracts_view_reports': true,
+        'safecontracts_export_reports': true,
+      },
+    };
 
 Map<String, Object?> _dashboardData({
   List<Object?>? customers,
   List<Object?>? contracts,
-}) => <String, Object?>{
-  'filters': <String, Object?>{},
-  'kpis': <String, Object?>{
-    'contract_count': '1',
-    'scheduled_total': '100.0000',
-    'remaining_total': '40.0000',
-    'overdue_exposure': '40.0000',
-    'collected_total': '60.0000',
-  },
-  'customers':
-      customers ??
-      <Object?>[
-        <String, Object?>{'id': 7, 'name': 'Alpha Customer'},
-        <String, Object?>{'id': 8, 'name': 'Beta Customer'},
-      ],
-  'contracts':
-      contracts ??
-      <Object?>[
-        <String, Object?>{
-          'id': 70,
-          'contract_number': 'SC-70',
-          'customer_id': 7,
-        },
-      ],
-};
+}) =>
+    <String, Object?>{
+      'filters': <String, Object?>{},
+      'kpis': <String, Object?>{
+        'contract_count': '1',
+        'scheduled_total': '100.0000',
+        'remaining_total': '40.0000',
+        'overdue_exposure': '40.0000',
+        'collected_total': '60.0000',
+      },
+      'customers': customers ??
+          <Object?>[
+            <String, Object?>{'id': 7, 'name': 'Alpha Customer'},
+            <String, Object?>{'id': 8, 'name': 'Beta Customer'},
+          ],
+      'contracts': contracts ??
+          <Object?>[
+            <String, Object?>{
+              'id': 70,
+              'contract_number': 'SC-70',
+              'customer_id': 7,
+            },
+          ],
+    };
 
 ApiTransportResponse _dashboardHandler(Uri uri) {
   if (uri.path.endsWith('/filters/contracts')) {
@@ -639,48 +641,50 @@ const _xlsxBytes = <int>[0x50, 0x4b, 0x03, 0x04, 0x01, 0x02, 0x03];
 Map<String, Object?> _exportData({
   List<int> bytes = _xlsxBytes,
   Map<String, Object?> filters = const <String, Object?>{'customer_id': 7},
-}) => <String, Object?>{
-  'filename': 'SafeContracts-report.xlsx',
-  'content_type': MobileExcelExport.xlsxContentType,
-  'encoding': 'base64',
-  'content_base64': base64Encode(bytes),
-  'filters': filters,
-  'row_counts': <String, Object?>{
-    'customers': 1,
-    'contracts': 1,
-    'payments': 1,
-    'collections': 1,
-    'followups': 1,
-    'private_internal_rows': 999,
-  },
-};
+}) =>
+    <String, Object?>{
+      'filename': 'SafeContracts-report.xlsx',
+      'content_type': MobileExcelExport.xlsxContentType,
+      'encoding': 'base64',
+      'content_base64': base64Encode(bytes),
+      'filters': filters,
+      'row_counts': <String, Object?>{
+        'customers': 1,
+        'contracts': 1,
+        'payments': 1,
+        'collections': 1,
+        'followups': 1,
+        'private_internal_rows': 999,
+      },
+    };
 
 Map<String, Object?> _customerData(int id, String name) => <String, Object?>{
-  'id': id,
-  'internal_code': 'C$id',
-  'name': name,
-  'contact_name': 'Operations',
-  'email': 'ops@example.test',
-  'phone': '+96555555555',
-  'is_active': '1',
-};
+      'id': id,
+      'internal_code': 'C$id',
+      'name': name,
+      'contact_name': 'Operations',
+      'email': 'ops@example.test',
+      'phone': '+96555555555',
+      'is_active': '1',
+    };
 
 ApiEnvelope _customerEnvelope(
   List<Object?> customers, {
   String scope = 'assigned',
-}) => ApiEnvelope(
-  data: customers,
-  meta: <String, Object?>{
-    'api_version': 'v1',
-    'scope': scope,
-    'page': 1,
-    'per_page': 25,
-    'sort': 'name',
-    'order': 'asc',
-    'bounded_window': 500,
-    'has_more': false,
-  },
-);
+}) =>
+    ApiEnvelope(
+      data: customers,
+      meta: <String, Object?>{
+        'api_version': 'v1',
+        'scope': scope,
+        'page': 1,
+        'per_page': 25,
+        'sort': 'name',
+        'order': 'asc',
+        'bounded_window': 500,
+        'has_more': false,
+      },
+    );
 
 final class _MemorySaver implements ExcelExportSaver {
   @override

@@ -278,8 +278,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
         contract != null &&
         contract.id == widget.contractId) {
       final currentId = contract.accountantUserId;
-      _accountantId =
-          currentId != null &&
+      _accountantId = currentId != null &&
               _editController.accountants.any((item) => item.id == currentId)
           ? currentId
           : null;
@@ -342,8 +341,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
       appBar: AppBar(title: Text(l10n.t('Edit contract'))),
       body: !ready
           ? Center(
-              child:
-                  widget.contractsController.detailState ==
+              child: widget.contractsController.detailState ==
                       ContractDetailLoadState.loading
                   ? const CircularProgressIndicator()
                   : Text(
@@ -373,7 +371,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                     onChanged: busy || !_editController.canEdit
                         ? null
                         : (value) =>
-                              setState(() => _updateDates = value ?? false),
+                            setState(() => _updateDates = value ?? false),
                     title: Text(l10n.t('Update start/end dates')),
                   ),
                   if (_updateDates) ...[
@@ -474,8 +472,8 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                               _editController.canAssignAccountant
                           ? 'Contract fields are read-only for this session. Responsible accountant assignment remains server-authorized and audited.'
                           : _editController.canAssignAccountant
-                          ? 'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.'
-                          : 'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.',
+                              ? 'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.'
+                              : 'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.',
                     ),
                   ),
                 ],

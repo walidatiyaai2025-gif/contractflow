@@ -38,8 +38,7 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _date.text =
-        '${now.year.toString().padLeft(4, '0')}-'
+    _date.text = '${now.year.toString().padLeft(4, '0')}-'
         '${now.month.toString().padLeft(2, '0')}-'
         '${now.day.toString().padLeft(2, '0')}';
     unawaited(_loadMethods());
@@ -270,9 +269,8 @@ bool _validPositiveMoney(String value) {
   final normalized = value.trim();
   if (normalized.isEmpty || normalized.length > 32) return false;
   if (!RegExp(r'^\d+(?:\.\d{1,2})?$').hasMatch(normalized)) return false;
-  final digits = normalized
-      .replaceAll('.', '')
-      .replaceFirst(RegExp(r'^0+'), '');
+  final digits =
+      normalized.replaceAll('.', '').replaceFirst(RegExp(r'^0+'), '');
   return digits.isNotEmpty;
 }
 

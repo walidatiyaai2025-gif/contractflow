@@ -270,8 +270,7 @@ final class DashboardRecord {
     return DashboardRecord(
       id: id,
       type: DashboardRecordType.payment,
-      title:
-          _optionalText(data['reference'], 'payment.reference') ??
+      title: _optionalText(data['reference'], 'payment.reference') ??
           'Payment #$id',
       status: _optionalText(data['status'], 'payment.status'),
       date: _optionalDate(data['due_date'], 'payment.due_date'),
@@ -296,8 +295,7 @@ final class DashboardRecord {
     return DashboardRecord(
       id: id,
       type: DashboardRecordType.collection,
-      title:
-          _optionalText(data['reference'], 'collection.reference') ??
+      title: _optionalText(data['reference'], 'collection.reference') ??
           'Collection #$id',
       status: _optionalText(
         data['payment_status'],
@@ -325,12 +323,11 @@ final class DashboardRecord {
     return DashboardRecord(
       id: id,
       type: DashboardRecordType.followUp,
-      title:
-          _optionalText(data['reference'], 'followup.reference') ??
+      title: _optionalText(data['reference'], 'followup.reference') ??
           'Payment #$id',
       status:
           _optionalText(data['followup_state'], 'followup.followup_state') ??
-          _optionalText(data['status'], 'followup.status'),
+              _optionalText(data['status'], 'followup.status'),
       date: _optionalDate(data['due_date'], 'followup.due_date'),
       remainingAmount: _optionalMoneyText(
         data['remaining_amount'],

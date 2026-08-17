@@ -101,11 +101,9 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
           repository: widget.repository,
           paymentId: payment.id,
           currency: widget.currency,
-          onEditExpectedDate:
-              widget.onEditExpectedDate ??
+          onEditExpectedDate: widget.onEditExpectedDate ??
               (widget.canManagePayments ? _editExpectedDate : null),
-          onRecordCollection:
-              widget.onRecordCollection ??
+          onRecordCollection: widget.onRecordCollection ??
               (widget.canEnterCollection ? _recordCollection : null),
         ),
       ),
@@ -231,8 +229,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final payment = page.payments[index];
-                final owner =
-                    payment.customerName ??
+                final owner = payment.customerName ??
                     payment.contractNumber ??
                     l10n.contractNumber(payment.contractId);
                 return Card(
@@ -369,76 +366,78 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _errorTitle != null
-          ? _ErrorState(
-              title: l10n.t(_errorTitle!),
-              message: l10n.rawMessage(
-                _errorMessage ?? 'SafeContracts request failed.',
-              ),
-              onRetry: _load,
-            )
-          : payment == null
-          ? Center(child: Text(l10n.t('Payment not found.')))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    payment.reference ?? l10n.paymentNumber(payment.id),
-                    style: Theme.of(context).textTheme.headlineSmall,
+              ? _ErrorState(
+                  title: l10n.t(_errorTitle!),
+                  message: l10n.rawMessage(
+                    _errorMessage ?? 'SafeContracts request failed.',
                   ),
-                  const SizedBox(height: 16),
-                  _Value(l10n.t('Status'), l10n.status(payment.status)),
-                  _Value(l10n.t('Contractual due date'), payment.dueDate),
-                  _Value(
-                    l10n.t('Expected payment date'),
-                    payment.expectedPaymentDate ?? '—',
-                  ),
-                  _Value(
-                    l10n.t('Original amount'),
-                    l10n.money(payment.originalAmount, widget.currency),
-                  ),
-                  _Value(
-                    l10n.t('Paid amount'),
-                    l10n.money(payment.paidAmount, widget.currency),
-                  ),
-                  _Value(
-                    l10n.t('Remaining amount'),
-                    l10n.money(payment.remainingAmount, widget.currency),
-                  ),
-                  _Value(
-                    l10n.t('Contract archived'),
-                    l10n.yesNo(payment.contractIsArchived),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.t(
-                      'Dates, balances and status are server-authoritative. Mobile does not recalculate receivables.',
+                  onRetry: _load,
+                )
+              : payment == null
+                  ? Center(child: Text(l10n.t('Payment not found.')))
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            payment.reference ?? l10n.paymentNumber(payment.id),
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 16),
+                          _Value(l10n.t('Status'), l10n.status(payment.status)),
+                          _Value(
+                              l10n.t('Contractual due date'), payment.dueDate),
+                          _Value(
+                            l10n.t('Expected payment date'),
+                            payment.expectedPaymentDate ?? '—',
+                          ),
+                          _Value(
+                            l10n.t('Original amount'),
+                            l10n.money(payment.originalAmount, widget.currency),
+                          ),
+                          _Value(
+                            l10n.t('Paid amount'),
+                            l10n.money(payment.paidAmount, widget.currency),
+                          ),
+                          _Value(
+                            l10n.t('Remaining amount'),
+                            l10n.money(
+                                payment.remainingAmount, widget.currency),
+                          ),
+                          _Value(
+                            l10n.t('Contract archived'),
+                            l10n.yesNo(payment.contractIsArchived),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n.t(
+                              'Dates, balances and status are server-authoritative. Mobile does not recalculate receivables.',
+                            ),
+                          ),
+                          if (!payment.contractIsArchived &&
+                              widget.onEditExpectedDate != null) ...[
+                            const SizedBox(height: 20),
+                            FilledButton.tonalIcon(
+                              onPressed: () => unawaited(
+                                  _runAction(widget.onEditExpectedDate!)),
+                              icon: const Icon(Icons.event_available_outlined),
+                              label: Text(l10n.t('Edit expected payment date')),
+                            ),
+                          ],
+                          if (!payment.contractIsArchived &&
+                              widget.onRecordCollection != null) ...[
+                            const SizedBox(height: 12),
+                            FilledButton.tonalIcon(
+                              onPressed: () => unawaited(
+                                  _runAction(widget.onRecordCollection!)),
+                              icon: const Icon(Icons.add_card_outlined),
+                              label: Text(l10n.t('Record collection')),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (!payment.contractIsArchived &&
-                      widget.onEditExpectedDate != null) ...[
-                    const SizedBox(height: 20),
-                    FilledButton.tonalIcon(
-                      onPressed: () =>
-                          unawaited(_runAction(widget.onEditExpectedDate!)),
-                      icon: const Icon(Icons.event_available_outlined),
-                      label: Text(l10n.t('Edit expected payment date')),
-                    ),
-                  ],
-                  if (!payment.contractIsArchived &&
-                      widget.onRecordCollection != null) ...[
-                    const SizedBox(height: 12),
-                    FilledButton.tonalIcon(
-                      onPressed: () =>
-                          unawaited(_runAction(widget.onRecordCollection!)),
-                      icon: const Icon(Icons.add_card_outlined),
-                      label: Text(l10n.t('Record collection')),
-                    ),
-                  ],
-                ],
-              ),
-            ),
     );
   }
 }
@@ -450,10 +449,10 @@ final class _Value extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    title: Text(label),
-    subtitle: SelectableText(value),
-  );
+        contentPadding: EdgeInsets.zero,
+        title: Text(label),
+        subtitle: SelectableText(value),
+      );
 }
 
 final class _ErrorState extends StatelessWidget {
@@ -469,26 +468,26 @@ final class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            context.scL10n.t(title),
-            style: Theme.of(context).textTheme.titleLarge,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.scL10n.t(title),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton.tonal(
+                onPressed: () => unawaited(onRetry()),
+                child: Text(context.scL10n.t('Retry')),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          FilledButton.tonal(
-            onPressed: () => unawaited(onRetry()),
-            child: Text(context.scL10n.t('Retry')),
-          ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 bool _validNullableDate(String value) {

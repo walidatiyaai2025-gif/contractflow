@@ -179,8 +179,8 @@ ApiTransportResponse _customerHandler(Uri uri) {
     final name = order == 'desc'
         ? 'Zulu'
         : page == 2
-        ? 'Beta'
-        : 'Acme';
+            ? 'Beta'
+            : 'Acme';
     final id = page == 2 ? 8 : 7;
     return _ok(
       <Object?>[

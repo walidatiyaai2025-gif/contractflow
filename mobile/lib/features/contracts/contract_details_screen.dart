@@ -53,8 +53,7 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
       animation: controller,
       builder: (context, child) {
         final contract = controller.selectedContract;
-        final ready =
-            controller.detailState == ContractDetailLoadState.ready &&
+        final ready = controller.detailState == ContractDetailLoadState.ready &&
             controller.selectedContractId == widget.contractId &&
             contract != null;
         return Scaffold(
@@ -263,14 +262,14 @@ final class _ReadyContractDetails extends StatelessWidget {
       );
 
   Widget _row(String label, String value) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 3),
-        SelectableText(value),
-      ],
-    ),
-  );
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 3),
+            SelectableText(value),
+          ],
+        ),
+      );
 }

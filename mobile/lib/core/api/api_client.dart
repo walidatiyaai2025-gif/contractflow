@@ -145,9 +145,8 @@ final class SafeContractsApiClient {
       );
     }
     final metaValue = root['meta'];
-    final meta = metaValue == null
-        ? <String, Object?>{}
-        : _objectMap(metaValue, 'meta');
+    final meta =
+        metaValue == null ? <String, Object?>{} : _objectMap(metaValue, 'meta');
     final responseVersion = meta['api_version'];
     if (responseVersion != null && responseVersion != apiVersion) {
       throw const FormatException(

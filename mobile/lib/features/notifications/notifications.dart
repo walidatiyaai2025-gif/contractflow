@@ -82,9 +82,8 @@ final class NotificationPage {
 
   factory NotificationPage.fromEnvelope(ApiEnvelope envelope) {
     final rows = apiObjectList(envelope.data, 'notifications.data');
-    final notifications = rows
-        .map(SafeContractsNotification.fromData)
-        .toList(growable: false);
+    final notifications =
+        rows.map(SafeContractsNotification.fromData).toList(growable: false);
     final ids = <int>{};
     for (final notification in notifications) {
       if (!ids.add(notification.id)) {
@@ -229,7 +228,7 @@ final class NotificationsController extends ChangeNotifier {
   ) async {
     final visible =
         currentPage?.notifications.any((item) => item.id == notification.id) ??
-        false;
+            false;
     if (!visible) {
       return null;
     }

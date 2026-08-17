@@ -184,8 +184,7 @@ final class _TopographicPainter extends CustomPainter {
       const segments = 48;
       for (var step = 0; step <= segments; step++) {
         final theta = (math.pi * 2 * step) / segments;
-        final wobble =
-            1 +
+        final wobble = 1 +
             0.11 * math.sin(theta * 3 + i * 0.7) +
             0.055 * math.cos(theta * 5 - i * 0.45);
         final x = center.dx + math.cos(theta) * radius * scale * wobble;

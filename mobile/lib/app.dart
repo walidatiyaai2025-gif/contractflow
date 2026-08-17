@@ -53,13 +53,11 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
       initialLanguageCode: widget.languageCode,
     );
     unawaited(_localeController.load());
-    _tokenStore =
-        widget.tokenStore ??
+    _tokenStore = widget.tokenStore ??
         (widget.client == null
             ? SecureMobileTokenStore()
             : MemoryMobileTokenStore());
-    _client =
-        widget.client ??
+    _client = widget.client ??
         SafeContractsApiClient(
           environment: widget.environment,
           transport: IoApiTransport(),
@@ -353,7 +351,9 @@ final class _BootstrapView extends StatelessWidget {
                       const SizedBox(height: 16),
                       Text(
                         SafeContractsBrand.name,
-                        style: Theme.of(context).textTheme.headlineMedium
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 8),

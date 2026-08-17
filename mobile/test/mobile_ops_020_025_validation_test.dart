@@ -358,8 +358,7 @@ Map<String, Object?> _notificationData({Object? deepLink}) {
     'scheduled_for': '2026-08-15 12:00:00',
     'created_at': '2026-08-15 12:00:01',
     'is_read': false,
-    'deep_link':
-        deepLink ??
+    'deep_link': deepLink ??
         <String, Object?>{'destination': 'payments', 'resource_id': 21},
     'transport_secret': 'must-not-be-modeled',
   };

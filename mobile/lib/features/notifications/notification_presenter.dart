@@ -30,8 +30,7 @@ final class MobileNotificationPresenter {
     if (title.isEmpty || body.isEmpty) return;
 
     final iconKey = (message.data['icon_key'] ?? 'safe_contracts').trim();
-    final stableId =
-        message.messageId?.hashCode ??
+    final stableId = message.messageId?.hashCode ??
         DateTime.now().millisecondsSinceEpoch.remainder(0x7fffffff);
     try {
       await _channel.invokeMethod<bool>('showNotification', <String, Object?>{

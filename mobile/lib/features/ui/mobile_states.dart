@@ -71,8 +71,7 @@ final class SafeContractsStateView extends StatelessWidget {
       MobileStateKind.loading => Icons.hourglass_empty,
     };
     final retry = mobileStateAllowsRetry(kind) ? onRetry : null;
-    final isUrgent =
-        kind == MobileStateKind.error ||
+    final isUrgent = kind == MobileStateKind.error ||
         kind == MobileStateKind.offline ||
         kind == MobileStateKind.forbidden;
 

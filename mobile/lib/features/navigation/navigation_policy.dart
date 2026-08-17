@@ -76,8 +76,7 @@ final class MobileNavigationPolicy {
 
     return MobileNavigationPolicy(
       destinations: List<MobileDestination>.unmodifiable(destinations),
-      canEnterCollection:
-          hasAccess &&
+      canEnterCollection: hasAccess &&
           config.features.collectionEntry &&
           session.can(collectionCapability),
       canManageFollowUps: hasAccess && session.can(followUpCapability),

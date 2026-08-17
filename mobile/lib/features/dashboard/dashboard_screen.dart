@@ -141,9 +141,8 @@ final class _QuickFilters extends StatelessWidget {
             icon: Icons.qr_code_2_rounded,
             selected: status == null || status.isEmpty,
             color: SafeContractsVisual.navy,
-            onSelected: busy
-                ? null
-                : () => unawaited(controller.selectStatus(null)),
+            onSelected:
+                busy ? null : () => unawaited(controller.selectStatus(null)),
           ),
           const SizedBox(width: 10),
           _StatusFilterChip(
@@ -161,9 +160,8 @@ final class _QuickFilters extends StatelessWidget {
             icon: Icons.circle,
             selected: status == 'paid',
             color: SafeContractsVisual.green,
-            onSelected: busy
-                ? null
-                : () => unawaited(controller.selectStatus('paid')),
+            onSelected:
+                busy ? null : () => unawaited(controller.selectStatus('paid')),
           ),
           const SizedBox(width: 10),
           ActionChip(
@@ -172,13 +170,12 @@ final class _QuickFilters extends StatelessWidget {
               controller.filters.customerId == null
                   ? _copy(l10n, 'Customers', 'العملاء')
                   : overview.customers
-                            .where(
-                              (item) =>
-                                  item.id == controller.filters.customerId,
-                            )
-                            .map((item) => item.name)
-                            .firstOrNull ??
-                        _copy(l10n, 'Customers', 'العملاء'),
+                          .where(
+                            (item) => item.id == controller.filters.customerId,
+                          )
+                          .map((item) => item.name)
+                          .firstOrNull ??
+                      _copy(l10n, 'Customers', 'العملاء'),
             ),
             backgroundColor: SafeContractsVisual.surface,
             side: const BorderSide(color: SafeContractsVisual.outline),
@@ -186,10 +183,10 @@ final class _QuickFilters extends StatelessWidget {
             onPressed: busy
                 ? null
                 : () => _showCustomerPicker(
-                    context,
-                    controller: controller,
-                    overview: overview,
-                  ),
+                      context,
+                      controller: controller,
+                      overview: overview,
+                    ),
           ),
         ],
       ),
@@ -307,8 +304,9 @@ final class _DetailedFilters extends StatelessWidget {
                   onChanged: busy
                       ? null
                       : (value) => unawaited(
-                          controller.selectCustomer(value == 0 ? null : value),
-                        ),
+                            controller
+                                .selectCustomer(value == 0 ? null : value),
+                          ),
                   items: <DropdownMenuItem<int>>[
                     DropdownMenuItem(
                       value: 0,
@@ -332,8 +330,9 @@ final class _DetailedFilters extends StatelessWidget {
                   onChanged: busy
                       ? null
                       : (value) => unawaited(
-                          controller.selectContract(value == 0 ? null : value),
-                        ),
+                            controller
+                                .selectContract(value == 0 ? null : value),
+                          ),
                   items: <DropdownMenuItem<int>>[
                     DropdownMenuItem(
                       value: 0,
@@ -357,10 +356,10 @@ final class _DetailedFilters extends StatelessWidget {
                   onChanged: busy
                       ? null
                       : (value) => unawaited(
-                          controller.selectStatus(
-                            value == null || value.isEmpty ? null : value,
+                            controller.selectStatus(
+                              value == null || value.isEmpty ? null : value,
+                            ),
                           ),
-                        ),
                   items: <DropdownMenuItem<String>>[
                     DropdownMenuItem(
                       value: '',
@@ -453,7 +452,9 @@ final class _PaymentLifecycleOverview extends StatelessWidget {
               'Payment Lifecycle Overview',
               'نظرة عامة على دورة الدفعات',
             ),
-            style: Theme.of(context).textTheme.headlineSmall
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 18),
@@ -479,7 +480,9 @@ final class _PaymentLifecycleOverview extends StatelessWidget {
                         const SizedBox(height: 5),
                         Text(
                           '${payments.length}',
-                          style: Theme.of(context).textTheme.headlineMedium
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         Text(
@@ -605,7 +608,9 @@ final class _LifecycleLegend extends StatelessWidget {
                           alignment: AlignmentDirectional.centerStart,
                           child: Text(
                             entry.value,
-                            style: Theme.of(context).textTheme.titleMedium
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ),
@@ -773,7 +778,9 @@ final class _PipelineNode extends StatelessWidget {
                     record.customerName!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelMedium
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelMedium
                         ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 const SizedBox(height: 4),

@@ -77,8 +77,7 @@ final class _ContractsToolbar extends StatelessWidget {
     final l10n = context.scL10n;
     final busy = controller.state == ContractsLoadState.loading;
     final selectedCustomer = controller.filters.customerId ?? 0;
-    final customerExists =
-        selectedCustomer == 0 ||
+    final customerExists = selectedCustomer == 0 ||
         customers.any((customer) => customer.id == selectedCustomer);
     final safeCustomer = customerExists ? selectedCustomer : 0;
     final selectedStatus = controller.filters.status ?? '';
@@ -120,10 +119,10 @@ final class _ContractsToolbar extends StatelessWidget {
               onChanged: busy
                   ? null
                   : (value) => unawaited(
-                      controller.selectCustomer(
-                        value == null || value == 0 ? null : value,
+                        controller.selectCustomer(
+                          value == null || value == 0 ? null : value,
+                        ),
                       ),
-                    ),
             ),
           ),
           SizedBox(
@@ -156,10 +155,10 @@ final class _ContractsToolbar extends StatelessWidget {
               onChanged: busy
                   ? null
                   : (value) => unawaited(
-                      controller.selectStatus(
-                        value == null || value.isEmpty ? null : value,
+                        controller.selectStatus(
+                          value == null || value.isEmpty ? null : value,
+                        ),
                       ),
-                    ),
             ),
           ),
           SizedBox(

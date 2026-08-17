@@ -110,10 +110,10 @@ final class _SafeContractsLoginScreenState
                             selected: <String>{selectedLanguage},
                             onSelectionChanged:
                                 submitting || widget.onLanguageChanged == null
-                                ? null
-                                : (selection) => widget.onLanguageChanged!(
-                                    selection.first,
-                                  ),
+                                    ? null
+                                    : (selection) => widget.onLanguageChanged!(
+                                          selection.first,
+                                        ),
                             showSelectedIcon: false,
                             style: const ButtonStyle(
                               visualDensity: VisualDensity.compact,
@@ -128,7 +128,9 @@ final class _SafeContractsLoginScreenState
                         const SizedBox(height: 18),
                         Text(
                           SafeContractsBrand.name,
-                          style: Theme.of(context).textTheme.headlineMedium
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 6),
@@ -136,7 +138,9 @@ final class _SafeContractsLoginScreenState
                           l10n.t(
                             'Sign in with your WordPress username and password',
                           ),
-                          style: Theme.of(context).textTheme.bodyLarge
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyLarge
                               ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                         const SizedBox(height: 24),
@@ -168,8 +172,8 @@ final class _SafeContractsLoginScreenState
                                       ),
                                       validator: (value) =>
                                           value == null || value.trim().isEmpty
-                                          ? l10n.t('Enter your username.')
-                                          : null,
+                                              ? l10n.t('Enter your username.')
+                                              : null,
                                     ),
                                     const SizedBox(height: 16),
                                     TextFormField(
@@ -192,9 +196,9 @@ final class _SafeContractsLoginScreenState
                                           onPressed: submitting
                                               ? null
                                               : () => setState(() {
-                                                  _obscurePassword =
-                                                      !_obscurePassword;
-                                                }),
+                                                    _obscurePassword =
+                                                        !_obscurePassword;
+                                                  }),
                                           icon: Icon(
                                             _obscurePassword
                                                 ? Icons.visibility_outlined
@@ -204,8 +208,8 @@ final class _SafeContractsLoginScreenState
                                       ),
                                       validator: (value) =>
                                           value == null || value.isEmpty
-                                          ? l10n.t('Enter your password.')
-                                          : null,
+                                              ? l10n.t('Enter your password.')
+                                              : null,
                                     ),
                                     const SizedBox(height: 8),
                                     CheckboxListTile(
@@ -213,7 +217,7 @@ final class _SafeContractsLoginScreenState
                                       onChanged: submitting
                                           ? null
                                           : (value) => widget.controller
-                                                .setRememberMe(value ?? false),
+                                              .setRememberMe(value ?? false),
                                       contentPadding: EdgeInsets.zero,
                                       controlAffinity:
                                           ListTileControlAffinity.leading,
@@ -322,7 +326,9 @@ final class _BlockingBootstrapSplash extends StatelessWidget {
                     const SizedBox(height: 22),
                     Text(
                       SafeContractsBrand.name,
-                      style: Theme.of(context).textTheme.headlineSmall
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 18),

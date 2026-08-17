@@ -162,8 +162,7 @@ final class _SupplierToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
-    final busy =
-        controller.state == SuppliersLoadState.loading ||
+    final busy = controller.state == SuppliersLoadState.loading ||
         controller.mutationInFlight;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -426,7 +425,9 @@ final class _SupplierDetail extends StatelessWidget {
                 children: [
                   Text(
                     supplier.legalName,
-                    style: Theme.of(context).textTheme.headlineSmall
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
                         ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   if (supplier.tradingName != null) ...[
@@ -505,9 +506,8 @@ final class _SupplierDetail extends StatelessWidget {
           children: [
             if (!supplier.isArchived && controller.canEdit)
               FilledButton.icon(
-                onPressed: controller.mutationInFlight
-                    ? null
-                    : () => onEdit(supplier),
+                onPressed:
+                    controller.mutationInFlight ? null : () => onEdit(supplier),
                 icon: const Icon(Icons.edit_rounded),
                 label: Text(l10n.t('Edit')),
               ),
@@ -526,7 +526,9 @@ final class _SupplierDetail extends StatelessWidget {
           l10n.isArabic
               ? 'العميل يقرأ ويكتب فقط من خلال API المصرح بها؛ صلاحيات الخادم هي المرجع النهائي.'
               : 'The client reads and writes only through authorized APIs; server permissions remain authoritative.',
-          style: Theme.of(context).textTheme.bodySmall
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
               ?.copyWith(color: SafeContractsVisual.muted),
         ),
       ],
@@ -625,7 +627,9 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
                 widget.supplier == null
                     ? (l10n.isArabic ? 'مورد جديد' : 'New supplier')
                     : (l10n.isArabic ? 'تعديل المورد' : 'Edit supplier'),
-                style: Theme.of(context).textTheme.headlineSmall
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 18),
@@ -782,24 +786,24 @@ final class _SupplierField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 130,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: SafeContractsVisual.muted,
-              fontWeight: FontWeight.w700,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 130,
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SafeContractsVisual.muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
             ),
-          ),
+            Expanded(child: Text(value)),
+          ],
         ),
-        Expanded(child: Text(value)),
-      ],
-    ),
-  );
+      );
 }
 
 final class _SupplierLongField extends StatelessWidget {
@@ -810,20 +814,22 @@ final class _SupplierLongField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeContractsSurface(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelLarge
-              ?.copyWith(color: SafeContractsVisual.muted),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(color: SafeContractsVisual.muted),
+            ),
+            const SizedBox(height: 6),
+            Text(value),
+          ],
         ),
-        const SizedBox(height: 6),
-        Text(value),
-      ],
-    ),
-  );
+      );
 }
 
 final class _SupplierError extends StatelessWidget {
@@ -834,22 +840,22 @@ final class _SupplierError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline_rounded, size: 44),
-          const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
-            label: Text(context.scL10n.t('Retry')),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 44),
+              const SizedBox(height: 12),
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text(context.scL10n.t('Retry')),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }

@@ -361,13 +361,14 @@ final class FinanceRepository {
     required String currencyCode,
     required String status,
     required String agingBucket,
-  }) => <String, String>{
-    if (direction.trim().isNotEmpty) 'direction': direction.trim(),
-    if (currencyCode.trim().isNotEmpty)
-      'currency_code': currencyCode.trim().toUpperCase(),
-    if (status.trim().isNotEmpty) 'status': status.trim(),
-    if (agingBucket.trim().isNotEmpty) 'aging_bucket': agingBucket.trim(),
-  };
+  }) =>
+      <String, String>{
+        if (direction.trim().isNotEmpty) 'direction': direction.trim(),
+        if (currencyCode.trim().isNotEmpty)
+          'currency_code': currencyCode.trim().toUpperCase(),
+        if (status.trim().isNotEmpty) 'status': status.trim(),
+        if (agingBucket.trim().isNotEmpty) 'aging_bucket': agingBucket.trim(),
+      };
 }
 
 final class FinanceController extends ChangeNotifier {
@@ -393,9 +394,9 @@ final class FinanceController extends ChangeNotifier {
   bool get canAccess => canViewPayables || canViewReceivables;
 
   List<String> get allowedDirections => <String>[
-    if (canViewReceivables) 'receivable',
-    if (canViewPayables) 'payable',
-  ];
+        if (canViewReceivables) 'receivable',
+        if (canViewPayables) 'payable',
+      ];
 
   Future<void> ensureLoaded() async {
     if (state == FinanceLoadState.idle) await refresh();

@@ -47,8 +47,7 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
         if (controller.state == NotificationsLoadState.error) {
           final message =
               controller.errorMessage ?? 'Notifications are unavailable.';
-          final offline =
-              message.toLowerCase().contains('unreachable') ||
+          final offline = message.toLowerCase().contains('unreachable') ||
               message.toLowerCase().contains('timed out');
           return SafeContractsStateView(
             kind: offline ? MobileStateKind.offline : MobileStateKind.error,
@@ -137,9 +136,8 @@ final class _PagingControls extends StatelessWidget {
           ),
           Text(l10n.pageNumber(page.page)),
           OutlinedButton.icon(
-            onPressed: page.hasMore
-                ? () => unawaited(controller.nextPage())
-                : null,
+            onPressed:
+                page.hasMore ? () => unawaited(controller.nextPage()) : null,
             icon: const Icon(Icons.chevron_right),
             label: Text(l10n.t('Next')),
           ),

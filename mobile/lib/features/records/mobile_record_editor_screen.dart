@@ -134,9 +134,8 @@ final class _MobileRecordEditorScreenState
           data['accountants'],
           'reference-data.accountants',
         );
-        accountants = rows
-            .map(_AccountantOption.fromData)
-            .toList(growable: false);
+        accountants =
+            rows.map(_AccountantOption.fromData).toList(growable: false);
       }
       if (!mounted) return;
       setState(() {
@@ -173,10 +172,10 @@ final class _MobileRecordEditorScreenState
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _loadError != null
-            ? _LoadError(message: _loadError!, onRetry: _load)
-            : TabBarView(
-                children: [_customerTab(), _contractTab(), _paymentTab()],
-              ),
+                ? _LoadError(message: _loadError!, onRetry: _load)
+                : TabBarView(
+                    children: [_customerTab(), _contractTab(), _paymentTab()],
+                  ),
       ),
     );
   }
@@ -401,9 +400,8 @@ final class _MobileRecordEditorScreenState
         ),
       ],
       FilledButton.icon(
-        onPressed: _saving || !enabled
-            ? null
-            : () => unawaited(_saveContract()),
+        onPressed:
+            _saving || !enabled ? null : () => unawaited(_saveContract()),
         icon: Icon(editing ? Icons.save_outlined : Icons.post_add_outlined),
         label: Text(
           editing
@@ -914,11 +912,11 @@ final class _NoPermission extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Text(text, textAlign: TextAlign.center),
-    ),
-  );
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(text, textAlign: TextAlign.center),
+        ),
+      );
 }
 
 final class _LoadError extends StatelessWidget {
@@ -928,21 +926,21 @@ final class _LoadError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: () => unawaited(onRetry()),
-            child: Text(_t(context, 'Retry', 'إعادة المحاولة')),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: () => unawaited(onRetry()),
+                child: Text(_t(context, 'Retry', 'إعادة المحاولة')),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 String _t(BuildContext context, String english, String arabic) {

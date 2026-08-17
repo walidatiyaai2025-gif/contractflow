@@ -12,11 +12,11 @@ final class SafeContractsTestHarness {
   SafeContractsTestHarness(
     HarnessHandler handler, {
     ApiHeadersProvider? headersProvider,
-  }) : transport = FakeApiTransport(handler),
-       environment = AppEnvironment.fromValues(
-         name: 'local',
-         apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
-       ) {
+  })  : transport = FakeApiTransport(handler),
+        environment = AppEnvironment.fromValues(
+          name: 'local',
+          apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
+        ) {
     client = SafeContractsApiClient(
       environment: environment,
       transport: transport,

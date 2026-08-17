@@ -62,9 +62,8 @@ final class CustomerPage {
 
   factory CustomerPage.fromEnvelope(ApiEnvelope envelope) {
     final values = apiObjectList(envelope.data, 'customers.data');
-    final customers = values
-        .map(SafeContractsCustomer.fromData)
-        .toList(growable: false);
+    final customers =
+        values.map(SafeContractsCustomer.fromData).toList(growable: false);
     final meta = envelope.meta;
     final page = _boundedInt(meta['page'], 'meta.page', minimum: 1, maximum: 5);
     final perPage = _boundedInt(

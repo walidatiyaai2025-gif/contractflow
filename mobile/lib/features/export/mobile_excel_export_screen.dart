@@ -46,14 +46,12 @@ final class MobileExcelExportScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     _FilterValue(
                       label: l10n.t('Customer'),
-                      value:
-                          filters.customerId?.toString() ??
+                      value: filters.customerId?.toString() ??
                           l10n.t('All customers'),
                     ),
                     _FilterValue(
                       label: l10n.t('Contract'),
-                      value:
-                          filters.contractId?.toString() ??
+                      value: filters.contractId?.toString() ??
                           l10n.t('All contracts'),
                     ),
                     _FilterValue(
@@ -129,18 +127,19 @@ final class _FilterValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 96,
-          child: Text(label, style: Theme.of(context).textTheme.labelMedium),
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 96,
+              child:
+                  Text(label, style: Theme.of(context).textTheme.labelMedium),
+            ),
+            Expanded(child: Text(value)),
+          ],
         ),
-        Expanded(child: Text(value)),
-      ],
-    ),
-  );
+      );
 }
 
 final class _ExportSuccess extends StatelessWidget {

@@ -33,8 +33,8 @@ final class SafeContractsDeepLink {
       'customers' => SafeContractsDeepLinkDestination.customers,
       'followups' => SafeContractsDeepLinkDestination.followUps,
       _ => throw const FormatException(
-        'deep_link.destination is not supported.',
-      ),
+          'deep_link.destination is not supported.',
+        ),
     };
 
     final resourceId = _positiveInt(data['resource_id']);

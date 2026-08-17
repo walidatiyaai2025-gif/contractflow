@@ -141,14 +141,12 @@ final class SafeContractsContract {
       data['customer_id'],
       'contract.customer_id',
     );
-    final type =
-        _optionalText(data['counterparty_type'])?.toLowerCase() ??
+    final type = _optionalText(data['counterparty_type'])?.toLowerCase() ??
         (legacyCustomerId != null ? 'customer' : '');
     if (type != 'customer' && type != 'supplier') {
       throw const FormatException('contract.counterparty_type is invalid.');
     }
-    final counterpartyId =
-        _optionalPositiveInt(
+    final counterpartyId = _optionalPositiveInt(
           data['counterparty_id'],
           'contract.counterparty_id',
         ) ??
@@ -158,15 +156,15 @@ final class SafeContractsContract {
     }
     final direction =
         _optionalText(data['financial_direction'])?.toLowerCase() ??
-        (type == 'supplier' ? 'payable' : 'receivable');
+            (type == 'supplier' ? 'payable' : 'receivable');
     if ((type == 'supplier' && direction != 'payable') ||
         (type == 'customer' && direction != 'receivable')) {
       throw const FormatException(
         'contract.financial_direction conflicts with counterparty type.',
       );
     }
-    final currency = (_optionalText(data['currency_code']) ?? 'UNSET')
-        .toUpperCase();
+    final currency =
+        (_optionalText(data['currency_code']) ?? 'UNSET').toUpperCase();
     if (currency != 'UNSET' && !RegExp(r'^[A-Z]{3}$').hasMatch(currency)) {
       throw const FormatException('contract.currency_code is invalid.');
     }
@@ -177,14 +175,12 @@ final class SafeContractsContract {
         data['contract_number'],
         'contract.contract_number',
       ),
-      customerId: type == 'customer'
-          ? (legacyCustomerId ?? counterpartyId)
-          : null,
+      customerId:
+          type == 'customer' ? (legacyCustomerId ?? counterpartyId) : null,
       customerName: _optionalText(data['customer_name']),
       counterpartyType: type,
       counterpartyId: counterpartyId,
-      counterpartyName:
-          _optionalText(data['counterparty_name']) ??
+      counterpartyName: _optionalText(data['counterparty_name']) ??
           _optionalText(data['customer_name']),
       financialDirection: direction,
       currencyCode: currency,
@@ -224,9 +220,8 @@ final class ContractPage {
 
   factory ContractPage.fromEnvelope(ApiEnvelope envelope) {
     final rows = apiObjectList(envelope.data, 'contracts.data');
-    final contracts = rows
-        .map(SafeContractsContract.fromData)
-        .toList(growable: false);
+    final contracts =
+        rows.map(SafeContractsContract.fromData).toList(growable: false);
     final ids = <int>{};
     for (final contract in contracts) {
       if (!ids.add(contract.id)) {
