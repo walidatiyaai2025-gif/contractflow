@@ -78,6 +78,7 @@ final class ApprovalDecisionRepository
     ): array {
         global $wpdb;
         $tenantId = $this->tenantId();
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $requests = $wpdb->prefix . 'safecontracts_workflow_approval_requests';
         $stages = $wpdb->prefix . 'safecontracts_workflow_approval_request_stages';
         $candidates = $wpdb->prefix . 'safecontracts_workflow_approval_request_candidates';
@@ -130,6 +131,7 @@ final class ApprovalDecisionRepository
                     throw new RuntimeException('Approval Decision idempotency key was already used for a different operation.');
                 }
                 $stage = $this->stageByIdLocked($wpdb, $tenantId, $requestId, (int) ($existing['request_stage_id'] ?? 0));
+                $stageCompleted = $this->stageIsCompleteLocked($wpdb, $tenantId, $requestId, $stage);
                 if ($wpdb->query('COMMIT') === false) {
                     throw new RuntimeException('Unable to commit idempotent Approval Decision retry.');
                 }
@@ -138,7 +140,7 @@ final class ApprovalDecisionRepository
                     'request_status' => $requestStatus,
                     'stage_position' => (int) ($stage['position_no'] ?? 0),
                     'stage_code' => (string) ($stage['stage_code_snapshot'] ?? ''),
-                    'stage_completed' => $this->stageIsCompleteLocked($wpdb, $tenantId, $requestId, $stage),
+                    'stage_completed' => $stageCompleted,
                     'request_completed' => $requestStatus !== ApprovalDecisionPolicy::REQUEST_STATUS_PENDING,
                     'idempotent' => true,
                 ];
@@ -146,6 +148,21 @@ final class ApprovalDecisionRepository
 
             if ($requestStatus !== ApprovalDecisionPolicy::REQUEST_STATUS_PENDING) {
                 throw new RuntimeException('Approval Request is already terminal and cannot accept another decision.');
+            }
+
+            $contractId = (int) ($request['contract_id'] ?? 0);
+            if ($contractId <= 0) {
+                throw new RuntimeException('Approval Request has invalid contract identity.');
+            }
+            $contractRows = $wpdb->get_results($wpdb->prepare(
+                "SELECT id FROM {$contracts}
+                 WHERE tenant_id = %d AND id = %d AND is_archived = 0
+                 LIMIT 2 FOR UPDATE",
+                $tenantId,
+                $contractId
+            ), ARRAY_A);
+            if (! is_array($contractRows) || count($contractRows) !== 1 || ! is_array($contractRows[0])) {
+                throw new RuntimeException('Approval Request contract changed concurrently or is no longer decisionable.');
             }
 
             $stageRows = $wpdb->get_results($wpdb->prepare(
@@ -161,10 +178,16 @@ final class ApprovalDecisionRepository
             if ($stageRows === [] || count($stageRows) > ApprovalRoutePolicy::MAX_STAGES) {
                 throw new RuntimeException('Approval Request stage snapshot is empty or exceeds the supported bound.');
             }
+            $stageIds = [];
             foreach ($stageRows as $index => $stage) {
-                if ((int) ($stage['position_no'] ?? 0) !== $index + 1 || (int) ($stage['id'] ?? 0) <= 0) {
-                    throw new RuntimeException('Approval Request stage snapshot ordering is invalid.');
+                $stageId = (int) ($stage['id'] ?? 0);
+                if ((int) ($stage['position_no'] ?? 0) !== $index + 1
+                    || $stageId <= 0
+                    || (string) ($stage['stage_code_snapshot'] ?? '') === ''
+                    || isset($stageIds[$stageId])) {
+                    throw new RuntimeException('Approval Request stage snapshot ordering or identity is invalid.');
                 }
+                $stageIds[$stageId] = true;
             }
 
             $candidateRows = $wpdb->get_results($wpdb->prepare(
@@ -198,8 +221,11 @@ final class ApprovalDecisionRepository
             foreach ($candidateRows as $candidate) {
                 $stageId = (int) ($candidate['request_stage_id'] ?? 0);
                 $userId = (int) ($candidate['user_id'] ?? 0);
-                if ($stageId <= 0 || $userId <= 0) {
-                    throw new RuntimeException('Approval Request candidate snapshot contains invalid identity.');
+                if ($stageId <= 0 || $userId <= 0 || ! isset($stageIds[$stageId])) {
+                    throw new RuntimeException('Approval Request candidate snapshot contains orphaned or invalid identity.');
+                }
+                if (isset($candidatesByStage[$stageId][$userId])) {
+                    throw new RuntimeException('Approval Request candidate snapshot contains duplicate stage/user identity.');
                 }
                 $candidatesByStage[$stageId][$userId] = true;
             }
@@ -210,6 +236,7 @@ final class ApprovalDecisionRepository
                 $userId = (int) ($decision['user_id'] ?? 0);
                 $decisionAction = (string) ($decision['action'] ?? '');
                 if ($stageId <= 0 || $userId <= 0
+                    || ! isset($stageIds[$stageId])
                     || ! isset($candidatesByStage[$stageId][$userId])
                     || ! in_array($decisionAction, [ApprovalDecisionPolicy::ACTION_APPROVE, ApprovalDecisionPolicy::ACTION_REJECT], true)) {
                     throw new RuntimeException('Approval Decision history is inconsistent with the immutable candidate snapshot.');
@@ -256,19 +283,35 @@ final class ApprovalDecisionRepository
             }
 
             $decidedAt = gmdate('Y-m-d H:i:s');
-            $inserted = $wpdb->query($wpdb->prepare(
-                "INSERT INTO {$decisions}
-                 (tenant_id, request_id, request_stage_id, user_id, action, decision_key_hash, comment, decided_at)
-                 VALUES (%d, %d, %d, %d, %s, %s, %s, %s)",
-                $tenantId,
-                $requestId,
-                $activeStageId,
-                $actorId,
-                $action,
-                $decisionKeyHash,
-                $comment,
-                $decidedAt
-            ));
+            if ($comment === null) {
+                $insertSql = $wpdb->prepare(
+                    "INSERT INTO {$decisions}
+                     (tenant_id, request_id, request_stage_id, user_id, action, decision_key_hash, comment, decided_at)
+                     VALUES (%d, %d, %d, %d, %s, %s, NULL, %s)",
+                    $tenantId,
+                    $requestId,
+                    $activeStageId,
+                    $actorId,
+                    $action,
+                    $decisionKeyHash,
+                    $decidedAt
+                );
+            } else {
+                $insertSql = $wpdb->prepare(
+                    "INSERT INTO {$decisions}
+                     (tenant_id, request_id, request_stage_id, user_id, action, decision_key_hash, comment, decided_at)
+                     VALUES (%d, %d, %d, %d, %s, %s, %s, %s)",
+                    $tenantId,
+                    $requestId,
+                    $activeStageId,
+                    $actorId,
+                    $action,
+                    $decisionKeyHash,
+                    $comment,
+                    $decidedAt
+                );
+            }
+            $inserted = $wpdb->query($insertSql);
             if ($inserted !== 1) {
                 throw new RuntimeException('Unable to persist immutable Approval Decision.');
             }
@@ -374,7 +417,11 @@ final class ApprovalDecisionRepository
         }
         $candidateSet = [];
         foreach ($candidateRows as $candidate) {
-            $candidateSet[(int) ($candidate['user_id'] ?? 0)] = true;
+            $userId = (int) ($candidate['user_id'] ?? 0);
+            if ($userId <= 0 || isset($candidateSet[$userId])) {
+                throw new RuntimeException('Approval Decision stage candidate snapshot contains invalid or duplicate identity.');
+            }
+            $candidateSet[$userId] = true;
         }
         $decisionRows = $wpdb->get_results($wpdb->prepare(
             "SELECT user_id, action FROM {$decisions}
