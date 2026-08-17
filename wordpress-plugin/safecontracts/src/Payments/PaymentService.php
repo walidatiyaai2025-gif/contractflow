@@ -61,6 +61,8 @@ final class PaymentService
             $contract['financial_direction'],
             $contract['currency_code']
         );
+
+        // Preserve established integration/audit payload positions.
         do_action(
             'safecontracts_payment_created',
             $paymentId,
@@ -69,9 +71,15 @@ final class PaymentService
             $dueDate,
             $expectedPaymentDate,
             $amount,
-            $actorId,
+            $actorId
+        );
+        do_action(
+            'safecontracts_payment_financial_context_assigned',
+            $paymentId,
+            $contractId,
             $contract['financial_direction'],
-            $contract['currency_code']
+            $contract['currency_code'],
+            $actorId
         );
 
         return $paymentId;
@@ -152,8 +160,6 @@ final class PaymentService
             return $current;
         }
 
-        // Contractual due_date is authoritative for Due/Due Soon/Overdue.
-        // expected_payment_date is an operational promise/follow-up date only.
         return PaymentStatus::temporalForDueDate($payment['due_date'], $today, $dueSoonDays);
     }
 
