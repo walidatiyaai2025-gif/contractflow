@@ -35,12 +35,16 @@ def main() -> int:
         "environment: esc-production",
         "ref: ${{ github.sha }}",
         "ESC_GITHUB_ADMIN_READ_TOKEN",
-        "Require live schema-v2 ESC branch enforcement and exact head",
+        "Require live schema-v3 ESC branch enforcement and exact head",
         "branches/enterprise-safecontracts/protection",
         "rules/branches/enterprise-safecontracts",
         "audit_esc_branch_protection.py",
         "--protection-json",
-        "schema_version') != 2",
+        "schema_version') != 3",
+        "required_status_check_sources_verified",
+        "expected_status_check_app_slug",
+        "expected_status_check_app_id",
+        "observed_required_check_source_ids",
         "administrator_enforcement_verified",
         "conversation_resolution_required",
         "ESC_BRANCH_PROTECTION_AUDIT_PATH",
@@ -57,7 +61,7 @@ def main() -> int:
         "verify_esc_android_isolation.py --esc-apk",
         "UAT_CANDIDATE_NOT_RELEASED",
         "release_eligible': False",
-        "branch_protection_audit_schema_version': 2",
+        "branch_protection_audit_schema_version': 3",
         "branch_protection_audit_decision': 'PASS'",
         "branch_protection_audit_sha256",
         "ESC_BRANCH_PROTECTION_AUDIT.json",
@@ -68,12 +72,12 @@ def main() -> int:
     ):
         require(workflow, marker, "ESC UAT candidate workflow")
 
-    audit_gate = workflow.index("Require live schema-v2 ESC branch enforcement and exact head")
+    audit_gate = workflow.index("Require live schema-v3 ESC branch enforcement and exact head")
     signing_material = workflow.index("Require ESC-only production signing and Firebase material")
     materialize = workflow.index("Materialize isolated ESC signing and Firebase files")
     if not audit_gate < signing_material < materialize:
         raise AssertionError(
-            "live schema-v2 branch audit must complete before signing/Firebase secret validation/materialization"
+            "live schema-v3 branch audit must complete before signing/Firebase secret validation/materialization"
         )
 
     admin_token = workflow.index("ESC_GITHUB_ADMIN_READ_TOKEN")
@@ -81,8 +85,6 @@ def main() -> int:
     if not audit_gate <= admin_token < audit_call < signing_material:
         raise AssertionError("admin-read credential must be used only in the pre-signing audit gate")
 
-    # This workflow only creates the exact-source binary needed to perform UAT.
-    # Stable retention, release publication and PASS/finalization stay separate.
     for marker in (
         "enterprise_verified_artifacts.py publish-apk",
         "gh release",
@@ -97,6 +99,7 @@ def main() -> int:
         "branches/enterprise-safecontracts/protection --method PUT",
         "--method PUT",
         "--method DELETE",
+        "app_id = -1",
     ):
         forbid(workflow, marker, "ESC UAT candidate workflow")
 
@@ -108,7 +111,9 @@ def main() -> int:
         "14 days",
         "enterprise-safecontracts",
         "branch protection",
-        "schema v2",
+        "schema v3",
+        "GitHub Actions",
+        "source-pinned",
         "ESC_GITHUB_ADMIN_READ_TOKEN",
         "Administration: read",
         "production signing",
@@ -123,6 +128,7 @@ def main() -> int:
     for marker in (
         "Administration: write",
         "repository write permission",
+        "any source",
     ):
         forbid(runbook, marker, "ESC UAT candidate runbook")
 
@@ -133,9 +139,9 @@ def main() -> int:
     )
 
     print(
-        "ESC UAT candidate workflow contract passed: exact-head live schema-v2 "
-        "branch enforcement is required before production signing and the audit "
-        "digest is bound into the short-lived non-release candidate provenance"
+        "ESC UAT candidate workflow contract passed: exact-head live schema-v3 "
+        "branch enforcement and GitHub Actions source pinning are required before "
+        "production signing, with the audit digest bound into candidate provenance"
     )
     return 0
 
