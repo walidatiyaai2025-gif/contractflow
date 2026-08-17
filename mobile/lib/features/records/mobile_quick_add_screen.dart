@@ -221,7 +221,8 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
 
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: Text(legacy.mobileQuickAddLabel(context, widget.type))),
+        appBar: AppBar(
+            title: Text(legacy.mobileQuickAddLabel(context, widget.type))),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
