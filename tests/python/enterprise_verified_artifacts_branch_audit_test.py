@@ -20,17 +20,19 @@ SPEC.loader.exec_module(artifacts)
 
 SOURCE_SHA = "a" * 40
 SHA256 = "b" * 64
+EXPECTED_APP_ID = 12345
 
 
 def valid_audit() -> dict[str, object]:
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "branch": "enterprise-safecontracts",
         "decision": "PASS",
         "checks": {
             "protected_branch": True,
             "pull_request_required": True,
             "required_status_checks_present": True,
+            "required_status_check_sources_verified": True,
             "strict_up_to_date_status_checks": True,
             "administrator_enforcement_verified": True,
             "conversation_resolution_required": True,
@@ -40,10 +42,18 @@ def valid_audit() -> dict[str, object]:
         },
         "observed_required_checks": ["esc-foundation", "esc-mobile"],
         "required_checks": ["esc-foundation", "esc-mobile"],
+        "expected_status_check_app_slug": "github-actions",
+        "expected_status_check_app_id": EXPECTED_APP_ID,
+        "observed_required_check_source_ids": {
+            "esc-foundation": [EXPECTED_APP_ID],
+            "esc-mobile": [EXPECTED_APP_ID],
+        },
+        "unbound_required_check_contexts": [],
         "break_glass_statement": "No routine bypass; emergency owner approval is required.",
         "sources": {
             "legacy_branch_protection_present": True,
             "administrator_enforcement_source": "legacy_branch_protection",
+            "status_check_source_contract": "github_app_id",
             "effective_rule_types": [],
         },
         "captured_input_sha256": {
@@ -56,7 +66,7 @@ def valid_audit() -> dict[str, object]:
 
 
 class EnterpriseVerifiedArtifactsBranchAuditTests(unittest.TestCase):
-    def test_valid_schema_v2_audit_passes(self) -> None:
+    def test_valid_schema_v3_source_pinned_audit_passes(self) -> None:
         payload = valid_audit()
         result = artifacts.validate_branch_protection_audit_payload(payload)
         self.assertEqual("PASS", result["decision"])
@@ -68,10 +78,11 @@ class EnterpriseVerifiedArtifactsBranchAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(artifacts.PolicyError, "decision=PASS"):
             artifacts.validate_branch_protection_audit_payload(payload)
 
-    def test_admin_enforcement_and_conversation_resolution_are_mandatory(self) -> None:
+    def test_admin_conversation_and_source_controls_are_mandatory(self) -> None:
         for control in (
             "administrator_enforcement_verified",
             "conversation_resolution_required",
+            "required_status_check_sources_verified",
         ):
             with self.subTest(control=control):
                 payload = valid_audit()
@@ -79,10 +90,31 @@ class EnterpriseVerifiedArtifactsBranchAuditTests(unittest.TestCase):
                 with self.assertRaisesRegex(artifacts.PolicyError, "failed controls"):
                     artifacts.validate_branch_protection_audit_payload(payload)
 
+    def test_required_check_source_identity_is_mandatory(self) -> None:
+        payload = valid_audit()
+        payload["expected_status_check_app_slug"] = "unexpected-app"
+        with self.assertRaisesRegex(artifacts.PolicyError, "GitHub Actions App"):
+            artifacts.validate_branch_protection_audit_payload(payload)
+
+        payload = valid_audit()
+        payload["expected_status_check_app_id"] = -1
+        with self.assertRaisesRegex(artifacts.PolicyError, "invalid expected GitHub Actions App ID"):
+            artifacts.validate_branch_protection_audit_payload(payload)
+
+        payload = valid_audit()
+        payload["observed_required_check_source_ids"]["esc-mobile"] = [EXPECTED_APP_ID + 1]
+        with self.assertRaisesRegex(artifacts.PolicyError, "source-pin esc-mobile"):
+            artifacts.validate_branch_protection_audit_payload(payload)
+
     def test_authoritative_legacy_protection_evidence_is_mandatory(self) -> None:
         payload = valid_audit()
         payload["sources"]["administrator_enforcement_source"] = "unverified"
         with self.assertRaisesRegex(artifacts.PolicyError, "administrator enforcement"):
+            artifacts.validate_branch_protection_audit_payload(payload)
+
+        payload = valid_audit()
+        payload["sources"]["status_check_source_contract"] = "any_source"
+        with self.assertRaisesRegex(artifacts.PolicyError, "GitHub App source contract"):
             artifacts.validate_branch_protection_audit_payload(payload)
 
         payload = valid_audit()
@@ -103,7 +135,7 @@ class EnterpriseVerifiedArtifactsBranchAuditTests(unittest.TestCase):
             self.assertEqual(artifacts.audit_document_digest(payload), digest)
 
             path.write_text(json.dumps(payload), encoding="utf-8")
-            with self.assertRaisesRegex(artifacts.PolicyError, "canonical schema-v2"):
+            with self.assertRaisesRegex(artifacts.PolicyError, "canonical schema-v3"):
                 artifacts.load_branch_protection_audit(path)
 
     def test_embedded_provenance_binds_audit_digest_and_source_sha(self) -> None:

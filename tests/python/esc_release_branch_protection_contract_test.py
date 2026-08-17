@@ -12,9 +12,9 @@ class EscReleaseBranchProtectionContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.source = WORKFLOW.read_text(encoding="utf-8")
 
-    def test_publish_is_exact_source_and_requires_live_schema_v2_audit(self) -> None:
+    def test_publish_is_exact_source_and_requires_live_schema_v3_audit(self) -> None:
         required = (
-            "Require live schema-v2 ESC branch protection",
+            "Require live schema-v3 ESC branch protection",
             'ref: ${{ github.sha }}',
             "ESC_GITHUB_ADMIN_READ_TOKEN",
             "rules/branches/enterprise-safecontracts",
@@ -23,8 +23,12 @@ class EscReleaseBranchProtectionContractTests(unittest.TestCase):
             "--branch-json",
             "--rules-json",
             "--protection-json",
-            "schema_version') != 2",
+            "schema_version') != 3",
             "decision') != 'PASS'",
+            "required_status_check_sources_verified",
+            "expected_status_check_app_slug",
+            "expected_status_check_app_id",
+            "observed_required_check_source_ids",
             "administrator_enforcement_verified",
             "conversation_resolution_required",
             'if [[ "$BRANCH_HEAD" != "$GITHUB_SHA" ]]',
@@ -34,7 +38,7 @@ class EscReleaseBranchProtectionContractTests(unittest.TestCase):
             self.assertIn(marker, self.source, marker)
 
     def test_live_audit_precedes_secret_material_and_build(self) -> None:
-        protection = self.source.index("Require live schema-v2 ESC branch protection")
+        protection = self.source.index("Require live schema-v3 ESC branch protection")
         production_material = self.source.index("Require ESC-only production material")
         materialize = self.source.index("Materialize isolated ESC signing and Firebase files")
         build = self.source.index("Build production-signed ESC APK")
@@ -45,7 +49,7 @@ class EscReleaseBranchProtectionContractTests(unittest.TestCase):
         self.assertLess(protection, publish)
 
     def test_admin_read_credential_cannot_mutate_repository_protection(self) -> None:
-        start = self.source.index("Require live schema-v2 ESC branch protection")
+        start = self.source.index("Require live schema-v3 ESC branch protection")
         end = self.source.index("- uses: subosito/flutter-action@v2", start)
         protection_step = self.source[start:end]
         self.assertIn('export GH_TOKEN="$ADMIN_READ_TOKEN"', protection_step)
@@ -55,6 +59,7 @@ class EscReleaseBranchProtectionContractTests(unittest.TestCase):
             "--method DELETE",
             "gh api --method",
             "branches/enterprise-safecontracts/protection -X",
+            "app_id = -1",
         ):
             self.assertNotIn(marker, protection_step, marker)
 

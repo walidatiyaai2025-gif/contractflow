@@ -20,18 +20,32 @@ Before production signing or Firebase material is validated or materialized:
 4. the workflow captures live branch, effective-rules and legacy branch-protection JSON using that read-only credential;
 5. GitHub must report `enterprise-safecontracts` protected;
 6. the current branch head must still equal the exact dispatch `GITHUB_SHA`;
-7. `scripts/audit_esc_branch_protection.py` must return **schema v2** `decision=PASS` with every required control true;
-8. only after that release-control gate may the approved ESC-only production signing and Firebase secrets be inspected or materialized.
+7. `scripts/audit_esc_branch_protection.py` must return **schema v3** `decision=PASS` with every required control true;
+8. schema v3 must prove both `esc-foundation` and `esc-mobile` are source-pinned to the current GitHub Actions App identity, not merely matched by context name;
+9. only after that release-control gate may the approved ESC-only production signing and Firebase secrets be inspected or materialized.
 
-A bare `protected=true` value is not sufficient. The live schema-v2 audit also requires the #522 controls including PR-only delivery, strict `esc-foundation` + `esc-mobile`, administrator enforcement, conversation resolution, force-push/deletion blocking and the retained break-glass policy.
+A bare `protected=true` value is not sufficient. The live schema-v3 audit requires the #522 controls including PR-only delivery, strict `esc-foundation` + `esc-mobile`, **source-pinned GitHub Actions status checks**, administrator enforcement, conversation resolution, force-push/deletion blocking and the retained break-glass policy.
 
-Branch protection is therefore an execution dependency. Until #522 is complete and a fresh live schema-v2 audit passes, the candidate workflow must fail before production signing/Firebase materialization.
+Branch protection is therefore an execution dependency. Until #522 is complete and a fresh live schema-v3 audit passes, the candidate workflow must fail before production signing/Firebase materialization.
+
+## Required-check source identity
+
+GitHub supports binding a required status check to the GitHub App that must provide it. ESC uses that capability so another integration or person cannot satisfy the production gate merely by publishing the same context name.
+
+The audit resolves the current `github-actions` App identity at runtime from GitHub's official App API. No numeric App ID is hardcoded in the repository.
+
+For each mandatory check:
+
+- legacy branch protection must expose the expected source through `checks[].app_id`; or
+- an effective ruleset may expose the expected source through `required_status_checks[].integration_id`.
+
+Schema v3 fails closed if either mandatory context is unbound, configured as any-source, or bound only to a different App ID. The resulting audit records the expected GitHub Actions App ID and the observed source IDs for `esc-foundation` and `esc-mobile`.
 
 ## Read-only GitHub administration credential
 
 `ESC_GITHUB_ADMIN_READ_TOKEN` is separate from Android signing/Firebase material. Store it only in the `esc-production` environment.
 
-It must be a fine-grained GitHub credential scoped to `walidatiyaai2025-gif/contractflow` with **Administration: read** only, sufficient to read the authoritative branch-protection and effective-rules configuration required by the schema-v2 audit.
+It must be a fine-grained GitHub credential scoped to `walidatiyaai2025-gif/contractflow` with **Administration: read** only, sufficient to read the authoritative branch-protection and effective-rules configuration required by the schema-v3 audit.
 
 Do not grant Administration write access to this credential. The UAT workflow contains no branch-protection mutation path and performs no `PUT` or `DELETE` administration call.
 
@@ -75,14 +89,17 @@ protection.json
 esc-branch-protection-audit.json
 ```
 
-The raw GitHub configuration snapshots remain runner-local. They are used to execute the same independent schema-v2 verifier documented in `BRANCH_PROTECTION_AUDIT.md`.
+The raw GitHub configuration snapshots remain runner-local. They are used to execute the independent schema-v3 verifier documented in `BRANCH_PROTECTION_AUDIT.md`.
 
 The gate requires:
 
-- audit `schema_version = 2`;
+- audit `schema_version = 3`;
 - `decision = PASS`;
 - every emitted control is `true`;
-- the required named controls include administrator enforcement and conversation resolution;
+- `expected_status_check_app_slug = github-actions`;
+- a positive resolved `expected_status_check_app_id`;
+- both mandatory contexts have that ID in `observed_required_check_source_ids`;
+- the required named controls include `required_status_check_sources_verified`, administrator enforcement and conversation resolution;
 - the branch snapshot is for the exact dispatch head.
 
 The sanitized audit JSON itself is retained with the short-lived candidate, and its SHA-256 is written into candidate provenance. The GitHub administration credential is never retained.
@@ -91,7 +108,7 @@ The sanitized audit JSON itself is retained with the short-lived candidate, and 
 
 The candidate job:
 
-1. verifies the exact target branch and live schema-v2 #522 enforcement using the read-only GitHub administration credential;
+1. verifies the exact target branch and live schema-v3 #522 enforcement, including GitHub Actions source pinning, using the read-only GitHub administration credential;
 2. validates the ESC production secret set only after the release-control audit passes;
 3. validates the production API input;
 4. materializes temporary ESC signing/Firebase files under the runner temporary directory;
@@ -134,7 +151,7 @@ ESC_UAT_CANDIDATE.json
 - ESC application ID;
 - APK filename and SHA-256;
 - verified signing certificate SHA-256;
-- branch-protection audit filename, schema version, PASS decision and SHA-256;
+- branch-protection audit filename, **schema version 3**, PASS decision and SHA-256;
 - sanitized API origin/path;
 - UTC creation time;
 - the physical-device UAT-only purpose.
@@ -146,13 +163,14 @@ The retained audit record is configuration provenance only. It does not turn the
 The candidate workflow intentionally contains no path to:
 
 - enable, weaken or otherwise mutate branch protection;
+- select any source for a required status check;
 - write `Last verified Enterprise apk/EnterpriseSafeContracts-latest.apk`;
 - call `enterprise_verified_artifacts.py publish-apk`;
 - create/update the `esc-mobile-latest` GitHub Release;
 - validate or manufacture a coexistence PASS record;
 - build/finalize the coexistence evidence bundle;
 - close #421;
-- bypass #522 branch protection or schema-v2 audit requirements.
+- bypass #522 branch protection or schema-v3 source-pinned audit requirements.
 
 The candidate is production-signed only so that install/update/signing-lineage behavior tested on the physical device matches the intended ESC production lineage. Production signing does not make the artifact release-eligible.
 
@@ -174,10 +192,10 @@ That runner still leaves the environment-specific checks pending. Execute and re
 - `independent_update`;
 - `clear_data_uninstall_isolation`.
 
-The candidate provenance should be retained with the #421 evidence set so the tested APK can be traced back to the exact source, Actions run, digest, live #522 audit and ESC signing lineage.
+The candidate provenance should be retained with the #421 evidence set so the tested APK can be traced back to the exact source, Actions run, digest, live #522 source-pinned audit and ESC signing lineage.
 
 ## Promotion boundary
 
 After all #421 physical-device, Firebase and business evidence is complete, use the separate content-addressed evidence bundle/finalizer/validator path. Only a finalized exact-source PASS record may be supplied to `publish-mobile-latest.yml`.
 
-Stable production publication remains separate and continues to require its existing evidence, branch-protection, signing, package and provenance gates.
+Stable production publication remains separate and must independently re-run the same live schema-v3, source-pinned #522 enforcement before it may access production material or publish `esc-mobile-latest`.

@@ -51,7 +51,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
 
-      - name: Require live schema-v2 ESC branch protection
+      - name: Require live schema-v3 ESC branch protection
         shell: bash
         env:
           ADMIN_READ_TOKEN: ${{ secrets.ESC_GITHUB_ADMIN_READ_TOKEN }}
@@ -101,19 +101,25 @@ jobs:
           from pathlib import Path
 
           payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-          if payload.get('schema_version') != 2:
-              raise SystemExit('FAIL: stable publication requires schema-v2 branch-protection audit evidence')
+          if payload.get('schema_version') != 3:
+              raise SystemExit('FAIL: stable publication requires schema-v3 branch-protection audit evidence')
           if payload.get('branch') != 'enterprise-safecontracts':
               raise SystemExit('FAIL: branch-protection audit targets the wrong branch')
           if payload.get('decision') != 'PASS':
               raise SystemExit('FAIL: stable publication requires live #522 decision=PASS')
+          if payload.get('expected_status_check_app_slug') != 'github-actions':
+              raise SystemExit('FAIL: stable publication requires the GitHub Actions App as the required-check source')
+          expected_app_id = payload.get('expected_status_check_app_id')
+          if not isinstance(expected_app_id, int) or expected_app_id <= 0:
+              raise SystemExit('FAIL: stable publication requires a positive GitHub Actions App ID')
           checks = payload.get('checks')
           if not isinstance(checks, dict) or not checks or not all(value is True for value in checks.values()):
-              raise SystemExit('FAIL: stable publication requires every schema-v2 branch-protection control to pass')
+              raise SystemExit('FAIL: stable publication requires every schema-v3 branch-protection control to pass')
           required = {
               'protected_branch',
               'pull_request_required',
               'required_status_checks_present',
+              'required_status_check_sources_verified',
               'strict_up_to_date_status_checks',
               'administrator_enforcement_verified',
               'conversation_resolution_required',
@@ -123,7 +129,14 @@ jobs:
           }
           missing = sorted(required - set(checks))
           if missing:
-              raise SystemExit('FAIL: schema-v2 audit is missing required controls: ' + ', '.join(missing))
+              raise SystemExit('FAIL: schema-v3 audit is missing required controls: ' + ', '.join(missing))
+          source_ids = payload.get('observed_required_check_source_ids')
+          if not isinstance(source_ids, dict):
+              raise SystemExit('FAIL: schema-v3 audit is missing required-check source IDs')
+          for context in ('esc-foundation', 'esc-mobile'):
+              values = source_ids.get(context)
+              if not isinstance(values, list) or expected_app_id not in values:
+                  raise SystemExit(f'FAIL: stable publication requires {context} from the expected GitHub Actions App')
           PY
 
           AUDIT_SHA256="$(sha256sum "$AUDIT" | awk '{print $1}')"

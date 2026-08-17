@@ -13,6 +13,8 @@ $ErrorActionPreference = 'Stop'
 
 $ExpectedRepository = 'walidatiyaai2025-gif/contractflow'
 $ExpectedBranch = 'enterprise-safecontracts'
+$GitHubActionsAppSlug = 'github-actions'
+$GitHubApiVersion = '2026-03-10'
 
 if ($Repository -ne $ExpectedRepository) {
     throw "Refusing repository '$Repository'. Expected exactly '$ExpectedRepository'."
@@ -24,12 +26,41 @@ if ([string]::IsNullOrWhiteSpace($BreakGlassNote) -or $BreakGlassNote.Trim().Len
     throw 'BreakGlassNote must contain the actual approved emergency/bypass policy.'
 }
 
+function Resolve-GitHubActionsAppId {
+    $Headers = @{
+        Accept = 'application/vnd.github+json'
+        'X-GitHub-Api-Version' = $GitHubApiVersion
+        'User-Agent' = 'enterprise-safecontracts-branch-protection-helper'
+    }
+    try {
+        $App = Invoke-RestMethod `
+            -Method Get `
+            -Uri "https://api.github.com/apps/$GitHubActionsAppSlug" `
+            -Headers $Headers
+    }
+    catch {
+        throw "Unable to resolve the GitHub Actions App from GitHub API: $($_.Exception.Message)"
+    }
+
+    if ($null -eq $App -or $App.slug -ne $GitHubActionsAppSlug) {
+        throw "GitHub API did not return the expected '$GitHubActionsAppSlug' app identity."
+    }
+    $AppId = 0L
+    if (-not [Int64]::TryParse([string]$App.id, [ref]$AppId) -or $AppId -le 0) {
+        throw 'GitHub Actions App ID must resolve to a positive integer.'
+    }
+    return $AppId
+}
+
+$GitHubActionsAppId = Resolve-GitHubActionsAppId
+Write-Host "Resolved required status-check source: $GitHubActionsAppSlug (App ID $GitHubActionsAppId)"
+
 $Protection = [ordered]@{
     required_status_checks = [ordered]@{
         strict = $true
         checks = @(
-            [ordered]@{ context = 'esc-foundation' },
-            [ordered]@{ context = 'esc-mobile' }
+            [ordered]@{ context = 'esc-foundation'; app_id = $GitHubActionsAppId },
+            [ordered]@{ context = 'esc-mobile'; app_id = $GitHubActionsAppId }
         )
     }
     enforce_admins = $true
@@ -97,7 +128,7 @@ Write-Warning 'Applying protection to enterprise-safecontracts. This changes rep
 $ProtectionJson | & gh api `
     --method PUT `
     -H 'Accept: application/vnd.github+json' `
-    -H 'X-GitHub-Api-Version: 2026-03-10' `
+    -H "X-GitHub-Api-Version: $GitHubApiVersion" `
     "repos/$Repository/branches/$Branch/protection" `
     --input - *> $null
 if ($LASTEXITCODE -ne 0) {
@@ -116,30 +147,35 @@ New-Item -ItemType Directory -Path $EvidenceRoot | Out-Null
 $BranchJson = Invoke-GhApi @(
     'api',
     '-H', 'Accept: application/vnd.github+json',
-    '-H', 'X-GitHub-Api-Version: 2026-03-10',
+    '-H', "X-GitHub-Api-Version: $GitHubApiVersion",
     "repos/$Repository/branches/$Branch"
 )
 $RulesJson = Invoke-GhApi @(
     'api',
     '-H', 'Accept: application/vnd.github+json',
-    '-H', 'X-GitHub-Api-Version: 2026-03-10',
+    '-H', "X-GitHub-Api-Version: $GitHubApiVersion",
     "repos/$Repository/rules/branches/$Branch"
 )
 $LegacyProtectionJson = Invoke-GhApi @(
     'api',
     '-H', 'Accept: application/vnd.github+json',
-    '-H', 'X-GitHub-Api-Version: 2026-03-10',
+    '-H', "X-GitHub-Api-Version: $GitHubApiVersion",
     "repos/$Repository/branches/$Branch/protection"
 )
 
 $BranchPath = Join-Path $EvidenceRoot 'branch.json'
 $RulesPath = Join-Path $EvidenceRoot 'rules.json'
 $ProtectionPath = Join-Path $EvidenceRoot 'protection.json'
+$AppIdentityPath = Join-Path $EvidenceRoot 'github-actions-app.json'
 $AuditPath = Join-Path $EvidenceRoot 'esc-branch-protection-audit.json'
 
 Write-Utf8NoBom -Path $BranchPath -Content $BranchJson
 Write-Utf8NoBom -Path $RulesPath -Content $RulesJson
 Write-Utf8NoBom -Path $ProtectionPath -Content $LegacyProtectionJson
+Write-Utf8NoBom -Path $AppIdentityPath -Content (([ordered]@{
+    slug = $GitHubActionsAppSlug
+    id = $GitHubActionsAppId
+}) | ConvertTo-Json -Compress)
 
 $AuditScript = Join-Path $PSScriptRoot 'audit_esc_branch_protection.py'
 & $PythonCommand $AuditScript `
@@ -147,10 +183,11 @@ $AuditScript = Join-Path $PSScriptRoot 'audit_esc_branch_protection.py'
     --rules-json $RulesPath `
     --protection-json $ProtectionPath `
     --break-glass-note $BreakGlassNote `
+    --expected-status-check-app-id $GitHubActionsAppId `
     --output $AuditPath
 if ($LASTEXITCODE -ne 0) {
     throw "Protection was applied, but verification failed. Inspect evidence under '$EvidenceRoot' and keep #522 open."
 }
 
-Write-Host "PASS: protection applied and independently audited. Evidence: $EvidenceRoot"
+Write-Host "PASS: protection applied and independently audited with GitHub Actions source pinning. Evidence: $EvidenceRoot"
 Write-Host 'Keep #522 open until the retained evidence is reviewed against the repository-admin acceptance criteria.'

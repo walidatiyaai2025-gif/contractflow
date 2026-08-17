@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,8 +32,8 @@ class EscBranchProtectionApplyHelperContractTests(unittest.TestCase):
     def test_required_controls_are_in_payload(self) -> None:
         required = (
             "strict = $true",
-            "context = 'esc-foundation'",
-            "context = 'esc-mobile'",
+            "context = 'esc-foundation'; app_id = $GitHubActionsAppId",
+            "context = 'esc-mobile'; app_id = $GitHubActionsAppId",
             "enforce_admins = $true",
             "required_pull_request_reviews",
             "required_approving_review_count = 0",
@@ -43,6 +44,25 @@ class EscBranchProtectionApplyHelperContractTests(unittest.TestCase):
         )
         for marker in required:
             self.assertIn(marker, self.source, marker)
+
+    def test_required_status_check_source_is_resolved_not_hardcoded(self) -> None:
+        required = (
+            "$GitHubActionsAppSlug = 'github-actions'",
+            "Resolve-GitHubActionsAppId",
+            "Invoke-RestMethod",
+            'https://api.github.com/apps/$GitHubActionsAppSlug',
+            "GitHub Actions App ID must resolve to a positive integer.",
+            "app_id = $GitHubActionsAppId",
+            "--expected-status-check-app-id $GitHubActionsAppId",
+            "github-actions-app.json",
+        )
+        for marker in required:
+            self.assertIn(marker, self.source, marker)
+
+        # App IDs are runtime GitHub identities, not repository constants.
+        self.assertIsNone(re.search(r"app_id\s*=\s*\d+", self.source))
+        self.assertNotIn("15368", self.source)
+        self.assertNotIn("app_id = -1", self.source)
 
     def test_pr_only_policy_does_not_require_external_reviewer(self) -> None:
         self.assertIn("required_pull_request_reviews", self.source)
@@ -57,7 +77,7 @@ class EscBranchProtectionApplyHelperContractTests(unittest.TestCase):
             "gh auth status",
             "--method PUT",
             "branches/$Branch/protection",
-            "X-GitHub-Api-Version: 2026-03-10",
+            "X-GitHub-Api-Version",
         )
         for marker in required:
             self.assertIn(marker, self.source, marker)
@@ -72,17 +92,19 @@ class EscBranchProtectionApplyHelperContractTests(unittest.TestCase):
         for marker in forbidden:
             self.assertNotIn(marker, self.source, marker)
 
-    def test_post_apply_capture_and_audit_are_mandatory(self) -> None:
+    def test_post_apply_capture_and_schema_v3_audit_are_mandatory(self) -> None:
         required = (
             "rules/branches/$Branch",
             "branches/$Branch/protection",
             "branch.json",
             "rules.json",
             "protection.json",
+            "github-actions-app.json",
             "audit_esc_branch_protection.py",
+            "--expected-status-check-app-id $GitHubActionsAppId",
             "esc-branch-protection-audit.json",
             "Protection was applied, but verification failed.",
-            "PASS: protection applied and independently audited.",
+            "independently audited with GitHub Actions source pinning",
         )
         for marker in required:
             self.assertIn(marker, self.source, marker)
