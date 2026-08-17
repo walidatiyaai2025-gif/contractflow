@@ -139,9 +139,8 @@ final class _PushMessage extends StatelessWidget {
           background: healthy
               ? SafeContractsVisual.greenSoft
               : SafeContractsVisual.amberSoft,
-          foreground: healthy
-              ? SafeContractsVisual.green
-              : SafeContractsVisual.amber,
+          foreground:
+              healthy ? SafeContractsVisual.green : SafeContractsVisual.amber,
         ),
         const SizedBox(width: 12),
         Expanded(
