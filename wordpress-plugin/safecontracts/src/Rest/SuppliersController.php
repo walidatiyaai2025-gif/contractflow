@@ -42,7 +42,7 @@ final class SuppliersController
                 'permission_callback' => [self::class, 'canEdit'],
             ],
             [
-                'methods' => WP_REST_Server::DELETABLE,
+                'methods' => 'DELETE',
                 'callback' => [self::class, 'archive'],
                 'permission_callback' => [self::class, 'canEdit'],
             ],
