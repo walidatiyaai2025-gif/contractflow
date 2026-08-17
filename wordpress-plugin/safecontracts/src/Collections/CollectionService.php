@@ -98,7 +98,7 @@ final class CollectionService
 
             $newPaid = ContractMoney::add($ledgerCollected, $amount);
             if (ContractMoney::compare($newPaid, $originalAmount) > 0) {
-                throw new DomainException('Settlement amount exceeds the payment remaining balance.');
+                throw new DomainException('Collection amount exceeds the payment remaining balance.');
             }
             $newRemaining = ContractMoney::subtract($originalAmount, $newPaid);
             $newStatus = $newRemaining === '0.0000' ? PaymentStatus::PAID : PaymentStatus::PARTIALLY_PAID;
