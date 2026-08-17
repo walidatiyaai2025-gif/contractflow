@@ -12,18 +12,24 @@ use UnexpectedValueException;
 
 final class ContractFinancialReconciliationRepository
 {
+    private const MAX_BASE_REVISION = 2147483647;
+
     /**
      * @param callable(array<string,mixed>):void $authorizeLockedContract
-     * @return array{contract:array<string,mixed>,profile:array{id:int,currency:string},base:array{amount:string,currency:string,profile_id:int,revision_number:int},adjustments:list<array{line_uuid:string,revision_number:int,kind:string,description:string,amount:string,currency:string,state:string,profile_id:int}>}
+     * @return array{profile:array{id:int,currency:string},base:array{amount:string,currency:string,profile_id:int,revision_number:int},adjustments:list<array{line_uuid:string,revision_number:int,kind:string,amount:string,currency:string,state:string,profile_id:int}>}
      */
     public function snapshot(int $contractId, callable $authorizeLockedContract): array
     {
+        if ($contractId <= 0) {
+            throw new RuntimeException('Enterprise financial reconciliation requires a positive Contract identifier.');
+        }
+
         global $wpdb;
         $tenantId = $this->tenantId();
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $profiles = $wpdb->prefix . 'safecontracts_contract_financial_currency_profiles';
         $baseRevisions = $wpdb->prefix . 'safecontracts_contract_financial_base_value_revisions';
-        $adjustments = $wpdb->prefix . 'safecontracts_contract_financial_adjustment_revisions';
+        $adjustmentRevisions = $wpdb->prefix . 'safecontracts_contract_financial_adjustment_revisions';
 
         if ($wpdb->query('START TRANSACTION') === false) {
             throw new RuntimeException('Unable to start Enterprise financial reconciliation snapshot transaction.');
@@ -46,8 +52,8 @@ final class ContractFinancialReconciliationRepository
                 throw new UnexpectedValueException('Locked Enterprise Contract identity is invalid.');
             }
 
-            // Authorization is intentionally evaluated while the authoritative Contract row is locked,
-            // before any financial rows are read. This closes assignment/data-scope TOCTOU gaps.
+            // Scope authorization must use the exact row protected by the Contract lock and
+            // must complete before any profile, base-value or adjustment state is observed.
             $authorizeLockedContract($contract);
 
             $profileRows = $wpdb->get_results($wpdb->prepare(
@@ -59,17 +65,18 @@ final class ContractFinancialReconciliationRepository
                 $contractId
             ), ARRAY_A);
             if (! is_array($profileRows) || count($profileRows) !== 1 || ! is_array($profileRows[0])) {
-                throw new RuntimeException('Enterprise financial reconciliation requires exactly one Contract currency profile.');
+                throw new RuntimeException('Enterprise financial reconciliation requires exactly one Contract financial currency profile.');
             }
             $profileId = (int) ($profileRows[0]['id'] ?? 0);
             $profileContractId = (int) ($profileRows[0]['contract_id'] ?? 0);
-            $profileCurrency = $this->currency($profileRows[0]['contract_currency'] ?? null, 'Contract currency profile');
+            $profileCurrency = $this->currency($profileRows[0]['contract_currency'] ?? null, 'Contract financial currency profile');
             if ($profileId <= 0 || $profileContractId !== $contractId) {
-                throw new UnexpectedValueException('Enterprise Contract currency profile identity is invalid.');
+                throw new UnexpectedValueException('Enterprise Contract financial currency profile identity is invalid.');
             }
 
             $baseRows = $wpdb->get_results($wpdb->prepare(
-                "SELECT id, financial_currency_profile_id, revision_number, amount, currency_code
+                "SELECT id, uuid, contract_id, financial_currency_profile_id, revision_number,
+                        amount, currency_code, created_by
                  FROM {$baseRevisions}
                  WHERE tenant_id = %d AND contract_id = %d
                  ORDER BY revision_number DESC, id DESC
@@ -80,11 +87,20 @@ final class ContractFinancialReconciliationRepository
             if (! is_array($baseRows) || count($baseRows) !== 1 || ! is_array($baseRows[0])) {
                 throw new RuntimeException('Enterprise financial reconciliation requires an explicit Contract base-value revision.');
             }
-            $baseProfileId = (int) ($baseRows[0]['financial_currency_profile_id'] ?? 0);
-            $baseRevisionNumber = (int) ($baseRows[0]['revision_number'] ?? 0);
-            $baseMoney = $this->money($baseRows[0]['amount'] ?? null, $baseRows[0]['currency_code'] ?? null, 'Contract base value');
-            if ($baseProfileId !== $profileId || $baseRevisionNumber <= 0 || ! $baseMoney->currency()->equals($profileCurrency)) {
-                throw new UnexpectedValueException('Enterprise Contract base value is inconsistent with its financial currency profile.');
+            $base = $baseRows[0];
+            $baseId = (int) ($base['id'] ?? 0);
+            $baseContractId = (int) ($base['contract_id'] ?? 0);
+            $baseProfileId = (int) ($base['financial_currency_profile_id'] ?? 0);
+            $baseRevisionNumber = (int) ($base['revision_number'] ?? 0);
+            $baseCreatedBy = (int) ($base['created_by'] ?? 0);
+            $this->uuid($base['uuid'] ?? null, 'Contract base-value revision UUID');
+            if ($baseId <= 0 || $baseContractId !== $contractId || $baseProfileId !== $profileId
+                || $baseRevisionNumber <= 0 || $baseRevisionNumber > self::MAX_BASE_REVISION || $baseCreatedBy <= 0) {
+                throw new UnexpectedValueException('Enterprise Contract base-value revision has invalid identity, profile or revision metadata.');
+            }
+            $baseMoney = $this->money($base['amount'] ?? null, $base['currency_code'] ?? null, 'Contract base value');
+            if (! $baseMoney->currency()->equals($profileCurrency)) {
+                throw new UnexpectedValueException('Enterprise Contract base-value currency differs from its financial currency profile.');
             }
             if ($baseMoney->compare(Money::of('0', $profileCurrency)) < 0) {
                 throw new UnexpectedValueException('Stored Enterprise Contract base value cannot be negative.');
@@ -92,13 +108,13 @@ final class ContractFinancialReconciliationRepository
 
             $limit = ContractFinancialAdjustmentPolicy::MAX_LINES + 1;
             $adjustmentRows = $wpdb->get_results($wpdb->prepare(
-                "SELECT r.id, r.revision_uuid, r.financial_currency_profile_id, r.line_uuid,
+                "SELECT r.id, r.revision_uuid, r.contract_id, r.financial_currency_profile_id, r.line_uuid,
                         r.revision_number, r.adjustment_kind, r.description, r.amount,
                         r.currency_code, r.line_state, r.created_by
-                 FROM {$adjustments} r
+                 FROM {$adjustmentRevisions} r
                  WHERE r.tenant_id = %d AND r.contract_id = %d
                    AND NOT EXISTS (
-                        SELECT 1 FROM {$adjustments} newer
+                        SELECT 1 FROM {$adjustmentRevisions} newer
                         WHERE newer.tenant_id = r.tenant_id
                           AND newer.contract_id = r.contract_id
                           AND newer.line_uuid = r.line_uuid
@@ -114,7 +130,7 @@ final class ContractFinancialReconciliationRepository
                 $limit
             ), ARRAY_A);
             if (! is_array($adjustmentRows)) {
-                throw new RuntimeException('Enterprise financial adjustment snapshot could not be read.');
+                throw new RuntimeException('Enterprise financial adjustment reconciliation snapshot could not be read.');
             }
             if (count($adjustmentRows) > ContractFinancialAdjustmentPolicy::MAX_LINES) {
                 throw new RuntimeException('Enterprise financial adjustment line limit was exceeded during reconciliation.');
@@ -124,24 +140,26 @@ final class ContractFinancialReconciliationRepository
             $seenLines = [];
             foreach ($adjustmentRows as $row) {
                 if (! is_array($row)) {
-                    throw new UnexpectedValueException('Enterprise financial adjustment snapshot row is invalid.');
+                    throw new UnexpectedValueException('Enterprise financial adjustment reconciliation row is invalid.');
                 }
                 try {
-                    $revisionUuid = ContractFinancialAdjustmentPolicy::normalizeUuid($row['revision_uuid'] ?? null, 'revision UUID');
+                    ContractFinancialAdjustmentPolicy::normalizeUuid($row['revision_uuid'] ?? null, 'revision UUID');
                     $lineUuid = ContractFinancialAdjustmentPolicy::normalizeUuid($row['line_uuid'] ?? null, 'line UUID');
                     $kind = ContractFinancialAdjustmentPolicy::normalizeKind($row['adjustment_kind'] ?? null);
-                    $description = ContractFinancialAdjustmentPolicy::normalizeDescription($row['description'] ?? null);
+                    ContractFinancialAdjustmentPolicy::normalizeDescription($row['description'] ?? null);
                     $state = ContractFinancialAdjustmentPolicy::normalizeState($row['line_state'] ?? null);
                 } catch (Throwable $error) {
-                    throw new UnexpectedValueException('Enterprise financial adjustment snapshot contains invalid persisted metadata.', 0, $error);
+                    throw new UnexpectedValueException('Enterprise financial adjustment reconciliation contains invalid persisted metadata.', 0, $error);
                 }
+
                 $rowId = (int) ($row['id'] ?? 0);
+                $rowContractId = (int) ($row['contract_id'] ?? 0);
                 $rowProfileId = (int) ($row['financial_currency_profile_id'] ?? 0);
                 $revisionNumber = (int) ($row['revision_number'] ?? 0);
                 $createdBy = (int) ($row['created_by'] ?? 0);
-                if ($rowId <= 0 || $rowProfileId !== $profileId || $revisionNumber <= 0
-                    || $revisionNumber > ContractFinancialAdjustmentPolicy::MAX_REVISION || $createdBy <= 0) {
-                    throw new UnexpectedValueException('Enterprise financial adjustment snapshot has invalid identity or profile metadata.');
+                if ($rowId <= 0 || $rowContractId !== $contractId || $rowProfileId !== $profileId
+                    || $revisionNumber <= 0 || $revisionNumber > ContractFinancialAdjustmentPolicy::MAX_REVISION || $createdBy <= 0) {
+                    throw new UnexpectedValueException('Enterprise financial adjustment reconciliation has invalid identity, profile or revision metadata.');
                 }
                 if (isset($seenLines[$lineUuid])) {
                     throw new UnexpectedValueException('Enterprise financial reconciliation contains duplicate latest adjustment line identities.');
@@ -150,7 +168,7 @@ final class ContractFinancialReconciliationRepository
 
                 $money = $this->money($row['amount'] ?? null, $row['currency_code'] ?? null, 'financial adjustment');
                 if (! $money->currency()->equals($profileCurrency)) {
-                    throw new UnexpectedValueException('Enterprise financial adjustment currency differs from the Contract currency profile.');
+                    throw new UnexpectedValueException('Enterprise financial adjustment currency differs from the Contract financial currency profile.');
                 }
                 if ($money->compare(Money::of('0', $profileCurrency)) < 0) {
                     throw new UnexpectedValueException('Stored Enterprise financial adjustment amount cannot be negative.');
@@ -160,17 +178,11 @@ final class ContractFinancialReconciliationRepository
                     'line_uuid' => $lineUuid,
                     'revision_number' => $revisionNumber,
                     'kind' => $kind,
-                    'description' => $description,
                     'amount' => $money->amount(),
                     'currency' => $money->currencyCode(),
                     'state' => $state,
                     'profile_id' => $rowProfileId,
                 ];
-
-                // Keep the revision UUID validation intentional even though it is not returned.
-                if ($revisionUuid === '') {
-                    throw new UnexpectedValueException('Enterprise financial adjustment revision UUID is invalid.');
-                }
             }
 
             if ($wpdb->query('COMMIT') === false) {
@@ -178,7 +190,6 @@ final class ContractFinancialReconciliationRepository
             }
 
             return [
-                'contract' => $contract,
                 'profile' => ['id' => $profileId, 'currency' => $profileCurrency->value()],
                 'base' => [
                     'amount' => $baseMoney->amount(),
@@ -210,6 +221,18 @@ final class ContractFinancialReconciliationRepository
         } catch (Throwable $error) {
             throw new UnexpectedValueException("Enterprise {$field} is invalid.", 0, $error);
         }
+    }
+
+    private function uuid(mixed $value, string $field): string
+    {
+        if (! is_string($value)) {
+            throw new UnexpectedValueException("Enterprise {$field} is invalid.");
+        }
+        $uuid = strtolower(trim($value));
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D', $uuid) !== 1) {
+            throw new UnexpectedValueException("Enterprise {$field} is invalid.");
+        }
+        return $uuid;
     }
 
     private function tenantId(): int
