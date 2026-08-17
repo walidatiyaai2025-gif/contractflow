@@ -35,15 +35,22 @@ class EscBranchProtectionApplyHelperContractTests(unittest.TestCase):
             "context = 'esc-mobile'",
             "enforce_admins = $true",
             "required_pull_request_reviews",
-            "dismiss_stale_reviews = $true",
-            "required_approving_review_count = 1",
-            "require_last_push_approval = $true",
+            "required_approving_review_count = 0",
+            "require_last_push_approval = $false",
             "allow_force_pushes = $false",
             "allow_deletions = $false",
             "required_conversation_resolution = $true",
         )
         for marker in required:
             self.assertIn(marker, self.source, marker)
+
+    def test_pr_only_policy_does_not_require_external_reviewer(self) -> None:
+        self.assertIn("required_pull_request_reviews", self.source)
+        self.assertIn("required_approving_review_count = 0", self.source)
+        self.assertIn("dismiss_stale_reviews = $false", self.source)
+        self.assertIn("require_last_push_approval = $false", self.source)
+        self.assertNotIn("required_approving_review_count = 1", self.source)
+        self.assertNotIn("require_last_push_approval = $true", self.source)
 
     def test_uses_approved_gh_session_without_secret_material(self) -> None:
         required = (
