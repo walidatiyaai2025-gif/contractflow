@@ -5,6 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
+use SafeContracts\Rest\CoreTenantRestGuard;
+
 $assertions = 0;
 function esc_p7_rest_assert(bool $condition, string $message): void
 {
@@ -19,6 +21,7 @@ function esc_p7_rest_assert(bool $condition, string $message): void
 $root = dirname(__DIR__, 2);
 $controller = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/ApprovalController.php');
 $router = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/Router.php');
+$tenantGuard = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/CoreTenantRestGuard.php');
 $requestService = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Approvals/ApprovalRequestService.php');
 $decisionService = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Approvals/ApprovalDecisionService.php');
 $releaseService = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Approvals/ApprovalReleaseService.php');
@@ -34,6 +37,12 @@ esc_p7_rest_assert(str_contains($controller, "'/contracts/(?P<contract_id>\\d+)/
 esc_p7_rest_assert(str_contains($controller, "'/approval-requests/(?P<request_id>\\d+)/decisions'"), 'decision list/create route is request scoped');
 esc_p7_rest_assert(str_contains($controller, "'/approval-requests/(?P<request_id>\\d+)/release'"), 'release read/create route is request scoped');
 
+esc_p7_rest_assert(method_exists(CoreTenantRestGuard::class, 'permission'), 'Approval permission helper exists at runtime instead of only as a controller source reference');
+esc_p7_rest_assert(CoreTenantRestGuard::isCoreBusinessRoute('/safecontracts/v1/contracts/42/approval-requests'), 'Approval Request collection is covered by global core tenant guard');
+esc_p7_rest_assert(CoreTenantRestGuard::isCoreBusinessRoute('/safecontracts/v1/approval-requests/42/decisions'), 'Approval Decision route is covered by global core tenant guard');
+esc_p7_rest_assert(CoreTenantRestGuard::isCoreBusinessRoute('/safecontracts/v1/approval-requests/42/release'), 'Approval Release route is covered by global core tenant guard');
+esc_p7_rest_assert(str_contains($tenantGuard, 'TenantRequestContext::resolve($request, true)'), 'Approval permission helper resolves and locks server-owned tenant context');
+esc_p7_rest_assert(str_contains($tenantGuard, 'Permission::capability($capability)'), 'Approval permission helper applies WordPress capability plus tenant-role ceiling');
 esc_p7_rest_assert(substr_count($controller, 'CoreTenantRestGuard::permission($request, Capabilities::ACCESS)') === 3, 'all Approval REST reads require ACCESS through locked tenant guard');
 esc_p7_rest_assert(substr_count($controller, 'CoreTenantRestGuard::permission($request, Capabilities::EDIT_CONTRACTS)') === 3, 'all Approval REST mutations require EDIT_CONTRACTS through locked tenant guard');
 esc_p7_rest_assert(str_contains($controller, "ApiRequest::routeId(\$request, 'contract_id')") && str_contains($controller, "ApiRequest::routeId(\$request, 'request_id')"), 'route object identities use existing positive-ID parser');
@@ -71,6 +80,6 @@ esc_p7_rest_assert(str_contains($decisionService, 'TenantAuthorization::allowsCa
 esc_p7_rest_assert(str_contains($releaseService, 'TenantAuthorization::allowsCapability') && str_contains($releaseService, 'assertScope'), 'Approval Release service retains tenant-role and contract data scope');
 esc_p7_rest_assert(! str_contains($controller, 'route_id') && ! str_contains($controller, 'stage_id') && ! str_contains($controller, 'candidate_id') && ! str_contains($controller, 'from_state_id') && ! str_contains($controller, 'to_state_id'), 'caller-forbidden Approval/Workflow identities are absent from REST mutation contract');
 esc_p7_rest_assert(str_contains($gate, 'enterprise_workflow_approval_release_service_p7_004.php'), 'P7-004 release service regression remains wired before REST exposure');
-esc_p7_rest_assert(str_contains($gate, 'enterprise_approval_rest_p7_005.php'), 'P7-005 Approval REST regression is wired into the full backend gate');
+esc_p7_rest_assert(str_contains($gate, 'enterprise_approval_rest_p7_005.php'), 'P7-005 Approval REST regression is explicitly wired into ESC backend gate');
 
 echo "P7-005 Approval REST checks passed ({$assertions} assertions).\n";

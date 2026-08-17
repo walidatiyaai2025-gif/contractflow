@@ -43,10 +43,35 @@ final class CoreTenantRestGuard
         return $access instanceof WP_Error ? $access : $response;
     }
 
+    /**
+     * Resolve/lock the current Enterprise tenant before evaluating a route capability.
+     *
+     * Controller permission callbacks use this helper so direct callback execution
+     * cannot skip the same server-owned tenant selection and tenant-role ceiling that
+     * the global core-business pre-callback guard enforces.
+     */
+    public static function permission(WP_REST_Request $request, string $capability): bool|WP_Error
+    {
+        if (! CoreTenantEnforcement::isEnabled()) {
+            return ApiResponse::error(
+                'esc_tenant_enforcement_required',
+                __('Enterprise tenant enforcement is required for this operation.', 'safecontracts'),
+                403
+            );
+        }
+
+        $tenantId = TenantRequestContext::resolve($request, true);
+        if ($tenantId instanceof WP_Error) {
+            return $tenantId;
+        }
+
+        return Permission::capability($capability);
+    }
+
     public static function isCoreBusinessRoute(string $route): bool
     {
         return preg_match(
-            '#^/safecontracts/v1/(?:customers(?:/|$)|contracts(?:/|$)|payments(?:/|$)|collections(?:/|$)|followups(?:/|$)|filters/contracts(?:/|$)|dashboard(?:/|$)|reports/excel(?:/|$)|tenant-members(?:/|$))#',
+            '#^/safecontracts/v1/(?:customers(?:/|$)|contracts(?:/|$)|payments(?:/|$)|collections(?:/|$)|followups(?:/|$)|filters/contracts(?:/|$)|dashboard(?:/|$)|reports/excel(?:/|$)|tenant-members(?:/|$)|approval-requests(?:/|$))#',
             $route
         ) === 1;
     }
