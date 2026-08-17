@@ -78,7 +78,7 @@ final class DataController
             $query = ApiListQuery::parse(
                 $request,
                 ['customer_id', 'contract_id', 'accountant_user_id', 'status'],
-                ['id', 'contract_number', 'customer_name', 'status', 'start_date', 'end_date'],
+                ['id', 'contract_number', 'customer_name', 'counterparty_name', 'status', 'start_date', 'end_date'],
                 'id',
                 'desc'
             );
@@ -225,7 +225,7 @@ final class DataController
     /** @param list<array<string,mixed>> $rows @param array<string,mixed> $filters @return list<array<string,mixed>> */
     private static function filterFollowUps(array $rows, array $filters): array
     {
-        $paymentStatuses = ['upcoming', 'due_soon', 'due', 'overdue', 'partially_paid', 'paid'];
+        $paymentStatuses = ['upcoming', 'due_soon', 'due', 'overdue', 'partially_paid', 'paid', 'partially_received', 'received'];
         return array_values(array_filter($rows, static function (array $row) use ($filters, $paymentStatuses): bool {
             if (($filters['customer_id'] ?? 0) > 0 && (int) ($row['customer_id'] ?? 0) !== (int) $filters['customer_id']) {
                 return false;
@@ -256,9 +256,9 @@ final class DataController
     }
 
     private static function customerView(array $row): array { return self::pick($row, ['id','internal_code','name','contact_name','email','phone','is_active']); }
-    private static function contractView(array $row): array { return self::pick($row, ['id','contract_number','customer_id','customer_name','accountant_user_id','status','start_date','end_date','base_value','is_archived']); }
-    private static function paymentListView(array $row): array { return self::pick($row, ['id','contract_id','contract_number','customer_id','customer_name','accountant_user_id','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','contract_is_archived']); }
-    private static function paymentView(array $row): array { return self::pick($row, ['id','contract_id','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','accountant_user_id','contract_is_archived']); }
+    private static function contractView(array $row): array { return self::pick($row, ['id','contract_number','customer_id','customer_name','counterparty_type','counterparty_id','counterparty_name','financial_direction','currency_code','accountant_user_id','status','start_date','end_date','base_value','is_archived']); }
+    private static function paymentListView(array $row): array { return self::pick($row, ['id','contract_id','contract_number','customer_id','customer_name','counterparty_type','counterparty_id','counterparty_name','financial_direction','currency_code','accountant_user_id','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','contract_is_archived']); }
+    private static function paymentView(array $row): array { return self::pick($row, ['id','contract_id','financial_direction','currency_code','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','accountant_user_id','contract_is_archived']); }
     private static function collectionListView(array $row): array { return self::pick($row, ['id','payment_id','amount','collection_date','payment_method_id','payment_method_name','reference','proof_media_id','created_by','created_at','payment_reference','sequence_no','due_date','payment_status','remaining_amount','contract_id','contract_number','accountant_user_id','customer_id','customer_name']); }
     private static function collectionView(array $row): array { return self::pick($row, ['id','payment_id','contract_id','amount','collection_date','payment_method_id','payment_method_name','reference','proof_media_id','created_by','created_at','updated_at']); }
     private static function followUpQueueView(array $row): array { return self::pick($row, ['payment_id','contract_id','customer_id','accountant_user_id','contract_status','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','followup_state']); }
