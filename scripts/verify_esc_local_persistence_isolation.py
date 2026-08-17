@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Fail closed if ESC mobile local persistence loses Enterprise namespace isolation.
 
-Enterprise Safe Contracts currently has exactly two audited persistent stores: the
-bearer token and the user's locale, both through Flutter secure storage and both using
-Enterprise-prefixed keys. New preference/database/file-cache persistence must not
-silently enter the mobile client: it requires an explicit Enterprise namespace and a
-reviewed isolation contract before this gate may be intentionally extended.
+Enterprise Safe Contracts currently has exactly two audited persistent secure stores
+and one audited transient export-file owner. New preference/database/file-cache
+persistence must not silently enter the mobile client: it requires an explicit
+Enterprise namespace and a reviewed isolation contract before this gate may be
+intentionally extended.
 """
 
 from __future__ import annotations
@@ -17,10 +17,13 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN_STORE = Path("mobile/lib/core/auth/mobile_token_store.dart")
 LOCALE_STORE = Path("mobile/lib/core/localization/mobile_locale_controller.dart")
+EXPORT_FILE = Path("mobile/lib/features/export/mobile_excel_export.dart")
 ESC_SECURE_STORAGE_KEY = "enterprise_safecontracts.mobile.bearer_token"
 ESC_LOCALE_STORAGE_KEY = "enterprise_safecontracts.mobile.language"
+ESC_EXPORT_TEMP_DIRECTORY = "enterprise_safecontracts_exports"
 SECURE_STORAGE_IMPORT = "package:flutter_secure_storage/flutter_secure_storage.dart"
 AUDITED_SECURE_STORAGE_FILES = {TOKEN_STORE, LOCALE_STORE}
+AUDITED_FILE_STORAGE_FILES = {EXPORT_FILE}
 
 FORBIDDEN_DEPENDENCIES = (
     "shared_preferences",
@@ -80,11 +83,13 @@ def validate_root(root: Path) -> None:
     pubspec_path = root / "mobile/pubspec.yaml"
     token_store_path = root / TOKEN_STORE
     locale_store_path = root / LOCALE_STORE
+    export_file_path = root / EXPORT_FILE
     lib_root = root / "mobile/lib"
 
     pubspec = read(pubspec_path)
     token_store = read(token_store_path)
     locale_store = read(locale_store_path)
+    export_file = read(export_file_path)
     if not lib_root.is_dir():
         fail("mobile/lib is missing")
 
@@ -122,23 +127,38 @@ def validate_root(root: Path) -> None:
         ),
         "ESC secure locale store",
     )
-
-    forbidden_legacy_keys = (
-        "safecontracts.mobile.bearer_token",
-        "safecontracts_mobile.bearer_token",
-        "safecontracts_mobile_language",
-        "safecontracts.mobile.language",
+    _require_markers(
+        export_file,
+        (
+            "import 'dart:io';",
+            "final class IoExcelExportSaver implements ExcelExportSaver",
+            f"static const enterpriseTempDirectoryName = '{ESC_EXPORT_TEMP_DIRECTORY}';",
+            "Directory.systemTemp.path",
+            "$enterpriseTempDirectoryName",
+            "_safeFilename(",
+            "file.writeAsBytes(export.bytes, flush: true)",
+        ),
+        "ESC transient Excel export store",
     )
-    combined_audited = token_store + "\n" + locale_store
-    for value in forbidden_legacy_keys:
-        if f"'{value}'" in combined_audited:
-            fail(f"ESC persistent storage contains a generic/inherited key: {value}")
+
+    forbidden_legacy_markers = (
+        "'safecontracts.mobile.bearer_token'",
+        "'safecontracts_mobile.bearer_token'",
+        "'safecontracts_mobile_language'",
+        "'safecontracts.mobile.language'",
+        "'safecontracts_exports'",
+    )
+    combined_audited = token_store + "\n" + locale_store + "\n" + export_file
+    for marker in forbidden_legacy_markers:
+        if marker in combined_audited:
+            fail(f"ESC local persistence contains a generic/inherited namespace: {marker}")
 
     dart_files = sorted(lib_root.rglob("*.dart"))
     if not dart_files:
         fail("mobile/lib contains no Dart production sources")
 
     secure_storage_users: set[Path] = set()
+    file_storage_users: set[Path] = set()
     for path in dart_files:
         relative = path.relative_to(root)
         text = path.read_text(encoding="utf-8")
@@ -161,11 +181,13 @@ def validate_root(root: Path) -> None:
         if "dart:io" in text and any(
             marker in text for marker in FILE_PERSISTENCE_MARKERS
         ):
-            fail(
-                "direct dart:io file/directory persistence is forbidden until an "
-                "explicit ESC namespaced file/cache contract is reviewed: "
-                f"{relative.as_posix()}"
-            )
+            file_storage_users.add(relative)
+            if relative not in AUDITED_FILE_STORAGE_FILES:
+                fail(
+                    "direct dart:io file/directory persistence is allowed only in "
+                    "audited ESC transient-file owners; found in "
+                    f"{relative.as_posix()}"
+                )
 
     if secure_storage_users != AUDITED_SECURE_STORAGE_FILES:
         actual = ", ".join(sorted(path.as_posix() for path in secure_storage_users))
@@ -174,6 +196,16 @@ def validate_root(root: Path) -> None:
         )
         fail(
             "ESC secure storage production owners differ from the audited allowlist; "
+            f"expected [{expected}], found [{actual}]"
+        )
+
+    if file_storage_users != AUDITED_FILE_STORAGE_FILES:
+        actual = ", ".join(sorted(path.as_posix() for path in file_storage_users))
+        expected = ", ".join(
+            sorted(path.as_posix() for path in AUDITED_FILE_STORAGE_FILES)
+        )
+        fail(
+            "ESC file-storage production owners differ from the audited allowlist; "
             f"expected [{expected}], found [{actual}]"
         )
 
@@ -186,9 +218,9 @@ def main() -> int:
         return 1
 
     print(
-        "ESC local persistence isolation passed: bearer-token and locale secure "
-        "stores are Enterprise-namespaced; unreviewed preference/database/file "
-        "persistence is absent"
+        "ESC local persistence isolation passed: bearer-token, locale, and transient "
+        "Excel export stores are Enterprise-namespaced; unreviewed preference/database/"
+        "file persistence is absent"
     )
     return 0
 

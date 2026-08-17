@@ -2,9 +2,9 @@
 
 Enterprise Safe Contracts Android must not inherit or silently share local persistence conventions from Safe Contract.
 
-## Current production persistence
+## Current persistent stores
 
-The current mobile client declares `flutter_secure_storage` as its only local-persistence package and has exactly two audited production owners:
+The mobile client declares `flutter_secure_storage` as its only local-persistence package and has exactly two audited persistent owners:
 
 1. `mobile/lib/core/auth/mobile_token_store.dart`
    - key: `enterprise_safecontracts.mobile.bearer_token`
@@ -14,6 +14,14 @@ The current mobile client declares `flutter_secure_storage` as its only local-pe
 The locale key was previously inherited as `safecontracts_mobile_language`; P0-002G corrects it to the Enterprise namespace.
 
 Combined with the distinct Android application ID `com.safecontracts.enterprise`, these stores are both application-sandboxed and explicitly Enterprise-namespaced.
+
+## Audited transient file output
+
+`mobile/lib/features/export/mobile_excel_export.dart` is the only production `dart:io` file writer currently allowed. It writes user-requested XLSX export files under `Directory.systemTemp` using the Enterprise subdirectory:
+
+`enterprise_safecontracts_exports`
+
+The previous generic subdirectory `safecontracts_exports` is replaced by the Enterprise namespace. The export path remains transient, payload-size bounded, and filename-normalized before writing.
 
 ## Fail-closed policy
 
@@ -28,12 +36,13 @@ Combined with the distinct Android application ID `com.safecontracts.enterprise`
 - ObjectBox;
 - Realm;
 - path-provider-backed local persistence;
-- direct `dart:io` file/directory persistence primitives;
 - direct `flutter_secure_storage` use outside the two audited ESC stores;
+- direct `dart:io` file/directory persistence outside the audited Excel-export owner;
 - drift from either Enterprise secure-storage key;
-- reintroduction of inherited Safe Contract persistence keys.
+- drift from the Enterprise export temporary-directory namespace;
+- reintroduction of inherited Safe Contract persistence/cache names.
 
-The gate is intentionally restrictive. New persistent preferences, cache files, databases, offline queues, or secure-storage records are allowed only after the implementation defines and tests an explicit Enterprise namespace/isolation contract. The correct change is to extend the reviewed allowlist and regression coverage with the new namespaced store, not to delete or weaken the gate.
+The gate is intentionally restrictive. New persistent preferences, cache files, databases, offline queues, secure-storage records, or file writers are allowed only after the implementation defines and tests an explicit Enterprise namespace/isolation contract. The correct change is to extend the reviewed allowlist and regression coverage with the new namespaced store, not to delete or weaken the gate.
 
 ## Runtime-UAT boundary
 

@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from verify_esc_local_persistence_isolation import (  # noqa: E402
+    ESC_EXPORT_TEMP_DIRECTORY,
     ESC_LOCALE_STORAGE_KEY,
     ESC_SECURE_STORAGE_KEY,
     PersistenceIsolationError,
@@ -89,6 +90,31 @@ final class SecureMobileLocaleStore implements MobileLocaleStore {{
 }}
 """
 
+SAFE_EXPORT_STORE = f"""import 'dart:io';
+
+abstract interface class ExcelExportSaver {{
+  Future<String> save(dynamic export);
+}}
+
+final class IoExcelExportSaver implements ExcelExportSaver {{
+  static const enterpriseTempDirectoryName = '{ESC_EXPORT_TEMP_DIRECTORY}';
+
+  @override
+  Future<String> save(dynamic export) async {{
+    final directory = Directory(
+      '${{Directory.systemTemp.path}}${{Platform.pathSeparator}}$enterpriseTempDirectoryName',
+    );
+    await directory.create(recursive: true);
+    final safe = _safeFilename('report.xlsx');
+    final file = File('${{directory.path}}${{Platform.pathSeparator}}$safe');
+    await file.writeAsBytes(export.bytes, flush: true);
+    return file.path;
+  }}
+}}
+
+String _safeFilename(String value) => value;
+"""
+
 
 def fixture_root() -> tuple[tempfile.TemporaryDirectory[str], Path]:
     temp = tempfile.TemporaryDirectory()
@@ -99,6 +125,9 @@ def fixture_root() -> tuple[tempfile.TemporaryDirectory[str], Path]:
     locale = root / "mobile/lib/core/localization/mobile_locale_controller.dart"
     locale.parent.mkdir(parents=True, exist_ok=True)
     locale.write_text(SAFE_LOCALE_STORE, encoding="utf-8")
+    export = root / "mobile/lib/features/export/mobile_excel_export.dart"
+    export.parent.mkdir(parents=True, exist_ok=True)
+    export.write_text(SAFE_EXPORT_STORE, encoding="utf-8")
     (root / "mobile/pubspec.yaml").write_text(SAFE_PUBSPEC, encoding="utf-8")
     return temp, root
 
@@ -152,15 +181,12 @@ class EscLocalPersistenceIsolationTests(unittest.TestCase):
                 "const storage = FlutterSecureStorage();\n",
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(
-                PersistenceIsolationError,
-                "only in audited ESC stores",
-            ):
+            with self.assertRaisesRegex(PersistenceIsolationError, "only in audited ESC stores"):
                 validate_root(root)
         finally:
             temp.cleanup()
 
-    def test_direct_file_persistence_fails_closed(self) -> None:
+    def test_direct_file_persistence_outside_export_owner_fails_closed(self) -> None:
         temp, root = fixture_root()
         try:
             file = root / "mobile/lib/features/contracts/file_cache.dart"
@@ -170,7 +196,7 @@ class EscLocalPersistenceIsolationTests(unittest.TestCase):
                 "Future<void> save() async => File('contracts.cache').writeAsString('x');\n",
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(PersistenceIsolationError, "direct dart:io"):
+            with self.assertRaisesRegex(PersistenceIsolationError, "audited ESC transient-file owners"):
                 validate_root(root)
         finally:
             temp.cleanup()
@@ -199,6 +225,22 @@ class EscLocalPersistenceIsolationTests(unittest.TestCase):
                 locale.read_text(encoding="utf-8").replace(
                     ESC_LOCALE_STORAGE_KEY,
                     "safecontracts_mobile_language",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(PersistenceIsolationError, "missing isolation marker"):
+                validate_root(root)
+        finally:
+            temp.cleanup()
+
+    def test_export_namespace_drift_fails_closed(self) -> None:
+        temp, root = fixture_root()
+        try:
+            export = root / "mobile/lib/features/export/mobile_excel_export.dart"
+            export.write_text(
+                export.read_text(encoding="utf-8").replace(
+                    ESC_EXPORT_TEMP_DIRECTORY,
+                    "safecontracts_exports",
                 ),
                 encoding="utf-8",
             )

@@ -133,13 +133,15 @@ abstract interface class ExcelExportSaver {
 final class IoExcelExportSaver implements ExcelExportSaver {
   IoExcelExportSaver({Directory? directory}) : _directory = directory;
 
+  static const enterpriseTempDirectoryName = 'enterprise_safecontracts_exports';
+
   final Directory? _directory;
 
   @override
   Future<String> save(MobileExcelExport export) async {
     final directory = _directory ??
         Directory(
-          '${Directory.systemTemp.path}${Platform.pathSeparator}safecontracts_exports',
+          '${Directory.systemTemp.path}${Platform.pathSeparator}$enterpriseTempDirectoryName',
         );
     await directory.create(recursive: true);
     final file = File(
