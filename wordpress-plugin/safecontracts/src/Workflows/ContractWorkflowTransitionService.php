@@ -59,7 +59,12 @@ final class ContractWorkflowTransitionService
             $transitionCode,
             $requestKeyHash,
             $actorId,
-            function (array $transition) use ($contractId): void {
+            function (array $transition) use ($contractId, $instance): void {
+                // The locked Workflow Instance is the authoritative immutable Workflow identity.
+                // Enrich the transition row before guard evaluation so legacy test doubles and
+                // any repository implementation that omits redundant selected IDs remain safe.
+                $transition['workflow_id'] = (int) ($transition['workflow_id'] ?? $instance['workflow_id'] ?? 0);
+                $transition['workflow_version_id'] = (int) ($transition['workflow_version_id'] ?? $instance['workflow_version_id'] ?? 0);
                 $this->guards->assertAllowed($contractId, $transition);
             }
         );
