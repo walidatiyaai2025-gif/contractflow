@@ -41,6 +41,8 @@ function sc_settle_payment(array $overrides = []): array
     return array_merge([
         'id' => '7001',
         'contract_id' => '501',
+        'financial_direction' => 'receivable',
+        'currency_code' => 'XXX',
         'sequence_no' => '1',
         'reference' => 'INST-001',
         'due_date' => '2026-09-15',
@@ -51,6 +53,8 @@ function sc_settle_payment(array $overrides = []): array
         'status' => PaymentStatus::UPCOMING,
         'accountant_user_id' => '42',
         'contract_is_archived' => '0',
+        'counterparty_type' => 'customer',
+        'counterparty_id' => '7',
     ], $overrides);
 }
 
