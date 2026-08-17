@@ -54,6 +54,8 @@ jobs:
             $errors | ForEach-Object { Write-Error $_.Message }
             exit 1
           }
+      - name: Test ESC production-signed UAT candidate workflow contract
+        run: python3 tests/python/esc_android_uat_candidate_workflow_test.py
       - name: Test ESC Android coexistence evidence bundle
         run: python3 tests/python/esc_android_coexistence_evidence_bundle_test.py
       - name: Test ESC Android coexistence evidence finalizer
