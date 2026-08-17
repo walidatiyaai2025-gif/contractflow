@@ -12,17 +12,11 @@ use Throwable;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
-use WP_REST_Server;
 
 final class CounterpartyContractsController
 {
     public static function register(): void
     {
-        register_rest_route(Router::NAMESPACE, '/contracts', [
-            'methods' => WP_REST_Server::CREATABLE,
-            'callback' => [self::class, 'create'],
-            'permission_callback' => [self::class, 'canCreate'],
-        ]);
         register_rest_route(Router::NAMESPACE, '/contracts/(?P<id>\d+)/counterparty', [
             'methods' => 'PATCH',
             'callback' => [self::class, 'assign'],
