@@ -1,0 +1,32 @@
+name: ESC P8-003 Contract Renewal Terms Gate
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-renewal-terms:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Validate P8-003 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0045EnterpriseContractRenewalTerms.php
+          php -l wordpress-plugin/safecontracts/src/Renewals/ContractRenewalTermsPolicy.php
+          php -l wordpress-plugin/safecontracts/src/Renewals/ContractRenewalTermsRepository.php
+          php -l wordpress-plugin/safecontracts/src/Renewals/ContractRenewalTermsService.php
+          php -l tests/php/enterprise_contract_renewal_terms_p8_003.php
+      - name: Validate ESC-P8-003 Contract Renewal Terms foundation
+        run: php tests/php/enterprise_contract_renewal_terms_p8_003.php
