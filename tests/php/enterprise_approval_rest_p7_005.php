@@ -45,14 +45,14 @@ esc_p7_rest_assert(str_contains($tenantGuard, 'TenantRequestContext::resolve($re
 esc_p7_rest_assert(str_contains($tenantGuard, 'Permission::capability($capability)'), 'Approval permission helper applies WordPress capability plus tenant-role ceiling');
 esc_p7_rest_assert(substr_count($controller, 'CoreTenantRestGuard::permission($request, Capabilities::ACCESS)') === 3, 'all Approval REST reads require ACCESS through locked tenant guard');
 esc_p7_rest_assert(substr_count($controller, 'CoreTenantRestGuard::permission($request, Capabilities::EDIT_CONTRACTS)') === 3, 'all Approval REST mutations require EDIT_CONTRACTS through locked tenant guard');
-esc_p7_rest_assert(str_contains($controller, "ApiRequest::routeId($request, 'contract_id')") && str_contains($controller, "ApiRequest::routeId($request, 'request_id')"), 'route object identities use existing positive-ID parser');
-esc_p7_rest_assert(substr_count($controller, "ApiRequest::positiveInt($request->get_param('page'), 1, 100000, 1)") === 2, 'request and decision list pagination validates page consistently');
-esc_p7_rest_assert(substr_count($controller, "ApiRequest::positiveInt($request->get_param('per_page'), 1, 100, 50)") === 2, 'request and decision list pagination is bounded to 100');
+esc_p7_rest_assert(str_contains($controller, "ApiRequest::routeId(\$request, 'contract_id')") && str_contains($controller, "ApiRequest::routeId(\$request, 'request_id')"), 'route object identities use existing positive-ID parser');
+esc_p7_rest_assert(substr_count($controller, "ApiRequest::positiveInt(\$request->get_param('page'), 1, 100000, 1)") === 2, 'request and decision list pagination validates page consistently');
+esc_p7_rest_assert(substr_count($controller, "ApiRequest::positiveInt(\$request->get_param('per_page'), 1, 100, 50)") === 2, 'request and decision list pagination is bounded to 100');
 
 esc_p7_rest_assert(substr_count($controller, 'RequestGuard::requireJsonObject($request)') === 3, 'all Approval REST mutations require JSON object bodies');
-esc_p7_rest_assert(str_contains($controller, "RequestGuard::assertAllowedKeys($payload, ['transition_code', 'idempotency_key'])"), 'Approval Request creation accepts only transition_code and idempotency_key');
-esc_p7_rest_assert(str_contains($controller, "RequestGuard::assertAllowedKeys($payload, ['action', 'idempotency_key', 'comment'])"), 'Approval Decision accepts only action, idempotency_key and optional comment');
-esc_p7_rest_assert(str_contains($controller, "RequestGuard::assertAllowedKeys($payload, ['idempotency_key'])"), 'Approval Release accepts only idempotency_key');
+esc_p7_rest_assert(str_contains($controller, "RequestGuard::assertAllowedKeys(\$payload, ['transition_code', 'idempotency_key'])"), 'Approval Request creation accepts only transition_code and idempotency_key');
+esc_p7_rest_assert(str_contains($controller, "RequestGuard::assertAllowedKeys(\$payload, ['action', 'idempotency_key', 'comment'])"), 'Approval Decision accepts only action, idempotency_key and optional comment');
+esc_p7_rest_assert(str_contains($controller, "RequestGuard::assertAllowedKeys(\$payload, ['idempotency_key'])"), 'Approval Release accepts only idempotency_key');
 esc_p7_rest_assert(! str_contains($controller, 'Idempotency-Key') && ! str_contains($controller, 'get_header('), 'P7-005 introduces no divergent REST idempotency-header convention');
 esc_p7_rest_assert(substr_count($controller, "'idempotency_key'") >= 3, 'Approval idempotency identity is explicit JSON input');
 
@@ -70,10 +70,10 @@ esc_p7_rest_assert(str_contains($releaseService, "unset(\$history['request_key_h
 esc_p7_rest_assert(! str_contains($decisionService, "'decision_key_hash' =>") && ! str_contains($requestService, "'request_key_hash' =>"), 'Approval Request/Decision services expose no explicit internal hash field');
 
 esc_p7_rest_assert(str_contains($controller, "ApiResponse::error('approval_release_not_found', 'Approval Release was not found.', 404)"), 'missing Release uses stable v1 404 envelope');
-esc_p7_rest_assert(str_contains($controller, "$status >= 500 ? 'Approval operation failed.' : $error->getMessage()"), 'unexpected server errors are masked instead of leaking internal messages');
-esc_p7_rest_assert(str_contains($controller, "return str_contains($message, 'not found') ? 404 : 400"), 'invalid/missing identifiers map to stable 400/404 semantics');
-esc_p7_rest_assert(str_contains($controller, "return ApiResponse::success($result, ($result['idempotent'] ?? false) ? 200 : 201)"), 'Decision/Release exact retries preserve 200 while new mutations use 201');
-esc_p7_rest_assert(str_contains($controller, "($result['approval_required'] ?? false) && ! ($result['idempotent'] ?? false) ? 201 : 200"), 'Approval Request create distinguishes new routed request from retry/no-route response');
+esc_p7_rest_assert(str_contains($controller, "\$status >= 500 ? 'Approval operation failed.' : \$error->getMessage()"), 'unexpected server errors are masked instead of leaking internal messages');
+esc_p7_rest_assert(str_contains($controller, "return str_contains(\$message, 'not found') ? 404 : 400"), 'invalid/missing identifiers map to stable 400/404 semantics');
+esc_p7_rest_assert(str_contains($controller, "return ApiResponse::success(\$result, (\$result['idempotent'] ?? false) ? 200 : 201)"), 'Decision/Release exact retries preserve 200 while new mutations use 201');
+esc_p7_rest_assert(str_contains($controller, "(\$result['approval_required'] ?? false) && ! (\$result['idempotent'] ?? false) ? 201 : 200"), 'Approval Request create distinguishes new routed request from retry/no-route response');
 
 esc_p7_rest_assert(str_contains($requestService, 'TenantAuthorization::allowsCapability') && str_contains($requestService, 'assertScope'), 'Approval Request service retains tenant-role and contract data scope');
 esc_p7_rest_assert(str_contains($decisionService, 'TenantAuthorization::allowsCapability') && str_contains($decisionService, 'assertScope'), 'Approval Decision service retains tenant-role and contract data scope');
