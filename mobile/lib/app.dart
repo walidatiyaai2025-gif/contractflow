@@ -141,15 +141,18 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         color: scheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side:
-              BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.62)),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.62),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerLowest,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
@@ -160,8 +163,9 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           textStyle: TextStyle(
             fontWeight: FontWeight.w700,
             fontFamily: arabicFontFamily,
@@ -172,8 +176,9 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 48),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -283,7 +288,9 @@ final class _BootstrapView extends StatelessWidget {
           final policy = controller.navigationPolicy;
           final dashboard = controller.dashboardController;
           final customers = controller.customersController;
+          final suppliers = controller.suppliersController;
           final contracts = controller.contractsController;
+          final finance = controller.financeController;
           final notifications = controller.notificationsController;
           final profile = controller.profileController;
           final excelExport = controller.excelExportController;
@@ -292,7 +299,9 @@ final class _BootstrapView extends StatelessWidget {
               policy != null &&
               dashboard != null &&
               customers != null &&
+              suppliers != null &&
               contracts != null &&
+              finance != null &&
               notifications != null &&
               profile != null &&
               excelExport != null) {
@@ -303,7 +312,9 @@ final class _BootstrapView extends StatelessWidget {
               policy: policy,
               dashboardController: dashboard,
               customersController: customers,
+              suppliersController: suppliers,
               contractsController: contracts,
+              financeController: finance,
               notificationsController: notifications,
               profileController: profile,
               excelExportController: excelExport,
@@ -336,23 +347,19 @@ final class _BootstrapView extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SafeContractsBrandMark(
-                        size: 72,
-                        borderRadius: 20,
-                      ),
+                      const SafeContractsBrandMark(size: 72, borderRadius: 20),
                       const SizedBox(height: 16),
                       Text(
                         SafeContractsBrand.name,
                         style: Theme.of(context)
                             .textTheme
                             .headlineMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                          '${l10n.t('Environment')}: ${environment.name.name}'),
+                        '${l10n.t('Environment')}: ${environment.name.name}',
+                      ),
                       const SizedBox(height: 18),
                       if (controller.state == MobileBootstrapState.idle ||
                           controller.state == MobileBootstrapState.loading)

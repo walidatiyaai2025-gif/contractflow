@@ -66,13 +66,10 @@ final class ContractsFilters {
   final int? customerId;
   final String? status;
 
-  ContractsFilters withCustomer(int? value) {
-    return ContractsFilters(customerId: value, status: status);
-  }
-
-  ContractsFilters withStatus(String? value) {
-    return ContractsFilters(customerId: customerId, status: value);
-  }
+  ContractsFilters withCustomer(int? value) =>
+      ContractsFilters(customerId: value, status: status);
+  ContractsFilters withStatus(String? value) =>
+      ContractsFilters(customerId: customerId, status: value);
 
   void validate() {
     if (customerId != null && customerId! <= 0) {
@@ -82,7 +79,10 @@ final class ContractsFilters {
         status!.isNotEmpty &&
         !_supportedContractFilterStatuses.contains(status)) {
       throw ArgumentError.value(
-          status, 'status', 'Unsupported contract status.');
+        status,
+        'status',
+        'Unsupported contract status.',
+      );
     }
   }
 
@@ -101,6 +101,11 @@ final class SafeContractsContract {
     required this.contractNumber,
     required this.customerId,
     required this.customerName,
+    required this.counterpartyType,
+    required this.counterpartyId,
+    required this.counterpartyName,
+    required this.financialDirection,
+    required this.currencyCode,
     required this.accountantUserId,
     required this.status,
     required this.startDate,
@@ -111,8 +116,13 @@ final class SafeContractsContract {
 
   final int id;
   final String contractNumber;
-  final int customerId;
+  final int? customerId;
   final String? customerName;
+  final String counterpartyType;
+  final int counterpartyId;
+  final String? counterpartyName;
+  final String financialDirection;
+  final String currencyCode;
   final int? accountantUserId;
   final String status;
   final String? startDate;
@@ -120,21 +130,64 @@ final class SafeContractsContract {
   final String? baseValue;
   final bool isArchived;
 
+  bool get isSupplier => counterpartyType == 'supplier';
+  bool get isCustomer => counterpartyType == 'customer';
+  String get displayCounterparty =>
+      counterpartyName ?? customerName ?? '#$counterpartyId';
+
   factory SafeContractsContract.fromData(Object? value) {
     final data = apiObjectMap(value, 'contract');
+    final legacyCustomerId = _optionalPositiveInt(
+      data['customer_id'],
+      'contract.customer_id',
+    );
+    final type = _optionalText(data['counterparty_type'])?.toLowerCase() ??
+        (legacyCustomerId != null ? 'customer' : '');
+    if (type != 'customer' && type != 'supplier') {
+      throw const FormatException('contract.counterparty_type is invalid.');
+    }
+    final counterpartyId = _optionalPositiveInt(
+          data['counterparty_id'],
+          'contract.counterparty_id',
+        ) ??
+        (type == 'customer' ? legacyCustomerId : null);
+    if (counterpartyId == null) {
+      throw const FormatException('contract.counterparty_id is required.');
+    }
+    final direction =
+        _optionalText(data['financial_direction'])?.toLowerCase() ??
+            (type == 'supplier' ? 'payable' : 'receivable');
+    if ((type == 'supplier' && direction != 'payable') ||
+        (type == 'customer' && direction != 'receivable')) {
+      throw const FormatException(
+        'contract.financial_direction conflicts with counterparty type.',
+      );
+    }
+    final currency =
+        (_optionalText(data['currency_code']) ?? 'UNSET').toUpperCase();
+    if (currency != 'UNSET' && !RegExp(r'^[A-Z]{3}$').hasMatch(currency)) {
+      throw const FormatException('contract.currency_code is invalid.');
+    }
+
     return SafeContractsContract(
       id: _positiveInt(data['id'], 'contract.id'),
       contractNumber: _requiredText(
         data['contract_number'],
         'contract.contract_number',
       ),
-      customerId: _positiveInt(data['customer_id'], 'contract.customer_id'),
+      customerId:
+          type == 'customer' ? (legacyCustomerId ?? counterpartyId) : null,
       customerName: _optionalText(data['customer_name']),
+      counterpartyType: type,
+      counterpartyId: counterpartyId,
+      counterpartyName: _optionalText(data['counterparty_name']) ??
+          _optionalText(data['customer_name']),
+      financialDirection: direction,
+      currencyCode: currency,
       accountantUserId: _optionalPositiveInt(
         data['accountant_user_id'],
         'contract.accountant_user_id',
       ),
-      // Status is server-authoritative and intentionally opaque to mobile.
       status: _requiredText(data['status'], 'contract.status'),
       startDate: _optionalIsoDate(data['start_date'], 'contract.start_date'),
       endDate: _optionalIsoDate(data['end_date'], 'contract.end_date'),
@@ -175,7 +228,6 @@ final class ContractPage {
         throw const FormatException('contracts contain duplicate IDs.');
       }
     }
-
     final meta = envelope.meta;
     final page = _boundedInt(meta['page'], 'meta.page', minimum: 1, maximum: 5);
     final perPage = _boundedInt(
@@ -202,7 +254,6 @@ final class ContractPage {
     if (scope != null && scope != 'all' && scope != 'assigned') {
       throw const FormatException('Contract scope metadata is invalid.');
     }
-
     return ContractPage(
       contracts: List<SafeContractsContract>.unmodifiable(contracts),
       page: page,
@@ -237,7 +288,6 @@ final class ContractsRepository {
       throw ArgumentError('Unsupported contract sort.');
     }
     filters.validate();
-
     final query = filters.toQuery()
       ..addAll(<String, String>{
         'page': '$page',
@@ -250,9 +300,7 @@ final class ContractsRepository {
   }
 
   Future<SafeContractsContract> loadContract(int id) async {
-    if (id <= 0) {
-      throw ArgumentError('Contract ID must be positive.');
-    }
+    if (id <= 0) throw ArgumentError('Contract ID must be positive.');
     final envelope = await client.get('contracts/$id');
     return SafeContractsContract.fromData(envelope.data);
   }
@@ -278,16 +326,13 @@ final class ContractsController extends ChangeNotifier {
   ContractsFilters filters = const ContractsFilters();
   ContractSortOption sort = ContractSortOption.newest;
   String? errorMessage;
-
   ContractDetailLoadState detailState = ContractDetailLoadState.idle;
   int? selectedContractId;
   SafeContractsContract? selectedContract;
   String? detailErrorMessage;
 
   Future<void> ensureLoaded() async {
-    if (state == ContractsLoadState.idle) {
-      await loadPage(1);
-    }
+    if (state == ContractsLoadState.idle) await loadPage(1);
   }
 
   Future<void> loadPage(int page) async {
@@ -298,15 +343,11 @@ final class ContractsController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (page < 1 || page > 5) {
-      return;
-    }
-
+    if (page < 1 || page > 5) return;
     currentPage = null;
     state = ContractsLoadState.loading;
     errorMessage = null;
     notifyListeners();
-
     try {
       currentPage = await repository.loadPage(
         page: page,
@@ -329,11 +370,25 @@ final class ContractsController extends ChangeNotifier {
 
   Future<void> refresh() => loadPage(currentPage?.page ?? 1);
 
+  Future<void> refreshSilently() async {
+    if (!canAccess) return;
+    try {
+      currentPage = await repository.loadPage(
+        page: currentPage?.page ?? 1,
+        perPage: pageSize,
+        filters: filters,
+        sort: sort,
+      );
+      state = ContractsLoadState.ready;
+      errorMessage = null;
+    } on Object {
+      // Keep the last authorized snapshot on silent refresh failure.
+    }
+  }
+
   Future<void> previousPage() async {
     final page = currentPage?.page ?? 1;
-    if (page > 1) {
-      await loadPage(page - 1);
-    }
+    if (page > 1) await loadPage(page - 1);
   }
 
   Future<void> nextPage() async {
@@ -372,9 +427,7 @@ final class ContractsController extends ChangeNotifier {
     if (!ContractSortOption.values.contains(nextSort)) {
       throw ArgumentError.value(nextSort, 'nextSort', 'Unsupported sort.');
     }
-    if (identical(sort, nextSort) && currentPage != null) {
-      return;
-    }
+    if (identical(sort, nextSort) && currentPage != null) return;
     sort = nextSort;
     await loadPage(1);
   }
@@ -397,24 +450,18 @@ final class ContractsController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-
     selectedContractId = id;
     selectedContract = null;
     detailErrorMessage = null;
     detailState = ContractDetailLoadState.loading;
     notifyListeners();
-
     try {
       final contract = await repository.loadContract(id);
-      if (selectedContractId != id) {
-        return;
-      }
+      if (selectedContractId != id) return;
       selectedContract = contract;
       detailState = ContractDetailLoadState.ready;
     } on SafeContractsApiException catch (error) {
-      if (selectedContractId != id) {
-        return;
-      }
+      if (selectedContractId != id) return;
       selectedContract = null;
       detailErrorMessage = error.message;
       if (error.statusCode == 404) {
@@ -425,9 +472,7 @@ final class ContractsController extends ChangeNotifier {
         detailState = ContractDetailLoadState.error;
       }
     } on Object catch (error) {
-      if (selectedContractId != id) {
-        return;
-      }
+      if (selectedContractId != id) return;
       selectedContract = null;
       detailErrorMessage = error.toString();
       detailState = ContractDetailLoadState.error;
@@ -436,9 +481,7 @@ final class ContractsController extends ChangeNotifier {
   }
 
   void clearContractDetail({int? expectedId}) {
-    if (expectedId != null && selectedContractId != expectedId) {
-      return;
-    }
+    if (expectedId != null && selectedContractId != expectedId) return;
     selectedContractId = null;
     selectedContract = null;
     detailErrorMessage = null;
@@ -460,9 +503,7 @@ int _positiveInt(Object? value, String field) {
 }
 
 int? _optionalPositiveInt(Object? value, String field) {
-  if (value == null || value == '') {
-    return null;
-  }
+  if (value == null || value == '') return null;
   return _positiveInt(value, field);
 }
 
@@ -488,16 +529,12 @@ String _requiredText(Object? value, String field) {
     throw FormatException('$field must be a non-empty string.');
   }
   final normalized = value.trim();
-  if (normalized.length > 256) {
-    throw FormatException('$field is too long.');
-  }
+  if (normalized.length > 256) throw FormatException('$field is too long.');
   return normalized;
 }
 
 String? _optionalText(Object? value) {
-  if (value == null) {
-    return null;
-  }
+  if (value == null) return null;
   if (value is! String) {
     throw const FormatException('Contract text field must be string or null.');
   }
@@ -510,13 +547,9 @@ String? _optionalText(Object? value) {
 
 String? _optionalIsoDate(Object? value, String field) {
   final text = _optionalText(value);
-  if (text == null) {
-    return null;
-  }
+  if (text == null) return null;
   final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(text);
-  if (match == null) {
-    throw FormatException('$field must use YYYY-MM-DD.');
-  }
+  if (match == null) throw FormatException('$field must use YYYY-MM-DD.');
   final parsed = DateTime.tryParse(text);
   if (parsed == null ||
       parsed.year != int.parse(match.group(1)!) ||
@@ -528,9 +561,7 @@ String? _optionalIsoDate(Object? value, String field) {
 }
 
 String? _optionalMoneyText(Object? value, String field) {
-  if (value == null || value == '') {
-    return null;
-  }
+  if (value == null || value == '') return null;
   if (value is! String) {
     throw FormatException('$field must be an exact server money string.');
   }

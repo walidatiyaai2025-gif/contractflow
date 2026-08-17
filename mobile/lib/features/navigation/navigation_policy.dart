@@ -4,8 +4,10 @@ import '../session/session_controller.dart';
 enum MobileDestination {
   dashboard,
   customers,
+  suppliers,
   contracts,
   payments,
+  finance,
   collections,
   followUps,
   notifications,
@@ -25,6 +27,9 @@ final class MobileNavigationPolicy {
   static const followUpCapability = 'safecontracts_manage_followups';
   static const exportCapability = 'safecontracts_export_reports';
   static const viewReportsCapability = 'safecontracts_view_reports';
+  static const viewSuppliersCapability = 'safecontracts_view_suppliers';
+  static const viewPayablesCapability = 'safecontracts_view_payables';
+  static const viewReceivablesCapability = 'safecontracts_view_receivables';
 
   final List<MobileDestination> destinations;
   final bool canEnterCollection;
@@ -42,8 +47,19 @@ final class MobileNavigationPolicy {
       destinations.addAll(const <MobileDestination>[
         MobileDestination.dashboard,
         MobileDestination.customers,
+      ]);
+      if (session.can(viewSuppliersCapability)) {
+        destinations.add(MobileDestination.suppliers);
+      }
+      destinations.addAll(const <MobileDestination>[
         MobileDestination.contracts,
         MobileDestination.payments,
+      ]);
+      if (session.can(viewPayablesCapability) ||
+          session.can(viewReceivablesCapability)) {
+        destinations.add(MobileDestination.finance);
+      }
+      destinations.addAll(const <MobileDestination>[
         MobileDestination.collections,
         MobileDestination.followUps,
       ]);
