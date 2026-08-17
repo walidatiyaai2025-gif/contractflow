@@ -17,6 +17,7 @@ use SafeContracts\Tenancy\TenantContextStore;
 $assertions = 0;
 function esc_p7_req_assert(bool $condition, string $message): void { global $assertions; $assertions++; if (! $condition) { fwrite(STDERR, "FAIL: {$message}\n"); exit(1); } }
 function esc_p7_req_throws(callable $callback, string $class, string $message): void { try { $callback(); } catch (Throwable $error) { esc_p7_req_assert($error instanceof $class, $message . ' (unexpected ' . get_class($error) . ': ' . $error->getMessage() . ')'); return; } esc_p7_req_assert(false, $message . ' (no exception)'); }
+function esc_p7_req_throws_contains(callable $callback, string $class, string $needle, string $message): void { try { $callback(); } catch (Throwable $error) { esc_p7_req_assert($error instanceof $class, $message . ' (unexpected ' . get_class($error) . ': ' . $error->getMessage() . ')'); esc_p7_req_assert(str_contains($error->getMessage(), $needle), $message . ' (message mismatch: ' . $error->getMessage() . ')'); return; } esc_p7_req_assert(false, $message . ' (no exception)'); }
 function esc_p7_req_instance(): array { return [['contract_id'=>'71','accountant_user_id'=>'42','is_archived'=>'0','instance_id'=>'501','workflow_id'=>'81','workflow_version_id'=>'91','current_state_id'=>'301','current_state_code_snapshot'=>'draft']]; }
 function esc_p7_req_transition(): array { return [['transition_id'=>'701','workflow_id'=>'81','workflow_version_id'=>'91','transition_code'=>'submit','source_state_id'=>'301','source_state_code'=>'draft','destination_state_id'=>'302','destination_state_code'=>'review']]; }
 function esc_p7_req_route(bool $stale = false): array { return [['id'=>'1001','workflow_id'=>'81','workflow_version_id'=>'91','transition_id'=>'701','transition_code_snapshot'=>$stale?'old_submit':'submit','source_state_id_snapshot'=>'301','source_state_code_snapshot'=>'draft','destination_state_id_snapshot'=>'302','destination_state_code_snapshot'=>'review']]; }
@@ -50,8 +51,9 @@ esc_p7_req_assert(str_contains($schema,'CREATE TABLE wp_safecontracts_workflow_a
 esc_p7_req_assert(str_contains($schema,'UNIQUE KEY tenant_instance_request_key'),'Approval Request has separate instance idempotency identity');
 esc_p7_req_assert(str_contains($schema,"status varchar(20) NOT NULL DEFAULT 'pending'"),'Approval Request starts pending');
 esc_p7_req_assert(str_contains($schema,'UNIQUE KEY tenant_request_stage_user'),'resolved candidates de-duplicate per stage');
+esc_p7_req_assert(str_contains($schema,'request_key_hash char(64) NOT NULL')&&!str_contains($schema,'request_key varchar'),'only the SHA-256 request identity is persisted');
 esc_p7_req_assert(!str_contains($migrationSource,'ALTER TABLE'),'P7-002 migration is additive');
-esc_p7_req_assert(Migrator::LATEST_VERSION==='1.39.0','P7-002 migration is latest');
+esc_p7_req_assert(version_compare(Migrator::LATEST_VERSION,'1.39.0','>='),'P7-002 migration remains at or before the current schema version');
 esc_p7_req_assert(str_contains($migratorSource,"'1.39.0' => Migration0040EnterpriseWorkflowApprovalRequests::class"),'P7-002 migration registered');
 
 esc_p7_req_assert(ApprovalRequestPolicy::normalizeTransitionCode(' Submit ')==='submit','transition code canonicalized');
@@ -128,6 +130,12 @@ esc_p7_req_throws(static fn()=>$repository->createRequest(71,501,'submit',Approv
 $overflow=[]; for($i=1;$i<=257;$i++){ $overflow[]=[$i,'manager']; }
 $GLOBALS['sc_test_queries']=[]; $GLOBALS['sc_test_result_queue']=[esc_p7_req_instance(),[],esc_p7_req_transition(),[],esc_p7_req_route(),esc_p7_req_stage(),esc_p7_req_selectors(false),esc_p7_req_memberships($overflow)];
 esc_p7_req_throws(static fn()=>$repository->createRequest(71,501,'submit',ApprovalRequestPolicy::requestKeyHash('overflow'),42),RuntimeException::class,'stage candidate overflow rejected');
+
+// Request-wide membership expansion is independently bounded at MAX+1 before any request snapshot write.
+$requestOverflow=[]; for($i=1;$i<=ApprovalRequestPolicy::MAX_CANDIDATES_PER_REQUEST+1;$i++){ $requestOverflow[]=[$i,'manager']; }
+$GLOBALS['sc_test_queries']=[]; $GLOBALS['sc_test_result_queue']=[esc_p7_req_instance(),[],esc_p7_req_transition(),[],esc_p7_req_route(),esc_p7_req_stage(),esc_p7_req_selectors(false),esc_p7_req_memberships($requestOverflow)];
+esc_p7_req_throws_contains(static fn()=>$repository->createRequest(71,501,'submit',ApprovalRequestPolicy::requestKeyHash('request-overflow'),42),RuntimeException::class,'request bound','request-wide candidate membership overflow rejected before stage snapshotting');
+esc_p7_req_assert(!array_filter($GLOBALS['sc_test_queries'],static fn(string $sql):bool=>str_starts_with(ltrim($sql),'INSERT INTO wp_safecontracts_workflow_approval_requests')),'request-wide candidate overflow occurs before request insert');
 
 // Guard failure is before all runtime snapshot inserts and rolls back locks/readiness together.
 $GLOBALS['sc_test_queries']=[]; $GLOBALS['sc_test_result_queue']=[esc_p7_req_instance(),[],esc_p7_req_transition(),[],esc_p7_req_route(),esc_p7_req_stage(),esc_p7_req_selectors(false),esc_p7_req_memberships([[66,'manager']])];
