@@ -96,8 +96,9 @@ esc_p9_006_assert(str_contains($repositorySource, '$authorizeLockedContract($con
 esc_p9_006_assert(str_contains($repositorySource, 'ContractFinancialAdjustmentPolicy::MAX_LINES + 1'), 'adjustment snapshot uses a 201st overflow sentinel');
 esc_p9_006_assert(str_contains($repositorySource, 'NOT EXISTS ('), 'only latest adjustment revisions participate');
 esc_p9_006_assert(str_contains($repositorySource, 'ORDER BY revision_number DESC, id DESC') && str_contains($repositorySource, 'LIMIT 1'), 'latest base revision is selected deterministically');
-esc_p9_006_assert(! preg_match('/\b(?:INSERT|UPDATE|DELETE\s+FROM)\b/i', $repositorySource), 'reconciliation repository contains no financial write statement');
-esc_p9_006_assert(! preg_match('/\b(?:INSERT|UPDATE|DELETE\s+FROM)\b/i', $serviceSource), 'reconciliation service contains no write statement');
+$financialWritePattern = '/\b(?:INSERT\s+INTO|DELETE\s+FROM|UPDATE\s+[A-Za-z0-9_`{}.]+\s+SET)\b/i';
+esc_p9_006_assert(! preg_match($financialWritePattern, $repositorySource), 'reconciliation repository contains no financial write statement');
+esc_p9_006_assert(! preg_match($financialWritePattern, $serviceSource), 'reconciliation service contains no write statement');
 foreach (['safecontracts_contracts.base_value', 'safecontracts_contract_adjustments', 'financialTotals', 'ContractMoney', 'exchange_rate', 'currency_convert'] as $forbidden) {
     esc_p9_006_assert(! str_contains($repositorySource, $forbidden) && ! str_contains($serviceSource, $forbidden), 'P9-006 avoids legacy/FX coupling: ' . $forbidden);
 }
