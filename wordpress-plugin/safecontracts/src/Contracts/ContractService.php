@@ -7,7 +7,10 @@ namespace SafeContracts\Contracts;
 use DateTimeImmutable;
 use DomainException;
 use InvalidArgumentException;
+use SafeContracts\Counterparties\CounterpartyType;
+use SafeContracts\Finance\CurrencyCode;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Settings\GeneralSettings;
 
 final class ContractService
 {
@@ -16,18 +19,31 @@ final class ContractService
         $this->repository ??= new ContractRepository();
     }
 
-    /** @param array{contract_number:mixed, customer_id:mixed, accountant_user_id?:mixed, notes?:mixed} $input */
+    /** @param array<string,mixed> $input */
     public function create(array $input): int
     {
         $this->requireCapability(Capabilities::CREATE_CONTRACTS, 'You do not have permission to create contracts.');
 
         $contractNumber = $this->normalizeContractNumber($input['contract_number'] ?? '');
-        $customerId = (int) ($input['customer_id'] ?? 0);
-        $notes = trim((string) ($input['notes'] ?? ''));
-        if ($customerId <= 0 || ! $this->repository->customerIsActive($customerId)) {
-            throw new InvalidArgumentException('Contract customer must be an active SafeContracts customer.');
+        $explicitCounterparty = array_key_exists('counterparty_type', $input) || array_key_exists('counterparty_id', $input);
+        if ($explicitCounterparty) {
+            if (! array_key_exists('counterparty_type', $input) || ! array_key_exists('counterparty_id', $input)) {
+                throw new InvalidArgumentException('Counterparty type and counterparty ID must be supplied together.');
+            }
+            $counterpartyType = CounterpartyType::normalize($input['counterparty_type']);
+            $counterpartyId = (int) $input['counterparty_id'];
+        } else {
+            // Backward compatibility for existing web/mobile clients. The legacy
+            // schema itself proves that customer_id means Customer/Receivable.
+            $counterpartyType = CounterpartyType::CUSTOMER;
+            $counterpartyId = (int) ($input['customer_id'] ?? 0);
+        }
+        if ($counterpartyId <= 0 || ! $this->repository->counterpartyIsActive($counterpartyType, $counterpartyId)) {
+            throw new InvalidArgumentException('Contract counterparty must be an active SafeContracts customer or supplier.');
         }
 
+        $currencyCode = $this->resolveCurrency($input['currency_code'] ?? null, $explicitCounterparty);
+        $notes = trim((string) ($input['notes'] ?? ''));
         $accountantUserId = $this->normalizeOptionalUserId($input['accountant_user_id'] ?? null);
         if ($accountantUserId === null && current_user_can(Capabilities::VIEW_ASSIGNED) && ! current_user_can(Capabilities::VIEW_ALL)) {
             $accountantUserId = get_current_user_id();
@@ -40,8 +56,27 @@ final class ContractService
         }
 
         $actorId = get_current_user_id();
-        $contractId = $this->repository->create($contractNumber, $customerId, $accountantUserId, $notes, $actorId);
-        do_action('safecontracts_contract_created', $contractId, $actorId, $customerId, $accountantUserId);
+        $contractId = $this->repository->createForCounterparty(
+            $contractNumber,
+            $counterpartyType,
+            $counterpartyId,
+            $currencyCode,
+            $accountantUserId,
+            $notes,
+            $actorId
+        );
+        $legacyCustomerId = $counterpartyType === CounterpartyType::CUSTOMER ? $counterpartyId : null;
+        do_action('safecontracts_contract_created', $contractId, $actorId, $legacyCustomerId, $accountantUserId);
+        do_action(
+            'safecontracts_contract_counterparty_assigned',
+            $contractId,
+            $counterpartyType,
+            $counterpartyId,
+            CounterpartyType::financialDirection($counterpartyType),
+            $actorId,
+            null,
+            null
+        );
         return $contractId;
     }
 
@@ -79,6 +114,19 @@ final class ContractService
         $actorId = get_current_user_id();
         $this->repository->updateBaseValue($contractId, $amount, $actorId);
         do_action('safecontracts_contract_base_value_changed', $contractId, $amount, $actorId, $contract['base_value']);
+    }
+
+    public function updateCurrency(int $contractId, mixed $currencyCode): void
+    {
+        $this->requireCapability(Capabilities::EDIT_CONTRACTS, 'You do not have permission to edit contract currency.');
+        $contract = $this->editableContract($contractId);
+        $currency = CurrencyCode::normalize($currencyCode);
+        if ($contract['currency_code'] === $currency) {
+            return;
+        }
+        $actorId = get_current_user_id();
+        $this->repository->updateCurrency($contractId, $currency, $actorId);
+        do_action('safecontracts_contract_currency_changed', $contractId, $contract['currency_code'], $currency, $actorId);
     }
 
     public function addFinancialItem(int $contractId, mixed $description, mixed $amount, mixed $displayOrder = 0): int
@@ -161,15 +209,36 @@ final class ContractService
 
     public function assignCustomer(int $contractId, int $customerId): void
     {
+        $this->assignCounterparty($contractId, CounterpartyType::CUSTOMER, $customerId);
+    }
+
+    public function assignCounterparty(int $contractId, mixed $counterpartyType, int $counterpartyId): void
+    {
         $this->requireCapability(Capabilities::ASSIGN_CONTRACTS, 'You do not have permission to assign contracts.');
         $contract = $this->requireContract($contractId);
         $this->assertScope($contract);
-        if ($customerId <= 0 || ! $this->repository->customerIsActive($customerId)) {
-            throw new InvalidArgumentException('Contract customer must be an active SafeContracts customer.');
+        if ($contract['is_archived']) {
+            throw new DomainException('Archived contracts cannot change counterparties.');
+        }
+        $type = CounterpartyType::normalize($counterpartyType);
+        if ($counterpartyId <= 0 || ! $this->repository->counterpartyIsActive($type, $counterpartyId)) {
+            throw new InvalidArgumentException('Contract counterparty must be an active SafeContracts customer or supplier.');
         }
         $actorId = get_current_user_id();
-        $this->repository->assignCustomer($contractId, $customerId, $actorId);
-        do_action('safecontracts_contract_customer_assigned', $contractId, $customerId, $actorId, $contract['customer_id']);
+        $this->repository->assignCounterparty($contractId, $type, $counterpartyId, $actorId);
+        do_action(
+            'safecontracts_contract_counterparty_assigned',
+            $contractId,
+            $type,
+            $counterpartyId,
+            CounterpartyType::financialDirection($type),
+            $actorId,
+            $contract['counterparty_type'],
+            $contract['counterparty_id']
+        );
+        if ($type === CounterpartyType::CUSTOMER) {
+            do_action('safecontracts_contract_customer_assigned', $contractId, $counterpartyId, $actorId, $contract['customer_id']);
+        }
     }
 
     public function assignAccountant(int $contractId, ?int $accountantUserId): void
@@ -203,7 +272,7 @@ final class ContractService
         do_action('safecontracts_contract_status_changed', $contractId, $contract['status'], $targetStatus, $actorId);
     }
 
-    /** @return array{id:int, contract_number:string, customer_id:int, accountant_user_id:?int, status:string, start_date:?string, end_date:?string, base_value:string, notes:string, is_archived:bool} */
+    /** @return array<string,mixed> */
     private function editableContract(int $contractId): array
     {
         $contract = $this->requireContract($contractId);
@@ -214,7 +283,7 @@ final class ContractService
         return $contract;
     }
 
-    /** @return array{id:int, contract_number:string, customer_id:int, accountant_user_id:?int, status:string, start_date:?string, end_date:?string, base_value:string, notes:string, is_archived:bool} */
+    /** @return array<string,mixed> */
     private function requireContract(int $contractId): array
     {
         if ($contractId <= 0) {
@@ -248,6 +317,19 @@ final class ContractService
         if (! $hasAccess || ! $canCreate || ! $hasAssignedScope) {
             throw new InvalidArgumentException('Assigned user must be an eligible SafeContracts Accountant.');
         }
+    }
+
+    private function resolveCurrency(mixed $value, bool $requiredForExplicitCounterparty): string
+    {
+        if ($value !== null && trim((string) $value) !== '') {
+            return CurrencyCode::normalize($value);
+        }
+        $settings = (new GeneralSettings())->read();
+        $configured = CurrencyCode::normalize($settings['currency_code'] ?? '', true);
+        if ($requiredForExplicitCounterparty && $configured === '') {
+            throw new InvalidArgumentException('Contract currency is required until a default currency is configured.');
+        }
+        return $configured;
     }
 
     private function normalizeContractNumber(mixed $value): string
