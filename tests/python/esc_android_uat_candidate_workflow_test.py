@@ -125,10 +125,14 @@ def main() -> int:
     ):
         require(runbook, marker, "ESC UAT candidate runbook")
 
+    # The runbook intentionally documents that any-source required checks are
+    # forbidden, so do not reject the explanatory phrase itself. Pin the safety
+    # contract to concrete unsafe permissions/configuration instead.
     for marker in (
         "Administration: write",
         "repository write permission",
-        "any source",
+        "app_id=-1",
+        "app_id = -1",
     ):
         forbid(runbook, marker, "ESC UAT candidate runbook")
 
