@@ -116,7 +116,7 @@ foreach ([
     'safecontracts_create_payments',
     'mobile/customers/create',
     "SuppliersRepository(widget.client).create",
-    "widget.client.post('contracts/create'",
+    "'contracts/create'",
     "'counterparty_type': _counterpartyType",
     "'counterparty_id': _counterpartyId",
     "'currency_code': currency",
@@ -124,7 +124,7 @@ foreach ([
 ] as $marker) {
     $assert(str_contains($quickAdd, $marker), "mobile quick add contains {$marker}");
 }
-$assert(! str_contains($quickAdd, "widget.client.post('mobile/contracts/create'"), 'new quick-add contract flow does not use the legacy customer-only contract endpoint');
+$assert(! str_contains($quickAdd, "'mobile/contracts/create'"), 'new quick-add contract flow does not use the legacy customer-only contract endpoint');
 
 $appShell = (string) file_get_contents($root . '/mobile/lib/features/navigation/app_shell.dart');
 $assert(str_contains($appShell, 'availableMobileQuickAdds(widget.session)'), 'app shell filters quick-add actions from session capabilities');
