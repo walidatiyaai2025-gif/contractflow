@@ -10,6 +10,13 @@ use SafeContracts\Roles\Capabilities;
 
 final class AdminReadRepository
 {
+    /**
+     * Legacy dashboard KPI compatibility read.
+     *
+     * These fields historically represented Customer receivables. Keep that
+     * contract explicit and exclude Supplier/AP obligations; canonical AP/AR
+     * intelligence is exposed by the finance read model.
+     */
     public function kpis(array $filters): array
     {
         global $wpdb;
@@ -17,12 +24,12 @@ final class AdminReadRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $customers = $wpdb->prefix . 'safecontracts_customers';
-        $suppliers = $wpdb->prefix . 'safecontracts_suppliers';
         $where = $this->where($normalized, 'c', 'p', 'p.due_date');
         $where[] = 'c.is_archived = 0';
-        $where[] = $this->activeCounterpartyWhere('c', 'cu', 's');
+        $where[] = "c.counterparty_type = 'customer'";
+        $where[] = 'cu.is_active = 1';
         $today = function_exists('wp_date') ? wp_date('Y-m-d') : gmdate('Y-m-d');
-        $currency = "COALESCE(NULLIF(p.currency_code, ''), 'UNSET')";
+        $currency = "CASE WHEN p.id IS NULL THEN NULL ELSE COALESCE(NULLIF(p.currency_code, ''), 'UNSET') END";
         $sql = "SELECT
                 COUNT(DISTINCT c.id) AS contract_count,
                 COUNT(DISTINCT {$currency}) AS currency_group_count,
@@ -32,9 +39,10 @@ final class AdminReadRepository
                 CASE WHEN COUNT(DISTINCT {$currency}) <= 1 THEN COALESCE(SUM(CASE WHEN p.due_date < '" . addslashes($today) . "' AND p.remaining_amount > 0 THEN p.remaining_amount ELSE 0 END), 0) ELSE NULL END AS overdue_exposure,
                 CASE WHEN COUNT(DISTINCT {$currency}) <= 1 THEN COALESCE(SUM(p.paid_amount), 0) ELSE NULL END AS collected_total
             FROM {$contracts} c
-            LEFT JOIN {$customers} cu ON c.counterparty_type = 'customer' AND cu.id = c.counterparty_id
-            LEFT JOIN {$suppliers} s ON c.counterparty_type = 'supplier' AND s.id = c.counterparty_id
-            LEFT JOIN {$payments} p ON p.contract_id = c.id AND p.is_archived = 0
+            INNER JOIN {$customers} cu ON c.counterparty_type = 'customer' AND cu.id = c.counterparty_id
+            LEFT JOIN {$payments} p ON p.contract_id = c.id
+                AND p.is_archived = 0
+                AND COALESCE(NULLIF(p.financial_direction, ''), 'receivable') = 'receivable'
             WHERE " . implode(' AND ', $where);
         return $this->firstRow($wpdb->get_results($sql, ARRAY_A), [
             'contract_count' => '0',
