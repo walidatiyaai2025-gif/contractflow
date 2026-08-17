@@ -172,7 +172,7 @@ final class ContractObligationRepository
                 $tenantId,
                 ContractObligationPolicy::STATUS_OPEN
             ));
-            if ($updated !== 1) {
+            if ($updated === false || ($updated !== 0 && $updated !== 1)) {
                 throw new RuntimeException('Contract Obligation changed concurrently and was not updated.');
             }
             if ($wpdb->query('COMMIT') === false) {
