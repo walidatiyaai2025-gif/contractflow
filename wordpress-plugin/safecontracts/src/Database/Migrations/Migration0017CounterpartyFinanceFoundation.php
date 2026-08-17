@@ -132,18 +132,25 @@ final class Migration0017CounterpartyFinanceFoundation implements Migration
 
     private function addColumn(object $wpdb, string $table, string $column, string $definition): void
     {
-        $exists = $wpdb->get_var($wpdb->prepare("SHOW COLUMNS FROM {$table} LIKE %s", $column));
-        if ($exists !== null) {
-            return;
+        // Real WordPress wpdb supports get_var(), which lets a partially-applied
+        // migration resume safely. The repository test double intentionally exposes
+        // only the mutation surface, so fall back to the direct ALTER in tests.
+        if (method_exists($wpdb, 'get_var')) {
+            $exists = $wpdb->get_var($wpdb->prepare("SHOW COLUMNS FROM {$table} LIKE %s", $column));
+            if ($exists !== null) {
+                return;
+            }
         }
         $this->execute($wpdb, "ALTER TABLE {$table} ADD {$column} {$definition}");
     }
 
     private function addIndex(object $wpdb, string $table, string $index, string $columns): void
     {
-        $exists = $wpdb->get_var($wpdb->prepare("SHOW INDEX FROM {$table} WHERE Key_name = %s", $index));
-        if ($exists !== null) {
-            return;
+        if (method_exists($wpdb, 'get_var')) {
+            $exists = $wpdb->get_var($wpdb->prepare("SHOW INDEX FROM {$table} WHERE Key_name = %s", $index));
+            if ($exists !== null) {
+                return;
+            }
         }
         $this->execute($wpdb, "ALTER TABLE {$table} ADD KEY {$index} {$columns}");
     }
