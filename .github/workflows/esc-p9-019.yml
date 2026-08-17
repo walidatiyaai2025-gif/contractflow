@@ -1,0 +1,60 @@
+name: ESC P9-019 Contract Schedule Coverage
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schedule-coverage:
+    name: schedule-coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Validate P9-019 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialReconciliationCalculator.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialReconciliationService.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialScheduleCoveragePolicy.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialScheduleCoverageRepository.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialScheduleCoverageService.php
+          php -l tests/php/enterprise_contract_financial_schedule_coverage_p9_019.php
+      - name: Validate P9-006 authoritative reconciliation compatibility
+        run: php tests/php/enterprise_contract_financial_reconciliation_p9_006.php
+      - name: Validate P9-012 payment schedule compatibility
+        run: php tests/php/enterprise_contract_financial_payment_schedule_p9_012.php
+      - name: Validate P9-017 settlement compatibility
+        run: php tests/php/enterprise_contract_financial_reversal_aware_settlement_p9_017.php
+      - name: Validate P9-018 collection capacity compatibility
+        run: php tests/php/enterprise_contract_financial_reversal_aware_capacity_p9_018.php
+      - name: Validate P9-019 schedule coverage
+        shell: bash
+        run: |
+          set +e
+          output="$(php tests/php/enterprise_contract_financial_schedule_coverage_p9_019.php 2>&1)"
+          status=$?
+          printf '%s\n' "$output"
+          if [ "$status" -ne 0 ]; then
+            first_line="$(printf '%s\n' "$output" | grep -m1 '^FAIL:' || true)"
+            if [ -z "$first_line" ]; then
+              first_line="P9-019 regression exited with status $status"
+            fi
+            first_line="${first_line//'%'/'%25'}"
+            first_line="${first_line//$'\r'/'%0D'}"
+            first_line="${first_line//$'\n'/'%0A'}"
+            echo "::error title=ESC P9-019 regression::$first_line"
+            exit "$status"
+          fi
