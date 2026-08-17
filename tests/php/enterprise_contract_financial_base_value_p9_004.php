@@ -5,7 +5,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
-use InvalidArgumentException;
 use RuntimeException;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Database\Migrations\Migration0049EnterpriseContractFinancialBaseValueRevisions;
@@ -84,6 +83,8 @@ esc_p9_004_assert(! str_contains($schema, 'updated_at') && ! str_contains($schem
 esc_p9_004_assert(str_contains($repositorySource, 'TenantContextStore::context()->requireTenantId()'), 'repository derives tenant identity from locked TenantContextStore');
 esc_p9_004_assert(str_contains($repositorySource, 'CoreTenantEnforcement::isEnabled()'), 'repository fails closed unless core tenant enforcement is enabled');
 esc_p9_004_assert(substr_count($repositorySource, 'FOR UPDATE') >= 3, 'contract, profile and latest revision are locked before append');
+esc_p9_004_assert(str_contains($repositorySource, 'LEFT JOIN {$profiles} p'), 'latest read validates the stored revision against its current-tenant financial profile');
+esc_p9_004_assert(str_contains($repositorySource, 'profile_match_id'), 'latest read fails closed when the stored financial profile does not match');
 esc_p9_004_assert(str_contains($repositorySource, "c.status = 'draft' AND c.is_archived = 0"), 'atomic append revalidates draft/unarchived contract state');
 esc_p9_004_assert(str_contains($repositorySource, 'p.contract_currency = %s'), 'atomic append revalidates the locked profile currency');
 esc_p9_004_assert(str_contains($repositorySource, '$storedMoney->equals($money)'), 'same-amount retry is explicitly idempotent');
@@ -99,7 +100,7 @@ TenantContextStore::reset();
 TenantContextStore::context()->setTenantId(7);
 $repository = new ContractFinancialBaseValueRevisionRepository();
 
-// Tenant-scoped read canonicalizes persisted Money and revision identity.
+// Tenant-scoped read canonicalizes persisted Money and validates profile linkage.
 $GLOBALS['sc_test_results'] = [[
     'id' => '80',
     'uuid' => '11111111-1111-4111-8111-111111111111',
@@ -110,6 +111,8 @@ $GLOBALS['sc_test_results'] = [[
     'currency_code' => 'usd',
     'created_by' => '42',
     'created_at' => '2026-08-17 12:00:00',
+    'profile_match_id' => '31',
+    'profile_currency' => 'USD',
 ]];
 $latest = $repository->findLatestForContract(55);
 esc_p9_004_assert(is_array($latest) && $latest['amount'] === '125.5000', 'persisted base value canonicalizes through P9-001 Money');
@@ -117,7 +120,26 @@ esc_p9_004_assert(is_array($latest) && $latest['currency_code'] === 'USD', 'pers
 esc_p9_004_assert(is_array($latest) && $latest['revision_number'] === 2, 'persisted revision number is normalized');
 $readSql = (string) end($GLOBALS['sc_test_read_queries']);
 esc_p9_004_assert(str_contains($readSql, 'tenant_id = 7') && str_contains($readSql, 'contract_id = 55'), 'latest read is scoped to current tenant and contract');
-esc_p9_004_assert(str_contains($readSql, 'ORDER BY revision_number DESC, id DESC LIMIT 1'), 'latest read is bounded and deterministic');
+esc_p9_004_assert(str_contains($readSql, 'ORDER BY r.revision_number DESC, r.id DESC'), 'latest read is bounded and deterministic');
+
+$GLOBALS['sc_test_results'] = [[
+    'id' => '80',
+    'uuid' => '11111111-1111-4111-8111-111111111111',
+    'contract_id' => '55',
+    'financial_currency_profile_id' => '31',
+    'revision_number' => '2',
+    'amount' => '125.5000',
+    'currency_code' => 'USD',
+    'created_by' => '42',
+    'created_at' => '2026-08-17 12:00:00',
+    'profile_match_id' => null,
+    'profile_currency' => null,
+]];
+esc_p9_004_expect_throw(
+    static fn (): ?array => $repository->findLatestForContract(55),
+    UnexpectedValueException::class,
+    'orphaned or cross-profile latest revision fails closed on read'
+);
 
 // First append locks parent/profile/latest and writes revision 1 in the profile currency.
 $GLOBALS['sc_test_results'] = [];
