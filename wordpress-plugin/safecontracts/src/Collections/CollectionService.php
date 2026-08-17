@@ -128,6 +128,7 @@ final class CollectionService
             throw $error;
         }
 
+        // Preserve the historical hook payload exactly for existing audit and integrations.
         do_action(
             'safecontracts_collection_recorded',
             $collectionId,
@@ -136,9 +137,7 @@ final class CollectionService
             $collectionDate,
             $paymentMethodId,
             $proofMediaId,
-            $actorId,
-            $payment['financial_direction'],
-            $payment['currency_code']
+            $actorId
         );
         do_action(
             'safecontracts_payment_settled',
@@ -150,9 +149,21 @@ final class CollectionService
             $actorId,
             $storedPaid,
             $storedRemaining,
-            $storedStatus,
+            $storedStatus
+        );
+
+        // P11 emits a separate event instead of mutating established hook signatures.
+        do_action(
+            'safecontracts_financial_settlement_recorded',
+            $collectionId,
+            $paymentId,
             $payment['financial_direction'],
-            $payment['currency_code']
+            $payment['currency_code'],
+            $amount,
+            $newPaid,
+            $newRemaining,
+            $newStatus,
+            $actorId
         );
 
         return $collectionId;
