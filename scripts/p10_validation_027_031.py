@@ -13,18 +13,25 @@ from backup_manifest import build_manifest, registered_migrations, validate_mani
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# This tuple is intentionally exact: adding or removing a critical audit event
+# requires an explicit release-baseline review in the same change.
 REQUIRED_AUDIT_EVENTS = (
     "safecontracts_contract_base_value_changed",
     "safecontracts_contract_financial_item_added",
     "safecontracts_contract_adjustment_added",
     "safecontracts_payment_settled",
     "safecontracts_contract_customer_assigned",
+    "safecontracts_contract_counterparty_assigned",
+    "safecontracts_contract_currency_changed",
     "safecontracts_contract_accountant_assigned",
     "safecontracts_contract_status_changed",
     "safecontracts_contract_dates_changed",
     "safecontracts_payment_status_changed",
     "safecontracts_payment_dates_changed",
     "safecontracts_followup_recorded",
+    "safecontracts_supplier_created",
+    "safecontracts_supplier_updated",
+    "safecontracts_supplier_archived",
     "safecontracts_export_completed",
     "safecontracts_import_uploaded",
     "safecontracts_import_discovered",
