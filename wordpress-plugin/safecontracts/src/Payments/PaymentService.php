@@ -57,7 +57,9 @@ final class PaymentService
             $dueDate,
             $expectedPaymentDate,
             $amount,
-            $actorId
+            $actorId,
+            $contract['financial_direction'],
+            $contract['currency_code']
         );
         do_action(
             'safecontracts_payment_created',
@@ -67,13 +69,15 @@ final class PaymentService
             $dueDate,
             $expectedPaymentDate,
             $amount,
-            $actorId
+            $actorId,
+            $contract['financial_direction'],
+            $contract['currency_code']
         );
 
         return $paymentId;
     }
 
-    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool} */
+    /** @return array<string,mixed> */
     public function find(int $paymentId): array
     {
         $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts payments.');
@@ -163,7 +167,7 @@ final class PaymentService
         return $this->temporalStatus($paymentId, $today) === PaymentStatus::OVERDUE;
     }
 
-    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool} */
+    /** @return array<string,mixed> */
     private function editablePayment(int $paymentId): array
     {
         $payment = $this->requirePayment($paymentId);
@@ -178,7 +182,7 @@ final class PaymentService
         return $payment;
     }
 
-    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool} */
+    /** @return array<string,mixed> */
     private function requirePayment(int $paymentId): array
     {
         if ($paymentId <= 0) {
