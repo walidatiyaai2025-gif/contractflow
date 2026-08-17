@@ -47,7 +47,8 @@ final class ReportsPage
         $summary = empty($filters['date_range_error'])
             ? $read->reportSummary($filters)
             : [
-                'contract_count' => '0', 'scheduled_total' => '0.0000', 'remaining_total' => '0.0000',
+                'contract_count' => '0', 'currency_group_count' => '0', 'currency_code' => '',
+                'scheduled_total' => '0.0000', 'remaining_total' => '0.0000',
                 'overdue_exposure' => '0.0000', 'collected_total' => '0.0000', 'collection_transactions' => '0',
                 'collection_ledger_total' => '0.0000', 'followup_events' => '0', 'followed_up_payments' => '0',
             ];
@@ -61,6 +62,8 @@ final class ReportsPage
             $financeInput['due_to'] = $financeInput['due_to'] ?? ($filters['date_to'] ?? null);
             $finance = (new FinanceOverviewService())->overview($financeInput);
         }
+        $legacyCurrency = (string) ($summary['currency_code'] ?? '');
+        $legacyMultiCurrency = (int) ($summary['currency_group_count'] ?? 0) > 1;
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Server-side reporting', 'safecontracts'); ?></p><h1><?php echo esc_html__('Reports', 'safecontracts'); ?></h1></div></div>
@@ -87,7 +90,7 @@ final class ReportsPage
                     <?php foreach (['customer_id','counterparty_type','counterparty_id','financial_direction','currency_code','contract_id','accountant_user_id','status','date_from','date_to'] as $key) : ?><input type="hidden" name="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr((string) ($filters[$key] ?? '')); ?>"><?php endforeach; ?>
                     <?php wp_nonce_field(self::EXPORT_ACTION); ?>
                     <button class="button" type="submit"><?php echo esc_html__('Export current filters to Excel', 'safecontracts'); ?></button>
-                    <span class="description"><?php echo esc_html__('XLSX includes currency-safe finance summary, aging, cash flow and obligation sheets when authorized.', 'safecontracts'); ?></span>
+                    <span class="description"><?php echo esc_html__('XLSX is generated server-side and includes currency-safe finance summary, aging, cash flow and obligation sheets when authorized.', 'safecontracts'); ?></span>
                 </form>
                 <?php endif; ?>
             </section>
@@ -105,14 +108,15 @@ final class ReportsPage
 
             <div class="safecontracts-kpi-grid">
                 <?php self::metric(__('Contracts', 'safecontracts'), (string) $summary['contract_count']); ?>
-                <?php self::metric(__('Scheduled receivables', 'safecontracts'), self::money($summary['scheduled_total'])); ?>
-                <?php self::metric(__('Remaining receivables', 'safecontracts'), self::money($summary['remaining_total'])); ?>
-                <?php self::metric(__('Overdue exposure', 'safecontracts'), self::money($summary['overdue_exposure']), true); ?>
+                <?php self::metric(__('Scheduled receivables', 'safecontracts'), self::legacyMoney($summary['scheduled_total'] ?? null, $legacyCurrency, $legacyMultiCurrency)); ?>
+                <?php self::metric(__('Remaining receivables', 'safecontracts'), self::legacyMoney($summary['remaining_total'] ?? null, $legacyCurrency, $legacyMultiCurrency)); ?>
+                <?php self::metric(__('Overdue exposure', 'safecontracts'), self::legacyMoney($summary['overdue_exposure'] ?? null, $legacyCurrency, $legacyMultiCurrency), true); ?>
                 <?php self::metric(__('Collection ledger', 'safecontracts'), self::money($summary['collection_ledger_total'])); ?>
                 <?php self::metric(__('Collection transactions', 'safecontracts'), (string) $summary['collection_transactions']); ?>
                 <?php self::metric(__('Follow-up events', 'safecontracts'), (string) $summary['followup_events']); ?>
                 <?php self::metric(__('Payments followed up', 'safecontracts'), (string) $summary['followed_up_payments']); ?>
             </div>
+            <?php if ($legacyMultiCurrency) : ?><p class="description"><?php echo esc_html__('Legacy receivable money cards are hidden because more than one currency is in scope. Use AP / AR by currency above.', 'safecontracts'); ?></p><?php endif; ?>
             <section class="safecontracts-admin-card safecontracts-admin-card--security">
                 <h2><?php echo esc_html__('Receivable operations history', 'safecontracts'); ?></h2>
                 <p><?php echo esc_html__('Legacy collection and follow-up metrics remain customer/receivable operational history. Canonical AP/AR reporting is shown above and exported in dedicated Finance sheets.', 'safecontracts'); ?></p>
@@ -124,6 +128,14 @@ final class ReportsPage
     private static function metric(string $label, string $value, bool $alert = false): void
     {
         ?><article class="safecontracts-kpi<?php echo $alert ? ' safecontracts-kpi--alert' : ''; ?>"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html($value); ?></strong></article><?php
+    }
+
+    private static function legacyMoney(mixed $value, string $currency, bool $multiCurrency): string
+    {
+        if ($multiCurrency || $value === null || $value === '') {
+            return '—';
+        }
+        return self::money($value, $currency);
     }
 
     private static function money(mixed $value, string $currency = ''): string
