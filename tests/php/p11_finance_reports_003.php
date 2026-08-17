@@ -5,6 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
+use SafeContracts\Admin\AdminReadRepository;
+use SafeContracts\Admin\DashboardPage;
 use SafeContracts\Admin\FinancePage;
 use SafeContracts\Admin\ReportsPage;
 use SafeContracts\Reports\ReportExportService;
@@ -22,6 +24,8 @@ function sc_p11fr_assert(bool $condition, string $message): void
 }
 
 $financePageSource = file_get_contents((string) (new ReflectionClass(FinancePage::class))->getFileName()) ?: '';
+$dashboardSource = file_get_contents((string) (new ReflectionClass(DashboardPage::class))->getFileName()) ?: '';
+$readSource = file_get_contents((string) (new ReflectionClass(AdminReadRepository::class))->getFileName()) ?: '';
 $reportsSource = file_get_contents((string) (new ReflectionClass(ReportsPage::class))->getFileName()) ?: '';
 $exportSource = file_get_contents((string) (new ReflectionClass(ReportExportService::class))->getFileName()) ?: '';
 
@@ -29,6 +33,13 @@ sc_p11fr_assert(str_contains($financePageSource, 'FinanceOverviewService'), 'Fin
 sc_p11fr_assert(str_contains($financePageSource, 'Accounts Payable') && str_contains($financePageSource, 'Accounts Receivable'), 'Finance workspace labels AP and AR independently');
 sc_p11fr_assert(str_contains($financePageSource, 'Aging') && str_contains($financePageSource, 'Cash flow'), 'Finance workspace exposes Aging and cash-flow intelligence');
 sc_p11fr_assert(str_contains($financePageSource, 'currency_code'), 'Finance workspace keeps currency explicit in rendering and filters');
+
+sc_p11fr_assert(str_contains($dashboardSource, 'FinanceOverviewService'), 'Main admin dashboard reuses canonical finance intelligence');
+sc_p11fr_assert(str_contains($dashboardSource, 'AP / AR by currency'), 'Main dashboard presents AP and AR by currency instead of a cross-direction total');
+sc_p11fr_assert(str_contains($dashboardSource, 'Counterparty') && str_contains($dashboardSource, 'counterparty_name'), 'Dashboard contract list is Customer/Supplier counterparty-aware');
+sc_p11fr_assert(! str_contains($dashboardSource, "self::kpi(__('Scheduled'"), 'Dashboard no longer renders ambiguous legacy scheduled-money KPI');
+sc_p11fr_assert(str_contains($readSource, "c.counterparty_type = 'customer'"), 'Legacy KPI compatibility read is explicitly Customer scoped');
+sc_p11fr_assert(str_contains($readSource, "COALESCE(NULLIF(p.financial_direction, ''), 'receivable') = 'receivable'"), 'Legacy KPI compatibility read excludes AP and safely maps legacy Customer rows to receivable');
 
 sc_p11fr_assert(str_contains($reportsSource, 'FinanceOverviewService'), 'Reports UI reads finance intelligence from the same service');
 sc_p11fr_assert(str_contains($reportsSource, 'AP / AR by currency'), 'Reports UI presents financial totals by direction and currency');
