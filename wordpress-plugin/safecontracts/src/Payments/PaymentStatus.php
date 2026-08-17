@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use DomainException;
 use InvalidArgumentException;
+use SafeContracts\Finance\FinancialDirection;
 
 final class PaymentStatus
 {
@@ -17,6 +18,8 @@ final class PaymentStatus
     public const OVERDUE = 'overdue';
     public const PARTIALLY_PAID = 'partially_paid';
     public const PAID = 'paid';
+    public const PARTIALLY_RECEIVED = 'partially_received';
+    public const RECEIVED = 'received';
 
     /** @return list<string> */
     public static function all(): array
@@ -28,6 +31,8 @@ final class PaymentStatus
             self::OVERDUE,
             self::PARTIALLY_PAID,
             self::PAID,
+            self::PARTIALLY_RECEIVED,
+            self::RECEIVED,
         ];
     }
 
@@ -41,6 +46,35 @@ final class PaymentStatus
         return $status;
     }
 
+    public static function partialForDirection(string $direction): string
+    {
+        return FinancialDirection::normalize($direction) === FinancialDirection::PAYABLE
+            ? self::PARTIALLY_PAID
+            : self::PARTIALLY_RECEIVED;
+    }
+
+    public static function settledForDirection(string $direction): string
+    {
+        return FinancialDirection::normalize($direction) === FinancialDirection::PAYABLE
+            ? self::PAID
+            : self::RECEIVED;
+    }
+
+    public static function isSettlementStatus(string $status): bool
+    {
+        return in_array(self::normalize($status), [
+            self::PARTIALLY_PAID,
+            self::PAID,
+            self::PARTIALLY_RECEIVED,
+            self::RECEIVED,
+        ], true);
+    }
+
+    public static function isTerminalSettlement(string $status): bool
+    {
+        return in_array(self::normalize($status), [self::PAID, self::RECEIVED], true);
+    }
+
     public static function assertTransition(string $current, string $target): void
     {
         $current = self::normalize($current);
@@ -50,10 +84,8 @@ final class PaymentStatus
             return;
         }
 
-        // Temporal states can move as contractual due dates are changed or recalculated.
-        // PAID remains terminal until a later explicit reversal workflow is introduced.
-        if ($current === self::PAID) {
-            throw new DomainException('Paid payments cannot leave the paid state without an explicit reversal workflow.');
+        if (self::isTerminalSettlement($current)) {
+            throw new DomainException('Settled obligations cannot leave their final state without an explicit reversal workflow.');
         }
     }
 
