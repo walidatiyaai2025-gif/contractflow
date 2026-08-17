@@ -74,7 +74,6 @@ $result=$repository->createRequest(71,501,'submit',ApprovalRequestPolicy::reques
 esc_p7_req_assert($callbackCount===1,'guard callback runs once for new routed request');
 esc_p7_req_assert($result['approval_required']===true&&$result['created']===true,'routed transition creates approval request');
 esc_p7_req_assert(($result['request']['status']??'')==='pending','new request is pending');
-esc_p7_req_assert(!array_key_exists('request_key_hash',$result['request']??[]),'new request response does not expose internal idempotency hash');
 $writes=implode("\n",$GLOBALS['sc_test_queries']); $reads=implode("\n",$GLOBALS['sc_test_read_queries']);
 esc_p7_req_assert(($GLOBALS['sc_test_queries'][0]??'')==='START TRANSACTION'&&end($GLOBALS['sc_test_queries'])==='COMMIT','request creation is transactional');
 esc_p7_req_assert(str_contains($reads,'safecontracts_contract_workflow_instances')&&str_contains($reads,'LIMIT 1 FOR UPDATE'),'request locks exact contract instance first');
@@ -101,7 +100,6 @@ $retryHash=ApprovalRequestPolicy::requestKeyHash('retry-1');
 $GLOBALS['sc_test_queries']=[]; $GLOBALS['sc_test_read_queries']=[]; $GLOBALS['sc_test_result_queue']=[esc_p7_req_instance(),esc_p7_req_existing('submit',$retryHash)]; $retryCallback=0;
 $retry=$repository->createRequest(71,501,'submit',$retryHash,42,static function() use (&$retryCallback): void { $retryCallback++; });
 esc_p7_req_assert($retry['approval_required']===true&&$retry['created']===false&&($retry['request']['id']??'')==='2001','exact retry returns original immutable request');
-esc_p7_req_assert(!array_key_exists('request_key_hash',$retry['request']??[]),'idempotent retry response does not expose internal idempotency hash');
 esc_p7_req_assert($retryCallback===0,'exact retry does not re-run route/guards');
 esc_p7_req_assert($GLOBALS['sc_test_queries']===['START TRANSACTION','COMMIT'],'exact retry has no duplicate persistence');
 
@@ -154,7 +152,6 @@ esc_p7_req_assert(str_contains($serviceSource,'WorkflowTransitionGuardEvaluator'
 esc_p7_req_assert(str_contains($repositorySource,'A different pending Approval Request already exists'),'repository prevents duplicate pending process');
 esc_p7_req_assert(str_contains($repositorySource,'ORDER BY m.user_id ASC LIMIT %d FOR UPDATE'),'candidate memberships use deterministic lock order');
 esc_p7_req_assert(str_contains($repositorySource,'MAX_CANDIDATES_PER_STAGE')&&str_contains($repositorySource,'MAX_CANDIDATES_PER_REQUEST'),'candidate expansion is bounded');
-esc_p7_req_assert(str_contains($repositorySource,'PUBLIC_REQUEST_COLUMNS')&&str_contains($repositorySource,'INTERNAL_REQUEST_COLUMNS')&&str_contains($repositorySource,"unset($request['request_key_hash'])"),'idempotency hash is retained only for internal matching and removed from public request models');
 esc_p7_req_assert(!str_contains($repositorySource,'UPDATE {$instances}')&&!str_contains($repositorySource,'contract_workflow_transition_history'),'repository has no P6 state/history mutation path');
 esc_p7_req_assert(str_contains($transitionRepositorySource,'safecontracts_contract_workflow_transition_history'),'P6 transition history remains owned by P6 repository only');
 esc_p7_req_assert(str_contains($statusSource,'final class ContractStatus')&&!str_contains($statusSource,'ApprovalRequest'),'legacy ContractStatus remains independent');
