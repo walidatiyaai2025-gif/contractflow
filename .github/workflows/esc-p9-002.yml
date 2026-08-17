@@ -1,0 +1,35 @@
+name: ESC P9-002 Tenant Base Currency
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tenant-base-currency:
+    name: tenant-base-currency
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+
+      - name: Validate P9-002 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Finance/TenantBaseCurrencyRepository.php
+          php -l tests/php/enterprise_tenant_base_currency_p9_002.php
+
+      - name: Validate P9-002 tenant base currency policy
+        run: php tests/php/enterprise_tenant_base_currency_p9_002.php
