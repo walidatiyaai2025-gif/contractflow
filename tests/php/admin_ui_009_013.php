@@ -37,7 +37,7 @@ $collections = $read->collections(['customer_id' => 4, 'contract_id' => 8, 'acco
 $collectionQuery = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
 sc_p6ops_assert(count($collections) === 1, 'SC-P6-009 collection ledger returns scoped rows');
 sc_p6ops_assert(str_contains($collectionQuery, 'safecontracts_payment_collections') && str_contains($collectionQuery, 'safecontracts_payment_methods'), 'SC-P6-009 ledger joins collection and payment-method sources');
-sc_p6ops_assert(str_contains($collectionQuery, 'c.customer_id = 4') && str_contains($collectionQuery, 'c.id = 8') && str_contains($collectionQuery, 'c.accountant_user_id = 17'), 'SC-P6-009 manager collection filters apply server-side');
+sc_p6ops_assert(str_contains($collectionQuery, "c.counterparty_type = 'customer'") && str_contains($collectionQuery, 'c.counterparty_id = 4') && str_contains($collectionQuery, 'c.id = 8') && str_contains($collectionQuery, 'c.accountant_user_id = 17'), 'SC-P6-009 manager collection filters apply server-side with receivable customer semantics');
 
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_ASSIGNED => true];
 $GLOBALS['sc_test_result_queue'] = [[]];
@@ -82,7 +82,7 @@ $before = count($GLOBALS['sc_test_read_queries']);
 $summary = $read->reportSummary(['customer_id' => 3, 'status' => 'overdue']);
 $reportQueries = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
 sc_p6ops_assert($summary['contract_count'] === '2' && $summary['collection_transactions'] === '3' && $summary['followup_events'] === '4', 'SC-P6-012 report read model combines contract/payment/collection/follow-up summaries');
-sc_p6ops_assert(str_contains($reportQueries, 'c.accountant_user_id = 42') && str_contains($reportQueries, 'c.customer_id = 3'), 'SC-P6-012 assigned report scope is enforced across summary queries');
+sc_p6ops_assert(str_contains($reportQueries, 'c.accountant_user_id = 42') && str_contains($reportQueries, "c.counterparty_type = 'customer'") && str_contains($reportQueries, 'c.counterparty_id = 3'), 'SC-P6-012 assigned report scope is enforced across receivable customer summary queries');
 sc_p6ops_assert(str_contains($reportQueries, 'p.due_date <') && str_contains($reportQueries, "p.status = 'overdue'"), 'SC-P6-012 reporting preserves contractual due-date and status filtering');
 $reportsSource = file_get_contents((string) (new ReflectionClass(ReportsPage::class))->getFileName()) ?: '';
 sc_p6ops_assert(str_contains($reportsSource, 'AdminReadRepository') && str_contains($reportsSource, 'server-side'), 'SC-P6-012 report screen keeps the scoped read-model/server-side reporting boundary as later export features are added');
