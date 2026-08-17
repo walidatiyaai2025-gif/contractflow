@@ -7,6 +7,7 @@ namespace SafeContracts\Rest;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Admin\AdminReadRepository;
+use SafeContracts\Finance\FinanceOverviewService;
 use Throwable;
 use WP_Error;
 use WP_REST_Request;
@@ -37,6 +38,7 @@ final class DashboardController
             return RequestGuard::response([
                 'filters' => $filters,
                 'kpis' => $read->kpis($filters),
+                'finance' => (new FinanceOverviewService())->overview($filters),
                 'customers' => $read->customerOptions(),
                 'contracts' => $read->contractOptions($filters['customer_id']),
             ]);
