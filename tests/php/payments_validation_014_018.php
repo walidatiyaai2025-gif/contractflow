@@ -53,8 +53,11 @@ $GLOBALS['sc_test_current_caps'] = [
 
 // SC-P3-014 — Payment lifecycle validation.
 sc_p3v_assert(
-    PaymentStatus::all() === ['upcoming','due_soon','due','overdue','partially_paid','paid'],
-    'SC-P3-014 approved payment lifecycle is complete and ordered'
+    PaymentStatus::all() === [
+        'upcoming','due_soon','due','overdue',
+        'partially_paid','paid','partially_received','received',
+    ],
+    'SC-P3-014 approved timing/AP lifecycle remains ordered and P11 adds explicit AR settlement states'
 );
 PaymentStatus::assertTransition(PaymentStatus::OVERDUE, PaymentStatus::DUE_SOON);
 sc_p3v_assert(true, 'SC-P3-014 temporal states may recalculate after contractual date changes');
@@ -62,6 +65,11 @@ sc_p3v_expect(
     DomainException::class,
     fn () => PaymentStatus::assertTransition(PaymentStatus::PAID, PaymentStatus::OVERDUE),
     'SC-P3-014 paid remains terminal without explicit reversal workflow'
+);
+sc_p3v_expect(
+    DomainException::class,
+    fn () => PaymentStatus::assertTransition(PaymentStatus::RECEIVED, PaymentStatus::OVERDUE),
+    'SC-P11 received remains terminal without explicit reversal workflow'
 );
 $GLOBALS['sc_test_result_queue'] = [[sc_p3v_payment(['status'=>PaymentStatus::UPCOMING])]];
 $payments->changeStatus(7001, PaymentStatus::DUE_SOON);
