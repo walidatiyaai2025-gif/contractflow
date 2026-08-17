@@ -24,8 +24,8 @@ final class DeviceTokenService
 
     public function register(mixed $token, mixed $platform, mixed $applicationId = null): string
     {
-        $normalizedApplicationId = $this->normalizeApplicationId($applicationId);
         $userId = $this->requireAuthenticatedAccess();
+        $normalizedApplicationId = $this->normalizeApplicationId($applicationId);
         $normalizedToken = $this->normalizeToken($token);
         $normalizedPlatform = $this->normalizePlatform($platform);
         $this->repository->register($userId, $normalizedToken, $normalizedPlatform);
@@ -41,8 +41,8 @@ final class DeviceTokenService
 
     public function revoke(mixed $token, mixed $applicationId = null): string
     {
-        $normalizedApplicationId = $this->normalizeApplicationId($applicationId);
         $userId = $this->requireAuthenticatedAccess();
+        $normalizedApplicationId = $this->normalizeApplicationId($applicationId);
         $normalizedToken = $this->normalizeToken($token);
         $this->repository->revokeOwned($userId, $normalizedToken);
         do_action(
