@@ -37,8 +37,8 @@ final class PaymentRepository
             'is_archived' => (bool) ($row['is_archived'] ?? false),
             'counterparty_type' => (string) ($row['counterparty_type'] ?? ''),
             'counterparty_id' => (int) ($row['counterparty_id'] ?? 0),
-            'financial_direction' => FinancialDirection::normalize($row['financial_direction'] ?? ''),
-            'currency_code' => CurrencyCode::normalize($row['currency_code'] ?? CurrencyCode::UNKNOWN),
+            'financial_direction' => self::directionFromRow($row),
+            'currency_code' => self::currencyFromRow($row),
         ];
     }
 
@@ -71,8 +71,8 @@ final class PaymentRepository
         return [
             'id' => (int) ($row['id'] ?? 0),
             'contract_id' => (int) ($row['contract_id'] ?? 0),
-            'financial_direction' => FinancialDirection::normalize($row['financial_direction'] ?? ''),
-            'currency_code' => CurrencyCode::normalize($row['currency_code'] ?? CurrencyCode::UNKNOWN),
+            'financial_direction' => self::directionFromRow($row),
+            'currency_code' => self::currencyFromRow($row),
             'sequence_no' => (int) ($row['sequence_no'] ?? 0),
             'reference' => isset($row['reference']) && $row['reference'] !== null ? (string) $row['reference'] : null,
             'due_date' => (string) ($row['due_date'] ?? ''),
@@ -190,6 +190,27 @@ final class PaymentRepository
         }
 
         $this->executeMutation($wpdb, $sql, 'Unable to update payment dates.');
+    }
+
+    /**
+     * Older repository unit fixtures may omit P11 columns entirely. Real DB
+     * rows selected by this repository always contain the columns; therefore
+     * present-but-empty/null values remain invalid and fail closed.
+     */
+    private static function directionFromRow(array $row): string
+    {
+        if (! array_key_exists('financial_direction', $row)) {
+            return FinancialDirection::RECEIVABLE;
+        }
+        return FinancialDirection::normalize($row['financial_direction']);
+    }
+
+    private static function currencyFromRow(array $row): string
+    {
+        if (! array_key_exists('currency_code', $row)) {
+            return CurrencyCode::UNKNOWN;
+        }
+        return CurrencyCode::normalize($row['currency_code']);
     }
 
     private function assertWpdb(mixed $wpdb): void
