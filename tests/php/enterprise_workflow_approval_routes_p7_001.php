@@ -74,7 +74,7 @@ esc_p7_route_assert(str_contains($schema, 'UNIQUE KEY tenant_version_transition'
 esc_p7_route_assert(str_contains($schema, 'UNIQUE KEY tenant_route_position') && str_contains($schema, 'UNIQUE KEY tenant_route_code'), 'stage position and code are unique');
 esc_p7_route_assert(str_contains($schema, 'UNIQUE KEY tenant_stage_selector') && str_contains($schema, 'selector_key varchar(100) NOT NULL'), 'canonical selector uniqueness is persisted');
 esc_p7_route_assert(! str_contains($migrationSource, 'ALTER TABLE'), 'P7-001 migration is additive');
-esc_p7_route_assert(Migrator::LATEST_VERSION === '1.38.0', 'P7-001 migration is latest version');
+esc_p7_route_assert(version_compare(Migrator::LATEST_VERSION, '1.38.0', '>='), 'P7-001 migration remains at or before the current schema version');
 esc_p7_route_assert(str_contains($migratorSource, "'1.38.0' => Migration0039EnterpriseWorkflowTransitionApprovalRoutes::class"), 'P7-001 migration registered');
 
 $allRoute = ApprovalRoutePolicy::normalizeRoute([[
