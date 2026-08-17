@@ -51,22 +51,84 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
 
-      - name: Require protected ESC integration branch
+      - name: Require live schema-v2 ESC branch protection
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          ADMIN_READ_TOKEN: ${{ secrets.ESC_GITHUB_ADMIN_READ_TOKEN }}
         run: |
           set -euo pipefail
-          PROTECTED="$(gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" --jq '.protected')"
-          BRANCH_HEAD="$(gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" --jq '.commit.sha')"
-          if [[ "$PROTECTED" != "true" ]]; then
-            echo "FAIL: enterprise-safecontracts must be protected before ESC production publication" >&2
+          if [[ -z "${ADMIN_READ_TOKEN:-}" ]]; then
+            echo "FAIL: ESC_GITHUB_ADMIN_READ_TOKEN is required to verify live #522 enforcement before stable publication" >&2
             exit 1
           fi
+
+          EVIDENCE_DIR="$RUNNER_TEMP/esc-stable-branch-protection"
+          mkdir -p "$EVIDENCE_DIR"
+          export GH_TOKEN="$ADMIN_READ_TOKEN"
+
+          gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" > "$EVIDENCE_DIR/branch.json"
+          BRANCH_HEAD="$(python3 - "$EVIDENCE_DIR/branch.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+          value = str(payload.get('commit', {}).get('sha', '')).strip()
+          if not value:
+              raise SystemExit('FAIL: captured enterprise-safecontracts branch has no commit SHA')
+          print(value)
+          PY
+          )"
           if [[ "$BRANCH_HEAD" != "$GITHUB_SHA" ]]; then
             echo "FAIL: enterprise-safecontracts advanced after this release dispatch; dispatch a new exact-head release" >&2
             exit 1
           fi
+
+          gh api "repos/${GITHUB_REPOSITORY}/rules/branches/enterprise-safecontracts" > "$EVIDENCE_DIR/rules.json"
+          gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts/protection" > "$EVIDENCE_DIR/protection.json"
+
+          AUDIT="$EVIDENCE_DIR/esc-branch-protection-audit.json"
+          python3 scripts/audit_esc_branch_protection.py \
+            --branch-json "$EVIDENCE_DIR/branch.json" \
+            --rules-json "$EVIDENCE_DIR/rules.json" \
+            --protection-json "$EVIDENCE_DIR/protection.json" \
+            --break-glass-note "No routine bypass. Emergency repository-admin bypass is documented in #522 and requires owner approval." \
+            --output "$AUDIT"
+
+          python3 - "$AUDIT" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+          if payload.get('schema_version') != 2:
+              raise SystemExit('FAIL: stable publication requires schema-v2 branch-protection audit evidence')
+          if payload.get('branch') != 'enterprise-safecontracts':
+              raise SystemExit('FAIL: branch-protection audit targets the wrong branch')
+          if payload.get('decision') != 'PASS':
+              raise SystemExit('FAIL: stable publication requires live #522 decision=PASS')
+          checks = payload.get('checks')
+          if not isinstance(checks, dict) or not checks or not all(value is True for value in checks.values()):
+              raise SystemExit('FAIL: stable publication requires every schema-v2 branch-protection control to pass')
+          required = {
+              'protected_branch',
+              'pull_request_required',
+              'required_status_checks_present',
+              'strict_up_to_date_status_checks',
+              'administrator_enforcement_verified',
+              'conversation_resolution_required',
+              'force_push_blocked',
+              'branch_deletion_blocked',
+              'break_glass_documented',
+          }
+          missing = sorted(required - set(checks))
+          if missing:
+              raise SystemExit('FAIL: schema-v2 audit is missing required controls: ' + ', '.join(missing))
+          PY
+
+          AUDIT_SHA256="$(sha256sum "$AUDIT" | awk '{print $1}')"
+          echo "ESC_BRANCH_PROTECTION_AUDIT=$AUDIT" >> "$GITHUB_ENV"
+          echo "ESC_BRANCH_PROTECTION_AUDIT_SHA256=$AUDIT_SHA256" >> "$GITHUB_ENV"
 
       - uses: subosito/flutter-action@v2
         with:
@@ -248,6 +310,7 @@ jobs:
           set -euo pipefail
           APK="mobile/build/app/outputs/flutter-apk/app-production-release.apk"
           test -s "$ESC_UAT_RECORD"
+          test -s "$ESC_BRANCH_PROTECTION_AUDIT"
           python3 scripts/enterprise_verified_artifacts.py publish-apk \
             --apk "$APK" \
             --source-sha "$GITHUB_SHA" \
@@ -257,12 +320,22 @@ jobs:
             --signing-verified \
             --identity-verified \
             --firebase-identity-verified \
+            --branch-protection-audit "$ESC_BRANCH_PROTECTION_AUDIT" \
             --uat-record "$ESC_UAT_RECORD" \
             --device-evidence "$DEVICE_EVIDENCE" \
             --uat-evidence "$UAT_EVIDENCE" \
             --coexistence-evidence "$COEXISTENCE_EVIDENCE" \
             --firebase-evidence "$FIREBASE_EVIDENCE"
           python3 scripts/enterprise_verified_artifacts.py check --require-apk
+
+          AUDIT_COPY="Last verified Enterprise apk/ESC_BRANCH_PROTECTION_AUDIT.json"
+          cp "$ESC_BRANCH_PROTECTION_AUDIT" "$AUDIT_COPY"
+          ACTUAL_AUDIT_SHA256="$(sha256sum "$AUDIT_COPY" | awk '{print $1}')"
+          if [[ "$ACTUAL_AUDIT_SHA256" != "$ESC_BRANCH_PROTECTION_AUDIT_SHA256" ]]; then
+            echo "FAIL: retained stable branch-protection audit digest changed after validation" >&2
+            exit 1
+          fi
+          printf '%s  %s\n' "$ACTUAL_AUDIT_SHA256" "$(basename "$AUDIT_COPY")" > "$AUDIT_COPY.sha256"
 
       - name: Retain verified ESC APK workflow artifact
         uses: actions/upload-artifact@v4
@@ -272,6 +345,8 @@ jobs:
             Last verified Enterprise apk/EnterpriseSafeContracts-latest.apk
             Last verified Enterprise apk/EnterpriseSafeContracts-latest.apk.sha256
             Last verified Enterprise apk/VERIFIED.json
+            Last verified Enterprise apk/ESC_BRANCH_PROTECTION_AUDIT.json
+            Last verified Enterprise apk/ESC_BRANCH_PROTECTION_AUDIT.json.sha256
           if-no-files-found: error
           retention-days: 90
 
@@ -285,15 +360,21 @@ jobs:
           APK="Last verified Enterprise apk/EnterpriseSafeContracts-latest.apk"
           SHA_FILE="$APK.sha256"
           PROVENANCE="Last verified Enterprise apk/VERIFIED.json"
+          PROTECTION_AUDIT="Last verified Enterprise apk/ESC_BRANCH_PROTECTION_AUDIT.json"
+          PROTECTION_AUDIT_SHA="$PROTECTION_AUDIT.sha256"
           test -s "$APK"
           test -s "$SHA_FILE"
           test -s "$PROVENANCE"
+          test -s "$PROTECTION_AUDIT"
+          test -s "$PROTECTION_AUDIT_SHA"
           gh release delete esc-mobile-latest --yes --cleanup-tag >/dev/null 2>&1 || true
           gh release create esc-mobile-latest \
             "$APK" \
             "$SHA_FILE" \
             "$PROVENANCE" \
+            "$PROTECTION_AUDIT" \
+            "$PROTECTION_AUDIT_SHA" \
             --target "$GITHUB_SHA" \
             --title "Enterprise Safe Contracts Mobile Latest" \
-            --notes "$RELEASE_NOTES\n\nSource commit: $GITHUB_SHA\nProduct: Enterprise Safe Contracts"
+            --notes "$RELEASE_NOTES\n\nSource commit: $GITHUB_SHA\nProduct: Enterprise Safe Contracts\nBranch protection audit SHA-256: $ESC_BRANCH_PROTECTION_AUDIT_SHA256"
           gh release view esc-mobile-latest --json url,tagName,assets
