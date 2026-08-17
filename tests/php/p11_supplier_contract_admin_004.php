@@ -11,6 +11,7 @@ use SafeContracts\Admin\SuppliersPage;
 use SafeContracts\Plugin;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Suppliers\SupplierService;
+use SafeContracts\Translations\CounterpartyArabicDefaults;
 
 $p11AdminTests = 0;
 function sc_p11admin_assert(bool $ok, string $message): void
@@ -33,8 +34,8 @@ $opsCss = file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontrac
 
 // Supplier workspace stays capability-gated and delegates all business mutations.
 sc_p11admin_assert(str_contains($supplierPage, 'SupplierService'), 'Supplier Admin delegates reads/writes to SupplierService');
-foreach ([Capabilities::VIEW_SUPPLIERS, Capabilities::CREATE_SUPPLIERS, Capabilities::EDIT_SUPPLIERS, Capabilities::ARCHIVE_SUPPLIERS] as $capability) {
-    sc_p11admin_assert(str_contains($supplierPage, $capability), "Supplier Admin references {$capability} capability");
+foreach (['VIEW_SUPPLIERS','CREATE_SUPPLIERS','EDIT_SUPPLIERS','ARCHIVE_SUPPLIERS'] as $capabilityConstant) {
+    sc_p11admin_assert(str_contains($supplierPage, 'Capabilities::' . $capabilityConstant), "Supplier Admin references {$capabilityConstant} capability constant");
 }
 sc_p11admin_assert(substr_count($supplierPage, 'check_admin_referer') >= 2, 'Supplier save and archive actions are nonce-protected');
 sc_p11admin_assert(str_contains($supplierPage, 'ARCHIVE_ACTION') && str_contains($supplierPage, 'archive($supplierId)'), 'Supplier deletion lifecycle is archive-only in Admin');
@@ -60,6 +61,12 @@ sc_p11admin_assert(str_contains($contractPage, 'Customers · Accounts Receivable
 sc_p11admin_assert(str_contains($contractPage, 'counterparty_name') && str_contains($contractPage, 'financial_direction'), 'Contract list/details display counterparty and direction');
 sc_p11admin_assert(str_contains($contractPage, 'Direction is derived server-side') || str_contains($contractPage, 'determined by the backend'), 'Contract UI states that financial direction is server-authoritative');
 sc_p11admin_assert(! str_contains($contractPage, '$wpdb'), 'Contract Admin remains presentation/application wiring without direct SQL');
+
+// Arabic fallback covers the new counterparty vocabulary without forcing locale globally.
+sc_p11admin_assert(CounterpartyArabicDefaults::default('Suppliers') === 'الموردون', 'Counterparty Arabic defaults translate Suppliers');
+sc_p11admin_assert(CounterpartyArabicDefaults::default('Accounts Payable') === 'الحسابات الدائنة', 'Counterparty Arabic defaults translate AP');
+sc_p11admin_assert(CounterpartyArabicDefaults::default('Accounts Receivable') === 'الحسابات المدينة', 'Counterparty Arabic defaults translate AR');
+sc_p11admin_assert(str_contains($pluginSource, 'CounterpartyArabicDefaults::register()'), 'Plugin registers counterparty Arabic fallback layer');
 
 // Existing design system provides the new surfaces with responsive/RTL-safe composition.
 foreach (['safecontracts-status-pill','safecontracts-heading-actions','safecontracts-supplier-editor','safecontracts-contract-editor'] as $marker) {
