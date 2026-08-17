@@ -1,0 +1,37 @@
+name: ESC P9-004 Contract Base Value Revisions
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-base-value:
+    name: contract-base-value
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+
+      - name: Validate P9-004 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0049EnterpriseContractFinancialBaseValueRevisions.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialBaseValueRevisionRepository.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialBaseValueRevisionService.php
+          php -l tests/php/enterprise_contract_financial_base_value_p9_004.php
+
+      - name: Validate P9-004 Contract base-value revisions
+        run: php tests/php/enterprise_contract_financial_base_value_p9_004.php
