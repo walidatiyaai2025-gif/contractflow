@@ -211,9 +211,7 @@ final class _ReadyContractDetails extends StatelessWidget {
           _section(context, l10n.t('Financial values'), [
             _row(
               l10n.t('Base value'),
-              contract.baseValue == null
-                  ? '—'
-                  : '${contract.baseValue} ${contract.currencyCode}',
+              contract.baseValue ?? '—',
             ),
           ]),
           const SizedBox(height: 12),
