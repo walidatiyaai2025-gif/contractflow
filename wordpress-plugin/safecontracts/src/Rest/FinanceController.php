@@ -43,12 +43,20 @@ final class FinanceController
         if ($access !== true) {
             return $access;
         }
-        return current_user_can(Capabilities::VIEW_FINANCE) || current_user_can(Capabilities::MANAGE_FINANCE)
-            ? true
-            : RequestGuard::forbidden(
-                'safecontracts_finance_view_forbidden',
-                __('You do not have permission to view SafeContracts finance.', 'safecontracts')
-            );
+        foreach ([
+            Capabilities::VIEW_PAYABLES,
+            Capabilities::VIEW_RECEIVABLES,
+            Capabilities::VIEW_FINANCE,
+            Capabilities::MANAGE_FINANCE,
+        ] as $capability) {
+            if (current_user_can($capability)) {
+                return true;
+            }
+        }
+        return RequestGuard::forbidden(
+            'safecontracts_finance_view_forbidden',
+            __('You do not have permission to view SafeContracts finance.', 'safecontracts')
+        );
     }
 
     public static function overview(WP_REST_Request $request): WP_REST_Response|WP_Error
