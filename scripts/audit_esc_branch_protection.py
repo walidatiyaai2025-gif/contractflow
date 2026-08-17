@@ -7,9 +7,13 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 TARGET_BRANCH = "enterprise-safecontracts"
 REQUIRED_CHECKS = {"esc-foundation", "esc-mobile"}
+GITHUB_ACTIONS_APP_SLUG = "github-actions"
+GITHUB_API_VERSION = "2026-03-10"
 
 
 def load_json(path: Path) -> Any:
@@ -25,6 +29,31 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def resolve_github_actions_app_id() -> int:
+    request = Request(
+        f"https://api.github.com/apps/{GITHUB_ACTIONS_APP_SLUG}",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": GITHUB_API_VERSION,
+            "User-Agent": "enterprise-safecontracts-branch-protection-audit",
+        },
+    )
+    try:
+        with urlopen(request, timeout=20) as response:
+            payload = json.load(response)
+    except (HTTPError, URLError, OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(
+            f"FAIL: cannot resolve GitHub Actions App identity from GitHub API: {exc}"
+        ) from exc
+
+    if not isinstance(payload, dict) or payload.get("slug") != GITHUB_ACTIONS_APP_SLUG:
+        raise SystemExit("FAIL: GitHub API returned an unexpected GitHub Actions App identity")
+    app_id = payload.get("id")
+    if not isinstance(app_id, int) or app_id <= 0:
+        raise SystemExit("FAIL: GitHub Actions App ID must resolve to a positive integer")
+    return app_id
 
 
 def enabled(value: Any) -> bool | None:
@@ -75,9 +104,6 @@ def legacy_status_checks(
             contexts.add(context)
             add_source(sources, unbound, context, item.get("app_id"))
 
-    # `contexts` is the legacy name-only representation. If a context has no
-    # source-bearing `checks[]` entry, retain that fact explicitly so the audit
-    # can fail closed instead of treating the name alone as authenticated.
     for context in contexts:
         if context not in sources:
             unbound.add(context)
@@ -166,7 +192,6 @@ def evaluate(
     )
 
     admin_enforced = enabled(legacy.get("enforce_admins")) is True
-
     legacy_conversation_resolution = enabled(legacy.get("required_conversation_resolution"))
     conversation_resolution_required = (
         legacy_conversation_resolution is True or rule_conversation_resolution
@@ -202,6 +227,7 @@ def evaluate(
         "checks": checks,
         "observed_required_checks": sorted(all_checks),
         "required_checks": sorted(REQUIRED_CHECKS),
+        "expected_status_check_app_slug": GITHUB_ACTIONS_APP_SLUG,
         "expected_status_check_app_id": expected_status_check_app_id,
         "observed_required_check_source_ids": {
             context: sorted(all_sources.get(context, set()))
@@ -234,14 +260,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rules-json", type=Path, required=True)
     parser.add_argument("--protection-json", type=Path)
     parser.add_argument("--break-glass-note", required=True)
-    parser.add_argument("--expected-status-check-app-id", type=int, required=True)
+    parser.add_argument("--expected-status-check-app-id", type=int)
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    if args.expected_status_check_app_id <= 0:
+    expected_app_id = args.expected_status_check_app_id
+    if expected_app_id is None:
+        expected_app_id = resolve_github_actions_app_id()
+    if expected_app_id <= 0:
         raise SystemExit("FAIL: --expected-status-check-app-id must be a positive GitHub App ID")
 
     branch = load_json(args.branch_json)
@@ -255,13 +284,7 @@ def main() -> int:
     if protection is not None and not isinstance(protection, dict):
         raise SystemExit("FAIL: protection JSON must be an object")
 
-    result = evaluate(
-        branch,
-        protection,
-        rules,
-        args.break_glass_note,
-        args.expected_status_check_app_id,
-    )
+    result = evaluate(branch, protection, rules, args.break_glass_note, expected_app_id)
     result["captured_input_sha256"] = {
         "branch_json": sha256_file(args.branch_json),
         "rules_json": sha256_file(args.rules_json),
