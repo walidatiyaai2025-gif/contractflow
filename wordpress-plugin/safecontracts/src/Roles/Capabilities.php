@@ -14,12 +14,18 @@ final class Capabilities
     public const VIEW_ASSIGNED = 'safecontracts_view_assigned';
     public const CREATE_CUSTOMERS = 'safecontracts_create_customers';
     public const EDIT_CUSTOMERS = 'safecontracts_edit_customers';
+    public const VIEW_SUPPLIERS = 'safecontracts_view_suppliers';
+    public const CREATE_SUPPLIERS = 'safecontracts_create_suppliers';
+    public const EDIT_SUPPLIERS = 'safecontracts_edit_suppliers';
+    public const MANAGE_SUPPLIERS = 'safecontracts_manage_suppliers';
     public const CREATE_CONTRACTS = 'safecontracts_create_contracts';
     public const EDIT_CONTRACTS = 'safecontracts_edit_contracts';
     public const ASSIGN_CONTRACTS = 'safecontracts_assign_contracts';
     public const CREATE_PAYMENTS = 'safecontracts_create_payments';
     public const EDIT_PAYMENTS = 'safecontracts_edit_payments';
     public const MANAGE_PAYMENTS = 'safecontracts_manage_payments';
+    public const VIEW_FINANCE = 'safecontracts_view_finance';
+    public const MANAGE_FINANCE = 'safecontracts_manage_finance';
     public const MANAGE_COLLECTIONS = 'safecontracts_manage_collections';
     public const MANAGE_FOLLOWUPS = 'safecontracts_manage_followups';
     public const VIEW_REPORTS = 'safecontracts_view_reports';
@@ -40,12 +46,18 @@ final class Capabilities
             self::VIEW_ASSIGNED,
             self::CREATE_CUSTOMERS,
             self::EDIT_CUSTOMERS,
+            self::VIEW_SUPPLIERS,
+            self::CREATE_SUPPLIERS,
+            self::EDIT_SUPPLIERS,
+            self::MANAGE_SUPPLIERS,
             self::CREATE_CONTRACTS,
             self::EDIT_CONTRACTS,
             self::ASSIGN_CONTRACTS,
             self::CREATE_PAYMENTS,
             self::EDIT_PAYMENTS,
             self::MANAGE_PAYMENTS,
+            self::VIEW_FINANCE,
+            self::MANAGE_FINANCE,
             self::MANAGE_COLLECTIONS,
             self::MANAGE_FOLLOWUPS,
             self::VIEW_REPORTS,

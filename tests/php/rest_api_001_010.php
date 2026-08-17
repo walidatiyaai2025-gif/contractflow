@@ -194,20 +194,27 @@ $history = DataController::followUpHistory(new WP_REST_Request(['payment_id' => 
 $historyRow = $history->data['data'][0] ?? [];
 sc_p8_assert(($historyRow['promised_date'] ?? '') === '2026-08-20' && ! array_key_exists('due_date', $historyRow), 'SC-P8-010 promise date remains operational and cannot masquerade as contractual due date');
 
-// Route/static contract: the first ten P8 tasks add reads only; no early mutation surface.
-$expectedRoutes = [
-    '/session', '/customers', '/customers/(?P<id>\\d+)', '/filters/contracts', '/contracts', '/contracts/(?P<id>\\d+)',
+// Route/static contract: P11 may extend /contracts with create while P8 read endpoints remain unchanged.
+$readOnlyRoutes = [
+    '/session', '/customers', '/customers/(?P<id>\\d+)', '/filters/contracts', '/contracts/(?P<id>\\d+)',
     '/payments', '/payments/(?P<id>\\d+)', '/collections', '/collections/(?P<id>\\d+)', '/followups', '/payments/(?P<payment_id>\\d+)/followups',
 ];
-foreach ($expectedRoutes as $route) {
+foreach ($readOnlyRoutes as $route) {
     $key = Router::NAMESPACE . $route;
     sc_p8_assert(isset($GLOBALS['sc_test_routes'][$key]), 'P8 route registered: ' . $route);
-    sc_p8_assert(($GLOBALS['sc_test_routes'][$key]['methods'] ?? '') === WP_REST_Server::READABLE, 'P8 route is read-only: ' . $route);
+    sc_p8_assert(($GLOBALS['sc_test_routes'][$key]['methods'] ?? '') === WP_REST_Server::READABLE, 'P8 route remains read-only: ' . $route);
 }
+$contractsKey = Router::NAMESPACE . '/contracts';
+sc_p8_assert(isset($GLOBALS['sc_test_routes'][$contractsKey]), 'P8/P11 route registered: /contracts');
+$contractsRoute = $GLOBALS['sc_test_routes'][$contractsKey];
+sc_p8_assert(is_array($contractsRoute) && isset($contractsRoute[0], $contractsRoute[1]), 'P11 /contracts exposes separate read and create endpoint definitions');
+$contractMethods = array_column($contractsRoute, 'methods');
+sc_p8_assert(in_array(WP_REST_Server::READABLE, $contractMethods, true), 'P11 /contracts preserves the P8 GET endpoint');
+sc_p8_assert(in_array(WP_REST_Server::CREATABLE, $contractMethods, true), 'P11 /contracts adds the contract create endpoint');
 $source = file_get_contents((string) (new ReflectionClass(DataController::class))->getFileName()) ?: '';
-sc_p8_assert(! str_contains($source, 'WP_REST_Server::CREATABLE') && ! str_contains($source, '$wpdb'), 'SC-P8-005..010 controller exposes no mutation verb or presentation-layer SQL');
+sc_p8_assert(! str_contains($source, '$wpdb'), 'SC-P8-005..010 controller keeps presentation-layer SQL out of the REST controller');
 foreach (['addNote(', 'promiseToPay(', 'markIssue(', 'defer(', 'escalate(', 'recordCollection(', 'createContract('] as $mutation) {
-    sc_p8_assert(! str_contains($source, $mutation), 'SC-P8-005..010 does not implement later mutation work: ' . $mutation);
+    sc_p8_assert(! str_contains($source, $mutation), 'SC-P8-005..010 does not implement unrelated mutation work: ' . $mutation);
 }
 
 printf("SafeContracts P8 REST implementation SC-P8-001..010 passed (%d assertions).\n", $tests);

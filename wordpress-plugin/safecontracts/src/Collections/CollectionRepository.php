@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SafeContracts\Collections;
 
 use RuntimeException;
+use SafeContracts\Payments\CurrencyCode;
+use SafeContracts\Payments\FinancialDirection;
 use SafeContracts\Payments\PaymentStatus;
 
 final class CollectionRepository
@@ -32,7 +34,7 @@ final class CollectionRepository
         $wpdb->query('ROLLBACK');
     }
 
-    /** @return array{id:int, contract_id:int, original_amount:string, paid_amount:string, remaining_amount:string, status:string, payment_is_archived:bool, accountant_user_id:?int, contract_is_archived:bool}|null */
+    /** @return array{id:int, contract_id:int, financial_direction:string, currency_code:string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, payment_is_archived:bool, accountant_user_id:?int, contract_is_archived:bool}|null */
     public function lockPayment(int $paymentId): ?array
     {
         global $wpdb;
@@ -41,7 +43,7 @@ final class CollectionRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT p.id, p.contract_id, p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
+                "SELECT p.id, p.contract_id, p.financial_direction, p.currency_code, p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
                         c.accountant_user_id, c.is_archived AS contract_is_archived
                  FROM {$payments} p
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
@@ -61,6 +63,8 @@ final class CollectionRepository
         return [
             'id' => (int) ($row['id'] ?? 0),
             'contract_id' => (int) ($row['contract_id'] ?? 0),
+            'financial_direction' => self::directionFromRow($row),
+            'currency_code' => self::currencyFromRow($row),
             'original_amount' => (string) ($row['original_amount'] ?? '0.0000'),
             'paid_amount' => (string) ($row['paid_amount'] ?? '0.0000'),
             'remaining_amount' => (string) ($row['remaining_amount'] ?? '0.0000'),
@@ -111,6 +115,8 @@ final class CollectionRepository
 
     public function create(
         int $paymentId,
+        string $financialDirection,
+        string $currencyCode,
         string $amount,
         string $collectionDate,
         int $paymentMethodId,
@@ -122,15 +128,17 @@ final class CollectionRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_payment_collections';
+        $financialDirection = FinancialDirection::normalize($financialDirection);
+        $currencyCode = CurrencyCode::normalize($currencyCode);
 
         $referencePlaceholder = $reference === null ? 'NULL' : '%s';
         $detailsPlaceholder = $details === null ? 'NULL' : '%s';
         $proofPlaceholder = $proofMediaId === null ? 'NULL' : '%d';
         $statement = "INSERT INTO {$table}
-            (payment_id, amount, collection_date, payment_method_id, reference, details, proof_media_id, created_by, updated_by, created_at, updated_at)
-            VALUES (%d, %s, %s, %d, {$referencePlaceholder}, {$detailsPlaceholder}, {$proofPlaceholder}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
+            (payment_id, financial_direction, currency_code, amount, collection_date, payment_method_id, reference, details, proof_media_id, created_by, updated_by, created_at, updated_at)
+            VALUES (%d, %s, %s, %s, %s, %d, {$referencePlaceholder}, {$detailsPlaceholder}, {$proofPlaceholder}, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
 
-        $args = [$paymentId, $amount, $collectionDate, $paymentMethodId];
+        $args = [$paymentId, $financialDirection, $currencyCode, $amount, $collectionDate, $paymentMethodId];
         if ($reference !== null) {
             $args[] = $reference;
         }
@@ -144,7 +152,7 @@ final class CollectionRepository
         $args[] = $actorId;
 
         $sql = $wpdb->prepare($statement, ...$args);
-        $this->execute($wpdb, $sql, 'Unable to record collection transaction.');
+        $this->execute($wpdb, $sql, 'Unable to record settlement transaction.');
 
         return (int) $wpdb->insert_id;
     }
@@ -184,7 +192,7 @@ final class CollectionRepository
         $table = $wpdb->prefix . 'safecontracts_payment_collections';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, payment_id, amount, collection_date, payment_method_id, reference, details,
+                "SELECT id, payment_id, financial_direction, currency_code, amount, collection_date, payment_method_id, reference, details,
                         proof_media_id, created_by, updated_by, created_at, updated_at
                  FROM {$table}
                  WHERE payment_id = %d AND is_archived = 0
@@ -202,6 +210,8 @@ final class CollectionRepository
             static fn (array $row): array => [
                 'id' => (int) ($row['id'] ?? 0),
                 'payment_id' => (int) ($row['payment_id'] ?? 0),
+                'financial_direction' => self::directionFromRow($row),
+                'currency_code' => self::currencyFromRow($row),
                 'amount' => (string) ($row['amount'] ?? '0.0000'),
                 'collection_date' => (string) ($row['collection_date'] ?? ''),
                 'payment_method_id' => (int) ($row['payment_method_id'] ?? 0),
@@ -215,6 +225,27 @@ final class CollectionRepository
             ],
             $rows
         );
+    }
+
+    /**
+     * Compatibility is limited to repository mocks that omit the new keys.
+     * Actual selected rows always contain P11 columns; null/empty DB values
+     * therefore still fail FinancialDirection/CurrencyCode normalization.
+     */
+    private static function directionFromRow(array $row): string
+    {
+        if (! array_key_exists('financial_direction', $row)) {
+            return FinancialDirection::RECEIVABLE;
+        }
+        return FinancialDirection::normalize($row['financial_direction']);
+    }
+
+    private static function currencyFromRow(array $row): string
+    {
+        if (! array_key_exists('currency_code', $row)) {
+            return CurrencyCode::UNKNOWN;
+        }
+        return CurrencyCode::normalize($row['currency_code']);
     }
 
     private function assertWpdb(mixed $wpdb): void

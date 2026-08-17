@@ -53,7 +53,7 @@ foreach ($GLOBALS['sc_test_routes'] as $route => $definition) {
         $endpointCount++;
         sc_p8v18_assert(isset($endpoint['methods'], $endpoint['callback'], $endpoint['permission_callback']), "SC-P8-018 route {$route} has method/callback/permission contract");
         $methods = $endpoint['methods'];
-        sc_p8v18_assert(in_array($methods, [WP_REST_Server::READABLE, WP_REST_Server::CREATABLE, 'PATCH'], true), "SC-P8-018 route {$route} uses supported v1 HTTP method contract");
+        sc_p8v18_assert(in_array($methods, [WP_REST_Server::READABLE, WP_REST_Server::CREATABLE, 'PATCH', 'DELETE'], true), "SC-P8-018 route {$route} uses supported v1 HTTP method contract");
         if ($route === Router::NAMESPACE . '/health') {
             sc_p8v18_assert($endpoint['permission_callback'] === '__return_true', 'SC-P8-018 health stays explicitly public');
         } elseif ($route === Router::NAMESPACE . '/auth/login') {

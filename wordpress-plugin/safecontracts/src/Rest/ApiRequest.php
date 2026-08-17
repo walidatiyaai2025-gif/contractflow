@@ -8,6 +8,8 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use SafeContracts\Admin\DashboardFilters;
 use SafeContracts\Contracts\ContractStatus;
+use SafeContracts\Contracts\Counterparty;
+use SafeContracts\Payments\FinancialDirection;
 use SafeContracts\Payments\PaymentStatus;
 use WP_REST_Request;
 
@@ -30,13 +32,24 @@ final class ApiRequest
         return self::positiveInt($value, $key);
     }
 
-    /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} */
+    /** @return array<string,mixed> */
     public static function filters(WP_REST_Request $request): array
     {
         $params = self::params($request);
-        foreach (['customer_id', 'contract_id', 'accountant_user_id'] as $key) {
+        foreach (['customer_id', 'counterparty_id', 'contract_id', 'accountant_user_id'] as $key) {
             if (array_key_exists($key, $params) && $params[$key] !== '' && $params[$key] !== null) {
                 self::nonNegativeInt($params[$key], $key);
+            }
+        }
+        self::optionalEnum($params, 'counterparty_type', [Counterparty::CUSTOMER, Counterparty::SUPPLIER]);
+        self::optionalEnum($params, 'financial_direction', [FinancialDirection::RECEIVABLE, FinancialDirection::PAYABLE]);
+        if (array_key_exists('currency_code', $params) && $params['currency_code'] !== '' && $params['currency_code'] !== null) {
+            if (! is_string($params['currency_code'])) {
+                throw new InvalidArgumentException('currency_code must be a three-letter string.');
+            }
+            $currency = strtoupper(trim($params['currency_code']));
+            if (! preg_match('/^[A-Z]{3}$/', $currency)) {
+                throw new InvalidArgumentException('currency_code must be a three-letter ISO-style code.');
             }
         }
         if (array_key_exists('status', $params) && $params['status'] !== '' && $params['status'] !== null) {
@@ -67,7 +80,7 @@ final class ApiRequest
         return DashboardFilters::normalize($params);
     }
 
-    /** @return array{filters:array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string},page:int,per_page:int} */
+    /** @return array{filters:array<string,mixed>,page:int,per_page:int} */
     public static function listQuery(WP_REST_Request $request): array
     {
         $pagination = self::pagination($request);
@@ -95,6 +108,21 @@ final class ApiRequest
             return 0;
         }
         return self::nonNegativeInt($params['customer_id'], 'customer_id');
+    }
+
+    /** @param list<string> $allowed */
+    private static function optionalEnum(array $params, string $field, array $allowed): void
+    {
+        if (! array_key_exists($field, $params) || $params[$field] === '' || $params[$field] === null) {
+            return;
+        }
+        if (! is_string($params[$field])) {
+            throw new InvalidArgumentException("{$field} must be a string.");
+        }
+        $value = strtolower(trim($params[$field]));
+        if (! in_array($value, $allowed, true)) {
+            throw new InvalidArgumentException("{$field} is not supported.");
+        }
     }
 
     private static function positiveInt(mixed $value, string $field): int

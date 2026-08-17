@@ -120,10 +120,15 @@ sc_p8_016_assert($badCustomerFilter instanceof WP_Error && ($badCustomerFilter->
 $badContractOption = DataController::contractOptions(new WP_REST_Request(['sort' => 'contract_number']));
 sc_p8_016_assert($badContractOption instanceof WP_Error && ($badContractOption->data['status'] ?? 0) === 422, 'SC-P8-017 dependent lookup rejects unsupported query surface');
 
-foreach (['/customers', '/contracts', '/payments', '/collections', '/followups'] as $route) {
+foreach (['/customers', '/payments', '/collections', '/followups'] as $route) {
     $definition = $GLOBALS['sc_test_routes'][Router::NAMESPACE . $route] ?? [];
     sc_p8_016_assert(($definition['methods'] ?? null) === WP_REST_Server::READABLE, "SC-P8-017 {$route} remains read-only");
 }
+$contractsDefinition = $GLOBALS['sc_test_routes'][Router::NAMESPACE . '/contracts'] ?? [];
+sc_p8_016_assert(is_array($contractsDefinition) && isset($contractsDefinition[0], $contractsDefinition[1]), 'SC-P8-017 /contracts keeps separate read/create endpoint definitions');
+$contractMethods = array_column($contractsDefinition, 'methods');
+sc_p8_016_assert(in_array(WP_REST_Server::READABLE, $contractMethods, true), 'SC-P8-017 /contracts preserves the protected read endpoint');
+sc_p8_016_assert(in_array(WP_REST_Server::CREATABLE, $contractMethods, true), 'SC-P8-017 /contracts permits only the intentional P11 create extension');
 
 $dataSource = file_get_contents((string) (new ReflectionClass(DataController::class))->getFileName()) ?: '';
 $listSource = file_get_contents((string) (new ReflectionClass(ApiListQuery::class))->getFileName()) ?: '';
