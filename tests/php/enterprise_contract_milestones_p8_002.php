@@ -41,8 +41,9 @@ $serviceSource = (string) file_get_contents($root . '/wordpress-plugin/safecontr
 $routerSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/Router.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-// Additive schema/version registration.
-esc_p8_milestone_assert(Migrator::LATEST_VERSION === '1.43.0', 'P8-002 advances Enterprise schema exactly to 1.43.0');
+// Additive schema/version registration. The global latest version may advance after P8-002;
+// this regression pins Migration0044's historical mapping instead of blocking later migrations.
+esc_p8_milestone_assert(version_compare(Migrator::LATEST_VERSION, '1.43.0', '>='), 'Enterprise schema remains at or beyond P8-002 version 1.43.0');
 esc_p8_milestone_assert(str_contains($migratorSource, 'Migration0044EnterpriseContractMilestones'), 'Migrator registers Migration0044');
 esc_p8_milestone_assert(str_contains($migratorSource, "'1.43.0' => Migration0044EnterpriseContractMilestones::class"), 'Migration0044 is mapped to schema 1.43.0');
 $GLOBALS['sc_test_dbdelta'] = [];
