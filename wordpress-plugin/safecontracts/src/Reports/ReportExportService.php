@@ -6,7 +6,9 @@ namespace SafeContracts\Reports;
 
 use SafeContracts\Admin\AdminReadRepository;
 use SafeContracts\Admin\DashboardFilters;
+use SafeContracts\Finance\FinanceOverviewService;
 use SafeContracts\FollowUps\FollowUpService;
+use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
 
 final class ReportExportService
@@ -14,11 +16,13 @@ final class ReportExportService
     public function __construct(
         private ?AdminReadRepository $read = null,
         private ?FollowUpService $followUps = null,
-        private ?XlsxWorkbook $workbook = null
+        private ?XlsxWorkbook $workbook = null,
+        private ?FinanceOverviewService $finance = null
     ) {
         $this->read ??= new AdminReadRepository();
         $this->followUps ??= new FollowUpService();
         $this->workbook ??= new XlsxWorkbook();
+        $this->finance ??= new FinanceOverviewService();
     }
 
     /** @param array<string,mixed> $input */
@@ -32,6 +36,11 @@ final class ReportExportService
         if (! empty($filters['date_range_error'])) {
             throw new \InvalidArgumentException('Report period is invalid.');
         }
+
+        $financeInput = $this->financeInput($input, $filters);
+        $finance = $this->finance->overview($financeInput);
+        $financeObligations = $this->finance->obligations([...$financeInput, 'limit' => 500]);
+
         $summary = $this->read->reportSummary($filters);
         $customers = $this->read->customers($filters);
         $contracts = $this->read->contracts($filters);
@@ -44,9 +53,32 @@ final class ReportExportService
 
         $sheets = [
             'Summary' => $this->summaryRows($summary, $filters),
+            'Finance Summary' => $this->rows((array) ($finance['summary'] ?? []), [
+                'financial_direction','currency_code','obligation_count','original_total','settled_total','outstanding_total',
+                'overdue_total','overdue_count','due_today_total','due_today_count','due_7_total','due_7_count',
+                'due_30_total','due_30_count','upcoming_total',
+            ]),
+            'Aging' => $this->rows((array) ($finance['aging'] ?? []), [
+                'financial_direction','currency_code','aging_bucket','obligation_count','outstanding_total',
+            ]),
+            'Cash Flow' => $this->rows((array) ($finance['cash_flow'] ?? []), [
+                'due_date','financial_direction','currency_code','cash_flow_kind','obligation_count','expected_amount',
+            ]),
+            'Finance Obligations' => $this->rows($financeObligations, [
+                'id','contract_id','contract_number','counterparty_type','counterparty_id','counterparty_name','accountant_user_id',
+                'financial_direction','currency_code','sequence_no','reference','due_date','expected_payment_date',
+                'original_amount','settled_amount','remaining_amount','status','aging_bucket',
+            ]),
             'Customers' => $this->rows($customers, ['id','internal_code','name','contact_name','email','phone','is_active','created_at']),
-            'Contracts' => $this->rows($contracts, ['id','contract_number','customer_id','customer_name','accountant_user_id','status','start_date','end_date','base_value','is_archived','created_at']),
-            'Payments' => $this->rows($payments, ['id','contract_id','contract_number','customer_id','customer_name','accountant_user_id','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status']),
+            'Contracts' => $this->rows($contracts, [
+                'id','contract_number','counterparty_type','counterparty_id','counterparty_name','customer_id','customer_name',
+                'financial_direction','currency_code','accountant_user_id','status','start_date','end_date','base_value','is_archived','created_at',
+            ]),
+            'Payments' => $this->rows($payments, [
+                'id','contract_id','contract_number','counterparty_type','counterparty_id','counterparty_name','customer_id','customer_name',
+                'financial_direction','currency_code','accountant_user_id','sequence_no','reference','due_date','expected_payment_date',
+                'original_amount','paid_amount','remaining_amount','status',
+            ]),
             'Collections' => $this->rows($collections, ['id','payment_id','contract_id','contract_number','customer_id','customer_name','accountant_user_id','collection_date','amount','payment_method_name','reference','proof_media_id','created_by','created_at']),
             'Follow-up Queue' => $this->rows($followUps, ['payment_id','contract_id','customer_id','accountant_user_id','contract_status','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','followup_state']),
         ];
@@ -55,6 +87,10 @@ final class ReportExportService
         $date = function_exists('wp_date') ? wp_date('Y-m-d') : gmdate('Y-m-d');
         $filename = 'SafeContracts-report-' . $date . '.xlsx';
         $counts = [
+            'finance_summary' => count((array) ($finance['summary'] ?? [])),
+            'aging' => count((array) ($finance['aging'] ?? [])),
+            'cash_flow' => count((array) ($finance['cash_flow'] ?? [])),
+            'finance_obligations' => count($financeObligations),
             'customers' => count($customers),
             'contracts' => count($contracts),
             'payments' => count($payments),
@@ -66,6 +102,7 @@ final class ReportExportService
             'type' => 'admin_report_xlsx',
             'filename' => $filename,
             'filters' => $filters,
+            'finance_filters' => $financeInput,
             'row_counts' => $counts,
         ], get_current_user_id());
 
@@ -74,6 +111,7 @@ final class ReportExportService
             'content_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'content' => $binary,
             'filters' => $filters,
+            'finance_filters' => $financeInput,
             'row_counts' => $counts,
         ];
     }
@@ -83,7 +121,7 @@ final class ReportExportService
     {
         $rows = [['Metric', 'Value']];
         foreach ([
-            'contract_count','scheduled_total','remaining_total','overdue_exposure','collected_total',
+            'contract_count','currency_group_count','currency_code','scheduled_total','remaining_total','overdue_exposure','collected_total',
             'collection_transactions','collection_ledger_total','followup_events','followed_up_payments',
         ] as $key) {
             $rows[] = [$key, $summary[$key] ?? ''];
@@ -93,7 +131,9 @@ final class ReportExportService
         foreach (['customer_id','contract_id','accountant_user_id','status','date_from','date_to'] as $key) {
             $rows[] = [$key, $filters[$key] ?? ''];
         }
-        $rows[] = ['period_semantics', 'payments=due_date; collections=collection_date; followup_metrics=event_created_at; followup_queue=due_date; contracts=start_or_created; customers=created_at'];
+        $rows[] = ['period_semantics', 'finance obligations=due_date; legacy collections=collection_date; followup_metrics=event_created_at; contracts=start_or_created; customers=created_at'];
+        $rows[] = ['currency_semantics', 'Finance Summary/Aging/Cash Flow are always grouped by financial_direction + currency_code. Legacy money totals are blank when multiple currencies are present.'];
+        $rows[] = ['collection_semantics', 'Collections and Follow-up Queue are legacy receivable/customer history only; canonical AP/AR obligations are exported in Finance sheets.'];
         return $rows;
     }
 
@@ -112,10 +152,23 @@ final class ReportExportService
         return $rows;
     }
 
+    /** @param array<string,mixed> $input @param array<string,mixed> $filters @return array<string,mixed> */
+    private function financeInput(array $input, array $filters): array
+    {
+        $finance = $input;
+        if (! array_key_exists('due_from', $finance) || trim((string) ($finance['due_from'] ?? '')) === '') {
+            $finance['due_from'] = $filters['date_from'] ?? null;
+        }
+        if (! array_key_exists('due_to', $finance) || trim((string) ($finance['due_to'] ?? '')) === '') {
+            $finance['due_to'] = $filters['date_to'] ?? null;
+        }
+        return $finance;
+    }
+
     /** @param list<array<string,mixed>> $rows @param array<string,mixed> $filters @return list<array<string,mixed>> */
     private function filterFollowUps(array $rows, array $filters): array
     {
-        $paymentStatuses = ['upcoming', 'due_soon', 'due', 'overdue', 'partially_paid', 'paid'];
+        $paymentStatuses = PaymentStatus::all();
         return array_values(array_filter($rows, static function (array $row) use ($filters, $paymentStatuses): bool {
             if (($filters['customer_id'] ?? 0) > 0 && (int) ($row['customer_id'] ?? 0) !== (int) $filters['customer_id']) {
                 return false;
