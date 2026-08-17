@@ -220,7 +220,13 @@ esc_p7_route_assert(str_contains($repositorySource, 'MAX_STAGES + 1') && str_con
 esc_p7_route_assert(str_contains($repositorySource, 'sort($ordered, SORT_NUMERIC)') && str_contains($repositorySource, 'lockActiveTenantUsers'), 'tenant-user membership locks are canonicalized before acquisition');
 esc_p7_route_assert(str_contains($serviceSource, 'TenantAuthorization::allowsCapability') && str_contains($serviceSource, 'MANAGE_REFERENCE_DATA'), 'Approval Route service enforces tenant-role mutation ceiling');
 esc_p7_route_assert(! str_contains($policySource, 'eval(') && ! str_contains($policySource, 'exec(') && ! str_contains($policySource, 'callback'), 'Approval Route policy contains no executable language');
-esc_p7_route_assert(! str_contains($transitionRepositorySource, 'ApprovalRoute') && ! str_contains($transitionServiceSource, 'ApprovalRoute'), 'P7-001 does not change P6 runtime transition execution');
+esc_p7_route_assert(
+    str_contains($transitionRepositorySource, 'approval_route_id')
+        && str_contains($transitionRepositorySource, 'allowApprovalRouted')
+        && ! str_contains($transitionRepositorySource, 'ApprovalRouteRepository')
+        && ! str_contains($transitionServiceSource, 'ApprovalRoute'),
+    'P7-004 adds only a route-presence execution gate to P6; P7-001 route orchestration remains outside P6 runtime'
+);
 esc_p7_route_assert(str_contains($statusSource, 'final class ContractStatus') && ! str_contains($statusSource, 'Approval'), 'legacy ContractStatus remains independent');
 esc_p7_route_assert(str_contains($gateSource, 'enterprise_workflow_approval_routes_p7_001.php'), 'P7-001 regression explicitly wired into backend Gate');
 
