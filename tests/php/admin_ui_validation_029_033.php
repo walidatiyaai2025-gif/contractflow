@@ -34,7 +34,7 @@ $GLOBALS['sc_test_result_queue'] = [[]];
 $before = count($GLOBALS['sc_test_read_queries']);
 $read->collections(['customer_id' => 7, 'contract_id' => 9, 'accountant_user_id' => 999]);
 $collectionSql = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
-sc_p6v5_assert(str_contains($collectionSql, 'c.customer_id = 7') && str_contains($collectionSql, 'c.id = 9'), 'SC-P6-029 collection filters are enforced server-side');
+sc_p6v5_assert(str_contains($collectionSql, "c.counterparty_type = 'customer'") && str_contains($collectionSql, 'c.counterparty_id = 7') && str_contains($collectionSql, 'c.id = 9'), 'SC-P6-029 collection filters are enforced server-side with receivable customer semantics');
 sc_p6v5_assert(str_contains($collectionSql, 'c.accountant_user_id = 42') && ! str_contains($collectionSql, 'accountant_user_id = 999'), 'SC-P6-029 assigned collection scope cannot be widened');
 $collectionSource = file_get_contents((string) (new ReflectionClass(CollectionsPage::class))->getFileName()) ?: '';
 sc_p6v5_assert(str_contains($collectionSource, 'Capabilities::MANAGE_COLLECTIONS') && str_contains($collectionSource, 'check_admin_referer'), 'SC-P6-029 collection writes require capability and nonce');
