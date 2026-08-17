@@ -23,6 +23,20 @@ final class FinanceReadSql
         $clauses[] = $scope['clause'];
         array_push($args, ...$scope['args']);
 
+        if (($filters['counterparty_type'] ?? '') !== '') {
+            $clauses[] = 'c.counterparty_type = %s';
+            $args[] = (string) $filters['counterparty_type'];
+        }
+        if (($filters['customer_id'] ?? 0) > 0) {
+            $clauses[] = "c.counterparty_type = 'customer'";
+            $clauses[] = 'c.counterparty_id = %d';
+            $args[] = (int) $filters['customer_id'];
+        }
+        if (($filters['supplier_id'] ?? 0) > 0) {
+            $clauses[] = "c.counterparty_type = 'supplier'";
+            $clauses[] = 'c.counterparty_id = %d';
+            $args[] = (int) $filters['supplier_id'];
+        }
         if (($filters['contract_id'] ?? 0) > 0) {
             $clauses[] = 'c.id = %d';
             $args[] = (int) $filters['contract_id'];
