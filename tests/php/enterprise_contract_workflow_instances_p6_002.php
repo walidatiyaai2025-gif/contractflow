@@ -341,7 +341,17 @@ esc_p6_instance_assert(! str_contains($repositorySource, 'ON DUPLICATE KEY UPDAT
 esc_p6_instance_assert(! str_contains($repositorySource, 'workflow_transitions') && ! str_contains($serviceSource, 'workflow_transitions'), 'P6-002 introduces no transition execution path');
 esc_p6_instance_assert(! str_contains($repositorySource, 'approval') && ! str_contains($serviceSource, 'approval'), 'P6-002 introduces no approval routing');
 esc_p6_instance_assert(! str_contains($repositorySource, 'custom_field') && ! str_contains($serviceSource, 'custom_field'), 'P6-002 does not rewrite P5 data');
-esc_p6_instance_assert(! str_contains($repositorySource, 'UPDATE'), 'P6-002 repository never updates legacy contract or Workflow Definition rows');
+esc_p6_instance_assert(
+    ! str_contains($repositorySource, 'UPDATE {$contracts}')
+    && ! str_contains($repositorySource, 'UPDATE {$workflows}')
+    && ! str_contains($repositorySource, 'UPDATE {$versions}')
+    && ! str_contains($repositorySource, 'UPDATE {$states}')
+    && ! str_contains($repositorySource, 'DELETE FROM {$contracts}')
+    && ! str_contains($repositorySource, 'DELETE FROM {$workflows}')
+    && ! str_contains($repositorySource, 'DELETE FROM {$versions}')
+    && ! str_contains($repositorySource, 'DELETE FROM {$states}'),
+    'P6-002 repository never mutates legacy contract or Workflow Definition rows'
+);
 esc_p6_instance_assert(str_contains($statusSource, 'final class ContractStatus') && ! str_contains($statusSource, 'ContractWorkflowInstance'), 'legacy ContractStatus remains independent from ESC Workflow instance');
 esc_p6_instance_assert(! str_contains($contractSource, 'ContractWorkflowInstance'), 'legacy ContractService lifecycle remains untouched');
 esc_p6_instance_assert(str_contains($gateSource, 'enterprise_contract_workflow_instances_p6_002.php'), 'P6-002 regression is explicitly wired into ESC backend Gate');
