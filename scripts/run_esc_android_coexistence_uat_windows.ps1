@@ -165,8 +165,8 @@ if ($draft.source_sha -ne $NormalizedSourceSha) {
 if ($draft.decision -ne "PENDING") {
     Fail "objective draft must remain pending"
 }
-if ($draft.device.serial -ne $NormalizedSerial) {
-    Fail "objective draft device serial does not match the selected device"
+if ($draft.device.reference -ne $NormalizedSerial) {
+    Fail "objective draft device reference does not match the selected device"
 }
 
 $snapshot = [System.Collections.Generic.List[string]]::new()
