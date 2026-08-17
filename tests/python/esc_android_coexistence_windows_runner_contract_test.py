@@ -47,9 +47,9 @@ def main() -> int:
     ):
         require(runner, marker, "Windows UAT runner")
 
-    # The operator runner may collect objective/read-only ADB state only. Runtime
-    # mutations and final PASS production stay in the existing separately reviewed
-    # procedures/tools.
+    # The operator runner may collect the existing non-destructive objective session
+    # plus read-only ADB metadata. Runtime mutations and final PASS production stay
+    # in the separately reviewed procedures/tools.
     for pattern in (
         r"['\"]install['\"]",
         r"['\"]uninstall['\"]",
@@ -79,15 +79,17 @@ def main() -> int:
     ):
         require(doc, marker, "Windows UAT operator runbook")
 
-    require(
-        workflow,
+    for marker in (
         "python3 tests/python/esc_android_coexistence_windows_runner_contract_test.py",
-        "ESC Foundation workflow",
-    )
+        "Parse ESC Windows physical-device UAT runner",
+        "System.Management.Automation.Language.Parser",
+    ):
+        require(workflow, marker, "ESC Foundation workflow")
 
     print(
-        "ESC Windows UAT runner contract passed: objective/read-only collection only; "
-        "manual runtime evidence and finalization remain separate and pending"
+        "ESC Windows UAT runner contract passed: non-destructive objective/read-only "
+        "collection only; manual runtime evidence and finalization remain separate "
+        "and pending"
     )
     return 0
 
