@@ -1,0 +1,31 @@
+name: ESC P7-005 Approval REST Gate
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  approval-rest:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Validate P7-005 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Rest/CoreTenantRestGuard.php
+          php -l wordpress-plugin/safecontracts/src/Rest/ApprovalController.php
+          php -l wordpress-plugin/safecontracts/src/Rest/Router.php
+          php -l tests/php/enterprise_approval_rest_p7_005.php
+      - name: Validate ESC-P7-005 Approval REST boundary
+        run: php tests/php/enterprise_approval_rest_p7_005.php
