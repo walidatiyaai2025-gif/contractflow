@@ -52,11 +52,12 @@ use SafeContracts\Database\Migrations\Migration0044EnterpriseContractMilestones;
 use SafeContracts\Database\Migrations\Migration0045EnterpriseContractRenewalTerms;
 use SafeContracts\Database\Migrations\Migration0046EnterpriseContractNoticePeriodRules;
 use SafeContracts\Database\Migrations\Migration0047EnterpriseContractDeliverables;
+use SafeContracts\Database\Migrations\Migration0048EnterpriseContractFinancialCurrencyProfiles;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.46.0';
+    public const LATEST_VERSION = '1.47.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -107,6 +108,7 @@ final class Migrator
         '1.44.0' => Migration0045EnterpriseContractRenewalTerms::class,
         '1.45.0' => Migration0046EnterpriseContractNoticePeriodRules::class,
         '1.46.0' => Migration0047EnterpriseContractDeliverables::class,
+        '1.47.0' => Migration0048EnterpriseContractFinancialCurrencyProfiles::class,
     ];
 
     public function maybeMigrate(): void
