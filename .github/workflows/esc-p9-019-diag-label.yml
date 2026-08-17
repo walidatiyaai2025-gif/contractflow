@@ -1,0 +1,52 @@
+name: ESC P9-019 Diagnostic Labels
+
+on:
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fixture-diag-label:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Run diagnostic and label issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          output="$(php tests/php/enterprise_contract_financial_schedule_coverage_p9_019_diag.php 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+
+          read_count=$(printf '%s\n' "$output" | grep -c '^READ\[' || true)
+          read_label="diag-p9019-reads-${read_count}"
+          gh label create "$read_label" --color D4C5F9 --description "Temporary P9-019 diagnostic" --force
+          gh issue edit 535 --add-label "$read_label"
+
+          next_label="diag-p9019-next-unknown"
+          if printf '%s\n' "$output" | grep -q "contract_currency"; then
+            next_label="diag-p9019-next-profile"
+          elif printf '%s\n' "$output" | grep -q "financial_currency_profile_id.*revision_number.*amount"; then
+            next_label="diag-p9019-next-base"
+          elif printf '%s\n' "$output" | grep -q "schedule_entry_uuid"; then
+            next_label="diag-p9019-next-schedule"
+          elif printf '%s\n' "$output" | grep -q "accountant_user_id"; then
+            next_label="diag-p9019-next-contract"
+          elif printf '%s\n' "$output" | grep -q "QUEUE_REMAINING=0"; then
+            next_label="diag-p9019-next-empty"
+          fi
+          gh label create "$next_label" --color D4C5F9 --description "Temporary P9-019 diagnostic" --force
+          gh issue edit 535 --add-label "$next_label"
+
+          exit "$status"
