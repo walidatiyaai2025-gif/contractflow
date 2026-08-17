@@ -241,10 +241,11 @@ final class ContractFinancialAdjustmentRevisionRepository
         }
 
         try {
-            $latest = $this->lockLatestLineAfterContract($contractId, $lineUuid);
-            $storedMoney = Money::of((string) $latest['amount'], (string) $latest['currency_code']);
-            $profile = $this->lockProfileForMoney($contractId, $storedMoney);
+            $this->lockDraftContract($contractId);
+            $profile = $this->lockProfile($contractId);
+            $latest = $this->lockLatestLine($contractId, $lineUuid);
             $this->assertRevisionProfile($latest, $profile);
+            $storedMoney = Money::of((string) $latest['amount'], (string) $latest['currency_code']);
 
             if ((string) $latest['line_state'] === ContractFinancialAdjustmentPolicy::STATE_VOIDED) {
                 $this->commit('idempotent Enterprise financial adjustment void');
@@ -298,7 +299,7 @@ final class ContractFinancialAdjustmentRevisionRepository
     }
 
     /** @return array{id:int,currency:CurrencyCode} */
-    private function lockProfileForMoney(int $contractId, Money $money): array
+    private function lockProfile(int $contractId): array
     {
         global $wpdb;
         $tenantId = $this->tenantId();
@@ -314,17 +315,20 @@ final class ContractFinancialAdjustmentRevisionRepository
         $profileId = (int) ($rows[0]['id'] ?? 0);
         $profileContractId = (int) ($rows[0]['contract_id'] ?? 0);
         $profileCurrency = $this->currencyFromStorage($rows[0]['contract_currency'] ?? null, 'financial profile currency');
-        if ($profileId <= 0 || $profileContractId !== $contractId || ! $profileCurrency->equals($money->currency())) {
-            throw new UnexpectedValueException('Enterprise Contract financial profile is inconsistent with the adjustment currency.');
+        if ($profileId <= 0 || $profileContractId !== $contractId) {
+            throw new UnexpectedValueException('Enterprise Contract financial profile identity is invalid.');
         }
         return ['id' => $profileId, 'currency' => $profileCurrency];
     }
 
-    /** @return array<string,mixed> */
-    private function lockLatestLineAfterContract(int $contractId, string $lineUuid): array
+    /** @return array{id:int,currency:CurrencyCode} */
+    private function lockProfileForMoney(int $contractId, Money $money): array
     {
-        $this->lockDraftContract($contractId);
-        return $this->lockLatestLine($contractId, $lineUuid);
+        $profile = $this->lockProfile($contractId);
+        if (! $profile['currency']->equals($money->currency())) {
+            throw new UnexpectedValueException('Enterprise Contract financial profile is inconsistent with the adjustment currency.');
+        }
+        return $profile;
     }
 
     /** @return array<string,mixed> */
