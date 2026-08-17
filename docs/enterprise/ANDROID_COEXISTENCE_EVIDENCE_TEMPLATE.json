@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "decision": "PASS",
+  "source_sha": "REPLACE_WITH_EXACT_40_CHARACTER_ESC_SOURCE_SHA",
+  "tester": "REPLACE_WITH_TESTER_OR_APPROVED_TEAM_REFERENCE",
+  "tested_at_utc": "2026-08-17T00:00:00Z",
+  "device": {
+    "reference": "REPLACE_WITH_DEVICE_OR_APPROVED_ANONYMIZED_REFERENCE",
+    "android_version": "REPLACE_WITH_ANDROID_VERSION"
+  },
+  "safe_contract": {
+    "application_id": "com.safecontracts.safecontracts_mobile",
+    "version": "REPLACE_WITH_SAFE_CONTRACT_VERSION",
+    "apk_sha256": "REPLACE_WITH_64_CHARACTER_SAFE_CONTRACT_APK_SHA256",
+    "signer_sha256": "REPLACE_WITH_64_CHARACTER_SAFE_CONTRACT_CERT_SHA256"
+  },
+  "esc": {
+    "application_id": "com.safecontracts.enterprise",
+    "version": "REPLACE_WITH_ESC_VERSION",
+    "apk_sha256": "REPLACE_WITH_64_CHARACTER_ESC_APK_SHA256",
+    "signer_sha256": "REPLACE_WITH_64_CHARACTER_ESC_CERT_SHA256",
+    "firebase_reference": "REPLACE_WITH_APPROVED_ESC_FIREBASE_IDENTITY_EVIDENCE_REFERENCE"
+  },
+  "checks": {
+    "dual_install": {
+      "status": "PASS",
+      "evidence": "REPLACE_WITH_DUAL_INSTALL_COMMAND_OUTPUT_REFERENCE"
+    },
+    "independent_launch": {
+      "status": "PASS",
+      "evidence": "REPLACE_WITH_INDEPENDENT_LAUNCH_EVIDENCE_REFERENCE"
+    },
+    "session_isolation": {
+      "status": "PASS",
+      "evidence": "REPLACE_WITH_SESSION_AND_LOCAL_STATE_EVIDENCE_REFERENCE"
+    },
+    "safe_only_push": {
+      "status": "PASS",
+      "evidence": "REPLACE_WITH_SAFE_CONTRACT_ONLY_PUSH_EVIDENCE_REFERENCE"
+    },
+    "esc_only_push": {
+      "status": "PASS",
+      "evidence": "REPLACE_WITH_ESC_ONLY_PUSH_EVIDENCE_REFERENCE"
+    },
+    "deep_link_isolation": {
+      "status": "PASS",
+      "evidence": "REPLACE_WITH_DEEP_LINK_ISOLATION_EVIDENCE_REFERENCE"
+    },
+    "independent_update": {
+      "status": "PASS",
+      "evidence": "REPLACE_WITH_INDEPENDENT_UPDATE_EVIDENCE_REFERENCE"
+    },
+    "clear_data_uninstall_isolation": {
+      "status": "PASS",
+      "evidence": "REPLACE_WITH_CLEAR_DATA_AND_UNINSTALL_EVIDENCE_REFERENCE"
+    }
+  },
+  "evidence": {
+    "device": "REPLACE_WITH_REAL_DEVICE_EVIDENCE_REFERENCE",
+    "business_uat": "REPLACE_WITH_BUSINESS_UAT_EVIDENCE_REFERENCE",
+    "coexistence": "REPLACE_WITH_COEXISTENCE_EVIDENCE_REFERENCE",
+    "firebase": "REPLACE_WITH_FIREBASE_IDENTITY_EVIDENCE_REFERENCE"
+  }
+}
