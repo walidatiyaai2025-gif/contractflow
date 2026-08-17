@@ -8,7 +8,7 @@ use RuntimeException;
 
 final class PaymentRepository
 {
-    /** @return array{id:int, accountant_user_id:?int, is_archived:bool}|null */
+    /** @return array<string,mixed>|null */
     public function contractContext(int $contractId): ?array
     {
         global $wpdb;
@@ -17,7 +17,9 @@ final class PaymentRepository
         $table = $wpdb->prefix . 'safecontracts_contracts';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, accountant_user_id, is_archived FROM {$table} WHERE id = %d LIMIT 1",
+                "SELECT id, accountant_user_id, is_archived, counterparty_type, counterparty_id,
+                        financial_direction, currency_code
+                 FROM {$table} WHERE id = %d LIMIT 1",
                 $contractId
             ),
             ARRAY_A
@@ -34,10 +36,16 @@ final class PaymentRepository
                 ? (int) $row['accountant_user_id']
                 : null,
             'is_archived' => (bool) ($row['is_archived'] ?? false),
+            'counterparty_type' => (string) ($row['counterparty_type'] ?? ''),
+            'counterparty_id' => isset($row['counterparty_id']) && $row['counterparty_id'] !== null
+                ? (int) $row['counterparty_id']
+                : null,
+            'financial_direction' => (string) ($row['financial_direction'] ?? ''),
+            'currency_code' => strtoupper(trim((string) ($row['currency_code'] ?? ''))),
         ];
     }
 
-    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool}|null */
+    /** @return array<string,mixed>|null */
     public function find(int $paymentId): ?array
     {
         global $wpdb;
@@ -47,9 +55,10 @@ final class PaymentRepository
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT p.id, p.contract_id, p.sequence_no, p.reference, p.due_date, p.expected_payment_date,
-                        p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
-                        c.accountant_user_id, c.is_archived AS contract_is_archived
+                "SELECT p.id, p.contract_id, p.financial_direction, p.currency_code, p.sequence_no, p.reference,
+                        p.due_date, p.expected_payment_date, p.original_amount, p.paid_amount, p.remaining_amount,
+                        p.status, p.is_archived, c.accountant_user_id, c.is_archived AS contract_is_archived,
+                        c.counterparty_type, c.counterparty_id
                  FROM {$payments} p
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
                  WHERE p.id = %d AND p.is_archived = 0 LIMIT 1",
@@ -66,6 +75,8 @@ final class PaymentRepository
         return [
             'id' => (int) ($row['id'] ?? 0),
             'contract_id' => (int) ($row['contract_id'] ?? 0),
+            'financial_direction' => (string) ($row['financial_direction'] ?? ''),
+            'currency_code' => strtoupper(trim((string) ($row['currency_code'] ?? ''))),
             'sequence_no' => (int) ($row['sequence_no'] ?? 0),
             'reference' => isset($row['reference']) && $row['reference'] !== null ? (string) $row['reference'] : null,
             'due_date' => (string) ($row['due_date'] ?? ''),
@@ -81,6 +92,10 @@ final class PaymentRepository
                 ? (int) $row['accountant_user_id']
                 : null,
             'contract_is_archived' => (bool) ($row['contract_is_archived'] ?? false),
+            'counterparty_type' => (string) ($row['counterparty_type'] ?? ''),
+            'counterparty_id' => isset($row['counterparty_id']) && $row['counterparty_id'] !== null
+                ? (int) $row['counterparty_id']
+                : null,
         ];
     }
 
@@ -96,14 +111,30 @@ final class PaymentRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $contract = $this->contractContext($contractId);
+        if ($contract === null) {
+            throw new RuntimeException('Unable to resolve payment contract context.');
+        }
+        $direction = trim((string) ($contract['financial_direction'] ?? ''));
+        $currency = strtoupper(trim((string) ($contract['currency_code'] ?? '')));
 
         $referenceSql = $reference === null ? 'NULL' : '%s';
         $expectedSql = $expectedPaymentDate === null ? 'NULL' : '%s';
+        $directionSql = $direction === '' ? 'NULL' : '%s';
+        $currencySql = $currency === '' ? 'NULL' : '%s';
         $query = "INSERT INTO {$table}
-            (contract_id, sequence_no, reference, due_date, expected_payment_date, original_amount, paid_amount, remaining_amount, status, created_by, updated_by, created_at, updated_at)
-            VALUES (%d, %d, {$referenceSql}, %s, {$expectedSql}, %s, '0.0000', %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
+            (contract_id, financial_direction, currency_code, sequence_no, reference, due_date, expected_payment_date,
+             original_amount, paid_amount, remaining_amount, status, created_by, updated_by, created_at, updated_at)
+            VALUES (%d, {$directionSql}, {$currencySql}, %d, {$referenceSql}, %s, {$expectedSql}, %s, '0.0000', %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
 
-        $args = [$contractId, $sequenceNo];
+        $args = [$contractId];
+        if ($direction !== '') {
+            $args[] = $direction;
+        }
+        if ($currency !== '') {
+            $args[] = $currency;
+        }
+        $args[] = $sequenceNo;
         if ($reference !== null) {
             $args[] = $reference;
         }
