@@ -160,6 +160,7 @@ final class PaymentService
             return $current;
         }
 
+        // expected_payment_date is an operational promise/follow-up date only; contractual due classification stays based on due_date.
         return PaymentStatus::temporalForDueDate($payment['due_date'], $today, $dueSoonDays);
     }
 
