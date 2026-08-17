@@ -1,0 +1,35 @@
+name: ESC P8-001 Contract Obligation Gate
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-obligation:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Validate P8-001 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0043EnterpriseContractObligations.php
+          php -l wordpress-plugin/safecontracts/src/Obligations/ObligationPolicy.php
+          php -l wordpress-plugin/safecontracts/src/Obligations/ObligationRepository.php
+          php -l wordpress-plugin/safecontracts/src/Obligations/ObligationService.php
+          php -l tests/php/enterprise_contract_obligation_foundation_p8_001.php
+          php -l tests/php/enterprise_contract_obligations_p8_001.php
+      - name: Validate ESC-P8-001 obligation foundation
+        run: php tests/php/enterprise_contract_obligation_foundation_p8_001.php
+      - name: Validate ESC-P8-001 obligation adversarial runtime
+        run: php tests/php/enterprise_contract_obligations_p8_001.php
