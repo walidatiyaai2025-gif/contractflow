@@ -32,14 +32,16 @@ PRODUCT = "Enterprise Safe Contracts"
 BRANCH = "enterprise-safecontracts"
 PUBLIC_URL = "https://esc.50sols.com/"
 APPLICATION_ID = "com.safecontracts.enterprise"
+GITHUB_ACTIONS_APP_SLUG = "github-actions"
 SOURCE_SHA_RE = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$", re.IGNORECASE)
 HTTPS_RE = re.compile(r"^https://[^\s]+$", re.IGNORECASE)
-BRANCH_PROTECTION_AUDIT_SCHEMA_VERSION = 2
+BRANCH_PROTECTION_AUDIT_SCHEMA_VERSION = 3
 BRANCH_PROTECTION_REQUIRED_CONTROLS = {
     "protected_branch",
     "pull_request_required",
     "required_status_checks_present",
+    "required_status_check_sources_verified",
     "strict_up_to_date_status_checks",
     "administrator_enforcement_verified",
     "conversation_resolution_required",
@@ -184,7 +186,7 @@ def validate_branch_protection_audit_payload(payload: object) -> dict[str, objec
     if not isinstance(payload, dict):
         fail("ESC branch-protection audit must be a JSON object")
     if payload.get("schema_version") != BRANCH_PROTECTION_AUDIT_SCHEMA_VERSION:
-        fail("ESC branch-protection audit must use schema version 2")
+        fail("ESC branch-protection audit must use schema version 3")
     if payload.get("branch") != BRANCH:
         fail("ESC branch-protection audit targets the wrong branch")
     if payload.get("decision") != "PASS":
@@ -224,6 +226,19 @@ def validate_branch_protection_audit_payload(payload: object) -> dict[str, objec
     if required_set != BRANCH_PROTECTION_REQUIRED_STATUS_CHECKS:
         fail("ESC branch-protection audit required-check contract is unexpected")
 
+    if payload.get("expected_status_check_app_slug") != GITHUB_ACTIONS_APP_SLUG:
+        fail("ESC branch-protection audit must target the GitHub Actions App")
+    expected_app_id = payload.get("expected_status_check_app_id")
+    if not isinstance(expected_app_id, int) or expected_app_id <= 0:
+        fail("ESC branch-protection audit has invalid expected GitHub Actions App ID")
+    observed_sources = payload.get("observed_required_check_source_ids")
+    if not isinstance(observed_sources, dict):
+        fail("ESC branch-protection audit observed source IDs must be an object")
+    for context in BRANCH_PROTECTION_REQUIRED_STATUS_CHECKS:
+        source_ids = observed_sources.get(context)
+        if not isinstance(source_ids, list) or expected_app_id not in source_ids:
+            fail(f"ESC branch-protection audit does not source-pin {context} to GitHub Actions")
+
     captured = payload.get("captured_input_sha256")
     if not isinstance(captured, dict):
         fail("ESC branch-protection audit must retain captured input digests")
@@ -239,6 +254,8 @@ def validate_branch_protection_audit_payload(payload: object) -> dict[str, objec
         fail("ESC branch-protection audit must include authoritative legacy protection")
     if sources.get("administrator_enforcement_source") != "legacy_branch_protection":
         fail("ESC branch-protection audit does not prove administrator enforcement")
+    if sources.get("status_check_source_contract") != "github_app_id":
+        fail("ESC branch-protection audit does not prove the GitHub App source contract")
 
     if len(str(payload.get("break_glass_statement", "")).strip()) < 12:
         fail("ESC branch-protection audit break-glass statement is missing")
@@ -258,7 +275,7 @@ def load_branch_protection_audit(path: Path) -> tuple[dict[str, object], str]:
     file_digest = digest(path)
     deterministic_digest = audit_document_digest(validated)
     if file_digest != deterministic_digest:
-        fail("ESC branch-protection audit file is not the canonical schema-v2 document")
+        fail("ESC branch-protection audit file is not the canonical schema-v3 document")
     return validated, file_digest
 
 
