@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Build and verify a content-addressed ESC Android coexistence evidence bundle.
 
-This utility never performs device/runtime UAT. It binds already-collected evidence
-files to an exact ESC source SHA so later PASS finalization can re-hash the retained
-files and fail closed on deletion, modification, path escape, or manifest tampering.
+This utility never performs device/runtime UAT. It binds the exact objective UAT
+draft plus already-collected evidence files to one ESC source SHA so later PASS
+finalization can re-hash retained files and fail closed on deletion, modification,
+path escape, source drift, draft substitution, or manifest tampering.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ import sys
 from typing import Any
 
 ARTIFACT_KEYS = (
+    "objective_draft",
     "session_isolation",
     "safe_only_push",
     "esc_only_push",
@@ -186,7 +188,7 @@ def verify_manifest(
     expected = source_sha(expected_source_sha)
     if source != expected:
         fail(f"manifest source SHA mismatch: manifest={source}, expected={expected}")
-    utc_timestamp(manifest.get("collected_at_utc"))
+    collected = utc_timestamp(manifest.get("collected_at_utc"))
 
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, dict):
@@ -237,7 +239,7 @@ def verify_manifest(
     normalized = {
         "schema_version": 1,
         "source_sha": source,
-        "collected_at_utc": manifest["collected_at_utc"],
+        "collected_at_utc": collected,
         "artifacts": normalized_artifacts,
         "bundle_sha256": bundle_digest,
     }
@@ -303,7 +305,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="KEY=RELATIVE_PATH",
-        help="Required once for each of the ten fixed coexistence evidence keys.",
+        help="Required once for each fixed coexistence evidence key.",
     )
     parser.add_argument("--output", type=Path, required=True)
     return parser
