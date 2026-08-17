@@ -50,21 +50,27 @@ void main() {
   });
 
   test('profile no longer owns CRUD entry points or raw capabilities', () {
-    final source = File('lib/features/profile/profile_screen.dart')
-        .readAsStringSync();
+    final source = <String>[
+      File('lib/features/profile/profile_screen.dart').readAsStringSync(),
+      File('lib/features/profile/modern_profile_content.dart')
+          .readAsStringSync(),
+      File('lib/features/profile/profile_identity_sections.dart')
+          .readAsStringSync(),
+    ].join('\n');
 
     expect(source, isNot(contains('MobileRecordEditorScreen')));
     expect(source, isNot(contains('mobile_record_editor_screen.dart')));
     expect(source, isNot(contains('Granted capabilities')));
     expect(source, isNot(contains('_grantedCapabilities')));
     expect(source, isNot(contains('Data management')));
-    expect(source, contains('SafeContractsSectionTitle'));
+    expect(source, contains('ProfileSectionTitle'));
     expect(source, contains('My profile'));
   });
 
-  test('app shell owns the animated permission-aware quick add entry point', () {
-    final source = File('lib/features/navigation/app_shell.dart')
-        .readAsStringSync();
+  test('app shell owns the animated permission-aware quick add entry point',
+      () {
+    final source =
+        File('lib/features/navigation/app_shell.dart').readAsStringSync();
 
     expect(source, contains('availableMobileQuickAdds(widget.session)'));
     expect(source, contains('floatingActionButton:'));
