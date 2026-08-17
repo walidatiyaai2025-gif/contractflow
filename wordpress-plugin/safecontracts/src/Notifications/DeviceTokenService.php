@@ -12,6 +12,8 @@ use SafeContracts\Tenancy\TenantMembershipRepository;
 
 final class DeviceTokenService
 {
+    public const APPLICATION_ID = 'com.safecontracts.enterprise';
+
     public function __construct(
         private ?DeviceTokenRepository $repository = null,
         private ?TenantMembershipRepository $memberships = null
@@ -20,21 +22,47 @@ final class DeviceTokenService
         $this->memberships ??= new TenantMembershipRepository();
     }
 
-    public function register(mixed $token, mixed $platform): void
+    public function register(mixed $token, mixed $platform, mixed $applicationId = self::APPLICATION_ID): string
     {
         $userId = $this->requireAuthenticatedAccess();
+        $normalizedApplicationId = $this->normalizeApplicationId($applicationId);
         $normalizedToken = $this->normalizeToken($token);
         $normalizedPlatform = $this->normalizePlatform($platform);
         $this->repository->register($userId, $normalizedToken, $normalizedPlatform);
-        do_action('safecontracts_device_token_registered', $userId, hash('sha256', $normalizedToken), $normalizedPlatform);
+        do_action(
+            'safecontracts_device_token_registered',
+            $userId,
+            hash('sha256', $normalizedToken),
+            $normalizedPlatform,
+            $normalizedApplicationId
+        );
+        return $normalizedApplicationId;
     }
 
-    public function revoke(mixed $token): void
+    public function revoke(mixed $token, mixed $applicationId = self::APPLICATION_ID): string
     {
         $userId = $this->requireAuthenticatedAccess();
+        $normalizedApplicationId = $this->normalizeApplicationId($applicationId);
         $normalizedToken = $this->normalizeToken($token);
         $this->repository->revokeOwned($userId, $normalizedToken);
-        do_action('safecontracts_device_token_revoked', $userId, hash('sha256', $normalizedToken));
+        do_action(
+            'safecontracts_device_token_revoked',
+            $userId,
+            hash('sha256', $normalizedToken),
+            $normalizedApplicationId
+        );
+        return $normalizedApplicationId;
+    }
+
+    private function normalizeApplicationId(mixed $value): string
+    {
+        $applicationId = trim((string) $value);
+        if ($applicationId !== self::APPLICATION_ID) {
+            throw new InvalidArgumentException(
+                'Device registration application identity must be ' . self::APPLICATION_ID . '.'
+            );
+        }
+        return $applicationId;
     }
 
     private function normalizeToken(mixed $value): string

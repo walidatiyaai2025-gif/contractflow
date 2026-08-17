@@ -72,14 +72,21 @@ final class DevicesController
         }
 
         try {
-            $body = self::body($request, ['token', 'platform']);
-            if (! array_key_exists('token', $body) || ! array_key_exists('platform', $body)) {
-                throw new InvalidArgumentException('Device token and platform are required.');
+            $body = self::body($request, ['token', 'platform', 'application_id']);
+            if (! array_key_exists('token', $body)
+                || ! array_key_exists('platform', $body)
+                || ! array_key_exists('application_id', $body)) {
+                throw new InvalidArgumentException('Device token, platform, and application identity are required.');
             }
-            (new DeviceTokenService())->register($body['token'], $body['platform']);
+            $applicationId = (new DeviceTokenService())->register(
+                $body['token'],
+                $body['platform'],
+                $body['application_id']
+            );
             return RequestGuard::response([
                 'registered' => true,
                 'platform' => strtolower(trim((string) $body['platform'])),
+                'application_id' => $applicationId,
             ], [], 201);
         } catch (InvalidArgumentException $error) {
             return RequestGuard::invalid($error, 'safecontracts_device_register_invalid');
@@ -98,12 +105,18 @@ final class DevicesController
         }
 
         try {
-            $body = self::body($request, ['token']);
-            if (! array_key_exists('token', $body)) {
-                throw new InvalidArgumentException('Device token is required.');
+            $body = self::body($request, ['token', 'application_id']);
+            if (! array_key_exists('token', $body) || ! array_key_exists('application_id', $body)) {
+                throw new InvalidArgumentException('Device token and application identity are required.');
             }
-            (new DeviceTokenService())->revoke($body['token']);
-            return RequestGuard::response(['revoked' => true]);
+            $applicationId = (new DeviceTokenService())->revoke(
+                $body['token'],
+                $body['application_id']
+            );
+            return RequestGuard::response([
+                'revoked' => true,
+                'application_id' => $applicationId,
+            ]);
         } catch (InvalidArgumentException $error) {
             return RequestGuard::invalid($error, 'safecontracts_device_revoke_invalid');
         } catch (DomainException $error) {

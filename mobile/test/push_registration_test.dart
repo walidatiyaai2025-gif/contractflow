@@ -10,7 +10,7 @@ import 'package:safecontracts_mobile/features/notifications/push_registration.da
 import 'fake_api_transport.dart';
 
 void main() {
-  test('denied notification permission does not block device registration',
+  test('denied notification permission does not block ESC-bound registration',
       () async {
     const token = 'safecontracts-fcm-registration-token-1234567890';
     final messaging = _FakePushMessagingGateway(
@@ -23,6 +23,7 @@ void main() {
       return _ok(<String, Object?>{
         'registered': true,
         'platform': 'android',
+        'application_id': MobilePushRegistration.applicationId,
       }, statusCode: 201);
     });
     final registration = MobilePushRegistration(
@@ -43,6 +44,7 @@ void main() {
         jsonDecode(transport.requests.single.body!) as Map<String, Object?>;
     expect(body['token'], token);
     expect(body['platform'], 'android');
+    expect(body['application_id'], 'com.safecontracts.enterprise');
 
     await registration.dispose();
     await messaging.dispose();
@@ -68,6 +70,7 @@ void main() {
       return _ok(<String, Object?>{
         'registered': true,
         'platform': 'android',
+        'application_id': MobilePushRegistration.applicationId,
       }, statusCode: 201);
     });
     final registration = MobilePushRegistration(
@@ -82,6 +85,10 @@ void main() {
     expect(messaging.getTokenCalls, 2);
     expect(registration.status.value.backendRegistered, isTrue);
     expect(registration.status.value.errorCode, isNull);
+    for (final request in transport.requests) {
+      final body = jsonDecode(request.body!) as Map<String, Object?>;
+      expect(body['application_id'], MobilePushRegistration.applicationId);
+    }
 
     await registration.dispose();
     await messaging.dispose();
@@ -98,6 +105,7 @@ void main() {
     transport = FakeApiTransport((uri) => _ok(<String, Object?>{
           'registered': true,
           'platform': 'android',
+          'application_id': MobilePushRegistration.applicationId,
         }, statusCode: 201));
     final registration = MobilePushRegistration(
       client: _client(transport),
@@ -115,12 +123,16 @@ void main() {
     expect(registration.status.value.tokenAcquired, isTrue);
     expect(registration.status.value.backendRegistered, isTrue);
     expect(transport.requests, hasLength(1));
+    final body =
+        jsonDecode(transport.requests.single.body!) as Map<String, Object?>;
+    expect(body['application_id'], MobilePushRegistration.applicationId);
 
     await registration.dispose();
     await messaging.dispose();
   });
 
-  test('manual recovery rotates the FCM token before re-registering', () async {
+  test('manual recovery keeps revoke and re-register bound to ESC identity',
+      () async {
     const oldToken = 'safecontracts-fcm-old-token-123456789012345678';
     const freshToken = 'safecontracts-fcm-fresh-token-9876543210987654';
     final messaging = _FakePushMessagingGateway(
@@ -133,10 +145,14 @@ void main() {
         return _ok(<String, Object?>{
           'registered': true,
           'platform': 'android',
+          'application_id': MobilePushRegistration.applicationId,
         }, statusCode: 201);
       }
       if (uri.path.endsWith('/devices/revoke')) {
-        return _ok(<String, Object?>{'revoked': true});
+        return _ok(<String, Object?>{
+          'revoked': true,
+          'application_id': MobilePushRegistration.applicationId,
+        });
       }
       fail('Unexpected push registration request: ${uri.path}');
     });
@@ -167,6 +183,56 @@ void main() {
     expect(revoke['token'], oldToken);
     expect(secondRegistration['token'], freshToken);
     expect(secondRegistration['token'], isNot(oldToken));
+    for (final body in <Map<String, Object?>>[
+      firstRegistration,
+      revoke,
+      secondRegistration,
+    ]) {
+      expect(body['application_id'], MobilePushRegistration.applicationId);
+    }
+
+    await registration.dispose();
+    await messaging.dispose();
+  });
+
+  test('logout revoke remains bound to ESC identity', () async {
+    const token = 'safecontracts-fcm-logout-token-1234567890123456789';
+    final messaging = _FakePushMessagingGateway(
+      permission: MobilePushPermissionState.authorized,
+      tokens: <String?>[token],
+    );
+    late FakeApiTransport transport;
+    transport = FakeApiTransport((uri) {
+      if (uri.path.endsWith('/devices/register')) {
+        return _ok(<String, Object?>{
+          'registered': true,
+          'platform': 'android',
+          'application_id': MobilePushRegistration.applicationId,
+        }, statusCode: 201);
+      }
+      if (uri.path.endsWith('/devices/revoke')) {
+        return _ok(<String, Object?>{
+          'revoked': true,
+          'application_id': MobilePushRegistration.applicationId,
+        });
+      }
+      fail('Unexpected push registration request: ${uri.path}');
+    });
+    final registration = MobilePushRegistration(
+      client: _client(transport),
+      messaging: messaging,
+      retryDelay: (_) async {},
+    );
+
+    await registration.start();
+    await registration.revokeAndStop();
+
+    expect(transport.requests, hasLength(2));
+    final revoke =
+        jsonDecode(transport.requests.last.body!) as Map<String, Object?>;
+    expect(revoke['token'], token);
+    expect(revoke['application_id'], MobilePushRegistration.applicationId);
+    expect(messaging.deleteTokenCalls, 1);
 
     await registration.dispose();
     await messaging.dispose();
