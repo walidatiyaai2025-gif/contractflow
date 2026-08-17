@@ -1,0 +1,42 @@
+name: ESC P9-012 Contract Payment Schedule
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-payment-schedule:
+    name: contract-payment-schedule
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+
+      - name: Validate P9-012 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0056EnterpriseContractFinancialPaymentScheduleEntryRevisions.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialPaymentSchedulePolicy.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialPaymentScheduleRevisionRepository.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialPaymentScheduleRevisionService.php
+          php -l tests/php/enterprise_contract_financial_payment_schedule_p9_012.php
+          php -l tests/php/enterprise_contract_financial_credits_p9_011.php
+
+      - name: Validate P9-011 compatibility
+        run: php tests/php/enterprise_contract_financial_credits_p9_011.php
+
+      - name: Validate P9-012 payment schedule
+        run: php tests/php/enterprise_contract_financial_payment_schedule_p9_012.php
