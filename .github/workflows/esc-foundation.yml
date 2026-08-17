@@ -32,6 +32,8 @@ jobs:
         run: python3 tests/python/esc_android_coexistence_preflight_test.py
       - name: Test ESC Android coexistence UAT session harness
         run: python3 tests/python/esc_android_coexistence_uat_session_test.py
+      - name: Test ESC Android coexistence evidence finalizer
+        run: python3 tests/python/esc_android_coexistence_evidence_finalizer_test.py
       - name: Validate ESC release artifact isolation
         run: python3 scripts/enterprise_verified_artifacts.py check
       - name: Run backend regression and Enterprise tenancy tests
