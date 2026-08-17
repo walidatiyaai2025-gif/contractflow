@@ -24,10 +24,21 @@ if old_parser not in source:
     raise SystemExit('Finance obligation parser marker not found')
 source = source.replace(old_parser, new_parser, 1)
 
-old_direction = "      direction: _direction(data['financial_direction']),\n"
+old_direction = """      counterpartyName: _requiredText(
+        data['counterparty_name'],
+        'obligation.counterparty_name',
+      ),
+      direction: _direction(data['financial_direction']),
+"""
+new_direction = """      counterpartyName: _requiredText(
+        data['counterparty_name'],
+        'obligation.counterparty_name',
+      ),
+      direction: direction,
+"""
 if old_direction not in source:
     raise SystemExit('Finance obligation direction marker not found')
-source = source.replace(old_direction, '      direction: direction,\n', 1)
+source = source.replace(old_direction, new_direction, 1)
 
 old_refresh = """  Future<void> refreshSilently() async {
     if (!canAccess) return;
