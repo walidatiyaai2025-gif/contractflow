@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace SafeContracts\Admin;
 
+use SafeContracts\Finance\FinanceOverviewService;
+use SafeContracts\Payments\CurrencyCode;
+use SafeContracts\Payments\FinancialDirection;
 use SafeContracts\Reports\ReportExportService;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Translations\TranslationCatalog;
@@ -44,18 +47,20 @@ final class ReportsPage
         $summary = empty($filters['date_range_error'])
             ? $read->reportSummary($filters)
             : [
-                'contract_count' => '0',
-                'scheduled_total' => '0.0000',
-                'remaining_total' => '0.0000',
-                'overdue_exposure' => '0.0000',
-                'collected_total' => '0.0000',
-                'collection_transactions' => '0',
-                'collection_ledger_total' => '0.0000',
-                'followup_events' => '0',
-                'followed_up_payments' => '0',
+                'contract_count' => '0', 'scheduled_total' => '0.0000', 'remaining_total' => '0.0000',
+                'overdue_exposure' => '0.0000', 'collected_total' => '0.0000', 'collection_transactions' => '0',
+                'collection_ledger_total' => '0.0000', 'followup_events' => '0', 'followed_up_payments' => '0',
             ];
         $customers = $read->customerOptions();
         $contracts = $read->contractOptions($filters['customer_id']);
+        $canViewFinance = current_user_can(Capabilities::VIEW_FINANCE) || current_user_can(Capabilities::MANAGE_FINANCE);
+        $finance = ['summary' => [], 'aging' => []];
+        if ($canViewFinance && empty($filters['date_range_error'])) {
+            $financeInput = $_GET;
+            $financeInput['due_from'] = $financeInput['due_from'] ?? ($filters['date_from'] ?? null);
+            $financeInput['due_to'] = $financeInput['due_to'] ?? ($filters['date_to'] ?? null);
+            $finance = (new FinanceOverviewService())->overview($financeInput);
+        }
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Server-side reporting', 'safecontracts'); ?></p><h1><?php echo esc_html__('Reports', 'safecontracts'); ?></h1></div></div>
@@ -65,6 +70,12 @@ final class ReportsPage
                     <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
                     <label><?php echo esc_html__('Customer', 'safecontracts'); ?><select name="customer_id"><option value="0"><?php echo esc_html__('All customers', 'safecontracts'); ?></option><?php foreach ($customers as $customer) : ?><option value="<?php echo esc_attr((string) $customer['id']); ?>" <?php selected($filters['customer_id'], $customer['id']); ?>><?php echo esc_html($customer['name']); ?></option><?php endforeach; ?></select></label>
                     <label><?php echo esc_html__('Contract', 'safecontracts'); ?><select name="contract_id"><option value="0"><?php echo esc_html__('All contracts', 'safecontracts'); ?></option><?php foreach ($contracts as $contract) : ?><option value="<?php echo esc_attr((string) $contract['id']); ?>" <?php selected($filters['contract_id'], $contract['id']); ?>><?php echo esc_html($contract['contract_number']); ?></option><?php endforeach; ?></select></label>
+                    <?php if ($canViewFinance) : ?>
+                        <label><?php echo esc_html__('Direction', 'safecontracts'); ?><select name="financial_direction"><option value=""><?php echo esc_html__('All AP / AR', 'safecontracts'); ?></option><option value="payable" <?php selected($filters['financial_direction'] ?? '', 'payable'); ?>><?php echo esc_html__('Accounts Payable', 'safecontracts'); ?></option><option value="receivable" <?php selected($filters['financial_direction'] ?? '', 'receivable'); ?>><?php echo esc_html__('Accounts Receivable', 'safecontracts'); ?></option></select></label>
+                        <label><?php echo esc_html__('Currency', 'safecontracts'); ?><input maxlength="3" name="currency_code" value="<?php echo esc_attr((string) ($filters['currency_code'] ?? '')); ?>" placeholder="KWD / USD / XXX"></label>
+                        <label><?php echo esc_html__('Counterparty type', 'safecontracts'); ?><select name="counterparty_type"><option value=""><?php echo esc_html__('Any type', 'safecontracts'); ?></option><option value="customer" <?php selected($filters['counterparty_type'] ?? '', 'customer'); ?>><?php echo esc_html__('Customer', 'safecontracts'); ?></option><option value="supplier" <?php selected($filters['counterparty_type'] ?? '', 'supplier'); ?>><?php echo esc_html__('Supplier', 'safecontracts'); ?></option></select></label>
+                        <label><?php echo esc_html__('Counterparty ID', 'safecontracts'); ?><input type="number" min="1" name="counterparty_id" value="<?php echo esc_attr((string) (($filters['counterparty_id'] ?? 0) ?: '')); ?>"></label>
+                    <?php endif; ?>
                     <?php if (current_user_can(Capabilities::VIEW_ALL)) : ?><label><?php echo esc_html__('Accountant ID', 'safecontracts'); ?><input type="number" min="0" name="accountant_user_id" value="<?php echo esc_attr((string) $filters['accountant_user_id']); ?>"></label><?php endif; ?>
                     <label><?php echo esc_html__('Status', 'safecontracts'); ?><select name="status"><option value=""><?php echo esc_html__('Any status', 'safecontracts'); ?></option><?php foreach (['active','draft','completed','cancelled','upcoming','due_soon','due','overdue','partially_paid','paid'] as $status) : ?><option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(self::statusLabel($status)); ?></option><?php endforeach; ?></select></label>
                     <?php AdminPeriodFilter::renderFields($filters); ?>
@@ -73,14 +84,25 @@ final class ReportsPage
                 <?php if (current_user_can(Capabilities::EXPORT_REPORTS) && empty($filters['date_range_error'])) : ?>
                 <form class="safecontracts-export-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="<?php echo esc_attr(self::EXPORT_ACTION); ?>">
-                    <?php foreach (['customer_id','contract_id','accountant_user_id','status','date_from','date_to'] as $key) : ?><input type="hidden" name="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr((string) ($filters[$key] ?? '')); ?>"><?php endforeach; ?>
+                    <?php foreach (['customer_id','counterparty_type','counterparty_id','financial_direction','currency_code','contract_id','accountant_user_id','status','date_from','date_to'] as $key) : ?><input type="hidden" name="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr((string) ($filters[$key] ?? '')); ?>"><?php endforeach; ?>
                     <?php wp_nonce_field(self::EXPORT_ACTION); ?>
                     <button class="button" type="submit"><?php echo esc_html__('Export current filters to Excel', 'safecontracts'); ?></button>
-                    <span class="description"><?php echo esc_html__('XLSX is generated server-side from your authorized report scope and selected period.', 'safecontracts'); ?></span>
+                    <span class="description"><?php echo esc_html__('XLSX includes currency-safe finance summary, aging, cash flow and obligation sheets when authorized.', 'safecontracts'); ?></span>
                 </form>
                 <?php endif; ?>
-                <p class="description"><?php echo esc_html__('Period semantics are server-side and explicit: receivable KPIs/payments use contractual due date; collections use collection date; follow-up metrics use follow-up event date; contracts use start date with creation-date fallback; customers use record creation date.', 'safecontracts'); ?></p>
             </section>
+
+            <?php if ($canViewFinance) : ?>
+                <section class="safecontracts-admin-card safecontracts-table-card">
+                    <h2><?php echo esc_html__('AP / AR by currency', 'safecontracts'); ?></h2>
+                    <p class="description"><?php echo esc_html__('Supplier payables are never folded into collection totals. Every finance total remains grouped by direction and currency.', 'safecontracts'); ?></p>
+                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Direction', 'safecontracts'); ?></th><th><?php echo esc_html__('Currency', 'safecontracts'); ?></th><th><?php echo esc_html__('Outstanding', 'safecontracts'); ?></th><th><?php echo esc_html__('Overdue', 'safecontracts'); ?></th><th><?php echo esc_html__('Due today', 'safecontracts'); ?></th><th><?php echo esc_html__('Due 30 days', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <?php foreach ((array) ($finance['summary'] ?? []) as $row) : $currency = (string) ($row['currency_code'] ?? CurrencyCode::UNKNOWN); ?><tr><td><?php echo esc_html(self::directionLabel((string) ($row['financial_direction'] ?? ''))); ?></td><td><?php echo esc_html($currency); ?></td><td><?php echo esc_html(self::money($row['outstanding_total'] ?? 0, $currency)); ?></td><td><?php echo esc_html(self::money($row['overdue_total'] ?? 0, $currency)); ?></td><td><?php echo esc_html(self::money($row['due_today_total'] ?? 0, $currency)); ?></td><td><?php echo esc_html(self::money($row['due_30_total'] ?? 0, $currency)); ?></td></tr><?php endforeach; ?>
+                    </tbody></table>
+                </section>
+                <section class="safecontracts-admin-card safecontracts-table-card"><h2><?php echo esc_html__('Aging report', 'safecontracts'); ?></h2><table class="widefat striped"><thead><tr><th><?php echo esc_html__('Direction', 'safecontracts'); ?></th><th><?php echo esc_html__('Currency', 'safecontracts'); ?></th><th><?php echo esc_html__('Bucket', 'safecontracts'); ?></th><th><?php echo esc_html__('Outstanding', 'safecontracts'); ?></th></tr></thead><tbody><?php foreach ((array) ($finance['aging'] ?? []) as $row) : $currency = (string) ($row['currency_code'] ?? CurrencyCode::UNKNOWN); ?><tr><td><?php echo esc_html(self::directionLabel((string) ($row['financial_direction'] ?? ''))); ?></td><td><?php echo esc_html($currency); ?></td><td><?php echo esc_html((string) ($row['aging_bucket'] ?? '')); ?></td><td><?php echo esc_html(self::money($row['outstanding_total'] ?? 0, $currency)); ?></td></tr><?php endforeach; ?></tbody></table></section>
+            <?php endif; ?>
+
             <div class="safecontracts-kpi-grid">
                 <?php self::metric(__('Contracts', 'safecontracts'), (string) $summary['contract_count']); ?>
                 <?php self::metric(__('Scheduled receivables', 'safecontracts'), self::money($summary['scheduled_total'])); ?>
@@ -92,8 +114,8 @@ final class ReportsPage
                 <?php self::metric(__('Payments followed up', 'safecontracts'), (string) $summary['followed_up_payments']); ?>
             </div>
             <section class="safecontracts-admin-card safecontracts-admin-card--security">
-                <h2><?php echo esc_html__('Scoped report boundary', 'safecontracts'); ?></h2>
-                <p><?php echo esc_html__('All totals and XLSX sheets are computed server-side using the same authorized customer, contract, accountant, status and period filters. Export completion is written through the Safe Contracts audit hook.', 'safecontracts'); ?></p>
+                <h2><?php echo esc_html__('Receivable operations history', 'safecontracts'); ?></h2>
+                <p><?php echo esc_html__('Legacy collection and follow-up metrics remain customer/receivable operational history. Canonical AP/AR reporting is shown above and exported in dedicated Finance sheets.', 'safecontracts'); ?></p>
             </section>
         </div>
         <?php
@@ -104,9 +126,15 @@ final class ReportsPage
         ?><article class="safecontracts-kpi<?php echo $alert ? ' safecontracts-kpi--alert' : ''; ?>"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html($value); ?></strong></article><?php
     }
 
-    private static function money(mixed $value): string
+    private static function money(mixed $value, string $currency = ''): string
     {
-        return number_format((float) $value, 2, '.', ',');
+        $amount = number_format((float) $value, 2, '.', ',');
+        return $currency === '' ? $amount : $currency . ' ' . $amount;
+    }
+
+    private static function directionLabel(string $direction): string
+    {
+        return $direction === FinancialDirection::PAYABLE ? __('Accounts Payable', 'safecontracts') : __('Accounts Receivable', 'safecontracts');
     }
 
     private static function statusLabel(string $status): string
