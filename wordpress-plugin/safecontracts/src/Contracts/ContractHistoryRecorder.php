@@ -11,11 +11,13 @@ final class ContractHistoryRecorder
         'safecontracts_contract_edited' => 'edited',
         'safecontracts_contract_dates_changed' => 'dates_changed',
         'safecontracts_contract_base_value_changed' => 'base_value_changed',
+        'safecontracts_contract_currency_changed' => 'currency_changed',
         'safecontracts_contract_financial_item_added' => 'financial_item_added',
         'safecontracts_contract_adjustment_added' => 'adjustment_added',
         'safecontracts_contract_attachment_added' => 'attachment_added',
         'safecontracts_contract_attachment_removed' => 'attachment_removed',
         'safecontracts_contract_customer_assigned' => 'customer_assigned',
+        'safecontracts_contract_counterparty_assigned' => 'counterparty_assigned',
         'safecontracts_contract_accountant_assigned' => 'accountant_assigned',
         'safecontracts_contract_status_changed' => 'status_changed',
     ];
