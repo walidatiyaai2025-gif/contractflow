@@ -121,7 +121,8 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
             const SizedBox(height: 180),
             Center(
               child: Text(
-                  l10n.t('No follow-up items match the authorized filters.')),
+                l10n.t('No follow-up items match the authorized filters.'),
+              ),
             ),
           ],
         ),
@@ -143,7 +144,8 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
                 return Card(
                   child: ListTile(
                     title: Text(
-                        item.reference ?? l10n.paymentNumber(item.paymentId)),
+                      item.reference ?? l10n.paymentNumber(item.paymentId),
+                    ),
                     subtitle: Text(
                       '${l10n.t('Due')} ${item.dueDate} · ${l10n.status(item.paymentStatus)}\n'
                       '${l10n.t('Remaining')} ${l10n.money(item.remainingAmount, widget.currency)} · '
@@ -278,9 +280,8 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
       );
     } on Object catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -302,47 +303,46 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _ErrorState(message: l10n.rawMessage(_error!), onRetry: _load)
-              : _history.isEmpty
-                  ? Center(child: Text(l10n.t('No follow-up history yet.')))
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      child: ListView.separated(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _history.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final item = _history[index];
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    l10n.status(item.state),
-                                    style:
-                                        Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  Text(item.createdAt),
-                                  if (item.promisedDate != null)
-                                    Text(
-                                        '${l10n.t('Promised:')} ${item.promisedDate}'),
-                                  if (item.deferredUntil != null)
-                                    Text(
-                                        '${l10n.t('Deferred until:')} ${item.deferredUntil}'),
-                                  if (item.note != null) ...[
-                                    const SizedBox(height: 8),
-                                    Text(item.note!),
-                                  ],
-                                ],
-                              ),
+          ? _ErrorState(message: l10n.rawMessage(_error!), onRetry: _load)
+          : _history.isEmpty
+          ? Center(child: Text(l10n.t('No follow-up history yet.')))
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: _history.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final item = _history[index];
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.status(item.state),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(item.createdAt),
+                          if (item.promisedDate != null)
+                            Text('${l10n.t('Promised:')} ${item.promisedDate}'),
+                          if (item.deferredUntil != null)
+                            Text(
+                              '${l10n.t('Deferred until:')} ${item.deferredUntil}',
                             ),
-                          );
-                        },
+                          if (item.note != null) ...[
+                            const SizedBox(height: 8),
+                            Text(item.note!),
+                          ],
+                        ],
                       ),
                     ),
+                  );
+                },
+              ),
+            ),
     );
   }
 }
@@ -372,7 +372,7 @@ final class _FollowUpDialogState extends State<_FollowUpDialog> {
     'promise',
     'issue',
     'defer',
-    'escalate'
+    'escalate',
   ];
   String _operation = 'note';
   final _note = TextEditingController();
@@ -489,21 +489,21 @@ final class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              FilledButton.tonal(
-                onPressed: () => unawaited(onRetry()),
-                child: Text(context.scL10n.t('Retry')),
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          FilledButton.tonal(
+            onPressed: () => unawaited(onRetry()),
+            child: Text(context.scL10n.t('Retry')),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 String? _nullable(String value) {

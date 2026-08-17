@@ -17,10 +17,8 @@ final class SafeContractsRuntimeTranslations {
     };
   }
 
-  static void clear() => replace(const {
-        'en': <String, String>{},
-        'ar': <String, String>{},
-      });
+  static void clear() =>
+      replace(const {'en': <String, String>{}, 'ar': <String, String>{}});
 
   static String? lookup(String languageCode, String source) {
     final language = languageCode.toLowerCase() == 'ar' ? 'ar' : 'en';

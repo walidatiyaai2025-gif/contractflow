@@ -38,7 +38,8 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _date.text = '${now.year.toString().padLeft(4, '0')}-'
+    _date.text =
+        '${now.year.toString().padLeft(4, '0')}-'
         '${now.month.toString().padLeft(2, '0')}-'
         '${now.day.toString().padLeft(2, '0')}';
     unawaited(_loadMethods());
@@ -150,7 +151,8 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
     final token = widget.currency.displayToken;
     return AlertDialog(
       title: Text(
-          '${l10n.t('Record collection')} · ${l10n.paymentNumber(widget.payment.id)}'),
+        '${l10n.t('Record collection')} · ${l10n.paymentNumber(widget.payment.id)}',
+      ),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -171,8 +173,9 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
               TextField(
                 controller: _amount,
                 enabled: !_submitting,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
                   labelText: token.isEmpty
                       ? l10n.t('Amount')
@@ -195,14 +198,17 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
                 DropdownButtonFormField<int>(
                   initialValue: _methodId,
                   isExpanded: true,
-                  decoration:
-                      InputDecoration(labelText: l10n.t('Payment method')),
+                  decoration: InputDecoration(
+                    labelText: l10n.t('Payment method'),
+                  ),
                   items: _methods
                       .map(
                         (method) => DropdownMenuItem<int>(
                           value: method.id,
-                          child: Text(method.name,
-                              overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            method.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       )
                       .toList(growable: false),
@@ -264,8 +270,9 @@ bool _validPositiveMoney(String value) {
   final normalized = value.trim();
   if (normalized.isEmpty || normalized.length > 32) return false;
   if (!RegExp(r'^\d+(?:\.\d{1,2})?$').hasMatch(normalized)) return false;
-  final digits =
-      normalized.replaceAll('.', '').replaceFirst(RegExp(r'^0+'), '');
+  final digits = normalized
+      .replaceAll('.', '')
+      .replaceFirst(RegExp(r'^0+'), '');
   return digits.isNotEmpty;
 }
 

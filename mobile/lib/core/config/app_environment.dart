@@ -1,10 +1,7 @@
 enum AppEnvironmentName { local, staging, production }
 
 final class AppEnvironment {
-  AppEnvironment._({
-    required this.name,
-    required this.apiBaseUri,
-  });
+  AppEnvironment._({required this.name, required this.apiBaseUri});
 
   final AppEnvironmentName name;
   final Uri apiBaseUri;
@@ -29,8 +26,8 @@ final class AppEnvironment {
       'staging' => AppEnvironmentName.staging,
       'production' => AppEnvironmentName.production,
       _ => throw FormatException(
-          'Unsupported SafeContracts environment: $name',
-        ),
+        'Unsupported SafeContracts environment: $name',
+      ),
     };
 
     final uri = Uri.tryParse(apiBaseUrl.trim());

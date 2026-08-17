@@ -43,7 +43,8 @@ final class SafeContractsLocalizations {
 
   String status(String value) {
     final normalized = value.trim().toLowerCase();
-    final english = <String, String>{
+    final english =
+        <String, String>{
           'draft': 'Draft',
           'active': 'Active',
           'completed': 'Completed',
@@ -77,9 +78,9 @@ final class SafeContractsLocalizations {
   }
 
   String pageShown(int page, int count) => template(
-        'Page {page} • {count} shown',
-        <String, Object>{'page': page, 'count': count},
-      );
+    'Page {page} • {count} shown',
+    <String, Object>{'page': page, 'count': count},
+  );
 
   String pageNumber(int page) =>
       template('Page {page}', <String, Object>{'page': page});
@@ -93,20 +94,14 @@ final class SafeContractsLocalizations {
   String contractNumber(int id) =>
       template('Contract #{id}', <String, Object>{'id': id});
 
-  String collectionRecorded(int id) => template(
-        'Collection #{id} recorded.',
-        <String, Object>{'id': id},
-      );
+  String collectionRecorded(int id) =>
+      template('Collection #{id} recorded.', <String, Object>{'id': id});
 
-  String followUpRecorded(int id) => template(
-        'Follow-up #{id} recorded.',
-        <String, Object>{'id': id},
-      );
+  String followUpRecorded(int id) =>
+      template('Follow-up #{id} recorded.', <String, Object>{'id': id});
 
-  String loadingCustomer(int id) => template(
-        'Loading customer #{id}…',
-        <String, Object>{'id': id},
-      );
+  String loadingCustomer(int id) =>
+      template('Loading customer #{id}…', <String, Object>{'id': id});
 
   String rawMessage(String message) => t(message);
 }
@@ -134,8 +129,8 @@ String _twoDecimalMoney(String rawValue) {
   final sign = rawSign == '-' && !isZero
       ? '-'
       : rawSign == '+'
-          ? '+'
-          : '';
+      ? '+'
+      : '';
   return '$sign$whole.${cents.toString().padLeft(2, '0')}';
 }
 
@@ -148,10 +143,8 @@ final class _SafeContractsLocalizationsDelegate
   const _SafeContractsLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) =>
-      SafeContractsLocalizations.supportedLocales.any(
-        (supported) => supported.languageCode == locale.languageCode,
-      );
+  bool isSupported(Locale locale) => SafeContractsLocalizations.supportedLocales
+      .any((supported) => supported.languageCode == locale.languageCode);
 
   @override
   Future<SafeContractsLocalizations> load(Locale locale) =>
@@ -178,8 +171,7 @@ const Map<String, String> _arabic = <String, String>{
   'Retry session': 'إعادة محاولة الجلسة',
   'SafeContracts mobile is unavailable.':
       'تطبيق SafeContracts غير متاح حالياً.',
-  'Remote mobile configuration is unavailable. Safe defaults are active.':
-      'تعذر تحميل إعدادات الموبايل من الخادم. يتم استخدام الإعدادات الآمنة الافتراضية.',
+  'Remote mobile configuration is unavailable. Safe defaults are active.': 'تعذر تحميل إعدادات الموبايل من الخادم. يتم استخدام الإعدادات الآمنة الافتراضية.',
   'Sign in with your WordPress username and password':
       'سجّل الدخول باسم مستخدم وكلمة مرور WordPress',
   'Username': 'اسم المستخدم',
@@ -302,8 +294,7 @@ const Map<String, String> _arabic = <String, String>{
   'Select a valid responsible accountant.': 'اختر محاسباً مسؤولاً صالحاً.',
   'Financial values': 'القيم المالية',
   'Base value': 'القيمة الأساسية',
-  'Financial values are formatted to two decimal places for display. Status and amounts remain server-authoritative; the mobile app does not recalculate them.':
-      'يتم تنسيق القيم المالية إلى منزلتين عشريتين للعرض. تظل الحالة والمبالغ معتمدة من الخادم، ولا يعيد تطبيق الموبايل حسابها.',
+  'Financial values are formatted to two decimal places for display. Status and amounts remain server-authoritative; the mobile app does not recalculate them.': 'يتم تنسيق القيم المالية إلى منزلتين عشريتين للعرض. تظل الحالة والمبالغ معتمدة من الخادم، ولا يعيد تطبيق الموبايل حسابها.',
   'This contract is read-only for the current session.':
       'هذا العقد للقراءة فقط في الجلسة الحالية.',
   'Contract details are unavailable.': 'تفاصيل العقد غير متاحة.',
@@ -311,12 +302,9 @@ const Map<String, String> _arabic = <String, String>{
   'Start date YYYY-MM-DD': 'تاريخ البداية YYYY-MM-DD',
   'End date YYYY-MM-DD': 'تاريخ النهاية YYYY-MM-DD',
   'Save supported fields': 'حفظ الحقول المدعومة',
-  'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.':
-      'الحالة والتكليف والقيم المالية غير قابلة للتعديل هنا. تظل الصلاحيات والتحقق وسجل التدقيق على الخادم هي المرجع.',
-  'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.':
-      'الحالة والقيم المالية غير قابلة للتعديل هنا. تعيين المحاسب المسؤول خاضع لصلاحيات الخادم وسجل التدقيق.',
-  'Contract fields are read-only for this session. Responsible accountant assignment remains server-authorized and audited.':
-      'حقول العقد للقراءة فقط في هذه الجلسة. يظل تعيين المحاسب المسؤول خاضعاً لصلاحيات الخادم وسجل التدقيق.',
+  'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.': 'الحالة والتكليف والقيم المالية غير قابلة للتعديل هنا. تظل الصلاحيات والتحقق وسجل التدقيق على الخادم هي المرجع.',
+  'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.': 'الحالة والقيم المالية غير قابلة للتعديل هنا. تعيين المحاسب المسؤول خاضع لصلاحيات الخادم وسجل التدقيق.',
+  'Contract fields are read-only for this session. Responsible accountant assignment remains server-authorized and audited.': 'حقول العقد للقراءة فقط في هذه الجلسة. يظل تعيين المحاسب المسؤول خاضعاً لصلاحيات الخادم وسجل التدقيق.',
   'Contract editing is not authorized for this session.':
       'تعديل العقود غير مسموح به في هذه الجلسة.',
   'Contract number must contain 1 to 100 characters.':
@@ -345,8 +333,7 @@ const Map<String, String> _arabic = <String, String>{
   'Paid amount': 'المبلغ المدفوع',
   'Remaining amount': 'المبلغ المتبقي',
   'Contract archived': 'العقد مؤرشف',
-  'Dates, balances and status are server-authoritative. Mobile does not recalculate receivables.':
-      'التواريخ والأرصدة والحالة معتمدة من الخادم. تطبيق الموبايل لا يعيد حساب المستحقات.',
+  'Dates, balances and status are server-authoritative. Mobile does not recalculate receivables.': 'التواريخ والأرصدة والحالة معتمدة من الخادم. تطبيق الموبايل لا يعيد حساب المستحقات.',
   'Edit expected payment date': 'تعديل تاريخ الدفع المتوقع',
   'Record collection': 'تسجيل تحصيل',
   'Unable to load payments': 'تعذر تحميل الدفعات',
@@ -358,8 +345,7 @@ const Map<String, String> _arabic = <String, String>{
   'Reference (optional)': 'المرجع (اختياري)',
   'Proof media ID (optional)': 'رقم مرفق الإثبات (اختياري)',
   'Retry methods': 'إعادة تحميل طرق الدفع',
-  'The server validates scope, payment balance, settlement status and audit history. Mobile performs input-shape checks only.':
-      'يتحقق الخادم من الصلاحيات ورصيد الدفعة وحالة التسوية وسجل التدقيق. تطبيق الموبايل يتحقق من شكل الإدخال فقط.',
+  'The server validates scope, payment balance, settlement status and audit history. Mobile performs input-shape checks only.': 'يتحقق الخادم من الصلاحيات ورصيد الدفعة وحالة التسوية وسجل التدقيق. تطبيق الموبايل يتحقق من شكل الإدخال فقط.',
   'No active payment methods are available.': 'لا توجد طرق دفع نشطة متاحة.',
   'Enter a positive amount with up to 2 decimal places.':
       'أدخل مبلغاً موجباً بحد أقصى منزلتين عشريتين.',
@@ -391,8 +377,7 @@ const Map<String, String> _arabic = <String, String>{
   'Notifications are unavailable.': 'الإشعارات غير متاحة.',
   'No notifications are available for this account.':
       'لا توجد إشعارات متاحة لهذا الحساب.',
-  'The workbook is generated by SafeContracts on the server using your current authorized dashboard filters.':
-      'يتم إنشاء ملف Excel على خادم SafeContracts باستخدام فلاتر لوحة التحكم الحالية المسموح بها.',
+  'The workbook is generated by SafeContracts on the server using your current authorized dashboard filters.': 'يتم إنشاء ملف Excel على خادم SafeContracts باستخدام فلاتر لوحة التحكم الحالية المسموح بها.',
   'Current filters': 'الفلاتر الحالية',
   'Any date': 'أي تاريخ',
   'Generating Excel…': 'جارٍ إنشاء ملف Excel…',
@@ -429,8 +414,7 @@ const Map<String, String> _arabic = <String, String>{
   'FCM token acquired': 'تم الحصول على رمز FCM',
   'Backend registration': 'التسجيل على الخادم',
   'Diagnostic code': 'كود التشخيص',
-  'Android notification permission is denied. The device can still register, but notification display remains blocked until permission is enabled.':
-      'إذن إشعارات Android مرفوض. يمكن تسجيل الجهاز، لكن عرض الإشعارات سيظل متوقفاً حتى يتم السماح بالإذن.',
+  'Android notification permission is denied. The device can still register, but notification display remains blocked until permission is enabled.': 'إذن إشعارات Android مرفوض. يمكن تسجيل الجهاز، لكن عرض الإشعارات سيظل متوقفاً حتى يتم السماح بالإذن.',
   'Retry device registration': 'إعادة محاولة تسجيل الجهاز',
   'Loading device state…': 'جارٍ تحميل حالة الجهاز…',
   'Device state is unavailable.': 'حالة الجهاز غير متاحة.',

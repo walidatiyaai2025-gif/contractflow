@@ -91,8 +91,8 @@ final class ProfilePushSection extends StatelessWidget {
                 FilledButton.tonalIcon(
                   onPressed:
                       status.backendState == MobilePushBackendState.registering
-                          ? null
-                          : () => unawaited(_retry()),
+                      ? null
+                      : () => unawaited(_retry()),
                   icon: const Icon(Icons.refresh_rounded),
                   label: Text(l10n.t('Retry device registration')),
                 ),
@@ -139,8 +139,9 @@ final class _PushMessage extends StatelessWidget {
           background: healthy
               ? SafeContractsVisual.greenSoft
               : SafeContractsVisual.amberSoft,
-          foreground:
-              healthy ? SafeContractsVisual.green : SafeContractsVisual.amber,
+          foreground: healthy
+              ? SafeContractsVisual.green
+              : SafeContractsVisual.amber,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -149,17 +150,15 @@ final class _PushMessage extends StatelessWidget {
             children: [
               Text(
                 profileCopy(context, englishTitle, arabicTitle),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(context).textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
               if (englishSubtitle != null && arabicSubtitle != null) ...[
                 const SizedBox(height: 3),
                 Text(
                   profileCopy(context, englishSubtitle!, arabicSubtitle!),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SafeContractsVisual.muted,
-                      ),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: SafeContractsVisual.muted),
                 ),
               ],
             ],
@@ -183,18 +182,17 @@ final class _KeyValue extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SafeContractsVisual.muted,
-                ),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: SafeContractsVisual.muted),
           ),
         ),
         const SizedBox(width: 12),
         Text(
           value,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SafeContractsVisual.ink,
-                fontWeight: FontWeight.w800,
-              ),
+            color: SafeContractsVisual.ink,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ],
     );

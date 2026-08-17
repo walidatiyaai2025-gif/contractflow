@@ -4,14 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('SC-MOBILE-056 visual identity is shared across shell and pages', () {
-    final design =
-        File('lib/features/ui/safecontracts_design.dart').readAsStringSync();
-    final layout =
-        File('lib/features/ui/mobile_layout.dart').readAsStringSync();
-    final shell =
-        File('lib/features/navigation/app_shell.dart').readAsStringSync();
-    final brand =
-        File('lib/core/branding/safe_contracts_brand.dart').readAsStringSync();
+    final design = File('lib/features/ui/safecontracts_design.dart')
+        .readAsStringSync();
+    final layout = File('lib/features/ui/mobile_layout.dart')
+        .readAsStringSync();
+    final shell = File('lib/features/navigation/app_shell.dart')
+        .readAsStringSync();
+    final brand = File('lib/core/branding/safe_contracts_brand.dart')
+        .readAsStringSync();
 
     expect(design, contains('SafeContractsBackdrop'));
     expect(design, contains('_TopographicPainter'));

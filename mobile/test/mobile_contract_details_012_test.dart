@@ -11,26 +11,28 @@ import 'package:safecontracts_mobile/features/contracts/contracts.dart';
 import 'fake_api_transport.dart';
 
 void main() {
-  test('SC-P9-012 direct detail preserves server status and base value',
-      () async {
-    final transport = FakeApiTransport(_detailHandler);
-    final controller = _controller(transport, canEdit: true);
+  test(
+    'SC-P9-012 direct detail preserves server status and base value',
+    () async {
+      final transport = FakeApiTransport(_detailHandler);
+      final controller = _controller(transport, canEdit: true);
 
-    await controller.openContract(70);
+      await controller.openContract(70);
 
-    expect(controller.detailState, ContractDetailLoadState.ready);
-    expect(controller.selectedContractId, 70);
-    final contract = controller.selectedContract!;
-    expect(contract.contractNumber, 'SC-70');
-    expect(contract.status, 'server_detail_status');
-    expect(contract.baseValue, '1000.5000');
-    expect(contract.customerName, 'Alpha Customer');
-    expect(contract.accountantUserId, 42);
-    expect(contract.isArchived, isFalse);
-    expect(transport.requests, hasLength(1));
-    expect(transport.requests.single.uri.path, endsWith('/contracts/70'));
-    controller.dispose();
-  });
+      expect(controller.detailState, ContractDetailLoadState.ready);
+      expect(controller.selectedContractId, 70);
+      final contract = controller.selectedContract!;
+      expect(contract.contractNumber, 'SC-70');
+      expect(contract.status, 'server_detail_status');
+      expect(contract.baseValue, '1000.5000');
+      expect(contract.customerName, 'Alpha Customer');
+      expect(contract.accountantUserId, 42);
+      expect(contract.isArchived, isFalse);
+      expect(transport.requests, hasLength(1));
+      expect(transport.requests.single.uri.path, endsWith('/contracts/70'));
+      controller.dispose();
+    },
+  );
 
   test('SC-P9-012 maps direct endpoint not-found distinctly', () async {
     final controller = _controller(FakeApiTransport(_detailHandler));
@@ -82,8 +84,9 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('SC-P9-012 renders direct detail and edit action by capability',
-      (tester) async {
+  testWidgets('SC-P9-012 renders direct detail and edit action by capability', (
+    tester,
+  ) async {
     final transport = FakeApiTransport(_detailHandler);
     final controller = _controller(transport, canEdit: true);
     int? editContractId;
@@ -116,45 +119,48 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('SC-P9-012 exposes responsible accountant action for assign-only',
-      (tester) async {
-    final controller = _controller(
-      FakeApiTransport(_detailHandler),
-      canEdit: false,
-    );
-    int? actionContractId;
+  testWidgets(
+    'SC-P9-012 exposes responsible accountant action for assign-only',
+    (tester) async {
+      final controller = _controller(
+        FakeApiTransport(_detailHandler),
+        canEdit: false,
+      );
+      int? actionContractId;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ContractDetailsScreen(
-          controller: controller,
-          contractId: 70,
-          onEditContract: (id) => actionContractId = id,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ContractDetailsScreen(
+            controller: controller,
+            contractId: 70,
+            onEditContract: (id) => actionContractId = id,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Edit contract'), findsNothing);
-    expect(find.text('Responsible accountant'), findsOneWidget);
-    expect(
-      find.text('This contract is read-only for the current session.'),
-      findsNothing,
-    );
+      expect(find.text('Edit contract'), findsNothing);
+      expect(find.text('Responsible accountant'), findsOneWidget);
+      expect(
+        find.text('This contract is read-only for the current session.'),
+        findsNothing,
+      );
 
-    await tester.ensureVisible(find.text('Responsible accountant'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Responsible accountant'));
-    await tester.pump();
-    expect(actionContractId, 70);
+      await tester.ensureVisible(find.text('Responsible accountant'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Responsible accountant'));
+      await tester.pump();
+      expect(actionContractId, 70);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    controller.dispose();
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      controller.dispose();
+    },
+  );
 
-  testWidgets('SC-P9-012 hides edit mutation action without capability',
-      (tester) async {
+  testWidgets('SC-P9-012 hides edit mutation action without capability', (
+    tester,
+  ) async {
     final controller = _controller(
       FakeApiTransport(_detailHandler),
       canEdit: false,
@@ -183,8 +189,9 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('SC-P9-012 shows explicit not-found state and retry',
-      (tester) async {
+  testWidgets('SC-P9-012 shows explicit not-found state and retry', (
+    tester,
+  ) async {
     final controller = _controller(FakeApiTransport(_detailHandler));
 
     await tester.pumpWidget(

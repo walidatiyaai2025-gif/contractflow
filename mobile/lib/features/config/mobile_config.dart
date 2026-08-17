@@ -11,9 +11,9 @@ final class MobileFeatureFlags {
   });
 
   const MobileFeatureFlags.defaults()
-      : excelExport = false,
-        pushNotifications = false,
-        collectionEntry = false;
+    : excelExport = false,
+      pushNotifications = false,
+      collectionEntry = false;
 
   final bool excelExport;
   final bool pushNotifications;
@@ -23,9 +23,7 @@ final class MobileFeatureFlags {
 final class MobileCurrencyConfig {
   const MobileCurrencyConfig({required this.code, required this.symbol});
 
-  const MobileCurrencyConfig.defaults()
-      : code = '',
-        symbol = '';
+  const MobileCurrencyConfig.defaults() : code = '', symbol = '';
 
   final String code;
   final String symbol;
@@ -54,14 +52,14 @@ final class SafeContractsMobileConfig {
   });
 
   const SafeContractsMobileConfig.defaults()
-      : supportText = '',
-        defaultPageSize = 25,
-        currency = const MobileCurrencyConfig.defaults(),
-        features = const MobileFeatureFlags.defaults(),
-        translationOverrides = const {
-          'en': <String, String>{},
-          'ar': <String, String>{},
-        };
+    : supportText = '',
+      defaultPageSize = 25,
+      currency = const MobileCurrencyConfig.defaults(),
+      features = const MobileFeatureFlags.defaults(),
+      translationOverrides = const {
+        'en': <String, String>{},
+        'ar': <String, String>{},
+      };
 
   static const maxSupportTextLength = 500;
 
@@ -73,8 +71,10 @@ final class SafeContractsMobileConfig {
 
   factory SafeContractsMobileConfig.fromData(Object? value) {
     final data = apiObjectMap(value, 'mobile_config.data');
-    final features =
-        _optionalObjectMap(data['features'], 'mobile_config.features');
+    final features = _optionalObjectMap(
+      data['features'],
+      'mobile_config.features',
+    );
     final configuredPageSize = _pageSize(data['default_page_size']);
     final translationData = _optionalObjectMap(
       data['translation_overrides'],

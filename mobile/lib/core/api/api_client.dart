@@ -4,10 +4,7 @@ import '../config/app_environment.dart';
 import 'api_transport.dart';
 
 final class ApiEnvelope {
-  const ApiEnvelope({
-    required this.data,
-    required this.meta,
-  });
+  const ApiEnvelope({required this.data, required this.meta});
 
   final Object? data;
   final Map<String, Object?> meta;
@@ -104,7 +101,8 @@ final class SafeContractsApiClient {
     if (encodedBody != null &&
         utf8.encode(encodedBody).length > maxJsonRequestBytes) {
       throw const FormatException(
-          'SafeContracts API JSON request is too large.');
+        'SafeContracts API JSON request is too large.',
+      );
     }
 
     final response = await transport.send(
@@ -147,12 +145,14 @@ final class SafeContractsApiClient {
       );
     }
     final metaValue = root['meta'];
-    final meta =
-        metaValue == null ? <String, Object?>{} : _objectMap(metaValue, 'meta');
+    final meta = metaValue == null
+        ? <String, Object?>{}
+        : _objectMap(metaValue, 'meta');
     final responseVersion = meta['api_version'];
     if (responseVersion != null && responseVersion != apiVersion) {
       throw const FormatException(
-          'SafeContracts API version is not supported.');
+        'SafeContracts API version is not supported.',
+      );
     }
     return ApiEnvelope(
       data: root['data'],

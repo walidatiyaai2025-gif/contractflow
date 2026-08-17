@@ -8,10 +8,7 @@ final class DashboardRepository {
 
   Future<DashboardOverview> loadOverview(DashboardFilters filters) async {
     filters.validate();
-    final response = await client.get(
-      'dashboard',
-      query: filters.toQuery(),
-    );
+    final response = await client.get('dashboard', query: filters.toQuery());
     final overview = DashboardOverview.fromData(response.data);
     final customerId = filters.customerId;
     if (customerId != null &&

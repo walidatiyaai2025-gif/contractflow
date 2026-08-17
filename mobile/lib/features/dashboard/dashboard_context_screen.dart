@@ -128,9 +128,9 @@ final class _EntityContextBanner extends StatelessWidget {
                 Text(
                   isArabic ? 'بيانات الجهة' : 'Dashboard entity',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: SafeContractsVisual.muted,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: SafeContractsVisual.muted,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -138,22 +138,21 @@ final class _EntityContextBanner extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: SafeContractsVisual.navy,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: SafeContractsVisual.navy,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   contractNumber == null
                       ? (isArabic
-                          ? 'كل الأرقام والمؤشرات أدناه مفلترة لهذه الجهة.'
-                          : 'All figures and indicators below are filtered for this entity.')
+                            ? 'كل الأرقام والمؤشرات أدناه مفلترة لهذه الجهة.'
+                            : 'All figures and indicators below are filtered for this entity.')
                       : (isArabic
-                          ? 'العقد: $contractNumber · كل البيانات أدناه ضمن هذا النطاق.'
-                          : 'Contract: $contractNumber · all data below uses this scope.'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SafeContractsVisual.muted,
-                      ),
+                            ? 'العقد: $contractNumber · كل البيانات أدناه ضمن هذا النطاق.'
+                            : 'Contract: $contractNumber · all data below uses this scope.'),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: SafeContractsVisual.muted),
                 ),
               ],
             ),

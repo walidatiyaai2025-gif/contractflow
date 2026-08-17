@@ -6,24 +6,27 @@ import 'package:safecontracts_mobile/core/branding/safe_contracts_brand.dart';
 void main() {
   test('Alkenzy ADV uses the supplied packaged identity', () {
     expect(SafeContractsBrand.name, 'Alkenzy ADV');
-    expect(
-      SafeContractsBrand.assetPath,
-      'assets/brand/alkenzy_adv.png',
-    );
+    expect(SafeContractsBrand.assetPath, 'assets/brand/alkenzy_adv.png');
 
     final bytes = File(SafeContractsBrand.assetPath).readAsBytesSync();
     expect(bytes.length, greaterThan(4096));
-    expect(
-      bytes.take(8),
-      <int>[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
-    );
+    expect(bytes.take(8), <int>[
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a,
+    ]);
   });
 
   test('automatic app-shell refresh uses silent refresh paths', () {
-    final shell =
-        File('lib/features/navigation/app_shell.dart').readAsStringSync();
-    final silent =
-        File('lib/features/refresh/silent_refresh.dart').readAsStringSync();
+    final shell = File('lib/features/navigation/app_shell.dart')
+        .readAsStringSync();
+    final silent = File('lib/features/refresh/silent_refresh.dart')
+        .readAsStringSync();
 
     expect(shell, contains('dashboardController.refreshSilently()'));
     expect(shell, contains('customersController.refreshSilently()'));

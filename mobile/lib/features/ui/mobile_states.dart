@@ -58,9 +58,7 @@ final class SafeContractsStateView extends StatelessWidget {
         liveRegion: true,
         label: message,
         child: Center(
-          child: CircularProgressIndicator(
-            semanticsLabel: l10n.t('Loading'),
-          ),
+          child: CircularProgressIndicator(semanticsLabel: l10n.t('Loading')),
         ),
       );
     }
@@ -73,7 +71,8 @@ final class SafeContractsStateView extends StatelessWidget {
       MobileStateKind.loading => Icons.hourglass_empty,
     };
     final retry = mobileStateAllowsRetry(kind) ? onRetry : null;
-    final isUrgent = kind == MobileStateKind.error ||
+    final isUrgent =
+        kind == MobileStateKind.error ||
         kind == MobileStateKind.offline ||
         kind == MobileStateKind.forbidden;
 

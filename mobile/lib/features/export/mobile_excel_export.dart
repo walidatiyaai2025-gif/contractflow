@@ -94,10 +94,7 @@ final class MobileExcelExport {
     final rowCounts = <String, int>{};
     for (final key in allowedCountKeys) {
       if (rawCounts.containsKey(key)) {
-        rowCounts[key] = _nonNegativeInt(
-          rawCounts[key],
-          'row_counts.$key',
-        );
+        rowCounts[key] = _nonNegativeInt(rawCounts[key], 'row_counts.$key');
       }
     }
 
@@ -137,7 +134,8 @@ final class IoExcelExportSaver implements ExcelExportSaver {
 
   @override
   Future<String> save(MobileExcelExport export) async {
-    final directory = _directory ??
+    final directory =
+        _directory ??
         Directory(
           '${Directory.systemTemp.path}${Platform.pathSeparator}safecontracts_exports',
         );
@@ -276,10 +274,7 @@ int _nonNegativeInt(Object? value, String field) {
 
 String _safeFilename(String value) {
   final basename = value.replaceAll('\\', '/').split('/').last;
-  final normalized = basename.replaceAll(
-    RegExp(r'[^A-Za-z0-9._-]'),
-    '_',
-  );
+  final normalized = basename.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
   if (normalized.isEmpty ||
       normalized.length > 128 ||
       normalized == '.' ||

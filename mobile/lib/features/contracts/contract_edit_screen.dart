@@ -14,7 +14,7 @@ enum ContractEditState {
   validationError,
   forbidden,
   conflict,
-  error
+  error,
 }
 
 final class AccountantOption {
@@ -278,7 +278,8 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
         contract != null &&
         contract.id == widget.contractId) {
       final currentId = contract.accountantUserId;
-      _accountantId = currentId != null &&
+      _accountantId =
+          currentId != null &&
               _editController.accountants.any((item) => item.id == currentId)
           ? currentId
           : null;
@@ -341,7 +342,8 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
       appBar: AppBar(title: Text(l10n.t('Edit contract'))),
       body: !ready
           ? Center(
-              child: widget.contractsController.detailState ==
+              child:
+                  widget.contractsController.detailState ==
                       ContractDetailLoadState.loading
                   ? const CircularProgressIndicator()
                   : Text(
@@ -371,7 +373,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                     onChanged: busy || !_editController.canEdit
                         ? null
                         : (value) =>
-                            setState(() => _updateDates = value ?? false),
+                              setState(() => _updateDates = value ?? false),
                     title: Text(l10n.t('Update start/end dates')),
                   ),
                   if (_updateDates) ...[
@@ -439,8 +441,9 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                         icon: assigning
                             ? const SizedBox.square(
                                 dimension: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.assignment_ind_outlined),
                         label: Text(l10n.t('Assign responsible accountant')),
@@ -471,8 +474,8 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                               _editController.canAssignAccountant
                           ? 'Contract fields are read-only for this session. Responsible accountant assignment remains server-authorized and audited.'
                           : _editController.canAssignAccountant
-                              ? 'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.'
-                              : 'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.',
+                          ? 'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.'
+                          : 'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.',
                     ),
                   ),
                 ],
@@ -526,7 +529,8 @@ String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
     throw const FormatException(
-        'Accountant text field must be string or null.');
+      'Accountant text field must be string or null.',
+    );
   }
   final normalized = value.trim();
   if (normalized.length > 254) {

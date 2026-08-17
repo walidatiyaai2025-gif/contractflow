@@ -8,7 +8,7 @@ abstract interface class MobileTokenStore {
 
 final class SecureMobileTokenStore implements MobileTokenStore {
   SecureMobileTokenStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   static const _key = 'safecontracts.mobile.bearer_token';
   final FlutterSecureStorage _storage;

@@ -49,7 +49,8 @@ final class SafeContractsSession {
     );
     if (rawCapabilities.length > maxCapabilities) {
       throw const FormatException(
-          'session.capabilities contains too many entries.');
+        'session.capabilities contains too many entries.',
+      );
     }
 
     final capabilities = <String, bool>{};

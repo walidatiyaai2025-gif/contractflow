@@ -27,8 +27,9 @@ void main() {
   });
 
   test('bootstrap preloads authorized shared data before marking ready', () {
-    final bootstrap =
-        source('lib/features/bootstrap/mobile_bootstrap_controller.dart');
+    final bootstrap = source(
+      'lib/features/bootstrap/mobile_bootstrap_controller.dart',
+    );
 
     expect(bootstrap, contains('bool _bootstrapInFlight = false;'));
     expect(bootstrap, contains('if (_bootstrapInFlight) return;'));

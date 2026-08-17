@@ -82,8 +82,9 @@ final class NotificationPage {
 
   factory NotificationPage.fromEnvelope(ApiEnvelope envelope) {
     final rows = apiObjectList(envelope.data, 'notifications.data');
-    final notifications =
-        rows.map(SafeContractsNotification.fromData).toList(growable: false);
+    final notifications = rows
+        .map(SafeContractsNotification.fromData)
+        .toList(growable: false);
     final ids = <int>{};
     for (final notification in notifications) {
       if (!ids.add(notification.id)) {
@@ -99,8 +100,9 @@ final class NotificationPage {
     }
 
     return NotificationPage(
-      notifications:
-          List<SafeContractsNotification>.unmodifiable(notifications),
+      notifications: List<SafeContractsNotification>.unmodifiable(
+        notifications,
+      ),
       page: page,
       perPage: perPage,
       hasMore: _boolish(meta['has_more'], 'meta.has_more'),
@@ -125,10 +127,7 @@ final class NotificationsRepository {
     }
     final envelope = await client.get(
       'notifications',
-      query: <String, String>{
-        'page': '$page',
-        'per_page': '$perPage',
-      },
+      query: <String, String>{'page': '$page', 'per_page': '$perPage'},
     );
     return NotificationPage.fromEnvelope(envelope);
   }
@@ -142,7 +141,8 @@ final class NotificationsRepository {
     if (_positiveInt(data['id'], 'notification_read.id') != notificationId ||
         _boolish(data['is_read'], 'notification_read.is_read') != true) {
       throw const FormatException(
-          'Notification read acknowledgement is invalid.');
+        'Notification read acknowledgement is invalid.',
+      );
     }
   }
 }
@@ -229,7 +229,7 @@ final class NotificationsController extends ChangeNotifier {
   ) async {
     final visible =
         currentPage?.notifications.any((item) => item.id == notification.id) ??
-            false;
+        false;
     if (!visible) {
       return null;
     }

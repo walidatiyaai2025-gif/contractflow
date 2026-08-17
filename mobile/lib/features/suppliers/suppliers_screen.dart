@@ -121,9 +121,7 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(
-              context.scL10n.isArabic ? 'أرشفة' : 'Archive',
-            ),
+            child: Text(context.scL10n.isArabic ? 'أرشفة' : 'Archive'),
           ),
         ],
       ),
@@ -164,7 +162,8 @@ final class _SupplierToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
-    final busy = controller.state == SuppliersLoadState.loading ||
+    final busy =
+        controller.state == SuppliersLoadState.loading ||
         controller.mutationInFlight;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -206,9 +205,7 @@ final class _SupplierToolbar extends StatelessWidget {
           ),
           if (controller.canArchive)
             FilterChip(
-              label: Text(
-                l10n.isArabic ? 'إظهار المؤرشف' : 'Show archived',
-              ),
+              label: Text(l10n.isArabic ? 'إظهار المؤرشف' : 'Show archived'),
               selected: controller.includeArchived,
               onSelected: busy
                   ? null
@@ -223,9 +220,7 @@ final class _SupplierToolbar extends StatelessWidget {
             FilledButton.icon(
               onPressed: busy ? null : onCreate,
               icon: const Icon(Icons.add_business_rounded),
-              label: Text(
-                l10n.isArabic ? 'مورد جديد' : 'New supplier',
-              ),
+              label: Text(l10n.isArabic ? 'مورد جديد' : 'New supplier'),
             ),
         ],
       ),
@@ -431,9 +426,8 @@ final class _SupplierDetail extends StatelessWidget {
                 children: [
                   Text(
                     supplier.legalName,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                    style: Theme.of(context).textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   if (supplier.tradingName != null) ...[
                     const SizedBox(height: 4),
@@ -459,8 +453,14 @@ final class _SupplierDetail extends StatelessWidget {
                 label: l10n.isArabic ? 'جهة الاتصال' : 'Contact',
                 value: supplier.contactName ?? '—',
               ),
-              _SupplierField(label: l10n.t('Email'), value: supplier.email ?? '—'),
-              _SupplierField(label: l10n.t('Phone'), value: supplier.phone ?? '—'),
+              _SupplierField(
+                label: l10n.t('Email'),
+                value: supplier.email ?? '—',
+              ),
+              _SupplierField(
+                label: l10n.t('Phone'),
+                value: supplier.phone ?? '—',
+              ),
               _SupplierField(
                 label: l10n.isArabic ? 'الدولة' : 'Country',
                 value: supplier.countryCode ?? '—',
@@ -526,9 +526,8 @@ final class _SupplierDetail extends StatelessWidget {
           l10n.isArabic
               ? 'العميل يقرأ ويكتب فقط من خلال API المصرح بها؛ صلاحيات الخادم هي المرجع النهائي.'
               : 'The client reads and writes only through authorized APIs; server permissions remain authoritative.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SafeContractsVisual.muted,
-              ),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: SafeContractsVisual.muted),
         ),
       ],
     );
@@ -573,13 +572,16 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
     _email = TextEditingController(text: supplier?.email ?? '');
     _address = TextEditingController(text: supplier?.address ?? '');
     _country = TextEditingController(text: supplier?.countryCode ?? '');
-    _registration =
-        TextEditingController(text: supplier?.registrationNumber ?? '');
+    _registration = TextEditingController(
+      text: supplier?.registrationNumber ?? '',
+    );
     _tax = TextEditingController(text: supplier?.taxNumber ?? '');
     _currency = TextEditingController(text: supplier?.defaultCurrency ?? '');
     _terms = TextEditingController(text: supplier?.paymentTerms ?? '');
     _notes = TextEditingController(text: supplier?.notes ?? '');
-    _status = supplier?.status == 'archived' ? 'inactive' : supplier?.status ?? 'active';
+    _status = supplier?.status == 'archived'
+        ? 'inactive'
+        : supplier?.status ?? 'active';
   }
 
   @override
@@ -623,9 +625,8 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
                 widget.supplier == null
                     ? (l10n.isArabic ? 'مورد جديد' : 'New supplier')
                     : (l10n.isArabic ? 'تعديل المورد' : 'Edit supplier'),
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 18),
               _field(
@@ -633,15 +634,35 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
                 l10n.isArabic ? 'الاسم القانوني' : 'Legal name',
                 required: true,
               ),
-              _field(_tradingName, l10n.isArabic ? 'الاسم التجاري' : 'Trading name'),
-              _field(_internalCode, l10n.isArabic ? 'الكود الداخلي' : 'Internal code'),
+              _field(
+                _tradingName,
+                l10n.isArabic ? 'الاسم التجاري' : 'Trading name',
+              ),
+              _field(
+                _internalCode,
+                l10n.isArabic ? 'الكود الداخلي' : 'Internal code',
+              ),
               _field(_contact, l10n.isArabic ? 'جهة الاتصال' : 'Contact name'),
               _field(_phone, l10n.t('Phone')),
               _field(_email, l10n.t('Email'), email: true),
-              _field(_country, l10n.isArabic ? 'رمز الدولة' : 'Country code', maxLength: 2),
-              _field(_registration, l10n.isArabic ? 'رقم التسجيل' : 'Registration number'),
-              _field(_tax, l10n.isArabic ? 'الرقم الضريبي' : 'Tax / VAT number'),
-              _field(_currency, l10n.isArabic ? 'العملة الافتراضية' : 'Default currency', maxLength: 3),
+              _field(
+                _country,
+                l10n.isArabic ? 'رمز الدولة' : 'Country code',
+                maxLength: 2,
+              ),
+              _field(
+                _registration,
+                l10n.isArabic ? 'رقم التسجيل' : 'Registration number',
+              ),
+              _field(
+                _tax,
+                l10n.isArabic ? 'الرقم الضريبي' : 'Tax / VAT number',
+              ),
+              _field(
+                _currency,
+                l10n.isArabic ? 'العملة الافتراضية' : 'Default currency',
+                maxLength: 3,
+              ),
               _field(_terms, l10n.isArabic ? 'شروط السداد' : 'Payment terms'),
               _field(_address, l10n.isArabic ? 'العنوان' : 'Address', lines: 3),
               _field(_notes, l10n.isArabic ? 'ملاحظات' : 'Notes', lines: 3),
@@ -654,7 +675,10 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
                 items: const <DropdownMenuItem<String>>[
                   DropdownMenuItem(value: 'active', child: Text('Active')),
                   DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-                  DropdownMenuItem(value: 'suspended', child: Text('Suspended')),
+                  DropdownMenuItem(
+                    value: 'suspended',
+                    child: Text('Suspended'),
+                  ),
                 ],
                 onChanged: (value) {
                   if (value != null) setState(() => _status = value);
@@ -758,24 +782,24 @@ final class _SupplierField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 130,
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SafeContractsVisual.muted,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 130,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: SafeContractsVisual.muted,
+              fontWeight: FontWeight.w700,
             ),
-            Expanded(child: Text(value)),
-          ],
+          ),
         ),
-      );
+        Expanded(child: Text(value)),
+      ],
+    ),
+  );
 }
 
 final class _SupplierLongField extends StatelessWidget {
@@ -786,21 +810,20 @@ final class _SupplierLongField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeContractsSurface(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: SafeContractsVisual.muted,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(value),
-          ],
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge
+              ?.copyWith(color: SafeContractsVisual.muted),
         ),
-      );
+        const SizedBox(height: 6),
+        Text(value),
+      ],
+    ),
+  );
 }
 
 final class _SupplierError extends StatelessWidget {
@@ -811,22 +834,22 @@ final class _SupplierError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline_rounded, size: 44),
-              const SizedBox(height: 12),
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
-                label: Text(context.scL10n.t('Retry')),
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline_rounded, size: 44),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(context.scL10n.t('Retry')),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }

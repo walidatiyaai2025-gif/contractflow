@@ -28,13 +28,10 @@ void main() {
       'safecontracts_edit_contracts': true,
     });
 
-    expect(
-      availableMobileQuickAdds(session),
-      <MobileQuickAddType>[
-        MobileQuickAddType.customer,
-        MobileQuickAddType.payment,
-      ],
-    );
+    expect(availableMobileQuickAdds(session), <MobileQuickAddType>[
+      MobileQuickAddType.customer,
+      MobileQuickAddType.payment,
+    ]);
   });
 
   test('all create capabilities expose the complete quick add set', () {
@@ -44,14 +41,11 @@ void main() {
       'safecontracts_create_payments': true,
     });
 
-    expect(
-      availableMobileQuickAdds(session),
-      <MobileQuickAddType>[
-        MobileQuickAddType.customer,
-        MobileQuickAddType.contract,
-        MobileQuickAddType.payment,
-      ],
-    );
+    expect(availableMobileQuickAdds(session), <MobileQuickAddType>[
+      MobileQuickAddType.customer,
+      MobileQuickAddType.contract,
+      MobileQuickAddType.payment,
+    ]);
   });
 
   test('profile no longer owns CRUD entry points or raw capabilities', () {
@@ -72,21 +66,24 @@ void main() {
     expect(source, contains('My profile'));
   });
 
-  test('app shell owns the animated permission-aware quick add entry point',
-      () {
-    final source =
-        File('lib/features/navigation/app_shell.dart').readAsStringSync();
+  test(
+    'app shell owns the animated permission-aware quick add entry point',
+    () {
+      final source = File('lib/features/navigation/app_shell.dart')
+          .readAsStringSync();
 
-    expect(source, contains('availableMobileQuickAdds(widget.session)'));
-    expect(source, contains('floatingActionButton:'));
-    expect(source, contains('_QuickAddFab'));
-    expect(source, contains('_QuickAddSheet'));
-    expect(source, contains('AnimatedSwitcher'));
-    expect(source, contains('AnimatedScale'));
-  });
+      expect(source, contains('availableMobileQuickAdds(widget.session)'));
+      expect(source, contains('floatingActionButton:'));
+      expect(source, contains('_QuickAddFab'));
+      expect(source, contains('_QuickAddSheet'));
+      expect(source, contains('AnimatedSwitcher'));
+      expect(source, contains('AnimatedScale'));
+    },
+  );
 
-  testWidgets('contract quick add can reach an authorized customer on page 2',
-      (tester) async {
+  testWidgets('contract quick add can reach an authorized customer on page 2', (
+    tester,
+  ) async {
     final transport = _PagedReferenceTransport();
     final client = SafeContractsApiClient(
       environment: AppEnvironment.fromValues(

@@ -31,10 +31,7 @@ void main() {
         query: const <String, String>{'sort': 'due_date', 'order': 'asc'},
       );
 
-      expect(
-        apiObjectMap(response.data, 'data')['ok'],
-        isTrue,
-      );
+      expect(apiObjectMap(response.data, 'data')['ok'], isTrue);
       expect(response.meta['api_version'], 'v1');
       expect(transport.requests, hasLength(1));
       final request = transport.requests.single;
@@ -42,43 +39,40 @@ void main() {
       expect(request.uri.path, endsWith('/safecontracts/v1/payments'));
       expect(request.uri.queryParameters['sort'], 'due_date');
       expect(request.headers['Accept'], 'application/json');
-      expect(
-        request.headers['X-SafeContracts-Session'],
-        'opaque-test-session',
-      );
+      expect(request.headers['X-SafeContracts-Session'], 'opaque-test-session');
     });
 
-    test('maps WordPress REST failures without exposing a second auth store',
-        () async {
-      final transport = FakeApiTransport(
-        (uri) => _error(
-          403,
-          'safecontracts_forbidden',
-          'You do not have access to SafeContracts.',
-        ),
-      );
-      final client = _client(transport);
+    test(
+      'maps WordPress REST failures without exposing a second auth store',
+      () async {
+        final transport = FakeApiTransport(
+          (uri) => _error(
+            403,
+            'safecontracts_forbidden',
+            'You do not have access to SafeContracts.',
+          ),
+        );
+        final client = _client(transport);
 
-      await expectLater(
-        client.get('session'),
-        throwsA(
-          isA<SafeContractsApiException>()
-              .having((error) => error.statusCode, 'status', 403)
-              .having(
-                (error) => error.code,
-                'code',
-                'safecontracts_forbidden',
-              ),
-        ),
-      );
-    });
+        await expectLater(
+          client.get('session'),
+          throwsA(
+            isA<SafeContractsApiException>()
+                .having((error) => error.statusCode, 'status', 403)
+                .having(
+                  (error) => error.code,
+                  'code',
+                  'safecontracts_forbidden',
+                ),
+          ),
+        );
+      },
+    );
   });
 
   group('SC-P9-002 session', () {
     test('parses server capability and accountant scope metadata', () async {
-      final transport = FakeApiTransport(
-        (uri) => _ok(_sessionData()),
-      );
+      final transport = FakeApiTransport((uri) => _ok(_sessionData()));
       final controller = SessionController(_client(transport));
 
       await controller.bootstrap();
@@ -105,57 +99,61 @@ void main() {
     });
   });
 
-  test('SC-P9-003 mobile config is typed, bounded and ignores unknown fields',
-      () {
-    final config = SafeContractsMobileConfig.fromData(<String, Object?>{
-      'support_text': 'Support desk',
-      'default_page_size': 200,
-      'features': <String, Object?>{
-        'excel_export': true,
-        'push_notifications': true,
-        'collection_entry': false,
-        'future_flag': true,
-      },
-      'firebase_service_account': 'must-be-ignored',
-    });
+  test(
+    'SC-P9-003 mobile config is typed, bounded and ignores unknown fields',
+    () {
+      final config = SafeContractsMobileConfig.fromData(<String, Object?>{
+        'support_text': 'Support desk',
+        'default_page_size': 200,
+        'features': <String, Object?>{
+          'excel_export': true,
+          'push_notifications': true,
+          'collection_entry': false,
+          'future_flag': true,
+        },
+        'firebase_service_account': 'must-be-ignored',
+      });
 
-    expect(config.supportText, 'Support desk');
-    expect(config.defaultPageSize, 100);
-    expect(config.features.excelExport, isTrue);
-    expect(config.features.pushNotifications, isTrue);
-    expect(config.features.collectionEntry, isFalse);
-  });
+      expect(config.supportText, 'Support desk');
+      expect(config.defaultPageSize, 100);
+      expect(config.features.excelExport, isTrue);
+      expect(config.features.pushNotifications, isTrue);
+      expect(config.features.collectionEntry, isFalse);
+    },
+  );
 
-  test('SC-P9-004 navigation derives from capabilities instead of role names',
-      () {
-    final session = SafeContractsSession(
-      userId: 42,
-      scope: SafeContractsDataScope.assigned,
-      capabilities: const <String, bool>{
-        'safecontracts_access': true,
-        'safecontracts_view_reports': true,
-        'safecontracts_export_reports': true,
-        'safecontracts_manage_collections': false,
-        'safecontracts_manage_followups': true,
-      },
-    );
-    const config = SafeContractsMobileConfig(
-      supportText: '',
-      defaultPageSize: 25,
-      features: MobileFeatureFlags(
-        excelExport: true,
-        pushNotifications: false,
-        collectionEntry: true,
-      ),
-    );
+  test(
+    'SC-P9-004 navigation derives from capabilities instead of role names',
+    () {
+      final session = SafeContractsSession(
+        userId: 42,
+        scope: SafeContractsDataScope.assigned,
+        capabilities: const <String, bool>{
+          'safecontracts_access': true,
+          'safecontracts_view_reports': true,
+          'safecontracts_export_reports': true,
+          'safecontracts_manage_collections': false,
+          'safecontracts_manage_followups': true,
+        },
+      );
+      const config = SafeContractsMobileConfig(
+        supportText: '',
+        defaultPageSize: 25,
+        features: MobileFeatureFlags(
+          excelExport: true,
+          pushNotifications: false,
+          collectionEntry: true,
+        ),
+      );
 
-    final policy = MobileNavigationPolicy.resolve(session, config);
+      final policy = MobileNavigationPolicy.resolve(session, config);
 
-    expect(policy.destinations, contains(MobileDestination.dashboard));
-    expect(policy.destinations, contains(MobileDestination.export));
-    expect(policy.canEnterCollection, isFalse);
-    expect(policy.canManageFollowUps, isTrue);
-  });
+      expect(policy.destinations, contains(MobileDestination.dashboard));
+      expect(policy.destinations, contains(MobileDestination.export));
+      expect(policy.canEnterCollection, isFalse);
+      expect(policy.canManageFollowUps, isTrue);
+    },
+  );
 
   test('SC-P9-005 KPI values remain exact server strings', () {
     final kpis = DashboardKpis.fromData(<String, Object?>{
@@ -174,59 +172,63 @@ void main() {
   });
 
   group('SC-P9-006..008 dashboard selectors and lists', () {
-    test('customer change resets contract and loads dependent options',
-        () async {
-      final transport = FakeApiTransport(_dashboardHandler);
-      final repository = DashboardRepository(_client(transport));
-      final controller = DashboardController(
-        repository: repository,
-        config: const SafeContractsMobileConfig.defaults(),
-      );
+    test(
+      'customer change resets contract and loads dependent options',
+      () async {
+        final transport = FakeApiTransport(_dashboardHandler);
+        final repository = DashboardRepository(_client(transport));
+        final controller = DashboardController(
+          repository: repository,
+          config: const SafeContractsMobileConfig.defaults(),
+        );
 
-      await controller.load();
-      await controller.selectContract(70);
-      expect(controller.filters.contractId, 70);
+        await controller.load();
+        await controller.selectContract(70);
+        expect(controller.filters.contractId, 70);
 
-      await controller.selectCustomer(8);
+        await controller.selectCustomer(8);
 
-      expect(controller.filters.customerId, 8);
-      expect(controller.filters.contractId, isNull);
-      expect(controller.availableContracts.map((item) => item.id), <int>[80]);
-      expect(
-        transport.requests.any(
-          (request) =>
-              request.uri.path.endsWith('/filters/contracts') &&
-              request.uri.queryParameters['customer_id'] == '8',
-        ),
-        isTrue,
-      );
-      controller.dispose();
-    });
+        expect(controller.filters.customerId, 8);
+        expect(controller.filters.contractId, isNull);
+        expect(controller.availableContracts.map((item) => item.id), <int>[80]);
+        expect(
+          transport.requests.any(
+            (request) =>
+                request.uri.path.endsWith('/filters/contracts') &&
+                request.uri.queryParameters['customer_id'] == '8',
+          ),
+          isTrue,
+        );
+        controller.dispose();
+      },
+    );
 
-    test('contract and status filters propagate to server list requests',
-        () async {
-      final transport = FakeApiTransport(_dashboardHandler);
-      final controller = DashboardController(
-        repository: DashboardRepository(_client(transport)),
-        config: const SafeContractsMobileConfig.defaults(),
-      );
+    test(
+      'contract and status filters propagate to server list requests',
+      () async {
+        final transport = FakeApiTransport(_dashboardHandler);
+        final controller = DashboardController(
+          repository: DashboardRepository(_client(transport)),
+          config: const SafeContractsMobileConfig.defaults(),
+        );
 
-      await controller.load();
-      await controller.selectCustomer(8);
-      await controller.selectContract(80);
-      await controller.selectStatus('overdue');
+        await controller.load();
+        await controller.selectCustomer(8);
+        await controller.selectContract(80);
+        await controller.selectStatus('overdue');
 
-      final paymentRequests = transport.requests.where(
-        (request) => request.uri.path.endsWith('/payments'),
-      );
-      final lastPayment = paymentRequests.last.uri.queryParameters;
-      expect(lastPayment['customer_id'], '8');
-      expect(lastPayment['contract_id'], '80');
-      expect(lastPayment['status'], 'overdue');
-      expect(lastPayment['sort'], 'due_date');
-      expect(lastPayment['per_page'], '25');
-      controller.dispose();
-    });
+        final paymentRequests = transport.requests.where(
+          (request) => request.uri.path.endsWith('/payments'),
+        );
+        final lastPayment = paymentRequests.last.uri.queryParameters;
+        expect(lastPayment['customer_id'], '8');
+        expect(lastPayment['contract_id'], '80');
+        expect(lastPayment['status'], 'overdue');
+        expect(lastPayment['sort'], 'due_date');
+        expect(lastPayment['per_page'], '25');
+        controller.dispose();
+      },
+    );
 
     test('filtered list models preserve server status and balances', () async {
       final repository = DashboardRepository(

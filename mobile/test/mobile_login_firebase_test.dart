@@ -24,15 +24,12 @@ void main() {
     transport = FakeApiTransport((uri) {
       final request = transport.requests.last;
       if (uri.path.endsWith('/auth/login')) {
-        return _ok(
-          <String, Object?>{
-            'token': token,
-            'token_type': 'Bearer',
-            'expires_at': '2026-09-15T00:00:00Z',
-            'user_id': 42,
-          },
-          statusCode: 201,
-        );
+        return _ok(<String, Object?>{
+          'token': token,
+          'token_type': 'Bearer',
+          'expires_at': '2026-09-15T00:00:00Z',
+          'user_id': 42,
+        }, statusCode: 201);
       }
       if (uri.path.endsWith('/session')) {
         if (request.headers['Authorization'] != 'Bearer $token') {
@@ -145,10 +142,7 @@ ApiTransportResponse _error(int statusCode, String code, String message) {
     body: jsonEncode(<String, Object?>{
       'code': code,
       'message': message,
-      'data': <String, Object?>{
-        'status': statusCode,
-        'api_version': 'v1',
-      },
+      'data': <String, Object?>{'status': statusCode, 'api_version': 'v1'},
     }),
   );
 }

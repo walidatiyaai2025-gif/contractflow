@@ -44,15 +44,20 @@ final class FinanceSummaryRow {
     return FinanceSummaryRow(
       direction: _direction(data['financial_direction']),
       currencyCode: _currency(data['currency_code']),
-      obligationCount: _nonNegativeInt(data['obligation_count'], 'obligation_count'),
+      obligationCount: _nonNegativeInt(
+        data['obligation_count'],
+        'obligation_count',
+      ),
       originalTotal: _money(data['original_total'], 'original_total'),
       settledTotal: _money(data['settled_total'], 'settled_total'),
       outstandingTotal: _money(data['outstanding_total'], 'outstanding_total'),
       overdueTotal: _money(data['overdue_total'], 'overdue_total'),
       overdueCount: _nonNegativeInt(data['overdue_count'], 'overdue_count'),
       dueTodayTotal: _money(data['due_today_total'], 'due_today_total'),
-      dueTodayCount:
-          _nonNegativeInt(data['due_today_count'], 'due_today_count'),
+      dueTodayCount: _nonNegativeInt(
+        data['due_today_count'],
+        'due_today_count',
+      ),
       due7Total: _money(data['due_7_total'], 'due_7_total'),
       due7Count: _nonNegativeInt(data['due_7_count'], 'due_7_count'),
       due30Total: _money(data['due_30_total'], 'due_30_total'),
@@ -80,15 +85,23 @@ final class FinanceAgingRow {
   factory FinanceAgingRow.fromData(Object? value) {
     final data = apiObjectMap(value, 'finance.aging');
     final bucket = _requiredText(data['aging_bucket'], 'aging_bucket');
-    if (!const <String>{'current', '1-30', '31-60', '61-90', '90+'}
-        .contains(bucket)) {
+    if (!const <String>{
+      'current',
+      '1-30',
+      '31-60',
+      '61-90',
+      '90+',
+    }.contains(bucket)) {
       throw const FormatException('finance aging bucket is invalid.');
     }
     return FinanceAgingRow(
       direction: _direction(data['financial_direction']),
       currencyCode: _currency(data['currency_code']),
       bucket: bucket,
-      obligationCount: _nonNegativeInt(data['obligation_count'], 'obligation_count'),
+      obligationCount: _nonNegativeInt(
+        data['obligation_count'],
+        'obligation_count',
+      ),
       outstandingTotal: _money(data['outstanding_total'], 'outstanding_total'),
     );
   }
@@ -122,7 +135,10 @@ final class FinanceCashFlowRow {
       direction: _direction(data['financial_direction']),
       currencyCode: _currency(data['currency_code']),
       kind: kind,
-      obligationCount: _nonNegativeInt(data['obligation_count'], 'obligation_count'),
+      obligationCount: _nonNegativeInt(
+        data['obligation_count'],
+        'obligation_count',
+      ),
       expectedAmount: _money(data['expected_amount'], 'expected_amount'),
     );
   }
@@ -208,26 +224,36 @@ final class FinanceObligation {
     return FinanceObligation(
       id: _positiveInt(data['id'], 'obligation.id'),
       contractId: _positiveInt(data['contract_id'], 'obligation.contract_id'),
-      contractNumber:
-          _requiredText(data['contract_number'], 'obligation.contract_number'),
+      contractNumber: _requiredText(
+        data['contract_number'],
+        'obligation.contract_number',
+      ),
       counterpartyType: type,
-      counterpartyId:
-          _positiveInt(data['counterparty_id'], 'obligation.counterparty_id'),
-      counterpartyName:
-          _requiredText(data['counterparty_name'], 'obligation.counterparty_name'),
+      counterpartyId: _positiveInt(
+        data['counterparty_id'],
+        'obligation.counterparty_id',
+      ),
+      counterpartyName: _requiredText(
+        data['counterparty_name'],
+        'obligation.counterparty_name',
+      ),
       direction: _direction(data['financial_direction']),
       currencyCode: _currency(data['currency_code']),
       sequenceNo: _positiveInt(data['sequence_no'], 'obligation.sequence_no'),
       reference: _optionalText(data['reference']),
       dueDate: _date(data['due_date'], 'obligation.due_date'),
-      expectedPaymentDate:
-          _optionalDate(data['expected_payment_date'], 'expected_payment_date'),
+      expectedPaymentDate: _optionalDate(
+        data['expected_payment_date'],
+        'expected_payment_date',
+      ),
       originalAmount: _money(data['original_amount'], 'original_amount'),
       settledAmount: _money(data['settled_amount'], 'settled_amount'),
       remainingAmount: _money(data['remaining_amount'], 'remaining_amount'),
       status: _requiredText(data['status'], 'obligation.status').toLowerCase(),
-      agingBucket:
-          _requiredText(data['aging_bucket'], 'obligation.aging_bucket'),
+      agingBucket: _requiredText(
+        data['aging_bucket'],
+        'obligation.aging_bucket',
+      ),
     );
   }
 }
@@ -254,15 +280,20 @@ final class FinanceOverview {
     final directions = _stringList(data['directions'], 'finance.directions');
     for (final direction in directions) {
       if (!const <String>{'payable', 'receivable'}.contains(direction)) {
-        throw const FormatException('finance directions contain an invalid value.');
+        throw const FormatException(
+          'finance directions contain an invalid value.',
+        );
       }
     }
     return FinanceOverview(
       directions: List<String>.unmodifiable(directions),
       summary: _models(data['summary'], FinanceSummaryRow.fromData, 'summary'),
       aging: _models(data['aging'], FinanceAgingRow.fromData, 'aging'),
-      cashFlow:
-          _models(data['cash_flow'], FinanceCashFlowRow.fromData, 'cash_flow'),
+      cashFlow: _models(
+        data['cash_flow'],
+        FinanceCashFlowRow.fromData,
+        'cash_flow',
+      ),
       actionCenter: _models(
         data['action_center'],
         FinanceActionItem.fromData,
@@ -330,14 +361,13 @@ final class FinanceRepository {
     required String currencyCode,
     required String status,
     required String agingBucket,
-  }) =>
-      <String, String>{
-        if (direction.trim().isNotEmpty) 'direction': direction.trim(),
-        if (currencyCode.trim().isNotEmpty)
-          'currency_code': currencyCode.trim().toUpperCase(),
-        if (status.trim().isNotEmpty) 'status': status.trim(),
-        if (agingBucket.trim().isNotEmpty) 'aging_bucket': agingBucket.trim(),
-      };
+  }) => <String, String>{
+    if (direction.trim().isNotEmpty) 'direction': direction.trim(),
+    if (currencyCode.trim().isNotEmpty)
+      'currency_code': currencyCode.trim().toUpperCase(),
+    if (status.trim().isNotEmpty) 'status': status.trim(),
+    if (agingBucket.trim().isNotEmpty) 'aging_bucket': agingBucket.trim(),
+  };
 }
 
 final class FinanceController extends ChangeNotifier {
@@ -363,9 +393,9 @@ final class FinanceController extends ChangeNotifier {
   bool get canAccess => canViewPayables || canViewReceivables;
 
   List<String> get allowedDirections => <String>[
-        if (canViewReceivables) 'receivable',
-        if (canViewPayables) 'payable',
-      ];
+    if (canViewReceivables) 'receivable',
+    if (canViewPayables) 'payable',
+  ];
 
   Future<void> ensureLoaded() async {
     if (state == FinanceLoadState.idle) await refresh();
@@ -434,7 +464,8 @@ final class FinanceController extends ChangeNotifier {
 
   Future<void> setDirection(String value) async {
     final normalized = value.trim().toLowerCase();
-    if (normalized.isNotEmpty && !allowedDirections.contains(normalized)) return;
+    if (normalized.isNotEmpty && !allowedDirections.contains(normalized))
+      return;
     direction = normalized;
     currencyCode = '';
     status = '';
@@ -549,7 +580,9 @@ String _requiredText(Object? value, String field) {
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
-    throw const FormatException('finance optional text must be string or null.');
+    throw const FormatException(
+      'finance optional text must be string or null.',
+    );
   }
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;

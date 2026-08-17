@@ -116,22 +116,16 @@ final class _MobileRecordEditorScreenState
       _loadError = null;
     });
     try {
-      final customers = await CustomersRepository(widget.client).loadPage(
-        page: 1,
-        perPage: 100,
-        order: 'asc',
-      );
+      final customers = await CustomersRepository(widget.client)
+          .loadPage(page: 1, perPage: 100, order: 'asc');
       final contracts = await ContractsRepository(widget.client).loadPage(
         page: 1,
         perPage: 100,
         filters: const ContractsFilters(),
         sort: ContractSortOption.newest,
       );
-      final payments = await PaymentsRepository(widget.client).loadPage(
-        page: 1,
-        perPage: 100,
-        filters: const DashboardFilters(),
-      );
+      final payments = await PaymentsRepository(widget.client)
+          .loadPage(page: 1, perPage: 100, filters: const DashboardFilters());
       var accountants = const <_AccountantOption>[];
       if (_canAssignContracts) {
         final envelope = await widget.client.get('reference-data');
@@ -140,8 +134,9 @@ final class _MobileRecordEditorScreenState
           data['accountants'],
           'reference-data.accountants',
         );
-        accountants =
-            rows.map(_AccountantOption.fromData).toList(growable: false);
+        accountants = rows
+            .map(_AccountantOption.fromData)
+            .toList(growable: false);
       }
       if (!mounted) return;
       setState(() {
@@ -178,14 +173,10 @@ final class _MobileRecordEditorScreenState
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _loadError != null
-                ? _LoadError(message: _loadError!, onRetry: _load)
-                : TabBarView(
-                    children: [
-                      _customerTab(),
-                      _contractTab(),
-                      _paymentTab(),
-                    ],
-                  ),
+            ? _LoadError(message: _loadError!, onRetry: _load)
+            : TabBarView(
+                children: [_customerTab(), _contractTab(), _paymentTab()],
+              ),
       ),
     );
   }
@@ -264,9 +255,7 @@ final class _MobileRecordEditorScreenState
         controller: _customerPhone,
         enabled: !editing || _customerId != null,
         keyboardType: TextInputType.phone,
-        decoration: InputDecoration(
-          labelText: _t(context, 'Phone', 'الهاتف'),
-        ),
+        decoration: InputDecoration(labelText: _t(context, 'Phone', 'الهاتف')),
       ),
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
@@ -349,10 +338,8 @@ final class _MobileRecordEditorScreenState
         ),
         items: _customers
             .map(
-              (item) => DropdownMenuItem<int>(
-                value: item.id,
-                child: Text(item.name),
-              ),
+              (item) =>
+                  DropdownMenuItem<int>(value: item.id, child: Text(item.name)),
             )
             .toList(growable: false),
         onChanged: enabled && (!editing || _canAssignContracts)
@@ -386,15 +373,21 @@ final class _MobileRecordEditorScreenState
           enabled: enabled,
           decoration: InputDecoration(
             labelText: _t(
-                context, 'Start date YYYY-MM-DD', 'تاريخ البداية YYYY-MM-DD'),
+              context,
+              'Start date YYYY-MM-DD',
+              'تاريخ البداية YYYY-MM-DD',
+            ),
           ),
         ),
         TextField(
           controller: _contractEnd,
           enabled: enabled,
           decoration: InputDecoration(
-            labelText:
-                _t(context, 'End date YYYY-MM-DD', 'تاريخ النهاية YYYY-MM-DD'),
+            labelText: _t(
+              context,
+              'End date YYYY-MM-DD',
+              'تاريخ النهاية YYYY-MM-DD',
+            ),
           ),
         ),
         TextField(
@@ -408,8 +401,9 @@ final class _MobileRecordEditorScreenState
         ),
       ],
       FilledButton.icon(
-        onPressed:
-            _saving || !enabled ? null : () => unawaited(_saveContract()),
+        onPressed: _saving || !enabled
+            ? null
+            : () => unawaited(_saveContract()),
         icon: Icon(editing ? Icons.save_outlined : Icons.post_add_outlined),
         label: Text(
           editing
@@ -504,15 +498,21 @@ final class _MobileRecordEditorScreenState
         enabled: enabled,
         decoration: InputDecoration(
           labelText: _t(
-              context, 'Due date YYYY-MM-DD *', 'تاريخ الاستحقاق YYYY-MM-DD *'),
+            context,
+            'Due date YYYY-MM-DD *',
+            'تاريخ الاستحقاق YYYY-MM-DD *',
+          ),
         ),
       ),
       TextField(
         controller: _paymentExpected,
         enabled: enabled,
         decoration: InputDecoration(
-          labelText: _t(context, 'Expected date YYYY-MM-DD',
-              'تاريخ الدفع المتوقع YYYY-MM-DD'),
+          labelText: _t(
+            context,
+            'Expected date YYYY-MM-DD',
+            'تاريخ الدفع المتوقع YYYY-MM-DD',
+          ),
         ),
       ),
       TextField(
@@ -605,14 +605,16 @@ final class _MobileRecordEditorScreenState
     final name = _customerName.text.trim();
     if (name.isEmpty || name.length > 191) {
       _message(
-          _t(context, 'Enter a valid customer name.', 'أدخل اسم عميل صحيح.'));
+        _t(context, 'Enter a valid customer name.', 'أدخل اسم عميل صحيح.'),
+      );
       return;
     }
     final email = _customerEmail.text.trim();
     if (email.isNotEmpty &&
         !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      _message(_t(
-          context, 'Enter a valid email.', 'أدخل بريدًا إلكترونيًا صحيحًا.'));
+      _message(
+        _t(context, 'Enter a valid email.', 'أدخل بريدًا إلكترونيًا صحيحًا.'),
+      );
       return;
     }
     await _runSave(() async {
@@ -625,8 +627,10 @@ final class _MobileRecordEditorScreenState
         'is_active': _customerActive,
       };
       if (editing) {
-        await widget.client
-            .patch('mobile/customers/$_customerId/edit', body: body);
+        await widget.client.patch(
+          'mobile/customers/$_customerId/edit',
+          body: body,
+        );
       } else {
         await widget.client.post('mobile/customers/create', body: body);
       }
@@ -646,8 +650,13 @@ final class _MobileRecordEditorScreenState
     final editing = _contractMode == 'edit';
     final number = _contractNumber.text.trim();
     if (number.isEmpty || number.length > 100 || _contractCustomerId == null) {
-      _message(_t(context, 'Contract number and customer are required.',
-          'رقم العقد والعميل مطلوبان.'));
+      _message(
+        _t(
+          context,
+          'Contract number and customer are required.',
+          'رقم العقد والعميل مطلوبان.',
+        ),
+      );
       return;
     }
     final start = _contractStart.text.trim();
@@ -655,20 +664,31 @@ final class _MobileRecordEditorScreenState
     final base = _contractBase.text.trim();
     if (_canEditContracts &&
         (!_validNullableDate(start) || !_validNullableDate(end))) {
-      _message(_t(
-          context, 'Contract dates are invalid.', 'تواريخ العقد غير صحيحة.'));
+      _message(
+        _t(context, 'Contract dates are invalid.', 'تواريخ العقد غير صحيحة.'),
+      );
       return;
     }
     if (start.isNotEmpty && end.isNotEmpty && start.compareTo(end) > 0) {
-      _message(_t(context, 'End date cannot precede start date.',
-          'تاريخ النهاية لا يمكن أن يسبق تاريخ البداية.'));
+      _message(
+        _t(
+          context,
+          'End date cannot precede start date.',
+          'تاريخ النهاية لا يمكن أن يسبق تاريخ البداية.',
+        ),
+      );
       return;
     }
     if (_canEditContracts &&
         base.isNotEmpty &&
         !_validMoney(base, allowZero: true)) {
-      _message(_t(context, 'Enter a valid amount with up to 2 decimals.',
-          'أدخل مبلغًا صحيحًا حتى رقمين عشريين.'));
+      _message(
+        _t(
+          context,
+          'Enter a valid amount with up to 2 decimals.',
+          'أدخل مبلغًا صحيحًا حتى رقمين عشريين.',
+        ),
+      );
       return;
     }
     await _runSave(() async {
@@ -681,8 +701,10 @@ final class _MobileRecordEditorScreenState
         if (_canEditContracts && base.isNotEmpty) 'base_value': base,
       };
       if (editing) {
-        await widget.client
-            .patch('mobile/contracts/$_contractId/edit', body: body);
+        await widget.client.patch(
+          'mobile/contracts/$_contractId/edit',
+          body: body,
+        );
       } else {
         await widget.client.post('mobile/contracts/create', body: body);
       }
@@ -707,18 +729,29 @@ final class _MobileRecordEditorScreenState
     if ((!editing && _paymentContractId == null) ||
         sequence == null ||
         sequence <= 0) {
-      _message(_t(context, 'Contract and positive sequence are required.',
-          'العقد وترتيب موجب مطلوبان.'));
+      _message(
+        _t(
+          context,
+          'Contract and positive sequence are required.',
+          'العقد وترتيب موجب مطلوبان.',
+        ),
+      );
       return;
     }
     if (!_validRequiredDate(due) || !_validNullableDate(expected)) {
-      _message(_t(
-          context, 'Payment dates are invalid.', 'تواريخ الدفعة غير صحيحة.'));
+      _message(
+        _t(context, 'Payment dates are invalid.', 'تواريخ الدفعة غير صحيحة.'),
+      );
       return;
     }
     if (!_validMoney(amount, allowZero: false)) {
-      _message(_t(context, 'Enter a positive amount with up to 2 decimals.',
-          'أدخل مبلغًا موجبًا حتى رقمين عشريين.'));
+      _message(
+        _t(
+          context,
+          'Enter a positive amount with up to 2 decimals.',
+          'أدخل مبلغًا موجبًا حتى رقمين عشريين.',
+        ),
+      );
       return;
     }
     await _runSave(() async {
@@ -731,8 +764,10 @@ final class _MobileRecordEditorScreenState
         'original_amount': amount,
       };
       if (editing) {
-        await widget.client
-            .patch('mobile/payments/$_paymentId/edit', body: body);
+        await widget.client.patch(
+          'mobile/payments/$_paymentId/edit',
+          body: body,
+        );
       } else {
         await widget.client.post('mobile/payments/create', body: body);
       }
@@ -756,7 +791,8 @@ final class _MobileRecordEditorScreenState
     } on SafeContractsApiException catch (error) {
       if (mounted) {
         _message(
-            '${_t(context, 'Request failed', 'فشل الطلب')}: ${context.scL10n.rawMessage(error.message)}');
+          '${_t(context, 'Request failed', 'فشل الطلب')}: ${context.scL10n.rawMessage(error.message)}',
+        );
       }
     } on Object catch (error) {
       if (mounted) _message(error.toString());
@@ -878,11 +914,11 @@ final class _NoPermission extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(text, textAlign: TextAlign.center),
-        ),
-      );
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Text(text, textAlign: TextAlign.center),
+    ),
+  );
 }
 
 final class _LoadError extends StatelessWidget {
@@ -892,21 +928,21 @@ final class _LoadError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () => unawaited(onRetry()),
-                child: Text(_t(context, 'Retry', 'إعادة المحاولة')),
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () => unawaited(onRetry()),
+            child: Text(_t(context, 'Retry', 'إعادة المحاولة')),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 String _t(BuildContext context, String english, String arabic) {

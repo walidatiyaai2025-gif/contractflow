@@ -46,12 +46,14 @@ final class MobileExcelExportScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     _FilterValue(
                       label: l10n.t('Customer'),
-                      value: filters.customerId?.toString() ??
+                      value:
+                          filters.customerId?.toString() ??
                           l10n.t('All customers'),
                     ),
                     _FilterValue(
                       label: l10n.t('Contract'),
-                      value: filters.contractId?.toString() ??
+                      value:
+                          filters.contractId?.toString() ??
                           l10n.t('All contracts'),
                     ),
                     _FilterValue(
@@ -78,8 +80,9 @@ final class MobileExcelExportScreen extends StatelessWidget {
                   ? null
                   : () => unawaited(controller.downloadCurrentFilters()),
               icon: const Icon(Icons.file_download_outlined),
-              label:
-                  Text(l10n.t(busy ? 'Generating Excel…' : 'Download Excel')),
+              label: Text(
+                l10n.t(busy ? 'Generating Excel…' : 'Download Excel'),
+              ),
             ),
             if (busy) ...[
               const SizedBox(height: 12),
@@ -89,8 +92,9 @@ final class MobileExcelExportScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _ExportMessage(
                 icon: Icons.lock_outline,
-                message:
-                    l10n.t('Excel export is not authorized for this session.'),
+                message: l10n.t(
+                  'Excel export is not authorized for this session.',
+                ),
               ),
             ],
             if (controller.state == ExcelExportState.error &&
@@ -125,19 +129,18 @@ final class _FilterValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 96,
-              child:
-                  Text(label, style: Theme.of(context).textTheme.labelMedium),
-            ),
-            Expanded(child: Text(value)),
-          ],
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 96,
+          child: Text(label, style: Theme.of(context).textTheme.labelMedium),
         ),
-      );
+        Expanded(child: Text(value)),
+      ],
+    ),
+  );
 }
 
 final class _ExportSuccess extends StatelessWidget {
@@ -225,7 +228,9 @@ final class _ExportMessage extends StatelessWidget {
           children: [
             Icon(icon, color: color),
             const SizedBox(width: 8),
-            Expanded(child: Text(message, style: TextStyle(color: color))),
+            Expanded(
+              child: Text(message, style: TextStyle(color: color)),
+            ),
           ],
         ),
       ),

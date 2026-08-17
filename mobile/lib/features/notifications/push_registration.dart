@@ -18,10 +18,10 @@ final class MobilePushRegistrationSnapshot {
   });
 
   const MobilePushRegistrationSnapshot.initial()
-      : permission = MobilePushPermissionState.unknown,
-        tokenAcquired = false,
-        backendState = MobilePushBackendState.idle,
-        errorCode = null;
+    : permission = MobilePushPermissionState.unknown,
+      tokenAcquired = false,
+      backendState = MobilePushBackendState.idle,
+      errorCode = null;
 
   final MobilePushPermissionState permission;
   final bool tokenAcquired;
@@ -41,7 +41,7 @@ abstract interface class PushMessagingGateway {
 
 final class FirebasePushMessagingGateway implements PushMessagingGateway {
   FirebasePushMessagingGateway([FirebaseMessaging? messaging])
-      : _messagingOverride = messaging;
+    : _messagingOverride = messaging;
 
   final FirebaseMessaging? _messagingOverride;
 
@@ -80,8 +80,8 @@ final class MobilePushRegistration {
     required this.client,
     PushMessagingGateway? messaging,
     PushRetryDelay? retryDelay,
-  })  : _messaging = messaging ?? FirebasePushMessagingGateway(),
-        _retryDelay = retryDelay ?? Future<void>.delayed;
+  }) : _messaging = messaging ?? FirebasePushMessagingGateway(),
+       _retryDelay = retryDelay ?? Future<void>.delayed;
 
   static const _retrySchedule = <Duration>[
     Duration(seconds: 1),
@@ -267,10 +267,7 @@ final class MobilePushRegistration {
     try {
       await client.post(
         'devices/register',
-        body: <String, Object?>{
-          'token': token,
-          'platform': 'android',
-        },
+        body: <String, Object?>{'token': token, 'platform': 'android'},
       );
       _registeredToken = token;
       _setStatus(

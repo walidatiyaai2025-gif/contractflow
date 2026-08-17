@@ -44,9 +44,8 @@ final class ProfileDevicesSection extends StatelessWidget {
           'No registered devices are currently visible.',
           'لا توجد أجهزة مسجلة ظاهرة حاليًا.',
         ),
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: SafeContractsVisual.muted,
-            ),
+        style: Theme.of(context).textTheme.bodyMedium
+            ?.copyWith(color: SafeContractsVisual.muted),
       );
     }
     return Column(

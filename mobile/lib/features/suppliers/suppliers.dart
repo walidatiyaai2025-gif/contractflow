@@ -47,9 +47,16 @@ final class SafeContractsSupplier {
 
   factory SafeContractsSupplier.fromData(Object? value) {
     final data = apiObjectMap(value, 'supplier');
-    final status = _requiredText(data['status'], 'supplier.status').toLowerCase();
-    if (!const <String>{'active', 'inactive', 'suspended', 'archived'}
-        .contains(status)) {
+    final status = _requiredText(
+      data['status'],
+      'supplier.status',
+    ).toLowerCase();
+    if (!const <String>{
+      'active',
+      'inactive',
+      'suspended',
+      'archived',
+    }.contains(status)) {
       throw const FormatException('supplier.status is invalid.');
     }
     final currency = _optionalText(data['default_currency'])?.toUpperCase();
@@ -116,21 +123,21 @@ final class SupplierDraft {
   final String? notes;
 
   Map<String, Object?> toPayload() => <String, Object?>{
-        'legal_name': legalName.trim(),
-        'internal_code': _payloadText(internalCode),
-        'trading_name': _payloadText(tradingName),
-        'contact_name': _payloadText(contactName),
-        'phone': _payloadText(phone),
-        'email': _payloadText(email),
-        'address': _payloadText(address),
-        'country_code': _payloadText(countryCode)?.toUpperCase(),
-        'registration_number': _payloadText(registrationNumber),
-        'tax_number': _payloadText(taxNumber),
-        'default_currency': _payloadText(defaultCurrency)?.toUpperCase(),
-        'payment_terms': _payloadText(paymentTerms),
-        'status': status.trim().toLowerCase(),
-        'notes': _payloadText(notes),
-      };
+    'legal_name': legalName.trim(),
+    'internal_code': _payloadText(internalCode),
+    'trading_name': _payloadText(tradingName),
+    'contact_name': _payloadText(contactName),
+    'phone': _payloadText(phone),
+    'email': _payloadText(email),
+    'address': _payloadText(address),
+    'country_code': _payloadText(countryCode)?.toUpperCase(),
+    'registration_number': _payloadText(registrationNumber),
+    'tax_number': _payloadText(taxNumber),
+    'default_currency': _payloadText(defaultCurrency)?.toUpperCase(),
+    'payment_terms': _payloadText(paymentTerms),
+    'status': status.trim().toLowerCase(),
+    'notes': _payloadText(notes),
+  };
 }
 
 final class SuppliersRepository {
@@ -153,8 +160,9 @@ final class SuppliersRepository {
       },
     );
     final values = apiObjectList(envelope.data, 'suppliers.data');
-    final suppliers =
-        values.map(SafeContractsSupplier.fromData).toList(growable: false);
+    final suppliers = values
+        .map(SafeContractsSupplier.fromData)
+        .toList(growable: false);
     final seen = <int>{};
     for (final supplier in suppliers) {
       if (!seen.add(supplier.id)) {
@@ -397,7 +405,9 @@ String _requiredText(Object? value, String field) {
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
-    throw const FormatException('Supplier text field must be a string or null.');
+    throw const FormatException(
+      'Supplier text field must be a string or null.',
+    );
   }
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;

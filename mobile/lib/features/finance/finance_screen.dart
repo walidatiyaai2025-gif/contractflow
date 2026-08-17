@@ -104,15 +104,13 @@ final class _FinanceScreenState extends State<FinanceScreen> {
                 const SizedBox(height: 22),
               ],
               _FinanceSectionTitle(
-                eyebrow:
-                    context.scL10n.isArabic ? 'أعمار الأرصدة' : 'Balance age',
+                eyebrow: context.scL10n.isArabic
+                    ? 'أعمار الأرصدة'
+                    : 'Balance age',
                 title: context.scL10n.isArabic ? 'Aging' : 'Aging',
               ),
               const SizedBox(height: 10),
-              _AgingGrid(
-                rows: overview.aging,
-                controller: controller,
-              ),
+              _AgingGrid(rows: overview.aging, controller: controller),
               const SizedBox(height: 22),
               if (overview.cashFlow.isNotEmpty) ...[
                 _FinanceSectionTitle(
@@ -128,8 +126,7 @@ final class _FinanceScreenState extends State<FinanceScreen> {
                 const SizedBox(height: 22),
               ],
               _FinanceSectionTitle(
-                eyebrow:
-                    context.scL10n.isArabic ? 'قائمة العمل' : 'Work queue',
+                eyebrow: context.scL10n.isArabic ? 'قائمة العمل' : 'Work queue',
                 title: context.scL10n.isArabic
                     ? 'الالتزامات المالية'
                     : 'Financial obligations',
@@ -172,64 +169,63 @@ final class _FinanceHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeContractsSurface(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: SafeContractsVisual.navySoft,
-                borderRadius: BorderRadius.circular(18),
+    padding: const EdgeInsets.all(20),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            color: SafeContractsVisual.navySoft,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: const Icon(
+            Icons.account_balance_wallet_outlined,
+            color: SafeContractsVisual.navy,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.scL10n.isArabic ? 'المالية' : 'Finance',
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
-              child: const Icon(
-                Icons.account_balance_wallet_outlined,
-                color: SafeContractsVisual.navy,
+              const SizedBox(height: 5),
+              Text(
+                context.scL10n.isArabic
+                    ? 'الحسابات المدينة والدائنة منفصلة حسب الصلاحية والعملة.'
+                    : 'Accounts Receivable and Accounts Payable stay separated by authorization and currency.',
+                style: TextStyle(color: SafeContractsVisual.muted),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  Text(
-                    context.scL10n.isArabic ? 'المالية' : 'Finance',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    context.scL10n.isArabic
-                        ? 'الحسابات المدينة والدائنة منفصلة حسب الصلاحية والعملة.'
-                        : 'Accounts Receivable and Accounts Payable stay separated by authorization and currency.',
-                    style: TextStyle(color: SafeContractsVisual.muted),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (controller.canViewReceivables)
-                        _DirectionChip(direction: 'receivable'),
-                      if (controller.canViewPayables)
-                        _DirectionChip(direction: 'payable'),
-                    ],
-                  ),
+                  if (controller.canViewReceivables)
+                    _DirectionChip(direction: 'receivable'),
+                  if (controller.canViewPayables)
+                    _DirectionChip(direction: 'payable'),
                 ],
               ),
-            ),
-            IconButton(
-              tooltip: context.scL10n.t('Refresh'),
-              onPressed: controller.state == FinanceLoadState.loading
-                  ? null
-                  : () => unawaited(controller.refresh()),
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-          ],
+            ],
+          ),
         ),
-      );
+        IconButton(
+          tooltip: context.scL10n.t('Refresh'),
+          onPressed: controller.state == FinanceLoadState.loading
+              ? null
+              : () => unawaited(controller.refresh()),
+          icon: const Icon(Icons.refresh_rounded),
+        ),
+      ],
+    ),
+  );
 }
 
 final class _FinanceFilters extends StatelessWidget {
@@ -243,9 +239,9 @@ final class _FinanceFilters extends StatelessWidget {
     final currencies = <String>{
       for (final row in overview.summary) row.currencyCode,
       for (final row in overview.aging) row.currencyCode,
-    }.toList()
-      ..sort();
-    final hasFilters = controller.direction.isNotEmpty ||
+    }.toList()..sort();
+    final hasFilters =
+        controller.direction.isNotEmpty ||
         controller.currencyCode.isNotEmpty ||
         controller.status.isNotEmpty ||
         controller.agingBucket.isNotEmpty;
@@ -275,9 +271,7 @@ final class _FinanceFilters extends StatelessWidget {
             ),
           if (controller.canViewPayables)
             ChoiceChip(
-              label: Text(
-                context.scL10n.isArabic ? 'دائن AP' : 'Payable AP',
-              ),
+              label: Text(context.scL10n.isArabic ? 'دائن AP' : 'Payable AP'),
               selected: controller.direction == 'payable',
               onSelected: controller.state == FinanceLoadState.loading
                   ? null
@@ -290,19 +284,17 @@ final class _FinanceFilters extends StatelessWidget {
               onSelected: controller.state == FinanceLoadState.loading
                   ? null
                   : (selected) => unawaited(
-                        controller.setCurrency(selected ? currency : ''),
-                      ),
+                      controller.setCurrency(selected ? currency : ''),
+                    ),
             ),
           FilterChip(
-            label: Text(
-              context.scL10n.isArabic ? 'متأخر' : 'Overdue',
-            ),
+            label: Text(context.scL10n.isArabic ? 'متأخر' : 'Overdue'),
             selected: controller.status == 'overdue',
             onSelected: controller.state == FinanceLoadState.loading
                 ? null
                 : (selected) => unawaited(
-                      controller.setStatus(selected ? 'overdue' : ''),
-                    ),
+                    controller.setStatus(selected ? 'overdue' : ''),
+                  ),
           ),
           if (hasFilters)
             TextButton.icon(
@@ -338,7 +330,11 @@ final class _SummaryGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final columns = width >= 1050 ? 3 : width >= 650 ? 2 : 1;
+        final columns = width >= 1050
+            ? 3
+            : width >= 650
+            ? 2
+            : 1;
         final cardWidth = (width - ((columns - 1) * 12)) / columns;
         return Wrap(
           spacing: 12,
@@ -363,52 +359,50 @@ final class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeContractsSurface(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Expanded(child: _DirectionChip(direction: row.direction)),
-                Text(
-                  row.currencyCode,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _FinanceMetric(
-              label: context.scL10n.isArabic ? 'المتبقي' : 'Outstanding',
-              value: _amount(row.currencyCode, row.outstandingTotal),
-              emphasized: true,
-            ),
-            _FinanceMetric(
-              label: row.direction == 'payable'
-                  ? (context.scL10n.isArabic ? 'المدفوع' : 'Paid')
-                  : (context.scL10n.isArabic ? 'المستلم' : 'Received'),
-              value: _amount(row.currencyCode, row.settledTotal),
-            ),
-            _FinanceMetric(
-              label: context.scL10n.isArabic ? 'المتأخر' : 'Overdue',
-              value: _amount(row.currencyCode, row.overdueTotal),
-              alert: row.overdueCount > 0,
-            ),
-            _FinanceMetric(
-              label: context.scL10n.isArabic ? 'خلال 7 أيام' : 'Due in 7 days',
-              value: _amount(row.currencyCode, row.due7Total),
-            ),
-            const SizedBox(height: 6),
+            Expanded(child: _DirectionChip(direction: row.direction)),
             Text(
-              '${row.obligationCount} ${context.scL10n.isArabic ? 'التزام' : 'obligations'}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SafeContractsVisual.muted,
-                  ),
+              row.currencyCode,
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
           ],
         ),
-      );
+        const SizedBox(height: 14),
+        _FinanceMetric(
+          label: context.scL10n.isArabic ? 'المتبقي' : 'Outstanding',
+          value: _amount(row.currencyCode, row.outstandingTotal),
+          emphasized: true,
+        ),
+        _FinanceMetric(
+          label: row.direction == 'payable'
+              ? (context.scL10n.isArabic ? 'المدفوع' : 'Paid')
+              : (context.scL10n.isArabic ? 'المستلم' : 'Received'),
+          value: _amount(row.currencyCode, row.settledTotal),
+        ),
+        _FinanceMetric(
+          label: context.scL10n.isArabic ? 'المتأخر' : 'Overdue',
+          value: _amount(row.currencyCode, row.overdueTotal),
+          alert: row.overdueCount > 0,
+        ),
+        _FinanceMetric(
+          label: context.scL10n.isArabic ? 'خلال 7 أيام' : 'Due in 7 days',
+          value: _amount(row.currencyCode, row.due7Total),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${row.obligationCount} ${context.scL10n.isArabic ? 'التزام' : 'obligations'}',
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: SafeContractsVisual.muted),
+        ),
+      ],
+    ),
+  );
 }
 
 final class _ActionCenter extends StatelessWidget {
@@ -419,34 +413,34 @@ final class _ActionCenter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeContractsSurface(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          children: [
-            for (final item in items)
-              ListTile(
-                leading: Icon(
-                  item.kind == 'overdue'
-                      ? Icons.warning_amber_rounded
-                      : Icons.schedule_rounded,
-                  color: item.kind == 'overdue'
-                      ? SafeContractsVisual.red
-                      : SafeContractsVisual.amber,
-                ),
-                title: Text(_actionLabel(context, item)),
-                subtitle: Text(
-                  '${item.currencyCode} • ${item.count} ${context.scL10n.isArabic ? 'بنود' : 'items'}',
-                ),
-                trailing: Text(
-                  _amount(item.currencyCode, item.amount),
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                onTap: controller.state == FinanceLoadState.loading
-                    ? null
-                    : () => unawaited(controller.applyAction(item)),
-              ),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.all(10),
+    child: Column(
+      children: [
+        for (final item in items)
+          ListTile(
+            leading: Icon(
+              item.kind == 'overdue'
+                  ? Icons.warning_amber_rounded
+                  : Icons.schedule_rounded,
+              color: item.kind == 'overdue'
+                  ? SafeContractsVisual.red
+                  : SafeContractsVisual.amber,
+            ),
+            title: Text(_actionLabel(context, item)),
+            subtitle: Text(
+              '${item.currencyCode} • ${item.count} ${context.scL10n.isArabic ? 'بنود' : 'items'}',
+            ),
+            trailing: Text(
+              _amount(item.currencyCode, item.amount),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            onTap: controller.state == FinanceLoadState.loading
+                ? null
+                : () => unawaited(controller.applyAction(item)),
+          ),
+      ],
+    ),
+  );
 }
 
 final class _AgingGrid extends StatelessWidget {
@@ -501,32 +495,32 @@ final class _CashFlowList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeContractsSurface(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Column(
-          children: [
-            for (final row in rows.take(20))
-              ListTile(
-                dense: true,
-                leading: Icon(
-                  row.kind == 'inflow'
-                      ? Icons.south_west_rounded
-                      : Icons.north_east_rounded,
-                  color: row.kind == 'inflow'
-                      ? SafeContractsVisual.green
-                      : SafeContractsVisual.amber,
-                ),
-                title: Text(row.dueDate),
-                subtitle: Text(
-                  '${_directionShort(row.direction)} • ${row.currencyCode} • ${row.obligationCount}',
-                ),
-                trailing: Text(
-                  _amount(row.currencyCode, row.expectedAmount),
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Column(
+      children: [
+        for (final row in rows.take(20))
+          ListTile(
+            dense: true,
+            leading: Icon(
+              row.kind == 'inflow'
+                  ? Icons.south_west_rounded
+                  : Icons.north_east_rounded,
+              color: row.kind == 'inflow'
+                  ? SafeContractsVisual.green
+                  : SafeContractsVisual.amber,
+            ),
+            title: Text(row.dueDate),
+            subtitle: Text(
+              '${_directionShort(row.direction)} • ${row.currencyCode} • ${row.obligationCount}',
+            ),
+            trailing: Text(
+              _amount(row.currencyCode, row.expectedAmount),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 final class _ObligationList extends StatelessWidget {
@@ -584,9 +578,8 @@ final class _ObligationList extends StatelessWidget {
                     row.direction == 'payable'
                         ? (context.scL10n.isArabic ? 'دائن AP' : 'AP')
                         : (context.scL10n.isArabic ? 'مدين AR' : 'AR'),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: SafeContractsVisual.muted,
-                        ),
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(color: SafeContractsVisual.muted),
                   ),
                 ],
               ),
@@ -604,21 +597,21 @@ final class _DirectionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Chip(
-        avatar: Icon(
-          direction == 'payable'
-              ? Icons.north_east_rounded
-              : Icons.south_west_rounded,
-          size: 16,
-          color: direction == 'payable'
-              ? SafeContractsVisual.amber
-              : SafeContractsVisual.green,
-        ),
-        label: Text(
-          direction == 'payable'
-              ? (context.scL10n.isArabic ? 'دائن AP' : 'Payable AP')
-              : (context.scL10n.isArabic ? 'مدين AR' : 'Receivable AR'),
-        ),
-      );
+    avatar: Icon(
+      direction == 'payable'
+          ? Icons.north_east_rounded
+          : Icons.south_west_rounded,
+      size: 16,
+      color: direction == 'payable'
+          ? SafeContractsVisual.amber
+          : SafeContractsVisual.green,
+    ),
+    label: Text(
+      direction == 'payable'
+          ? (context.scL10n.isArabic ? 'دائن AP' : 'Payable AP')
+          : (context.scL10n.isArabic ? 'مدين AR' : 'Receivable AR'),
+    ),
+  );
 }
 
 final class _FinanceMetric extends StatelessWidget {
@@ -636,25 +629,25 @@ final class _FinanceMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(color: SafeContractsVisual.muted),
-              ),
-            ),
-            Text(
-              value,
-              style: TextStyle(
-                fontWeight: emphasized ? FontWeight.w900 : FontWeight.w700,
-                color: alert ? SafeContractsVisual.red : null,
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: SafeContractsVisual.muted),
+          ),
         ),
-      );
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: emphasized ? FontWeight.w900 : FontWeight.w700,
+            color: alert ? SafeContractsVisual.red : null,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 final class _FinanceSectionTitle extends StatelessWidget {
@@ -665,25 +658,24 @@ final class _FinanceSectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            eyebrow.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SafeContractsVisual.muted,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: .8,
-                ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        eyebrow.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: SafeContractsVisual.muted,
+          fontWeight: FontWeight.w800,
+          letterSpacing: .8,
+        ),
+      ),
+      const SizedBox(height: 3),
+      Text(
+        title,
+        style: Theme.of(context).textTheme.titleLarge
+            ?.copyWith(fontWeight: FontWeight.w800),
+      ),
+    ],
+  );
 }
 
 final class _EmptyFinance extends StatelessWidget {
@@ -693,15 +685,15 @@ final class _EmptyFinance extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeContractsSurface(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          children: [
-            const Icon(Icons.inbox_outlined),
-            const SizedBox(width: 10),
-            Expanded(child: Text(text)),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.all(18),
+    child: Row(
+      children: [
+        const Icon(Icons.inbox_outlined),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text)),
+      ],
+    ),
+  );
 }
 
 final class _FinanceError extends StatelessWidget {
@@ -712,24 +704,24 @@ final class _FinanceError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline_rounded, size: 44),
-              const SizedBox(height: 12),
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
-                label: Text(context.scL10n.t('Retry')),
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline_rounded, size: 44),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(context.scL10n.t('Retry')),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 String _amount(String currency, String amount) => '$currency $amount';
@@ -741,13 +733,14 @@ String _actionLabel(BuildContext context, FinanceActionItem item) {
       ? (context.scL10n.isArabic ? 'الدائن' : 'Payables')
       : (context.scL10n.isArabic ? 'المدين' : 'Receivables');
   return switch (item.kind) {
-    'overdue' => context.scL10n.isArabic ? '$subject المتأخر' : '$subject overdue',
-    'due_today' => context.scL10n.isArabic
-        ? '$subject المستحق اليوم'
-        : '$subject due today',
-    'due_7_days' => context.scL10n.isArabic
-        ? '$subject خلال 7 أيام'
-        : '$subject due in 7 days',
+    'overdue' =>
+      context.scL10n.isArabic ? '$subject المتأخر' : '$subject overdue',
+    'due_today' =>
+      context.scL10n.isArabic ? '$subject المستحق اليوم' : '$subject due today',
+    'due_7_days' =>
+      context.scL10n.isArabic
+          ? '$subject خلال 7 أيام'
+          : '$subject due in 7 days',
     _ => subject,
   };
 }

@@ -15,54 +15,58 @@ import 'support/safecontracts_test_harness.dart';
 
 void main() {
   group('SC-P9-020 notifications inbox', () {
-    test('loads current-user page and persists read state through REST',
-        () async {
-      final harness = SafeContractsTestHarness((uri) {
-        if (uri.path.endsWith('/notifications/91/read')) {
-          return SafeContractsTestHarness.ok(<String, Object?>{
-            'id': 91,
-            'is_read': true,
-          });
-        }
-        return SafeContractsTestHarness.ok(
-          <Object?>[_notificationData()],
-          meta: <String, Object?>{
-            'api_version': 'v1',
-            'scope': 'current_user',
-            'page': 1,
-            'per_page': 25,
-            'returned': 1,
-            'has_more': false,
-          },
+    test(
+      'loads current-user page and persists read state through REST',
+      () async {
+        final harness = SafeContractsTestHarness((uri) {
+          if (uri.path.endsWith('/notifications/91/read')) {
+            return SafeContractsTestHarness.ok(<String, Object?>{
+              'id': 91,
+              'is_read': true,
+            });
+          }
+          return SafeContractsTestHarness.ok(
+            <Object?>[_notificationData()],
+            meta: <String, Object?>{
+              'api_version': 'v1',
+              'scope': 'current_user',
+              'page': 1,
+              'per_page': 25,
+              'returned': 1,
+              'has_more': false,
+            },
+          );
+        });
+        final controller = NotificationsController(
+          repository: NotificationsRepository(harness.client),
+          pageSize: 25,
+          canAccess: true,
         );
-      });
-      final controller = NotificationsController(
-        repository: NotificationsRepository(harness.client),
-        pageSize: 25,
-        canAccess: true,
-      );
 
-      await controller.ensureLoaded();
-      expect(controller.state, NotificationsLoadState.ready);
-      final notification = controller.currentPage!.notifications.single;
-      expect(notification.id, 91);
-      expect(notification.paymentId, 21);
-      expect(controller.isRead(91), isFalse);
-      expect(harness.transport.requests.single.uri.path,
-          endsWith('/notifications'));
+        await controller.ensureLoaded();
+        expect(controller.state, NotificationsLoadState.ready);
+        final notification = controller.currentPage!.notifications.single;
+        expect(notification.id, 91);
+        expect(notification.paymentId, 21);
+        expect(controller.isRead(91), isFalse);
+        expect(
+          harness.transport.requests.single.uri.path,
+          endsWith('/notifications'),
+        );
 
-      final link = await controller.openNotification(notification);
-      expect(controller.isRead(91), isTrue);
-      expect(link?.destination, SafeContractsDeepLinkDestination.payments);
-      expect(link?.resourceId, 21);
-      expect(harness.transport.requests, hasLength(2));
-      expect(
-        harness.transport.requests.last.uri.path,
-        endsWith('/notifications/91/read'),
-      );
-      expect(harness.transport.requests.last.method, 'POST');
-      controller.dispose();
-    });
+        final link = await controller.openNotification(notification);
+        expect(controller.isRead(91), isTrue);
+        expect(link?.destination, SafeContractsDeepLinkDestination.payments);
+        expect(link?.resourceId, 21);
+        expect(harness.transport.requests, hasLength(2));
+        expect(
+          harness.transport.requests.last.uri.path,
+          endsWith('/notifications/91/read'),
+        );
+        expect(harness.transport.requests.last.method, 'POST');
+        controller.dispose();
+      },
+    );
 
     test('unauthorized inbox fails before transport access', () async {
       final harness = SafeContractsTestHarness(
@@ -223,9 +227,7 @@ void main() {
         MobileFailureKind.validation,
       );
       expect(
-        classifyMobileFailure(
-          const SafeContractsTransportException('offline'),
-        ),
+        classifyMobileFailure(const SafeContractsTransportException('offline')),
         MobileFailureKind.network,
       );
       expect(
@@ -253,94 +255,98 @@ void main() {
   });
 
   group('SC-P9-025 deterministic mobile test automation', () {
-    test('harness exercises API session config navigation without network',
-        () async {
-      final harness = SafeContractsTestHarness((uri) {
-        if (uri.path.endsWith('/session')) {
-          return SafeContractsTestHarness.ok(<String, Object?>{
-            'authenticated': true,
-            'user_id': 42,
-            'scope': 'assigned',
-            'capabilities': <String, Object?>{
-              'safecontracts_access': true,
-              'safecontracts_view_reports': false,
-              'safecontracts_export_reports': false,
-            },
-          });
-        }
-        if (uri.path.endsWith('/mobile-config')) {
-          return SafeContractsTestHarness.ok(<String, Object?>{
-            'support_text': 'Support',
-            'default_page_size': 25,
-            'features': <String, Object?>{
-              'excel_export': false,
-              'push_notifications': true,
-              'collection_entry': false,
-            },
-          });
-        }
-        return SafeContractsTestHarness.error(404, 'not_found', 'Not found');
-      });
-      final sessionController = SessionController(harness.client);
-      final configController = MobileConfigController(harness.client);
-      await sessionController.bootstrap();
-      await configController.load();
-      final policy = MobileNavigationPolicy.resolve(
-        sessionController.session!,
-        configController.config,
-      );
-      expect(sessionController.state, SessionState.authenticated);
-      expect(configController.state, MobileConfigState.ready);
-      expect(policy.destinations, contains(MobileDestination.notifications));
-      expect(harness.transport.requests, hasLength(2));
-      sessionController.dispose();
-      configController.dispose();
-    });
+    test(
+      'harness exercises API session config navigation without network',
+      () async {
+        final harness = SafeContractsTestHarness((uri) {
+          if (uri.path.endsWith('/session')) {
+            return SafeContractsTestHarness.ok(<String, Object?>{
+              'authenticated': true,
+              'user_id': 42,
+              'scope': 'assigned',
+              'capabilities': <String, Object?>{
+                'safecontracts_access': true,
+                'safecontracts_view_reports': false,
+                'safecontracts_export_reports': false,
+              },
+            });
+          }
+          if (uri.path.endsWith('/mobile-config')) {
+            return SafeContractsTestHarness.ok(<String, Object?>{
+              'support_text': 'Support',
+              'default_page_size': 25,
+              'features': <String, Object?>{
+                'excel_export': false,
+                'push_notifications': true,
+                'collection_entry': false,
+              },
+            });
+          }
+          return SafeContractsTestHarness.error(404, 'not_found', 'Not found');
+        });
+        final sessionController = SessionController(harness.client);
+        final configController = MobileConfigController(harness.client);
+        await sessionController.bootstrap();
+        await configController.load();
+        final policy = MobileNavigationPolicy.resolve(
+          sessionController.session!,
+          configController.config,
+        );
+        expect(sessionController.state, SessionState.authenticated);
+        expect(configController.state, MobileConfigState.ready);
+        expect(policy.destinations, contains(MobileDestination.notifications));
+        expect(harness.transport.requests, hasLength(2));
+        sessionController.dispose();
+        configController.dispose();
+      },
+    );
   });
 
   group('SC-P9-045 notifications inbox validation', () {
-    test('duplicate IDs, invalid scope and mismatched deep links fail closed',
-        () {
-      expect(
-        () => NotificationPage.fromEnvelope(
-          ApiEnvelope(
-            data: <Object?>[_notificationData(), _notificationData()],
-            meta: const <String, Object?>{
-              'scope': 'current_user',
-              'page': 1,
-              'per_page': 25,
-              'has_more': false,
-            },
+    test(
+      'duplicate IDs, invalid scope and mismatched deep links fail closed',
+      () {
+        expect(
+          () => NotificationPage.fromEnvelope(
+            ApiEnvelope(
+              data: <Object?>[_notificationData(), _notificationData()],
+              meta: const <String, Object?>{
+                'scope': 'current_user',
+                'page': 1,
+                'per_page': 25,
+                'has_more': false,
+              },
+            ),
           ),
-        ),
-        throwsFormatException,
-      );
-      expect(
-        () => NotificationPage.fromEnvelope(
-          ApiEnvelope(
-            data: <Object?>[_notificationData()],
-            meta: const <String, Object?>{
-              'scope': 'all',
-              'page': 1,
-              'per_page': 25,
-              'has_more': false,
-            },
+          throwsFormatException,
+        );
+        expect(
+          () => NotificationPage.fromEnvelope(
+            ApiEnvelope(
+              data: <Object?>[_notificationData()],
+              meta: const <String, Object?>{
+                'scope': 'all',
+                'page': 1,
+                'per_page': 25,
+                'has_more': false,
+              },
+            ),
           ),
-        ),
-        throwsFormatException,
-      );
-      expect(
-        () => SafeContractsNotification.fromData(
-          _notificationData(
-            deepLink: <String, Object?>{
-              'destination': 'payments',
-              'resource_id': 999,
-            },
+          throwsFormatException,
+        );
+        expect(
+          () => SafeContractsNotification.fromData(
+            _notificationData(
+              deepLink: <String, Object?>{
+                'destination': 'payments',
+                'resource_id': 999,
+              },
+            ),
           ),
-        ),
-        throwsFormatException,
-      );
-    });
+          throwsFormatException,
+        );
+      },
+    );
   });
 }
 
@@ -352,11 +358,9 @@ Map<String, Object?> _notificationData({Object? deepLink}) {
     'scheduled_for': '2026-08-15 12:00:00',
     'created_at': '2026-08-15 12:00:01',
     'is_read': false,
-    'deep_link': deepLink ??
-        <String, Object?>{
-          'destination': 'payments',
-          'resource_id': 21,
-        },
+    'deep_link':
+        deepLink ??
+        <String, Object?>{'destination': 'payments', 'resource_id': 21},
     'transport_secret': 'must-not-be-modeled',
   };
 }

@@ -59,7 +59,8 @@ final class MobileBootstrapController extends ChangeNotifier {
       final session = nextSessionController.session;
       if (nextSessionController.state != SessionState.authenticated ||
           session == null) {
-        message = nextSessionController.errorMessage ??
+        message =
+            nextSessionController.errorMessage ??
             'SafeContracts mobile access requires an authorized session.';
         state = nextSessionController.state == SessionState.error
             ? MobileBootstrapState.error
@@ -96,8 +97,9 @@ final class MobileBootstrapController extends ChangeNotifier {
         canArchive: session.can(supplierArchiveCapability),
       );
       suppliersController = suppliers;
-      final canAccessContracts =
-          policy.destinations.contains(MobileDestination.contracts);
+      final canAccessContracts = policy.destinations.contains(
+        MobileDestination.contracts,
+      );
       final contracts = ContractsController(
         repository: ContractsRepository(client),
         pageSize: config.defaultPageSize,
@@ -115,8 +117,9 @@ final class MobileBootstrapController extends ChangeNotifier {
       final notifications = NotificationsController(
         repository: NotificationsRepository(client),
         pageSize: config.defaultPageSize,
-        canAccess:
-            policy.destinations.contains(MobileDestination.notifications),
+        canAccess: policy.destinations.contains(
+          MobileDestination.notifications,
+        ),
       );
       notificationsController = notifications;
       final profile = ProfileController(ProfileRepository(client));

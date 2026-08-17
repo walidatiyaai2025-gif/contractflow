@@ -42,8 +42,10 @@ final class SafeContractsPayment {
       id: _positiveInt(data['id'], 'payment.id'),
       contractId: _positiveInt(data['contract_id'], 'payment.contract_id'),
       contractNumber: _optionalText(data['contract_number']),
-      customerId:
-          _optionalPositiveInt(data['customer_id'], 'payment.customer_id'),
+      customerId: _optionalPositiveInt(
+        data['customer_id'],
+        'payment.customer_id',
+      ),
       customerName: _optionalText(data['customer_name']),
       accountantUserId: _optionalPositiveInt(
         data['accountant_user_id'],
@@ -53,11 +55,15 @@ final class SafeContractsPayment {
       reference: _optionalText(data['reference']),
       dueDate: _requiredText(data['due_date'], 'payment.due_date'),
       expectedPaymentDate: _optionalText(data['expected_payment_date']),
-      originalAmount:
-          _moneyText(data['original_amount'], 'payment.original_amount'),
+      originalAmount: _moneyText(
+        data['original_amount'],
+        'payment.original_amount',
+      ),
       paidAmount: _moneyText(data['paid_amount'], 'payment.paid_amount'),
-      remainingAmount:
-          _moneyText(data['remaining_amount'], 'payment.remaining_amount'),
+      remainingAmount: _moneyText(
+        data['remaining_amount'],
+        'payment.remaining_amount',
+      ),
       status: _requiredText(data['status'], 'payment.status'),
       contractIsArchived: _boolish(
         data['contract_is_archived'],
@@ -125,7 +131,9 @@ final class PaymentMethodOption {
       code: _boundedText(data['code'], 'payment_method.code', 64),
       name: _boundedText(data['name'], 'payment_method.name', 191),
       displayOrder: _nonNegativeInt(
-          data['display_order'], 'payment_method.display_order'),
+        data['display_order'],
+        'payment_method.display_order',
+      ),
     );
   }
 }
@@ -140,8 +148,10 @@ final class CollectionReceipt {
     final data = apiObjectMap(value, 'collection_receipt');
     return CollectionReceipt(
       id: _positiveInt(data['id'], 'collection_receipt.id'),
-      paymentId:
-          _positiveInt(data['payment_id'], 'collection_receipt.payment_id'),
+      paymentId: _positiveInt(
+        data['payment_id'],
+        'collection_receipt.payment_id',
+      ),
     );
   }
 }
@@ -236,8 +246,11 @@ final class PaymentsRepository {
       );
     }
     final normalizedDate = _requiredDate(collectionDate, 'collection date');
-    final normalizedReference =
-        _boundedOptionalText(reference, 191, 'reference');
+    final normalizedReference = _boundedOptionalText(
+      reference,
+      191,
+      'reference',
+    );
     if (proofMediaId != null && proofMediaId <= 0) {
       throw ArgumentError('Proof media ID must be positive when supplied.');
     }
@@ -322,9 +335,7 @@ String _moneyText(Object? value, String field) {
   if (value is! String ||
       !RegExp(r'^\d+(?:\.\d{4})$').hasMatch(value) ||
       value.length > 40) {
-    throw FormatException(
-      '$field must be an exact four-decimal money string.',
-    );
+    throw FormatException('$field must be an exact four-decimal money string.');
   }
   return value;
 }

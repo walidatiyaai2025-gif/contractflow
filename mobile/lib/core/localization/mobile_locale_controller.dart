@@ -7,9 +7,7 @@ abstract interface class MobileLocaleStore {
 }
 
 final class SecureMobileLocaleStore implements MobileLocaleStore {
-  const SecureMobileLocaleStore({
-    this.storage = const FlutterSecureStorage(),
-  });
+  const SecureMobileLocaleStore({this.storage = const FlutterSecureStorage()});
 
   static const _key = 'safecontracts_mobile_language';
 
@@ -27,8 +25,8 @@ final class MobileLocaleController extends ChangeNotifier {
   MobileLocaleController({
     MobileLocaleStore? store,
     String initialLanguageCode = 'en',
-  })  : _store = store ?? const SecureMobileLocaleStore(),
-        _locale = Locale(_normalize(initialLanguageCode));
+  }) : _store = store ?? const SecureMobileLocaleStore(),
+       _locale = Locale(_normalize(initialLanguageCode));
 
   final MobileLocaleStore _store;
   Locale _locale;

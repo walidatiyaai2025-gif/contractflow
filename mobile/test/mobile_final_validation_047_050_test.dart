@@ -33,39 +33,41 @@ void main() {
       expect(snapshot.devices.last.platform, 'ios');
     });
 
-    test('rejects invalid scope, duplicate IDs and oversized device payloads',
-        () {
-      expect(
-        () => DevicesSnapshot.fromEnvelope(
-          ApiEnvelope(
-            data: <Object?>[_deviceData(1)],
-            meta: const <String, Object?>{'scope': 'all'},
-          ),
-        ),
-        throwsFormatException,
-      );
-      expect(
-        () => DevicesSnapshot.fromEnvelope(
-          ApiEnvelope(
-            data: <Object?>[_deviceData(1), _deviceData(1)],
-            meta: const <String, Object?>{'scope': 'current_user'},
-          ),
-        ),
-        throwsFormatException,
-      );
-      expect(
-        () => DevicesSnapshot.fromEnvelope(
-          ApiEnvelope(
-            data: List<Object?>.generate(
-              DevicesSnapshot.maxDevices + 1,
-              (index) => _deviceData(index + 1),
+    test(
+      'rejects invalid scope, duplicate IDs and oversized device payloads',
+      () {
+        expect(
+          () => DevicesSnapshot.fromEnvelope(
+            ApiEnvelope(
+              data: <Object?>[_deviceData(1)],
+              meta: const <String, Object?>{'scope': 'all'},
             ),
-            meta: const <String, Object?>{'scope': 'current_user'},
           ),
-        ),
-        throwsFormatException,
-      );
-    });
+          throwsFormatException,
+        );
+        expect(
+          () => DevicesSnapshot.fromEnvelope(
+            ApiEnvelope(
+              data: <Object?>[_deviceData(1), _deviceData(1)],
+              meta: const <String, Object?>{'scope': 'current_user'},
+            ),
+          ),
+          throwsFormatException,
+        );
+        expect(
+          () => DevicesSnapshot.fromEnvelope(
+            ApiEnvelope(
+              data: List<Object?>.generate(
+                DevicesSnapshot.maxDevices + 1,
+                (index) => _deviceData(index + 1),
+              ),
+              meta: const <String, Object?>{'scope': 'current_user'},
+            ),
+          ),
+          throwsFormatException,
+        );
+      },
+    );
 
     test('profile repository stays on protected devices endpoint', () async {
       final harness = SafeContractsTestHarness(
@@ -90,34 +92,38 @@ void main() {
   });
 
   group('SC-P9-048 RTL/responsive mobile UX validation', () {
-    test('recognizes Arabic locale variants and exact responsive boundaries',
-        () {
-      expect(safeContractsIsRtlLanguage('ar'), isTrue);
-      expect(safeContractsIsRtlLanguage('ar-KW'), isTrue);
-      expect(safeContractsIsRtlLanguage('AR_eg'), isTrue);
-      expect(safeContractsIsRtlLanguage('en'), isFalse);
-      expect(safeContractsBreakpoint(599), SafeContractsBreakpoint.narrow);
-      expect(safeContractsBreakpoint(600), SafeContractsBreakpoint.medium);
-      expect(safeContractsBreakpoint(1023), SafeContractsBreakpoint.medium);
-      expect(safeContractsBreakpoint(1024), SafeContractsBreakpoint.wide);
-    });
+    test(
+      'recognizes Arabic locale variants and exact responsive boundaries',
+      () {
+        expect(safeContractsIsRtlLanguage('ar'), isTrue);
+        expect(safeContractsIsRtlLanguage('ar-KW'), isTrue);
+        expect(safeContractsIsRtlLanguage('AR_eg'), isTrue);
+        expect(safeContractsIsRtlLanguage('en'), isFalse);
+        expect(safeContractsBreakpoint(599), SafeContractsBreakpoint.narrow);
+        expect(safeContractsBreakpoint(600), SafeContractsBreakpoint.medium);
+        expect(safeContractsBreakpoint(1023), SafeContractsBreakpoint.medium);
+        expect(safeContractsBreakpoint(1024), SafeContractsBreakpoint.wide);
+      },
+    );
 
-    testWidgets('direction scope follows locale without changing child content',
-        (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: SafeContractsDirectionScope(
-            languageCode: 'ar-KW',
-            child: Text('SafeContracts'),
+    testWidgets(
+      'direction scope follows locale without changing child content',
+      (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: SafeContractsDirectionScope(
+              languageCode: 'ar-KW',
+              child: Text('SafeContracts'),
+            ),
           ),
-        ),
-      );
+        );
 
-      expect(
-        Directionality.of(tester.element(find.text('SafeContracts'))),
-        TextDirection.rtl,
-      );
-    });
+        expect(
+          Directionality.of(tester.element(find.text('SafeContracts'))),
+          TextDirection.rtl,
+        );
+      },
+    );
 
     test('adaptive body rejects invalid non-positive maximum width', () {
       expect(
@@ -163,9 +169,7 @@ void main() {
         MobileFailureKind.validation,
       );
       expect(
-        classifyMobileFailure(
-          const SafeContractsTransportException('offline'),
-        ),
+        classifyMobileFailure(const SafeContractsTransportException('offline')),
         MobileFailureKind.network,
       );
       expect(
@@ -178,52 +182,55 @@ void main() {
     });
 
     testWidgets(
-        'forbidden state suppresses retry while offline state permits it',
-        (tester) async {
-      var retries = 0;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: SafeContractsStateView(
-            kind: MobileStateKind.forbidden,
-            message: 'Forbidden',
-            onRetry: () => retries++,
+      'forbidden state suppresses retry while offline state permits it',
+      (tester) async {
+        var retries = 0;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SafeContractsStateView(
+              kind: MobileStateKind.forbidden,
+              message: 'Forbidden',
+              onRetry: () => retries++,
+            ),
           ),
-        ),
-      );
-      expect(find.text('Retry'), findsNothing);
-      expect(find.byType(Semantics), findsWidgets);
+        );
+        expect(find.text('Retry'), findsNothing);
+        expect(find.byType(Semantics), findsWidgets);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: SafeContractsStateView(
-            kind: MobileStateKind.offline,
-            message: 'Offline',
-            onRetry: () => retries++,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SafeContractsStateView(
+              kind: MobileStateKind.offline,
+              message: 'Offline',
+              onRetry: () => retries++,
+            ),
           ),
-        ),
-      );
-      await tester.tap(find.text('Retry'));
-      expect(retries, 1);
-    });
+        );
+        await tester.tap(find.text('Retry'));
+        expect(retries, 1);
+      },
+    );
   });
 
   group('SC-P9-050 mobile test automation validation', () {
-    test('hermetic harness uses local fake transport and records exact request',
-        () async {
-      final harness = SafeContractsTestHarness(
-        (uri) => SafeContractsTestHarness.ok(<String, Object?>{'ok': true}),
-      );
+    test(
+      'hermetic harness uses local fake transport and records exact request',
+      () async {
+        final harness = SafeContractsTestHarness(
+          (uri) => SafeContractsTestHarness.ok(<String, Object?>{'ok': true}),
+        );
 
-      final envelope = await harness.client.get('session');
+        final envelope = await harness.client.get('session');
 
-      expect(harness.environment.name.name, 'local');
-      expect(harness.environment.apiBaseUri.host, '127.0.0.1');
-      expect(envelope.data, <String, Object?>{'ok': true});
-      expect(harness.transport.requests, hasLength(1));
-      expect(harness.singleRequest.method, 'GET');
-      expect(harness.singleRequest.uri.path, endsWith('/session'));
-      expect(harness.singleRequest.body, isNull);
-    });
+        expect(harness.environment.name.name, 'local');
+        expect(harness.environment.apiBaseUri.host, '127.0.0.1');
+        expect(envelope.data, <String, Object?>{'ok': true});
+        expect(harness.transport.requests, hasLength(1));
+        expect(harness.singleRequest.method, 'GET');
+        expect(harness.singleRequest.uri.path, endsWith('/session'));
+        expect(harness.singleRequest.body, isNull);
+      },
+    );
   });
 }
 

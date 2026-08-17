@@ -63,10 +63,7 @@ final class _SafeContractsLoginScreenState
     final l10n = context.scL10n;
     final scheme = Theme.of(context).colorScheme;
     if (_bootstrapping) {
-      return _BlockingBootstrapSplash(
-        label: l10n.t('Loading'),
-        scheme: scheme,
-      );
+      return _BlockingBootstrapSplash(label: l10n.t('Loading'), scheme: scheme);
     }
 
     final selectedLanguage = widget.languageCode == 'ar' ? 'ar' : 'en';
@@ -111,11 +108,12 @@ final class _SafeContractsLoginScreenState
                               ),
                             ],
                             selected: <String>{selectedLanguage},
-                            onSelectionChanged: submitting ||
-                                    widget.onLanguageChanged == null
+                            onSelectionChanged:
+                                submitting || widget.onLanguageChanged == null
                                 ? null
-                                : (selection) =>
-                                    widget.onLanguageChanged!(selection.first),
+                                : (selection) => widget.onLanguageChanged!(
+                                    selection.first,
+                                  ),
                             showSelectedIcon: false,
                             style: const ButtonStyle(
                               visualDensity: VisualDensity.compact,
@@ -130,21 +128,16 @@ final class _SafeContractsLoginScreenState
                         const SizedBox(height: 18),
                         Text(
                           SafeContractsBrand.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           l10n.t(
-                              'Sign in with your WordPress username and password'),
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                  ),
+                            'Sign in with your WordPress username and password',
+                          ),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                         const SizedBox(height: 24),
                         Card(
@@ -169,13 +162,14 @@ final class _SafeContractsLoginScreenState
                                       enableSuggestions: false,
                                       decoration: InputDecoration(
                                         labelText: l10n.t('Username'),
-                                        prefixIcon:
-                                            const Icon(Icons.person_outline),
+                                        prefixIcon: const Icon(
+                                          Icons.person_outline,
+                                        ),
                                       ),
                                       validator: (value) =>
                                           value == null || value.trim().isEmpty
-                                              ? l10n.t('Enter your username.')
-                                              : null,
+                                          ? l10n.t('Enter your username.')
+                                          : null,
                                     ),
                                     const SizedBox(height: 16),
                                     TextFormField(
@@ -183,7 +177,7 @@ final class _SafeContractsLoginScreenState
                                       enabled: !submitting,
                                       obscureText: _obscurePassword,
                                       autofillHints: const <String>[
-                                        AutofillHints.password
+                                        AutofillHints.password,
                                       ],
                                       textInputAction: TextInputAction.done,
                                       onFieldSubmitted: submitting
@@ -191,15 +185,16 @@ final class _SafeContractsLoginScreenState
                                           : (_) => unawaited(_submit()),
                                       decoration: InputDecoration(
                                         labelText: l10n.t('Password'),
-                                        prefixIcon:
-                                            const Icon(Icons.lock_outline),
+                                        prefixIcon: const Icon(
+                                          Icons.lock_outline,
+                                        ),
                                         suffixIcon: IconButton(
                                           onPressed: submitting
                                               ? null
                                               : () => setState(() {
-                                                    _obscurePassword =
-                                                        !_obscurePassword;
-                                                  }),
+                                                  _obscurePassword =
+                                                      !_obscurePassword;
+                                                }),
                                           icon: Icon(
                                             _obscurePassword
                                                 ? Icons.visibility_outlined
@@ -209,8 +204,8 @@ final class _SafeContractsLoginScreenState
                                       ),
                                       validator: (value) =>
                                           value == null || value.isEmpty
-                                              ? l10n.t('Enter your password.')
-                                              : null,
+                                          ? l10n.t('Enter your password.')
+                                          : null,
                                     ),
                                     const SizedBox(height: 8),
                                     CheckboxListTile(
@@ -218,7 +213,7 @@ final class _SafeContractsLoginScreenState
                                       onChanged: submitting
                                           ? null
                                           : (value) => widget.controller
-                                              .setRememberMe(value ?? false),
+                                                .setRememberMe(value ?? false),
                                       contentPadding: EdgeInsets.zero,
                                       controlAffinity:
                                           ListTileControlAffinity.leading,
@@ -238,8 +233,9 @@ final class _SafeContractsLoginScreenState
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
                                             color: scheme.errorContainer,
-                                            borderRadius:
-                                                BorderRadius.circular(14),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
                                           ),
                                           child: Text(
                                             l10n.rawMessage(
@@ -261,13 +257,16 @@ final class _SafeContractsLoginScreenState
                                           ? const SizedBox.square(
                                               dimension: 18,
                                               child: CircularProgressIndicator(
-                                                  strokeWidth: 2),
+                                                strokeWidth: 2,
+                                              ),
                                             )
                                           : const Icon(Icons.login),
                                       label: Text(
-                                        l10n.t(submitting
-                                            ? 'Signing in…'
-                                            : 'Sign in'),
+                                        l10n.t(
+                                          submitting
+                                              ? 'Signing in…'
+                                              : 'Sign in',
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -290,10 +289,7 @@ final class _SafeContractsLoginScreenState
 }
 
 final class _BlockingBootstrapSplash extends StatelessWidget {
-  const _BlockingBootstrapSplash({
-    required this.label,
-    required this.scheme,
-  });
+  const _BlockingBootstrapSplash({required this.label, required this.scheme});
 
   final String label;
   final ColorScheme scheme;
@@ -322,17 +318,12 @@ final class _BlockingBootstrapSplash extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const SafeContractsBrandMark(
-                      size: 88,
-                      borderRadius: 26,
-                    ),
+                    const SafeContractsBrandMark(size: 88, borderRadius: 26),
                     const SizedBox(height: 22),
                     Text(
                       SafeContractsBrand.name,
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 18),
                     const SizedBox.square(

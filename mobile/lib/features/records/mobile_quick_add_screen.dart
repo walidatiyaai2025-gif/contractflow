@@ -71,11 +71,8 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
       _error = null;
     });
     try {
-      final result = await CustomersRepository(widget.client).loadPage(
-        page: page,
-        perPage: _pageSize,
-        order: 'asc',
-      );
+      final result = await CustomersRepository(widget.client)
+          .loadPage(page: page, perPage: _pageSize, order: 'asc');
       if (!mounted) return;
       if (result.page == _maxPage && result.hasMore) {
         throw const FormatException(
@@ -222,7 +219,8 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
     if (_loading) {
       return Scaffold(
         appBar: AppBar(
-            title: Text(legacy.mobileQuickAddLabel(context, widget.type))),
+          title: Text(legacy.mobileQuickAddLabel(context, widget.type)),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -238,28 +236,20 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
 
     return switch (widget.type) {
       legacy.MobileQuickAddType.contract => _CustomerReferenceGate(
-          page: _customerPage!,
-          onPrevious: () => unawaited(
-            _loadCustomerPage(_customerPage!.page - 1),
-          ),
-          onNext: () => unawaited(
-            _loadCustomerPage(_customerPage!.page + 1),
-          ),
-          onSelected: _selectCustomer,
-        ),
+        page: _customerPage!,
+        onPrevious: () => unawaited(_loadCustomerPage(_customerPage!.page - 1)),
+        onNext: () => unawaited(_loadCustomerPage(_customerPage!.page + 1)),
+        onSelected: _selectCustomer,
+      ),
       legacy.MobileQuickAddType.payment => _ContractReferenceGate(
-          page: _contractPage!,
-          onPrevious: () => unawaited(
-            _loadContractPage(_contractPage!.page - 1),
-          ),
-          onNext: () => unawaited(
-            _loadContractPage(_contractPage!.page + 1),
-          ),
-          onSelected: _selectContract,
-        ),
+        page: _contractPage!,
+        onPrevious: () => unawaited(_loadContractPage(_contractPage!.page - 1)),
+        onNext: () => unawaited(_loadContractPage(_contractPage!.page + 1)),
+        onSelected: _selectContract,
+      ),
       legacy.MobileQuickAddType.customer => throw StateError(
-          'Customer quick add must enter the existing flow directly.',
-        ),
+        'Customer quick add must enter the existing flow directly.',
+      ),
     };
   }
 }

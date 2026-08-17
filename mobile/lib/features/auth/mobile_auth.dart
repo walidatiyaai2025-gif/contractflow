@@ -6,10 +6,7 @@ import '../../core/auth/mobile_token_store.dart';
 enum MobileLoginState { idle, submitting, authenticated, error }
 
 final class MobileAuthRepository {
-  MobileAuthRepository({
-    required this.client,
-    required this.tokenStore,
-  });
+  MobileAuthRepository({required this.client, required this.tokenStore});
 
   final SafeContractsApiClient client;
   final MobileTokenStore tokenStore;

@@ -80,9 +80,9 @@ void main() {
       expect(en.money('7', config.currency), 'د.ك 7.00');
       expect(en.money('-0.0049', config.currency), 'د.ك 0.00');
 
-      final collectionSource =
-          File('lib/features/payments/collection_entry_dialog.dart')
-              .readAsStringSync();
+      final collectionSource = File(
+        'lib/features/payments/collection_entry_dialog.dart',
+      ).readAsStringSync();
       expect(collectionSource, contains(r'\.\d{1,2}'));
       expect(
         collectionSource,

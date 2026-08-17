@@ -10,43 +10,47 @@ import 'package:safecontracts_mobile/features/notifications/push_registration.da
 import 'fake_api_transport.dart';
 
 void main() {
-  test('denied notification permission does not block device registration',
-      () async {
-    const token = 'safecontracts-fcm-registration-token-1234567890';
-    final messaging = _FakePushMessagingGateway(
-      permission: MobilePushPermissionState.denied,
-      tokens: <String?>[token],
-    );
-    late FakeApiTransport transport;
-    transport = FakeApiTransport((uri) {
-      expect(uri.path.endsWith('/devices/register'), isTrue);
-      return _ok(<String, Object?>{
-        'registered': true,
-        'platform': 'android',
-      }, statusCode: 201);
-    });
-    final registration = MobilePushRegistration(
-      client: _client(transport),
-      messaging: messaging,
-      retryDelay: (_) async {},
-    );
+  test(
+    'denied notification permission does not block device registration',
+    () async {
+      const token = 'safecontracts-fcm-registration-token-1234567890';
+      final messaging = _FakePushMessagingGateway(
+        permission: MobilePushPermissionState.denied,
+        tokens: <String?>[token],
+      );
+      late FakeApiTransport transport;
+      transport = FakeApiTransport((uri) {
+        expect(uri.path.endsWith('/devices/register'), isTrue);
+        return _ok(<String, Object?>{
+          'registered': true,
+          'platform': 'android',
+        }, statusCode: 201);
+      });
+      final registration = MobilePushRegistration(
+        client: _client(transport),
+        messaging: messaging,
+        retryDelay: (_) async {},
+      );
 
-    await registration.start();
+      await registration.start();
 
-    expect(
-        registration.status.value.permission, MobilePushPermissionState.denied);
-    expect(registration.status.value.tokenAcquired, isTrue);
-    expect(registration.status.value.backendRegistered, isTrue);
-    expect(registration.status.value.errorCode, isNull);
-    expect(transport.requests, hasLength(1));
-    final body =
-        jsonDecode(transport.requests.single.body!) as Map<String, Object?>;
-    expect(body['token'], token);
-    expect(body['platform'], 'android');
+      expect(
+        registration.status.value.permission,
+        MobilePushPermissionState.denied,
+      );
+      expect(registration.status.value.tokenAcquired, isTrue);
+      expect(registration.status.value.backendRegistered, isTrue);
+      expect(registration.status.value.errorCode, isNull);
+      expect(transport.requests, hasLength(1));
+      final body =
+          jsonDecode(transport.requests.single.body!) as Map<String, Object?>;
+      expect(body['token'], token);
+      expect(body['platform'], 'android');
 
-    await registration.dispose();
-    await messaging.dispose();
-  });
+      await registration.dispose();
+      await messaging.dispose();
+    },
+  );
 
   test('transient backend registration failure is retried', () async {
     const token = 'safecontracts-fcm-registration-token-abcdef123456';
@@ -87,38 +91,42 @@ void main() {
     await messaging.dispose();
   });
 
-  test('token refresh can recover after initial token is unavailable',
-      () async {
-    const refreshedToken = 'safecontracts-fcm-refreshed-token-1234567890123';
-    final messaging = _FakePushMessagingGateway(
-      permission: MobilePushPermissionState.authorized,
-      tokens: <String?>[null, null, null],
-    );
-    late FakeApiTransport transport;
-    transport = FakeApiTransport((uri) => _ok(<String, Object?>{
+  test(
+    'token refresh can recover after initial token is unavailable',
+    () async {
+      const refreshedToken = 'safecontracts-fcm-refreshed-token-1234567890123';
+      final messaging = _FakePushMessagingGateway(
+        permission: MobilePushPermissionState.authorized,
+        tokens: <String?>[null, null, null],
+      );
+      late FakeApiTransport transport;
+      transport = FakeApiTransport(
+        (uri) => _ok(<String, Object?>{
           'registered': true,
           'platform': 'android',
-        }, statusCode: 201));
-    final registration = MobilePushRegistration(
-      client: _client(transport),
-      messaging: messaging,
-      retryDelay: (_) async {},
-    );
+        }, statusCode: 201),
+      );
+      final registration = MobilePushRegistration(
+        client: _client(transport),
+        messaging: messaging,
+        retryDelay: (_) async {},
+      );
 
-    await registration.start();
-    expect(registration.status.value.backendRegistered, isFalse);
-    expect(registration.status.value.errorCode, 'fcm_token_unavailable');
+      await registration.start();
+      expect(registration.status.value.backendRegistered, isFalse);
+      expect(registration.status.value.errorCode, 'fcm_token_unavailable');
 
-    messaging.emitRefresh(refreshedToken);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+      messaging.emitRefresh(refreshedToken);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
 
-    expect(registration.status.value.tokenAcquired, isTrue);
-    expect(registration.status.value.backendRegistered, isTrue);
-    expect(transport.requests, hasLength(1));
+      expect(registration.status.value.tokenAcquired, isTrue);
+      expect(registration.status.value.backendRegistered, isTrue);
+      expect(transport.requests, hasLength(1));
 
-    await registration.dispose();
-    await messaging.dispose();
-  });
+      await registration.dispose();
+      await messaging.dispose();
+    },
+  );
 
   test('manual recovery rotates the FCM token before re-registering', () async {
     const oldToken = 'safecontracts-fcm-old-token-123456789012345678';

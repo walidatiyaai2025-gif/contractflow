@@ -12,36 +12,38 @@ import 'package:safecontracts_mobile/features/dashboard/dashboard_models.dart';
 import 'fake_api_transport.dart';
 
 void main() {
-  test('SC-P9-011 loads bounded contract page with server default sort',
-      () async {
-    final transport = FakeApiTransport(_contractHandler);
-    final controller = ContractsController(
-      repository: ContractsRepository(_client(transport)),
-      pageSize: 25,
-      canAccess: true,
-      canEditContract: false,
-    );
+  test(
+    'SC-P9-011 loads bounded contract page with server default sort',
+    () async {
+      final transport = FakeApiTransport(_contractHandler);
+      final controller = ContractsController(
+        repository: ContractsRepository(_client(transport)),
+        pageSize: 25,
+        canAccess: true,
+        canEditContract: false,
+      );
 
-    await controller.ensureLoaded();
+      await controller.ensureLoaded();
 
-    expect(controller.state, ContractsLoadState.ready);
-    expect(controller.currentPage?.page, 1);
-    expect(controller.currentPage?.perPage, 25);
-    expect(controller.currentPage?.sort, 'id');
-    expect(controller.currentPage?.order, 'desc');
-    expect(controller.currentPage?.hasMore, isTrue);
-    expect(controller.currentPage?.boundedWindow, 500);
-    expect(controller.currentPage?.scope, 'assigned');
-    expect(controller.currentPage?.contracts.single.contractNumber, 'SC-70');
+      expect(controller.state, ContractsLoadState.ready);
+      expect(controller.currentPage?.page, 1);
+      expect(controller.currentPage?.perPage, 25);
+      expect(controller.currentPage?.sort, 'id');
+      expect(controller.currentPage?.order, 'desc');
+      expect(controller.currentPage?.hasMore, isTrue);
+      expect(controller.currentPage?.boundedWindow, 500);
+      expect(controller.currentPage?.scope, 'assigned');
+      expect(controller.currentPage?.contracts.single.contractNumber, 'SC-70');
 
-    final request = transport.requests.single;
-    expect(request.uri.path, endsWith('/contracts'));
-    expect(request.uri.queryParameters['page'], '1');
-    expect(request.uri.queryParameters['per_page'], '25');
-    expect(request.uri.queryParameters['sort'], 'id');
-    expect(request.uri.queryParameters['order'], 'desc');
-    controller.dispose();
-  });
+      final request = transport.requests.single;
+      expect(request.uri.path, endsWith('/contracts'));
+      expect(request.uri.queryParameters['page'], '1');
+      expect(request.uri.queryParameters['per_page'], '25');
+      expect(request.uri.queryParameters['sort'], 'id');
+      expect(request.uri.queryParameters['order'], 'desc');
+      controller.dispose();
+    },
+  );
 
   test('SC-P9-011 customer status sort and page remain server-bound', () async {
     final transport = FakeApiTransport(_contractHandler);
@@ -68,53 +70,58 @@ void main() {
     controller.dispose();
   });
 
-  test('SC-P9-011 preserves server contract status and safe projection',
-      () async {
-    final controller = ContractsController(
-      repository: ContractsRepository(
-        _client(FakeApiTransport(_contractHandler)),
-      ),
-      pageSize: 25,
-      canAccess: true,
-      canEditContract: false,
-    );
+  test(
+    'SC-P9-011 preserves server contract status and safe projection',
+    () async {
+      final controller = ContractsController(
+        repository: ContractsRepository(
+          _client(FakeApiTransport(_contractHandler)),
+        ),
+        pageSize: 25,
+        canAccess: true,
+        canEditContract: false,
+      );
 
-    await controller.ensureLoaded();
+      await controller.ensureLoaded();
 
-    final contract = controller.currentPage!.contracts.single;
-    expect(contract.id, 70);
-    expect(contract.contractNumber, 'SC-70');
-    expect(contract.customerId, 7);
-    expect(contract.customerName, 'Alpha Customer');
-    expect(contract.accountantUserId, 42);
-    expect(contract.status, 'server_custom_status');
-    expect(contract.startDate, '2026-01-01');
-    expect(contract.endDate, '2026-12-31');
-    expect(contract.baseValue, '1000.5000');
-    expect(contract.isArchived, isFalse);
-    controller.dispose();
-  });
+      final contract = controller.currentPage!.contracts.single;
+      expect(contract.id, 70);
+      expect(contract.contractNumber, 'SC-70');
+      expect(contract.customerId, 7);
+      expect(contract.customerName, 'Alpha Customer');
+      expect(contract.accountantUserId, 42);
+      expect(contract.status, 'server_custom_status');
+      expect(contract.startDate, '2026-01-01');
+      expect(contract.endDate, '2026-12-31');
+      expect(contract.baseValue, '1000.5000');
+      expect(contract.isArchived, isFalse);
+      controller.dispose();
+    },
+  );
 
-  test('SC-P9-011 unauthorized controller fails before network access',
-      () async {
-    final transport = FakeApiTransport(_contractHandler);
-    final controller = ContractsController(
-      repository: ContractsRepository(_client(transport)),
-      pageSize: 25,
-      canAccess: false,
-      canEditContract: false,
-    );
+  test(
+    'SC-P9-011 unauthorized controller fails before network access',
+    () async {
+      final transport = FakeApiTransport(_contractHandler);
+      final controller = ContractsController(
+        repository: ContractsRepository(_client(transport)),
+        pageSize: 25,
+        canAccess: false,
+        canEditContract: false,
+      );
 
-    await controller.ensureLoaded();
+      await controller.ensureLoaded();
 
-    expect(controller.state, ContractsLoadState.error);
-    expect(controller.currentPage, isNull);
-    expect(transport.requests, isEmpty);
-    controller.dispose();
-  });
+      expect(controller.state, ContractsLoadState.error);
+      expect(controller.currentPage, isNull);
+      expect(transport.requests, isEmpty);
+      controller.dispose();
+    },
+  );
 
-  testWidgets('SC-P9-011 screen lazy-loads and hands selected ID to details',
-      (tester) async {
+  testWidgets('SC-P9-011 screen lazy-loads and hands selected ID to details', (
+    tester,
+  ) async {
     final transport = FakeApiTransport(_contractHandler);
     final controller = ContractsController(
       repository: ContractsRepository(_client(transport)),
@@ -198,10 +205,7 @@ ApiTransportResponse _contractHandler(Uri uri) {
   return _error(404, 'not_found', 'Not found');
 }
 
-ApiTransportResponse _ok(
-  Object? data, {
-  required Map<String, Object?> meta,
-}) {
+ApiTransportResponse _ok(Object? data, {required Map<String, Object?> meta}) {
   return ApiTransportResponse(
     statusCode: 200,
     headers: const <String, String>{'content-type': 'application/json'},

@@ -29,8 +29,10 @@ final class SafeContractsDevice {
       id: id,
       platform: platform,
       isActive: _boolish(data['is_active'], 'device.is_active'),
-      lastSeenAt:
-          _optionalTimestamp(data['last_seen_at'], 'device.last_seen_at'),
+      lastSeenAt: _optionalTimestamp(
+        data['last_seen_at'],
+        'device.last_seen_at',
+      ),
       createdAt: _optionalTimestamp(data['created_at'], 'device.created_at'),
       updatedAt: _optionalTimestamp(data['updated_at'], 'device.updated_at'),
     );
@@ -51,10 +53,12 @@ final class DevicesSnapshot {
     final rows = apiObjectList(envelope.data, 'devices.data');
     if (rows.length > maxDevices) {
       throw const FormatException(
-          'device payload exceeds the supported bound.');
+        'device payload exceeds the supported bound.',
+      );
     }
-    final devices =
-        rows.map(SafeContractsDevice.fromData).toList(growable: false);
+    final devices = rows
+        .map(SafeContractsDevice.fromData)
+        .toList(growable: false);
     final ids = <int>{};
     for (final device in devices) {
       if (!ids.add(device.id)) {

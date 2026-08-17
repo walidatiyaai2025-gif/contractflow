@@ -7,10 +7,7 @@ import 'dashboard_repository.dart';
 enum DashboardLoadState { idle, loading, ready, error }
 
 final class DashboardController extends ChangeNotifier {
-  DashboardController({
-    required this.repository,
-    required this.config,
-  });
+  DashboardController({required this.repository, required this.config});
 
   final DashboardRepository repository;
   final SafeContractsMobileConfig config;
@@ -41,9 +38,9 @@ final class DashboardController extends ChangeNotifier {
     selectedCustomerName = customerId == null
         ? null
         : currentCustomers
-            .where((option) => option.id == customerId)
-            .map((option) => option.name)
-            .firstOrNull;
+              .where((option) => option.id == customerId)
+              .map((option) => option.name)
+              .firstOrNull;
     selectedContractNumber = null;
     filters = filters.withCustomer(customerId);
     availableContracts = const <ContractOption>[];
@@ -74,14 +71,11 @@ final class DashboardController extends ChangeNotifier {
     selectedContractNumber = contractId == null
         ? null
         : availableContracts
-            .where((option) => option.id == contractId)
-            .map((option) => option.contractNumber)
-            .firstOrNull;
+              .where((option) => option.id == contractId)
+              .map((option) => option.contractNumber)
+              .firstOrNull;
     filters = filters.withContract(contractId);
-    await _reload(
-      contractOptions: availableContracts,
-      clearExisting: true,
-    );
+    await _reload(contractOptions: availableContracts, clearExisting: true);
   }
 
   Future<void> selectStatus(String? status) async {
@@ -94,20 +88,14 @@ final class DashboardController extends ChangeNotifier {
     filters = filters.withStatus(
       normalized == null || normalized.isEmpty ? null : normalized,
     );
-    await _reload(
-      contractOptions: availableContracts,
-      clearExisting: true,
-    );
+    await _reload(contractOptions: availableContracts, clearExisting: true);
   }
 
   Future<void> setDueRange(String? from, String? to) async {
     final candidate = filters.withDueRange(from, to);
     candidate.validate();
     filters = candidate;
-    await _reload(
-      contractOptions: availableContracts,
-      clearExisting: true,
-    );
+    await _reload(contractOptions: availableContracts, clearExisting: true);
   }
 
   Future<void> _reload({
@@ -132,7 +120,8 @@ final class DashboardController extends ChangeNotifier {
       lists = nextLists;
       availableContracts = contractOptions ?? nextOverview.contracts;
       if (filters.customerId != null) {
-        selectedCustomerName = nextOverview.customers
+        selectedCustomerName =
+            nextOverview.customers
                 .where((option) => option.id == filters.customerId)
                 .map((option) => option.name)
                 .firstOrNull ??
@@ -141,7 +130,8 @@ final class DashboardController extends ChangeNotifier {
         selectedCustomerName = null;
       }
       if (filters.contractId != null) {
-        selectedContractNumber = availableContracts
+        selectedContractNumber =
+            availableContracts
                 .where((option) => option.id == filters.contractId)
                 .map((option) => option.contractNumber)
                 .firstOrNull ??
