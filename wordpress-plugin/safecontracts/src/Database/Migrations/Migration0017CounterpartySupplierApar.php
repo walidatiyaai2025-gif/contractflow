@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SafeContracts\Database\Migrations;
 
 use SafeContracts\Database\Migration;
+use SafeContracts\Roles\Capabilities;
+use SafeContracts\Roles\RoleRegistrar;
 
 final class Migration0017CounterpartySupplierApar implements Migration
 {
@@ -150,6 +152,49 @@ final class Migration0017CounterpartySupplierApar implements Migration
             SET cl.financial_direction = COALESCE(NULLIF(cl.financial_direction, ''), p.financial_direction, 'receivable'),
                 cl.currency_code = COALESCE(NULLIF(cl.currency_code, ''), NULLIF(p.currency_code, ''), 'XXX')
             WHERE cl.financial_direction IS NULL OR cl.financial_direction = '' OR cl.currency_code IS NULL OR cl.currency_code = ''");
+
+        $this->grantNewCapabilities();
+    }
+
+    private function grantNewCapabilities(): void
+    {
+        $allNew = [
+            Capabilities::VIEW_SUPPLIERS,
+            Capabilities::CREATE_SUPPLIERS,
+            Capabilities::EDIT_SUPPLIERS,
+            Capabilities::MANAGE_SUPPLIERS,
+            Capabilities::VIEW_FINANCE,
+            Capabilities::MANAGE_FINANCE,
+        ];
+        foreach (['administrator', RoleRegistrar::SYSTEM_ADMIN] as $roleSlug) {
+            $role = get_role($roleSlug);
+            if (! $role) {
+                continue;
+            }
+            foreach ($allNew as $capability) {
+                $role->add_cap($capability);
+            }
+        }
+
+        $manager = get_role(RoleRegistrar::MANAGER);
+        if ($manager) {
+            foreach ($allNew as $capability) {
+                $manager->add_cap($capability);
+            }
+        }
+
+        $accountant = get_role(RoleRegistrar::ACCOUNTANT);
+        if ($accountant) {
+            foreach ([Capabilities::VIEW_SUPPLIERS, Capabilities::VIEW_FINANCE, Capabilities::MANAGE_FINANCE] as $capability) {
+                $accountant->add_cap($capability);
+            }
+        }
+
+        $viewer = get_role(RoleRegistrar::VIEWER);
+        if ($viewer) {
+            $viewer->add_cap(Capabilities::VIEW_SUPPLIERS);
+            $viewer->add_cap(Capabilities::VIEW_FINANCE);
+        }
     }
 
     private function configuredCurrency(): string
