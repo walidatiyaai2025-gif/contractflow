@@ -181,11 +181,12 @@ final class SupplierRepository
                 continue;
             }
             $exclude = $excludeId === null ? '' : $wpdb->prepare(' AND id <> %d', $excludeId);
-            $id = $wpdb->get_var($wpdb->prepare(
+            $sql = $wpdb->prepare(
                 "SELECT id FROM {$table} WHERE {$column} = %s{$exclude} LIMIT 1",
                 $value
-            ));
-            if ($id !== null) {
+            );
+            $id = $this->scalar($wpdb, $sql, 'id');
+            if ($id !== null && $id !== '') {
                 return (int) $id;
             }
         }
@@ -197,11 +198,23 @@ final class SupplierRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
-        $count = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$contracts} WHERE counterparty_type = 'supplier' AND counterparty_id = %d",
+        $sql = $wpdb->prepare(
+            "SELECT COUNT(*) AS total FROM {$contracts} WHERE counterparty_type = 'supplier' AND counterparty_id = %d",
             $supplierId
-        ));
-        return (int) $count > 0;
+        );
+        return (int) ($this->scalar($wpdb, $sql, 'total') ?? 0) > 0;
+    }
+
+    private function scalar(object $wpdb, string $sql, string $field): mixed
+    {
+        if (method_exists($wpdb, 'get_var')) {
+            return $wpdb->get_var($sql);
+        }
+        $rows = $wpdb->get_results($sql, ARRAY_A);
+        if (! is_array($rows) || $rows === [] || ! is_array($rows[0] ?? null)) {
+            return null;
+        }
+        return $rows[0][$field] ?? null;
     }
 
     /** @return array<string,mixed> */
