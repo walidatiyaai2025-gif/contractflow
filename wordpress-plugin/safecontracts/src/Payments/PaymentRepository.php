@@ -100,17 +100,23 @@ final class PaymentRepository
         string $dueDate,
         ?string $expectedPaymentDate,
         string $amount,
-        int $actorId
+        int $actorId,
+        ?string $financialDirection = null,
+        ?string $currencyCode = null
     ): int {
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
-        $context = $this->contractContext($contractId);
-        if ($context === null) {
-            throw new RuntimeException('Unable to resolve contract financial context.');
+        if ($financialDirection === null || $currencyCode === null) {
+            $context = $this->contractContext($contractId);
+            if ($context === null) {
+                throw new RuntimeException('Unable to resolve contract financial context.');
+            }
+            $financialDirection ??= $context['financial_direction'];
+            $currencyCode ??= $context['currency_code'];
         }
-        $direction = FinancialDirection::normalize($context['financial_direction']);
-        $currency = CurrencyCode::normalize($context['currency_code']);
+        $direction = FinancialDirection::normalize($financialDirection);
+        $currency = CurrencyCode::normalize($currencyCode);
 
         $referenceSql = $reference === null ? 'NULL' : '%s';
         $expectedSql = $expectedPaymentDate === null ? 'NULL' : '%s';
