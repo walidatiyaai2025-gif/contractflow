@@ -96,7 +96,7 @@ New REST capabilities under `/wp-json/safecontracts/v1`:
 - `GET/POST /suppliers`
 - `GET/PATCH /suppliers/{id}`
 - `POST /suppliers/{id}/archive`
-- `POST /contracts` for explicit-counterparty creation
+- `POST /contracts/create` for explicit-counterparty creation; the established `/contracts` read resource remains read-only
 - `PATCH /contracts/{id}/counterparty`
 - `PATCH /contracts/{id}/currency`
 - `POST /finance/settlements`
