@@ -7,6 +7,7 @@ namespace SafeContracts\Rest;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Finance\FinanceOverviewService;
+use SafeContracts\Finance\FinanceReadFilters;
 use SafeContracts\Roles\Capabilities;
 use Throwable;
 use WP_Error;
@@ -53,7 +54,7 @@ final class FinanceController
     public static function overview(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $filters = ApiAbuseGuard::safeParams($request, self::READ_FILTERS);
+            $filters = FinanceReadFilters::strict(ApiAbuseGuard::safeParams($request, self::READ_FILTERS));
             return RequestGuard::response((new FinanceOverviewService())->overview($filters), [
                 'currency_safe' => true,
                 'grouped_by' => ['financial_direction', 'currency_code'],
@@ -64,7 +65,7 @@ final class FinanceController
     public static function obligations(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $filters = ApiAbuseGuard::safeParams($request, self::READ_FILTERS);
+            $filters = FinanceReadFilters::strict(ApiAbuseGuard::safeParams($request, self::READ_FILTERS));
             $rows = (new FinanceOverviewService())->obligations($filters);
             return RequestGuard::response($rows, [
                 'count' => count($rows),
