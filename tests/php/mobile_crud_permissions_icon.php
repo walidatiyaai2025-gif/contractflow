@@ -118,9 +118,30 @@ foreach ([
     $assert(str_contains($editor, $marker), "mobile record editor contains {$marker}");
 }
 
+$quickAdd = (string) file_get_contents($root . '/mobile/lib/features/records/mobile_quick_add_flow.dart');
+foreach ([
+    'safecontracts_create_customers',
+    'safecontracts_create_contracts',
+    'safecontracts_create_payments',
+    'mobile/customers/create',
+    'mobile/contracts/create',
+    'mobile/payments/create',
+] as $marker) {
+    $assert(str_contains($quickAdd, $marker), "mobile quick add contains {$marker}");
+}
+
+$appShell = (string) file_get_contents($root . '/mobile/lib/features/navigation/app_shell.dart');
+$assert(str_contains($appShell, 'availableMobileQuickAdds(widget.session)'), 'app shell filters quick-add actions from session capabilities');
+$assert(str_contains($appShell, 'floatingActionButton:'), 'app shell exposes the permission-aware quick-add FAB');
+
 $profile = (string) file_get_contents($root . '/mobile/lib/features/profile/profile_screen.dart');
-$assert(str_contains($profile, 'MobileRecordEditorScreen'), 'profile exposes the authorized data-management screen');
-$assert(str_contains($profile, 'إضافة / تعديل العملاء والعقود والدفعات'), 'Arabic data-management entry is present');
+$profileContent = (string) file_get_contents($root . '/mobile/lib/features/profile/modern_profile_content.dart');
+$profileIdentity = (string) file_get_contents($root . '/mobile/lib/features/profile/profile_identity_sections.dart');
+$profileUx = $profile . $profileContent . $profileIdentity;
+$assert(! str_contains($profileUx, 'MobileRecordEditorScreen'), 'profile no longer exposes the CRUD data-management entry');
+$assert(! str_contains($profileUx, 'Granted capabilities'), 'profile no longer dumps raw granted capabilities');
+$assert(str_contains($profileContent, 'ProfileSectionTitle'), 'profile uses dedicated modern settings sections');
+$assert(str_contains($profileIdentity, 'My profile'), 'profile presents a dedicated identity hero');
 
 $bootstrap = (string) file_get_contents($root . '/scripts/bootstrap_android.sh');
 $assert(str_contains($bootstrap, 'alkenzy_launcher.png'), 'Android bootstrap packages the supplied Alkenzy PNG launcher resource');
@@ -133,4 +154,4 @@ $inAppIcon = (string) file_get_contents($root . '/mobile/assets/brand/alkenzy_ad
 $assert(strlen($icon) >= 4096 && str_starts_with($icon, "\x89PNG\r\n\x1a\n"), 'Alkenzy launcher is a valid PNG');
 $assert(hash_equals(hash('sha256', $inAppIcon), hash('sha256', $icon)), 'in-app and Android launcher identities use the same supplied Alkenzy logo bytes');
 
-printf("SafeContracts mobile CRUD permissions + Alkenzy ADV identity regression passed (%d checks).\n", $checks);
+printf("SafeContracts mobile CRUD permissions + modern quick-add/profile UX + Alkenzy ADV identity regression passed (%d checks).\n", $checks);
