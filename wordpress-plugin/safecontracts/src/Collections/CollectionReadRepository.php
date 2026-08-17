@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SafeContracts\Collections;
 
 use RuntimeException;
+use SafeContracts\Payments\CurrencyCode;
+use SafeContracts\Payments\FinancialDirection;
 
 final class CollectionReadRepository
 {
@@ -26,9 +28,9 @@ final class CollectionReadRepository
 
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT cl.id, cl.payment_id, cl.amount, cl.collection_date, cl.payment_method_id,
+                "SELECT cl.id, cl.payment_id, cl.financial_direction, cl.currency_code, cl.amount, cl.collection_date, cl.payment_method_id,
                         pm.name AS payment_method_name, cl.reference, cl.proof_media_id, cl.created_by,
-                        cl.created_at, cl.updated_at, p.contract_id, c.accountant_user_id
+                        cl.created_at, cl.updated_at, p.contract_id, c.accountant_user_id, c.counterparty_type, c.counterparty_id
                  FROM {$collections} cl
                  INNER JOIN {$payments} p ON p.id = cl.payment_id
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
@@ -49,6 +51,10 @@ final class CollectionReadRepository
             'id' => (int) ($row['id'] ?? 0),
             'payment_id' => (int) ($row['payment_id'] ?? 0),
             'contract_id' => (int) ($row['contract_id'] ?? 0),
+            'counterparty_type' => (string) ($row['counterparty_type'] ?? ''),
+            'counterparty_id' => (int) ($row['counterparty_id'] ?? 0),
+            'financial_direction' => FinancialDirection::normalize($row['financial_direction'] ?? ''),
+            'currency_code' => CurrencyCode::normalize($row['currency_code'] ?? CurrencyCode::UNKNOWN),
             'accountant_user_id' => isset($row['accountant_user_id']) && $row['accountant_user_id'] !== null
                 ? (int) $row['accountant_user_id']
                 : null,
