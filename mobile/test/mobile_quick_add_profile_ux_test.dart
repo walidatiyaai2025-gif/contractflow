@@ -81,9 +81,8 @@ void main() {
   });
 
   test('quick add reaches bounded reference pages beyond the first 100', () {
-    final source =
-        File('lib/features/records/mobile_quick_add_screen.dart')
-            .readAsStringSync();
+    final source = File('lib/features/records/mobile_quick_add_screen.dart')
+        .readAsStringSync();
 
     expect(source, contains('static const _pageSize = 100'));
     expect(source, contains('static const _maxPage = 5'));
@@ -91,7 +90,10 @@ void main() {
     expect(source, contains('_loadCustomerPage(_customerPage!.page + 1)'));
     expect(source, contains('_loadContractPage(_contractPage!.page + 1)'));
     expect(source, contains('_PinnedReferenceTransport'));
-    expect(source, contains("export 'mobile_quick_add_flow.dart' hide MobileQuickAddScreen"));
+    expect(
+        source,
+        contains(
+            "export 'mobile_quick_add_flow.dart' hide MobileQuickAddScreen"));
   });
 }
 
