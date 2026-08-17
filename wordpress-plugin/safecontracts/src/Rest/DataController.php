@@ -23,7 +23,7 @@ final class DataController
     public static function register(): void
     {
         foreach ([
-            '/customers' => 'customers', '/contracts' => 'contracts', '/payments' => 'payments',
+            '/customers' => 'customers', '/payments' => 'payments',
             '/collections' => 'collections', '/followups' => 'followUps', '/filters/contracts' => 'contractOptions',
             '/finance/summary' => 'financeSummary',
         ] as $route => $callback) {
@@ -33,6 +33,20 @@ final class DataController
                 'permission_callback' => [Router::class, 'canAccess'],
             ]);
         }
+
+        register_rest_route(Router::NAMESPACE, '/contracts', [
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [self::class, 'contracts'],
+                'permission_callback' => [Router::class, 'canAccess'],
+            ],
+            [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [CounterpartyContractsController::class, 'create'],
+                'permission_callback' => [CounterpartyContractsController::class, 'canCreate'],
+            ],
+        ]);
+
         foreach ([
             '/customers/(?P<id>\d+)' => 'customer', '/contracts/(?P<id>\d+)' => 'contract',
             '/payments/(?P<id>\d+)' => 'payment', '/collections/(?P<id>\d+)' => 'collection',
@@ -283,7 +297,7 @@ final class DataController
     private static function paymentListView(array $row): array { return self::pick($row, ['id','contract_id','contract_number','customer_id','customer_name','supplier_id','supplier_name','counterparty_type','counterparty_id','counterparty_name','accountant_user_id','financial_direction','currency_code','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','contract_is_archived']); }
     private static function paymentView(array $row): array { return self::pick($row, ['id','contract_id','counterparty_type','counterparty_id','financial_direction','currency_code','sequence_no','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','accountant_user_id','contract_is_archived']); }
     private static function collectionListView(array $row): array { return self::pick($row, ['id','payment_id','financial_direction','currency_code','amount','collection_date','payment_method_id','payment_method_name','reference','proof_media_id','created_by','created_at','payment_reference','sequence_no','due_date','payment_status','remaining_amount','contract_id','contract_number','accountant_user_id','customer_id','customer_name','supplier_id','supplier_name','counterparty_type','counterparty_id','counterparty_name']); }
-    private static function collectionView(array $row): array { return self::pick($row, ['id','payment_id','contract_id','financial_direction','currency_code','amount','collection_date','payment_method_id','payment_method_name','reference','proof_media_id','created_by','created_at','updated_at']); }
+    private static function collectionView(array $row): array { return self::pick($row, ['id','payment_id','contract_id','counterparty_type','counterparty_id','financial_direction','currency_code','amount','collection_date','payment_method_id','payment_method_name','reference','proof_media_id','created_by','created_at','updated_at']); }
     private static function followUpQueueView(array $row): array { return self::pick($row, ['payment_id','contract_id','customer_id','accountant_user_id','contract_status','reference','due_date','expected_payment_date','original_amount','paid_amount','remaining_amount','status','followup_state']); }
     private static function followUpHistoryView(array $row): array { return self::pick($row, ['id','payment_id','state','note','promised_date','deferred_until','created_by','created_at']); }
 
