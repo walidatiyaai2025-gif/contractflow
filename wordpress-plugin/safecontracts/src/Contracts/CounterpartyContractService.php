@@ -101,13 +101,24 @@ final class CounterpartyContractService
         if ($contract['is_archived']) {
             throw new DomainException('Archived contracts cannot change counterparty.');
         }
-        if ($this->assignmentRepository->hasScheduledObligations($contractId)) {
-            throw new DomainException('Contract counterparty cannot change after financial obligations exist.');
-        }
 
         $type = Counterparty::normalize($counterpartyType);
         $counterpartyId = (int) $counterpartyId;
-        if ($counterpartyId <= 0 || ! $this->repository->counterpartyIsActive($type, $counterpartyId)) {
+        if ($counterpartyId <= 0) {
+            throw new InvalidArgumentException('Contract counterparty ID must be positive.');
+        }
+
+        // Re-saving the existing counterparty is a no-op. This must remain
+        // possible even after obligations exist or the Supplier master is later
+        // archived, because neither action changes historical financial truth.
+        if ($type === $contract['counterparty_type'] && $counterpartyId === $contract['counterparty_id']) {
+            return;
+        }
+
+        if ($this->assignmentRepository->hasScheduledObligations($contractId)) {
+            throw new DomainException('Contract counterparty cannot change after financial obligations exist.');
+        }
+        if (! $this->repository->counterpartyIsActive($type, $counterpartyId)) {
             throw new InvalidArgumentException('Contract counterparty must reference an active SafeContracts customer or supplier.');
         }
         if ($type === Counterparty::SUPPLIER) {
