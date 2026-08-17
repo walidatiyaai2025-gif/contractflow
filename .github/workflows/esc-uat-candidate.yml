@@ -1,0 +1,236 @@
+name: ESC Android UAT Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Production ESC API base URL ending in /wp-json/safecontracts/v1/"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  ESC_APPLICATION_ID: com.safecontracts.enterprise
+  SAFE_CONTRACT_APPLICATION_ID: com.safecontracts.safecontracts_mobile
+
+jobs:
+  build-esc-uat-candidate:
+    if: github.ref == 'refs/heads/enterprise-safecontracts'
+    runs-on: ubuntu-latest
+    environment: esc-production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Require protected exact-head ESC integration branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PROTECTED="$(gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" --jq '.protected')"
+          BRANCH_HEAD="$(gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" --jq '.commit.sha')"
+          if [[ "$PROTECTED" != "true" ]]; then
+            echo "FAIL: enterprise-safecontracts must be protected before production signing material may be used" >&2
+            exit 1
+          fi
+          if [[ "$BRANCH_HEAD" != "$GITHUB_SHA" ]]; then
+            echo "FAIL: enterprise-safecontracts advanced after this UAT-candidate dispatch; dispatch a new exact-head candidate" >&2
+            exit 1
+          fi
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Require ESC-only production signing and Firebase material
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.ESC_ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ESC_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ESC_ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ESC_ANDROID_KEY_PASSWORD }}
+          CERT_SHA256: ${{ secrets.ESC_ANDROID_CERT_SHA256 }}
+          FIREBASE_DEV_B64: ${{ secrets.ESC_FIREBASE_ANDROID_CONFIG_DEV_BASE64 }}
+          FIREBASE_STAGING_B64: ${{ secrets.ESC_FIREBASE_ANDROID_CONFIG_STAGING_BASE64 }}
+          FIREBASE_PRODUCTION_B64: ${{ secrets.ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION_BASE64 }}
+        run: |
+          set -euo pipefail
+          for name in \
+            KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_SHA256 \
+            FIREBASE_DEV_B64 FIREBASE_STAGING_B64 FIREBASE_PRODUCTION_B64; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "FAIL: ESC production secret $name is missing" >&2
+              exit 1
+            fi
+          done
+
+      - name: Validate UAT candidate API input
+        shell: bash
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+
+          url = os.environ['API_BASE_URL'].strip()
+          parsed = urlparse(url)
+          if parsed.scheme != 'https' or not parsed.netloc:
+              raise SystemExit('FAIL: ESC UAT candidate API URL must use HTTPS')
+          if parsed.username or parsed.password or parsed.query or parsed.fragment:
+              raise SystemExit('FAIL: ESC UAT candidate API URL must not contain credentials/query/fragment')
+          if not parsed.path.rstrip('/').endswith('/wp-json/safecontracts/v1'):
+              raise SystemExit('FAIL: ESC UAT candidate API URL must target /wp-json/safecontracts/v1/')
+          PY
+
+      - name: Materialize isolated ESC signing and Firebase files
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.ESC_ANDROID_KEYSTORE_BASE64 }}
+          FIREBASE_DEV_B64: ${{ secrets.ESC_FIREBASE_ANDROID_CONFIG_DEV_BASE64 }}
+          FIREBASE_STAGING_B64: ${{ secrets.ESC_FIREBASE_ANDROID_CONFIG_STAGING_BASE64 }}
+          FIREBASE_PRODUCTION_B64: ${{ secrets.ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION_BASE64 }}
+        run: |
+          set -euo pipefail
+          SIGNING_DIR="$RUNNER_TEMP/esc-signing"
+          FIREBASE_DIR="$RUNNER_TEMP/esc-firebase"
+          mkdir -p "$SIGNING_DIR" "$FIREBASE_DIR"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$SIGNING_DIR/release.jks"
+          printf '%s' "$FIREBASE_DEV_B64" | base64 --decode > "$FIREBASE_DIR/dev-google-services.json"
+          printf '%s' "$FIREBASE_STAGING_B64" | base64 --decode > "$FIREBASE_DIR/staging-google-services.json"
+          printf '%s' "$FIREBASE_PRODUCTION_B64" | base64 --decode > "$FIREBASE_DIR/production-google-services.json"
+          test -s "$SIGNING_DIR/release.jks"
+          test -s "$FIREBASE_DIR/dev-google-services.json"
+          test -s "$FIREBASE_DIR/staging-google-services.json"
+          test -s "$FIREBASE_DIR/production-google-services.json"
+          {
+            echo "ESC_ANDROID_KEYSTORE_PATH=$SIGNING_DIR/release.jks"
+            echo "ESC_FIREBASE_ANDROID_CONFIG_DEV=$FIREBASE_DIR/dev-google-services.json"
+            echo "ESC_FIREBASE_ANDROID_CONFIG_STAGING=$FIREBASE_DIR/staging-google-services.json"
+            echo "ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION=$FIREBASE_DIR/production-google-services.json"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate repository Android isolation contract
+        run: python3 scripts/verify_esc_android_isolation.py
+
+      - name: Bootstrap isolated ESC Android platform
+        shell: bash
+        run: ./scripts/bootstrap_android.sh
+
+      - name: Run ESC mobile quality gates
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          dart format --output=none --set-exit-if-changed lib test
+          flutter analyze
+          flutter test
+
+      - name: Build production-signed ESC UAT candidate APK
+        working-directory: mobile
+        shell: bash
+        env:
+          ESC_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ESC_ANDROID_KEYSTORE_PASSWORD }}
+          ESC_ANDROID_KEY_ALIAS: ${{ secrets.ESC_ANDROID_KEY_ALIAS }}
+          ESC_ANDROID_KEY_PASSWORD: ${{ secrets.ESC_ANDROID_KEY_PASSWORD }}
+          API_BASE_URL: ${{ inputs.api_base_url }}
+        run: |
+          set -euo pipefail
+          flutter build apk --flavor production --release \
+            --dart-define=ESC_ENV=production \
+            --dart-define=ESC_API_BASE_URL="$API_BASE_URL"
+
+      - name: Verify UAT candidate package and ESC signing certificate
+        shell: bash
+        env:
+          EXPECTED_CERT_SHA256: ${{ secrets.ESC_ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          APK="mobile/build/app/outputs/flutter-apk/app-production-release.apk"
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
+          test -x "$APKSIGNER"
+          test -x "$AAPT"
+          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/esc-uat-candidate-apksigner.txt"
+          ACTUAL="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/esc-uat-candidate-apksigner.txt" | head -1 | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
+          EXPECTED="$(printf '%s' "$EXPECTED_CERT_SHA256" | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
+          if [[ -z "$ACTUAL" || "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "FAIL: ESC UAT candidate signing certificate does not match ESC_ANDROID_CERT_SHA256" >&2
+            exit 1
+          fi
+          BADGING="$($AAPT dump badging "$APK")"
+          grep -Fq "package: name='$ESC_APPLICATION_ID'" <<<"$BADGING"
+          if grep -Fq "package: name='$SAFE_CONTRACT_APPLICATION_ID'" <<<"$BADGING"; then
+            echo "FAIL: ESC UAT candidate resolved to the Safe Contract package" >&2
+            exit 1
+          fi
+          python3 scripts/verify_esc_android_isolation.py --esc-apk "$APK" --aapt "$AAPT"
+          echo "ESC_UAT_APKSIGNER=$APKSIGNER" >> "$GITHUB_ENV"
+          echo "ESC_UAT_SIGNER_SHA256=$ACTUAL" >> "$GITHUB_ENV"
+
+      - name: Prepare non-release UAT candidate provenance
+        shell: bash
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url }}
+        run: |
+          set -euo pipefail
+          SOURCE_APK="mobile/build/app/outputs/flutter-apk/app-production-release.apk"
+          OUT="$RUNNER_TEMP/esc-uat-candidate"
+          APK_NAME="EnterpriseSafeContracts-UAT-CANDIDATE-${GITHUB_SHA}.apk"
+          mkdir -p "$OUT"
+          cp "$SOURCE_APK" "$OUT/$APK_NAME"
+          APK_SHA256="$(sha256sum "$OUT/$APK_NAME" | awk '{print $1}')"
+          printf '%s  %s\n' "$APK_SHA256" "$APK_NAME" > "$OUT/$APK_NAME.sha256"
+          export APK_NAME APK_SHA256
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from urllib.parse import urlparse
+
+          out = Path(os.environ['RUNNER_TEMP']) / 'esc-uat-candidate'
+          parsed = urlparse(os.environ['API_BASE_URL'].strip())
+          record = {
+              'schema_version': 1,
+              'state': 'UAT_CANDIDATE_NOT_RELEASED',
+              'release_eligible': False,
+              'repository': os.environ['GITHUB_REPOSITORY'],
+              'source_sha': os.environ['GITHUB_SHA'],
+              'workflow_run_id': os.environ['GITHUB_RUN_ID'],
+              'workflow_run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'application_id': 'com.safecontracts.enterprise',
+              'apk_file': os.environ['APK_NAME'],
+              'apk_sha256': os.environ['APK_SHA256'],
+              'signer_certificate_sha256': os.environ['ESC_UAT_SIGNER_SHA256'],
+              'api_origin': f'{parsed.scheme}://{parsed.netloc}',
+              'api_path': parsed.path,
+              'created_at_utc': datetime.now(timezone.utc).isoformat(),
+              'purpose': 'Physical-device ESC/Safe Contract coexistence UAT only',
+              'promotion': 'Requires finalized exact-source coexistence/business/Firebase evidence through the separate production publish workflow',
+          }
+          (out / 'ESC_UAT_CANDIDATE.json').write_text(
+              json.dumps(record, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          test -s "$OUT/$APK_NAME"
+          test -s "$OUT/$APK_NAME.sha256"
+          test -s "$OUT/ESC_UAT_CANDIDATE.json"
+
+      - name: Upload short-lived ESC UAT candidate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-uat-candidate-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/esc-uat-candidate/
+          if-no-files-found: error
+          retention-days: 14
