@@ -2,10 +2,10 @@
 """Finalize ESC Android coexistence evidence from a verified evidence bundle.
 
 This tool does not perform runtime UAT. It accepts only an exact-source PENDING draft
-whose objective device checks already passed, re-verifies every retained evidence file
-against a content-addressed manifest, derives every final evidence reference from that
-verified bundle, and writes PASS only after the existing coexistence validator accepts
-the complete record.
+whose objective device checks already passed, verifies that exact draft is itself
+content-addressed by the bundle, re-verifies every retained evidence file, promotes
+only the five manual runtime checks, and writes PASS only after the existing
+coexistence validator accepts the complete record.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from build_esc_android_coexistence_evidence_bundle import (
     EvidenceBundleError,
     artifact_reference,
     load_manifest,
+    sha256_file,
     verify_manifest,
 )
 from validate_esc_android_coexistence_evidence import (
@@ -45,13 +46,10 @@ MANUAL_CHECKS = (
     "independent_update",
     "clear_data_uninstall_isolation",
 )
-CHECK_ARTIFACTS = {
-    "dual_install": "coexistence",
-    "independent_launch": "coexistence",
+MANUAL_CHECK_ARTIFACTS = {
     "session_isolation": "session_isolation",
     "safe_only_push": "safe_only_push",
     "esc_only_push": "esc_only_push",
-    "deep_link_isolation": "coexistence",
     "independent_update": "independent_update",
     "clear_data_uninstall_isolation": "clear_data_uninstall_isolation",
 }
@@ -151,18 +149,24 @@ def assert_draft_boundary(record: dict[str, Any], expected_source_sha: str) -> N
         fail("draft ESC application identity is invalid")
 
 
-def derived_references(manifest: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "checks": {
-            name: artifact_reference(manifest, artifact_key)
-            for name, artifact_key in CHECK_ARTIFACTS.items()
-        },
-        "evidence": {
-            name: artifact_reference(manifest, artifact_key)
-            for name, artifact_key in TOP_LEVEL_ARTIFACTS.items()
-        },
-        "firebase_reference": artifact_reference(manifest, "esc_firebase_identity"),
-    }
+def assert_draft_matches_manifest(
+    draft_path: Path,
+    manifest: dict[str, Any],
+) -> None:
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict):
+        fail("evidence manifest artifacts are invalid")
+    objective = artifacts.get("objective_draft")
+    if not isinstance(objective, dict):
+        fail("evidence manifest is missing objective_draft")
+    if not draft_path.is_file() or draft_path.stat().st_size <= 0:
+        fail(f"objective draft is missing or empty: {draft_path}")
+    expected_size = objective.get("size")
+    if draft_path.stat().st_size != expected_size:
+        fail("objective draft size does not match the evidence manifest")
+    expected_digest = str(objective.get("sha256", "")).lower()
+    if sha256_file(draft_path) != expected_digest:
+        fail("objective draft SHA-256 does not match the evidence manifest")
 
 
 def finalize_record(
@@ -185,29 +189,34 @@ def finalize_record(
     except EvidenceBundleError as exc:
         raise FinalizerError(f"evidence bundle verification failed: {exc}") from exc
 
-    references = derived_references(manifest)
     record = deepcopy(draft)
     record["decision"] = "PASS"
     record["tested_at_utc"] = finalized_at
     record["esc"] = dict(record["esc"])
-    record["esc"]["firebase_reference"] = references["firebase_reference"]
-    record["evidence"] = references["evidence"]
+    record["esc"]["firebase_reference"] = artifact_reference(
+        manifest, "esc_firebase_identity"
+    )
+    record["evidence"] = {
+        name: artifact_reference(manifest, artifact_key)
+        for name, artifact_key in TOP_LEVEL_ARTIFACTS.items()
+    }
     record["evidence_bundle"] = {
         "sha256": manifest["bundle_sha256"],
         "source_sha": manifest["source_sha"],
         "collected_at_utc": manifest["collected_at_utc"],
+        "objective_draft_sha256": manifest["artifacts"]["objective_draft"]["sha256"],
     }
 
     checks = dict(record["checks"])
-    for name in REQUIRED_CHECKS:
+    for name, artifact_key in MANUAL_CHECK_ARTIFACTS.items():
         checks[name] = {
             "status": "PASS",
-            "evidence": references["checks"][name],
+            "evidence": artifact_reference(manifest, artifact_key),
         }
     record["checks"] = checks
 
     try:
-        validate_record(record, expected_source_sha, references["evidence"])
+        validate_record(record, expected_source_sha, record["evidence"])
     except EvidenceError as exc:
         raise FinalizerError(f"final coexistence validation failed: {exc}") from exc
     return record
@@ -236,11 +245,15 @@ def main() -> int:
     try:
         draft = load_record(args.draft)
         manifest = load_manifest(args.evidence_manifest)
+        verified_manifest = verify_manifest(
+            manifest, args.evidence_root, args.source_sha
+        )
+        assert_draft_matches_manifest(args.draft, verified_manifest)
         record = finalize_record(
             draft,
             args.source_sha,
             args.tested_at_utc,
-            manifest,
+            verified_manifest,
             args.evidence_root,
         )
         write_record(args.output, record)
@@ -249,9 +262,10 @@ def main() -> int:
         return 1
 
     print(
-        "ESC Android coexistence final evidence created only after retained files "
-        "were re-hashed and the existing final validator accepted all eight PASS "
-        f"checks; bundle_sha256={record['evidence_bundle']['sha256']}, output={args.output}"
+        "ESC Android coexistence final evidence created only after the objective "
+        "draft and all retained evidence files were re-hashed and the existing final "
+        f"validator accepted PASS; bundle_sha256={record['evidence_bundle']['sha256']}, "
+        f"output={args.output}"
     )
     return 0
 
