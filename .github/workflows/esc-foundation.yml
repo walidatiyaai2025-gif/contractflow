@@ -34,6 +34,22 @@ jobs:
         run: python3 tests/python/esc_release_branch_protection_contract_test.py
       - name: Test ESC branch protection audit evidence
         run: python3 tests/python/esc_branch_protection_audit_test.py
+      - name: Test ESC branch protection apply helper contract
+        run: python3 tests/python/esc_branch_protection_apply_helper_contract_test.py
+      - name: Parse ESC branch protection apply helper
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/configure_esc_branch_protection.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
       - name: Test ESC Android coexistence evidence gate
         run: python3 tests/python/esc_android_coexistence_evidence_test.py
       - name: Test ESC Android coexistence preflight collector
