@@ -68,7 +68,10 @@ sc_workflow_assert(count($GLOBALS['sc_test_queries']) === $queryCount + 1, 'cont
 $createSql = end($GLOBALS['sc_test_queries']);
 sc_workflow_assert(str_contains((string) $createSql, 'wp_safecontracts_contracts'), 'contract create uses the dedicated contracts table');
 sc_workflow_assert(str_contains((string) $createSql, "'SC-2026-001'"), 'contract number is trimmed and prepared');
-sc_workflow_assert(str_contains((string) $createSql, '7, 42'), 'Accountant-created contract is auto-assigned to the current Accountant');
+sc_workflow_assert(
+    preg_match("/VALUES \\('SC-2026-001', 7, 'customer', 7, 'receivable', NULL, 42,/", (string) $createSql) === 1,
+    'Accountant-created legacy customer contract is Customer/Receivable and auto-assigned to the current Accountant'
+);
 sc_workflow_assert(str_contains((string) $createSql, "'draft'"), 'new contracts always start in draft lifecycle state');
 sc_workflow_assert(isset($GLOBALS['sc_test_fired_actions']['safecontracts_contract_created']), 'contract create emits a domain action');
 
@@ -102,7 +105,10 @@ $managerCreatedId = $service->create([
 ]);
 sc_workflow_assert($managerCreatedId === 2002, 'manager create returns inserted ID');
 $managerCreateSql = end($GLOBALS['sc_test_queries']);
-sc_workflow_assert(str_contains((string) $managerCreateSql, '8, 77'), 'manager can assign an eligible Accountant during create');
+sc_workflow_assert(
+    preg_match("/VALUES \\('SC-2026-002', 8, 'customer', 8, 'receivable', NULL, 77,/", (string) $managerCreateSql) === 1,
+    'manager can assign an eligible Accountant while preserving Customer/Receivable semantics during create'
+);
 
 $GLOBALS['sc_test_result_queue'] = [[['id' => '8']]];
 $beforeBadAssignee = count($GLOBALS['sc_test_queries']);
