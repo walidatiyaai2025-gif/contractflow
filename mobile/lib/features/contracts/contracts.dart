@@ -278,12 +278,15 @@ final class ContractsRepository {
     required ContractsFilters filters,
     required ContractSortOption sort,
   }) async {
-    if (page < 1 || page > 5)
+    if (page < 1 || page > 5) {
       throw ArgumentError('Contract page must be between 1 and 5.');
-    if (perPage < 1 || perPage > 100)
+    }
+    if (perPage < 1 || perPage > 100) {
       throw ArgumentError('Contract page size must be between 1 and 100.');
-    if (!ContractSortOption.values.contains(sort))
+    }
+    if (!ContractSortOption.values.contains(sort)) {
       throw ArgumentError('Unsupported contract sort.');
+    }
     filters.validate();
     final query = filters.toQuery()
       ..addAll(<String, String>{
@@ -390,13 +393,15 @@ final class ContractsController extends ChangeNotifier {
 
   Future<void> nextPage() async {
     final value = currentPage;
-    if (value != null && value.hasMore && value.page < 5)
+    if (value != null && value.hasMore && value.page < 5) {
       await loadPage(value.page + 1);
+    }
   }
 
   Future<void> selectCustomer(int? customerId) async {
-    if (customerId != null && customerId <= 0)
+    if (customerId != null && customerId <= 0) {
       throw ArgumentError.value(customerId, 'customerId', 'Invalid customer.');
+    }
     filters = filters.withCustomer(customerId);
     await loadPage(1);
   }
@@ -419,8 +424,9 @@ final class ContractsController extends ChangeNotifier {
   }
 
   Future<void> selectSort(ContractSortOption nextSort) async {
-    if (!ContractSortOption.values.contains(nextSort))
+    if (!ContractSortOption.values.contains(nextSort)) {
       throw ArgumentError.value(nextSort, 'nextSort', 'Unsupported sort.');
+    }
     if (identical(sort, nextSort) && currentPage != null) return;
     sort = nextSort;
     await loadPage(1);
@@ -490,8 +496,9 @@ int _positiveInt(Object? value, String field) {
     final String value => int.tryParse(value),
     _ => null,
   };
-  if (parsed == null || parsed <= 0)
+  if (parsed == null || parsed <= 0) {
     throw FormatException('$field must be a positive integer.');
+  }
   return parsed;
 }
 
@@ -511,14 +518,16 @@ int _boundedInt(
     final String value => int.tryParse(value),
     _ => null,
   };
-  if (parsed == null || parsed < minimum || parsed > maximum)
+  if (parsed == null || parsed < minimum || parsed > maximum) {
     throw FormatException('$field is outside the supported range.');
+  }
   return parsed;
 }
 
 String _requiredText(Object? value, String field) {
-  if (value is! String || value.trim().isEmpty)
+  if (value is! String || value.trim().isEmpty) {
     throw FormatException('$field must be a non-empty string.');
+  }
   final normalized = value.trim();
   if (normalized.length > 256) throw FormatException('$field is too long.');
   return normalized;
@@ -526,11 +535,13 @@ String _requiredText(Object? value, String field) {
 
 String? _optionalText(Object? value) {
   if (value == null) return null;
-  if (value is! String)
+  if (value is! String) {
     throw const FormatException('Contract text field must be string or null.');
+  }
   final normalized = value.trim();
-  if (normalized.length > 256)
+  if (normalized.length > 256) {
     throw const FormatException('Contract text field is too long.');
+  }
   return normalized.isEmpty ? null : normalized;
 }
 
@@ -551,11 +562,13 @@ String? _optionalIsoDate(Object? value, String field) {
 
 String? _optionalMoneyText(Object? value, String field) {
   if (value == null || value == '') return null;
-  if (value is! String)
+  if (value is! String) {
     throw FormatException('$field must be an exact server money string.');
+  }
   final normalized = value.trim();
-  if (!RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(normalized))
+  if (!RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(normalized)) {
     throw FormatException('$field is invalid.');
+  }
   return normalized;
 }
 

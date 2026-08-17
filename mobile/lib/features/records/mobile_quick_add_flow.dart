@@ -450,8 +450,9 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
                     if (_counterpartyType == 'supplier' && value != null) {
                       final supplier =
                           _suppliers.where((s) => s.id == value).firstOrNull;
-                      if (supplier?.defaultCurrency != null)
+                      if (supplier?.defaultCurrency != null) {
                         _currency.text = supplier!.defaultCurrency!;
+                      }
                     }
                   });
                 },
@@ -539,10 +540,11 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
 
   Widget _paymentForm() {
     final ar = context.scL10n.isArabic;
-    if (_contracts.isEmpty)
+    if (_contracts.isEmpty) {
       return _EmptyReference(
         message: ar ? 'لا توجد عقود متاحة.' : 'No contracts are available.',
       );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -636,18 +638,20 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
 
   Future<void> _saveCustomer() async {
     final name = _name.text.trim();
-    if (name.isEmpty)
+    if (name.isEmpty) {
       return _message(
         context.scL10n.isArabic
             ? 'اسم العميل مطلوب.'
             : 'Customer name is required.',
       );
-    if (!_validEmail(_email.text))
+    }
+    if (!_validEmail(_email.text)) {
       return _message(
         context.scL10n.isArabic
             ? 'البريد الإلكتروني غير صحيح.'
             : 'Email is invalid.',
       );
+    }
     await _runSave(() async {
       await widget.client.post(
         'mobile/customers/create',
@@ -667,24 +671,27 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
   Future<void> _saveSupplier() async {
     final name = _name.text.trim();
     final currency = _currency.text.trim().toUpperCase();
-    if (name.isEmpty)
+    if (name.isEmpty) {
       return _message(
         context.scL10n.isArabic
             ? 'الاسم القانوني مطلوب.'
             : 'Legal name is required.',
       );
-    if (!_validEmail(_email.text))
+    }
+    if (!_validEmail(_email.text)) {
       return _message(
         context.scL10n.isArabic
             ? 'البريد الإلكتروني غير صحيح.'
             : 'Email is invalid.',
       );
-    if (currency.isNotEmpty && !RegExp(r'^[A-Z]{3}$').hasMatch(currency))
+    }
+    if (currency.isNotEmpty && !RegExp(r'^[A-Z]{3}$').hasMatch(currency)) {
       return _message(
         context.scL10n.isArabic
             ? 'العملة يجب أن تكون 3 أحرف.'
             : 'Currency must be a 3-letter code.',
       );
+    }
     await _runSave(() async {
       await SuppliersRepository(widget.client).create(
         SupplierDraft(
@@ -706,38 +713,43 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
     final ar = context.scL10n.isArabic;
     final number = _contractNumber.text.trim();
     final currency = _currency.text.trim().toUpperCase();
-    if (number.isEmpty || _counterpartyId == null)
+    if (number.isEmpty || _counterpartyId == null) {
       return _message(
         ar
             ? 'رقم العقد وجهة التعاقد مطلوبان.'
             : 'Contract number and counterparty are required.',
       );
-    if (!RegExp(r'^[A-Z]{3}$').hasMatch(currency))
+    }
+    if (!RegExp(r'^[A-Z]{3}$').hasMatch(currency)) {
       return _message(
         ar
             ? 'عملة العقد مطلوبة بصيغة 3 أحرف.'
             : 'Contract currency must be a 3-letter code.',
       );
+    }
     final start = _contractStart.text.trim();
     final end = _contractEnd.text.trim();
     final base = _contractBase.text.trim();
     if (_canEditContracts &&
-        (!_validNullableDate(start) || !_validNullableDate(end)))
+        (!_validNullableDate(start) || !_validNullableDate(end))) {
       return _message(
         ar ? 'تواريخ العقد غير صحيحة.' : 'Contract dates are invalid.',
       );
-    if (start.isNotEmpty && end.isNotEmpty && start.compareTo(end) > 0)
+    }
+    if (start.isNotEmpty && end.isNotEmpty && start.compareTo(end) > 0) {
       return _message(
         ar
             ? 'تاريخ النهاية يسبق البداية.'
             : 'End date cannot precede start date.',
       );
+    }
     if (_canEditContracts &&
         base.isNotEmpty &&
-        !_validMoney(base, allowZero: true))
+        !_validMoney(base, allowZero: true)) {
       return _message(
         ar ? 'قيمة العقد غير صحيحة.' : 'Contract value is invalid.',
       );
+    }
     await _runSave(() async {
       await widget.client.post(
         'contracts/create',
@@ -762,20 +774,23 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
     final due = _paymentDue.text.trim();
     final expected = _paymentExpected.text.trim();
     final amount = _paymentAmount.text.trim();
-    if (_paymentContractId == null || sequence == null || sequence <= 0)
+    if (_paymentContractId == null || sequence == null || sequence <= 0) {
       return _message(
         ar
             ? 'العقد والترتيب الموجب مطلوبان.'
             : 'Contract and positive sequence are required.',
       );
-    if (!_validRequiredDate(due) || !_validNullableDate(expected))
+    }
+    if (!_validRequiredDate(due) || !_validNullableDate(expected)) {
       return _message(
         ar ? 'تواريخ الاستحقاق غير صحيحة.' : 'Obligation dates are invalid.',
       );
-    if (!_validMoney(amount, allowZero: false))
+    }
+    if (!_validMoney(amount, allowZero: false)) {
       return _message(
         ar ? 'المبلغ يجب أن يكون موجبًا.' : 'Amount must be positive.',
       );
+    }
     await _runSave(() async {
       await widget.client.post(
         'mobile/payments/create',
@@ -807,9 +822,10 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
   }
 
   void _message(String message) {
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 }
 
@@ -909,11 +925,13 @@ final class _AccountantOption {
     final data = apiObjectMap(value, 'accountant');
     final id =
         data['id'] is int ? data['id'] as int : int.tryParse('${data['id']}');
-    if (id == null || id <= 0)
+    if (id == null || id <= 0) {
       throw const FormatException('Accountant ID is invalid.');
+    }
     final name = data['name'];
-    if (name is! String || name.trim().isEmpty)
+    if (name is! String || name.trim().isEmpty) {
       throw const FormatException('Accountant name is invalid.');
+    }
     final email = data['email'];
     return _AccountantOption(
       id: id,

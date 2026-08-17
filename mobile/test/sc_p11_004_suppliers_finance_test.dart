@@ -7,7 +7,8 @@ import 'package:safecontracts_mobile/features/records/mobile_quick_add_screen.da
 import 'package:safecontracts_mobile/features/session/session_controller.dart';
 
 void main() {
-  test('suppliers navigation requires the explicit supplier view capability', () {
+  test('suppliers navigation requires the explicit supplier view capability',
+      () {
     final withoutSupplier = MobileNavigationPolicy.resolve(
       _session(<String, bool>{'safecontracts_access': true}),
       const SafeContractsMobileConfig.defaults(),

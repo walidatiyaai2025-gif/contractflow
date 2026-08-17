@@ -465,8 +465,9 @@ final class FinanceController extends ChangeNotifier {
 
   Future<void> setDirection(String value) async {
     final normalized = value.trim().toLowerCase();
-    if (normalized.isNotEmpty && !allowedDirections.contains(normalized))
+    if (normalized.isNotEmpty && !allowedDirections.contains(normalized)) {
       return;
+    }
     direction = normalized;
     currencyCode = '';
     status = '';
