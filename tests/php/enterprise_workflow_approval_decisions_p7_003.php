@@ -7,7 +7,6 @@ require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontract
 
 use SafeContracts\Approvals\ApprovalDecisionPolicy;
 use SafeContracts\Approvals\ApprovalDecisionRepository;
-use SafeContracts\Approvals\ApprovalRoutePolicy;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Tenancy\CoreTenantEnforcement;
 use SafeContracts\Tenancy\TenantContextStore;
@@ -39,6 +38,10 @@ function esc_p7_dec_request(string $status = 'pending'): array
         'id'=>'2001','contract_id'=>'71','instance_id'=>'501','status'=>$status,
         'transition_id'=>'701','from_state_id'=>'301',
     ]];
+}
+function esc_p7_dec_contract(): array
+{
+    return [['id'=>'71']];
 }
 function esc_p7_dec_stages(): array
 {
@@ -78,46 +81,48 @@ esc_p7_dec_assert(str_contains($serviceSource, 'Capabilities::EDIT_CONTRACTS'), 
 esc_p7_dec_assert(str_contains($serviceSource, 'Capabilities::ACCESS'), 'decision history read requires Enterprise access');
 esc_p7_dec_assert(str_contains($serviceSource, 'TenantAuthorization::allowsCapability'), 'decision service preserves tenant-role narrowing');
 esc_p7_dec_assert(str_contains($repositorySource, 'PUBLIC_DECISION_COLUMNS') && str_contains($repositorySource, 'INTERNAL_DECISION_COLUMNS'), 'decision repository separates public and internal read models');
-esc_p7_dec_assert(! str_contains(substr($repositorySource, strpos($repositorySource, "PUBLIC_DECISION_COLUMNS"), 180), 'decision_key_hash'), 'public decision projection excludes idempotency hash');
+esc_p7_dec_assert(! str_contains(substr($repositorySource, strpos($repositorySource, 'PUBLIC_DECISION_COLUMNS'), 180), 'decision_key_hash'), 'public decision projection excludes idempotency hash');
 esc_p7_dec_assert(! str_contains($repositorySource, 'UPDATE {$stages}') && ! str_contains($repositorySource, 'UPDATE wp_safecontracts_workflow_approval_request_stages'), 'stage progression is derived without mutable stage status');
 esc_p7_dec_assert(! str_contains($repositorySource, 'contract_workflow_transition_history'), 'P7-003 repository does not write P6 transition history');
 esc_p7_dec_assert(! str_contains($repositorySource, 'UPDATE {$instances}') && ! str_contains($repositorySource, 'UPDATE wp_safecontracts_contract_workflow_instances'), 'P7-003 repository does not move P6 workflow state');
-esc_p7_dec_assert(str_contains($gateSource, 'enterprise_workflow_approval_decision_foundation_p7_003.php'), 'P7-003 foundation regression remains wired');
+esc_p7_dec_assert(str_contains($gateSource, 'enterprise_workflow_approval_decision_foundation_p7_003.php') && str_contains($gateSource, 'enterprise_workflow_approval_decisions_p7_003.php'), 'P7-003 regressions are explicitly wired');
 
 update_option(CoreTenantEnforcement::OPTION, '1', false);
 TenantContextStore::reset();
 TenantContextStore::context()->setTenantId(17);
 $repository = new ApprovalDecisionRepository();
 
-// First all-policy approval: active stage remains incomplete and request remains pending.
+// First all-policy approval: request + active contract + immutable snapshots are locked; stage remains incomplete.
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_read_queries'] = [];
-$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_stages(), esc_p7_dec_candidates(), []];
+$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), esc_p7_dec_candidates(), []];
 $first = $repository->recordDecision(2001, 42, 'approve', ApprovalDecisionPolicy::decisionKeyHash('d-1'), null);
 esc_p7_dec_assert($first['request_status'] === 'pending' && $first['stage_position'] === 1, 'first all-policy approval stays on stage one');
 esc_p7_dec_assert($first['stage_completed'] === false && $first['request_completed'] === false, 'first all-policy approval does not complete stage or request');
 $writes = implode("\n", $GLOBALS['sc_test_queries']); $reads = implode("\n", $GLOBALS['sc_test_read_queries']);
 esc_p7_dec_assert(($GLOBALS['sc_test_queries'][0] ?? '') === 'START TRANSACTION' && end($GLOBALS['sc_test_queries']) === 'COMMIT', 'decision recording is transactional');
-esc_p7_dec_assert(str_contains($reads, 'safecontracts_workflow_approval_requests') && str_contains($reads, 'LIMIT 2 FOR UPDATE'), 'decision locks exact request before progression');
+esc_p7_dec_assert(str_contains($reads, 'safecontracts_workflow_approval_requests') && str_contains($reads, 'LIMIT 2 FOR UPDATE'), 'decision locks exact request first');
+esc_p7_dec_assert(str_contains($reads, 'safecontracts_contracts') && str_contains($reads, 'is_archived = 0') && str_contains($reads, 'FOR UPDATE'), 'new decision re-locks active contract in same transaction');
 esc_p7_dec_assert(str_contains($reads, 'safecontracts_workflow_approval_request_stages') && str_contains($reads, 'FOR UPDATE'), 'decision locks immutable stage snapshots');
 esc_p7_dec_assert(str_contains($reads, 'safecontracts_workflow_approval_request_candidates') && str_contains($reads, 'FOR UPDATE'), 'decision locks immutable candidate snapshots');
 esc_p7_dec_assert(str_contains($writes, 'INSERT INTO wp_safecontracts_workflow_approval_decisions'), 'immutable decision row is inserted');
+esc_p7_dec_assert(str_contains($writes, ', NULL,'), 'missing optional comment persists as SQL NULL');
 esc_p7_dec_assert(! str_contains($writes, 'UPDATE wp_safecontracts_workflow_approval_requests'), 'incomplete stage does not mutate request status');
 
-// Second distinct approval completes stage one but does not complete the two-stage request.
+// Second distinct approval completes stage one but not the two-stage request.
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_read_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [
-    esc_p7_dec_request(), [], esc_p7_dec_stages(), esc_p7_dec_candidates(),
+    esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), esc_p7_dec_candidates(),
     [esc_p7_dec_row(3001,1101,42,'approve','old-1')],
 ];
 $stageOneDone = $repository->recordDecision(2001, 55, 'approve', ApprovalDecisionPolicy::decisionKeyHash('d-2'), null);
 esc_p7_dec_assert($stageOneDone['stage_position'] === 1 && $stageOneDone['stage_completed'] === true, 'second all-policy approval completes first stage');
 esc_p7_dec_assert($stageOneDone['request_status'] === 'pending' && $stageOneDone['request_completed'] === false, 'completing non-final stage leaves request pending');
-esc_p7_dec_assert(! str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'UPDATE wp_safecontracts_workflow_approval_requests'), 'non-final stage advancement has no mutable stage/request marker');
+esc_p7_dec_assert(! str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'UPDATE wp_safecontracts_workflow_approval_requests'), 'non-final stage advancement is derived without mutable stage/request marker');
 
-// Once stage one is derived complete, only stage two candidates can act; first quorum approval remains pending.
+// Stage one derived complete activates stage two; first quorum approval remains pending.
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_read_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [
-    esc_p7_dec_request(), [], esc_p7_dec_stages(), esc_p7_dec_candidates(),
+    esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), esc_p7_dec_candidates(),
     [esc_p7_dec_row(3001,1101,42,'approve','old-1'), esc_p7_dec_row(3002,1101,55,'approve','old-2')],
 ];
 $quorumOne = $repository->recordDecision(2001, 42, 'approve', ApprovalDecisionPolicy::decisionKeyHash('d-3'), 'reviewed');
@@ -127,7 +132,7 @@ esc_p7_dec_assert($quorumOne['stage_completed'] === false && $quorumOne['request
 // Second quorum approval completes final stage and CAS-updates only Approval Request status.
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_read_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [
-    esc_p7_dec_request(), [], esc_p7_dec_stages(), esc_p7_dec_candidates(),
+    esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), esc_p7_dec_candidates(),
     [
         esc_p7_dec_row(3001,1101,42,'approve','old-1'), esc_p7_dec_row(3002,1101,55,'approve','old-2'),
         esc_p7_dec_row(3003,1102,42,'approve','old-3'),
@@ -142,15 +147,27 @@ esc_p7_dec_assert(! str_contains($approvedWrites, 'contract_workflow_instances')
 
 // Reject is immediately terminal and never advances a stage.
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_read_queries'] = [];
-$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_stages(), esc_p7_dec_candidates(), []];
+$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), esc_p7_dec_candidates(), []];
 $rejected = $repository->recordDecision(2001, 42, 'reject', ApprovalDecisionPolicy::decisionKeyHash('reject-1'), 'not acceptable');
 esc_p7_dec_assert($rejected['request_status'] === 'rejected' && $rejected['request_completed'] === true, 'valid reject terminates request');
 esc_p7_dec_assert($rejected['stage_completed'] === false, 'reject does not mark approval stage complete');
 esc_p7_dec_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), "UPDATE wp_safecontracts_workflow_approval_requests SET status = 'rejected'"), 'reject CAS-updates request status');
 
+// Contract archival/concurrent disappearance is revalidated after idempotency but before stage/candidate reads.
+$GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_read_queries'] = [];
+$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], []];
+esc_p7_dec_throws(
+    static fn () => $repository->recordDecision(2001, 42, 'approve', ApprovalDecisionPolicy::decisionKeyHash('archived-race'), null),
+    RuntimeException::class,
+    'no longer decisionable',
+    'archived or concurrently missing contract rejects new decision'
+);
+esc_p7_dec_assert(count($GLOBALS['sc_test_read_queries']) === 3, 'contract drift fails before stage/candidate reads');
+esc_p7_dec_assert(! str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'INSERT INTO wp_safecontracts_workflow_approval_decisions'), 'contract drift writes no decision');
+
 // Future-stage-only candidate cannot decide while stage one is active.
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_read_queries'] = [];
-$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_stages(), esc_p7_dec_candidates(), []];
+$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), esc_p7_dec_candidates(), []];
 esc_p7_dec_throws(
     static fn () => $repository->recordDecision(2001, 66, 'approve', ApprovalDecisionPolicy::decisionKeyHash('future'), null),
     RuntimeException::class,
@@ -161,7 +178,8 @@ esc_p7_dec_assert(in_array('ROLLBACK', $GLOBALS['sc_test_queries'], true), 'futu
 esc_p7_dec_assert(! str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'INSERT INTO wp_safecontracts_workflow_approval_decisions'), 'future-stage attempt writes no decision');
 
 // Non-candidate cannot decide.
-$GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_stages(), esc_p7_dec_candidates(), []];
+$GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = [];
+$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), esc_p7_dec_candidates(), []];
 esc_p7_dec_throws(
     static fn () => $repository->recordDecision(2001, 99, 'approve', ApprovalDecisionPolicy::decisionKeyHash('outsider'), null),
     RuntimeException::class,
@@ -169,10 +187,30 @@ esc_p7_dec_throws(
     'non-candidate actor rejected'
 );
 
+// Orphan and duplicate candidate snapshots fail closed instead of being ignored/de-duplicated at decision time.
+$orphanCandidates = esc_p7_dec_candidates(); $orphanCandidates[] = ['request_stage_id'=>'9999','user_id'=>'88'];
+$GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = [];
+$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), $orphanCandidates, []];
+esc_p7_dec_throws(
+    static fn () => $repository->recordDecision(2001, 42, 'approve', ApprovalDecisionPolicy::decisionKeyHash('orphan-candidate'), null),
+    RuntimeException::class,
+    'orphaned or invalid',
+    'orphan candidate stage rejected'
+);
+$duplicateCandidates = esc_p7_dec_candidates(); $duplicateCandidates[] = ['request_stage_id'=>'1101','user_id'=>'42'];
+$GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = [];
+$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), $duplicateCandidates, []];
+esc_p7_dec_throws(
+    static fn () => $repository->recordDecision(2001, 42, 'approve', ApprovalDecisionPolicy::decisionKeyHash('duplicate-candidate'), null),
+    RuntimeException::class,
+    'duplicate stage/user',
+    'duplicate candidate stage/user rejected'
+);
+
 // Same actor/stage with another key cannot create a second effective decision.
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [
-    esc_p7_dec_request(), [], esc_p7_dec_stages(), esc_p7_dec_candidates(),
+    esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), esc_p7_dec_candidates(),
     [esc_p7_dec_row(3001,1101,42,'approve','different-key')],
 ];
 esc_p7_dec_throws(
@@ -182,24 +220,21 @@ esc_p7_dec_throws(
     'second effective decision with another key rejected'
 );
 
-// Exact retry is idempotent even after the request became terminal; hash stays internal.
+// Exact retry is idempotent even after the request became terminal; hash stays internal and no contract revalidation is needed.
 $retryHash = ApprovalDecisionPolicy::decisionKeyHash('retry-key');
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_read_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [
     esc_p7_dec_request('approved'),
     [esc_p7_dec_row(3004,1102,66,'approve',$retryHash)],
     [['id'=>'1102','position_no'=>'2','stage_code_snapshot'=>'legal_review','decision_policy_snapshot'=>'quorum','required_approvals_snapshot'=>'2']],
-    [
-        ['user_id'=>'42'],['user_id'=>'66'],['user_id'=>'77'],
-    ],
-    [
-        ['user_id'=>'42','action'=>'approve'],['user_id'=>'66','action'=>'approve'],
-    ],
+    [['user_id'=>'42'],['user_id'=>'66'],['user_id'=>'77']],
+    [['user_id'=>'42','action'=>'approve'],['user_id'=>'66','action'=>'approve']],
 ];
 $retry = $repository->recordDecision(2001, 66, 'approve', $retryHash, 'ignored on retry');
 esc_p7_dec_assert($retry['idempotent'] === true && $retry['request_status'] === 'approved', 'exact retry returns original decision after terminal completion');
 esc_p7_dec_assert(! array_key_exists('decision_key_hash', $retry['decision']), 'exact retry does not expose internal decision hash');
 esc_p7_dec_assert($GLOBALS['sc_test_queries'] === ['START TRANSACTION','COMMIT'], 'exact retry performs no duplicate persistence/status mutation');
+esc_p7_dec_assert(! str_contains(implode("\n", $GLOBALS['sc_test_read_queries']), 'safecontracts_contracts'), 'exact retry remains idempotency-first before mutable contract revalidation');
 
 // Reusing the key for another action fails closed before stage derivation.
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = [];
@@ -224,7 +259,7 @@ esc_p7_dec_throws(
 // Pending request with a stored reject is inconsistent and fails closed rather than reopening progression.
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = [];
 $GLOBALS['sc_test_result_queue'] = [
-    esc_p7_dec_request(), [], esc_p7_dec_stages(), esc_p7_dec_candidates(),
+    esc_p7_dec_request(), [], esc_p7_dec_contract(), esc_p7_dec_stages(), esc_p7_dec_candidates(),
     [esc_p7_dec_row(3005,1101,55,'reject','old-reject')],
 ];
 esc_p7_dec_throws(
@@ -237,7 +272,7 @@ esc_p7_dec_throws(
 // Malformed quorum threshold fails closed before insert.
 $badStages = esc_p7_dec_stages(); $badStages[0]['decision_policy_snapshot'] = 'quorum'; $badStages[0]['required_approvals_snapshot'] = '3';
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = [];
-$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], $badStages, esc_p7_dec_candidates(), []];
+$GLOBALS['sc_test_result_queue'] = [esc_p7_dec_request(), [], esc_p7_dec_contract(), $badStages, esc_p7_dec_candidates(), []];
 esc_p7_dec_throws(
     static fn () => $repository->recordDecision(2001, 42, 'approve', ApprovalDecisionPolicy::decisionKeyHash('bad-quorum'), null),
     RuntimeException::class,
