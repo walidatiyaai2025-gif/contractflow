@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Contracts\ContractArchiveService;
+use SafeContracts\Finance\FinanceOverviewService;
+use SafeContracts\Finance\FinancialDirection;
+use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
-use SafeContracts\Settings\GeneralSettings;
 use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
@@ -59,18 +61,10 @@ final class DashboardPage
             <?php
             return;
         }
+
         $filters = DashboardFilters::normalize($_GET);
         $read = new AdminReadRepository();
         $kpis = $read->kpis($filters);
-        $settings = (new GeneralSettings())->read();
-        $currencyToken = trim((string) ($settings['currency_symbol'] ?? ''));
-        if ($currencyToken === '') {
-            $currencyToken = trim((string) ($settings['currency_code'] ?? ''));
-        }
-        $currencyLabel = trim(implode(' ', array_filter([
-            (string) ($settings['currency_symbol'] ?? ''),
-            (string) ($settings['currency_code'] ?? ''),
-        ], static fn (string $value): bool => trim($value) !== '')));
         $customers = $read->customerOptions();
         $contracts = $read->contractOptions($filters['customer_id']);
         $tableFilters = $filters;
@@ -83,6 +77,23 @@ final class DashboardPage
         ));
         $dashboardContracts = array_slice($dashboardContracts, 0, 25);
         $collectorAttachments = $read->collectorAttachments($filters, 12);
+
+        $finance = null;
+        if (self::canViewFinance() && empty($filters['date_range_error'])) {
+            try {
+                $finance = (new FinanceOverviewService())->overview([
+                    'customer_id' => $filters['customer_id'],
+                    'contract_id' => $filters['contract_id'],
+                    'accountant_user_id' => $filters['accountant_user_id'],
+                    'status' => $filters['status'],
+                    'due_from' => $filters['date_from'],
+                    'due_to' => $filters['date_to'],
+                ]);
+            } catch (Throwable $error) {
+                unset($error);
+                $finance = null;
+            }
+        }
         ?>
         <section class="safecontracts-dashboard" aria-labelledby="safecontracts-dashboard-title">
             <div class="safecontracts-section-heading">
@@ -90,8 +101,8 @@ final class DashboardPage
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Operational overview', 'safecontracts'); ?></p>
                     <h2 id="safecontracts-dashboard-title"><?php echo esc_html__('Dashboard', 'safecontracts'); ?></h2>
                 </div>
-                <?php if ($currencyLabel !== '') : ?>
-                    <span class="safecontracts-currency-badge"><?php echo esc_html__('Currency', 'safecontracts'); ?>: <?php echo esc_html($currencyLabel); ?></span>
+                <?php if (self::canViewFinance()) : ?>
+                    <a class="button" href="<?php echo esc_url(add_query_arg(['page' => FinancePage::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open Finance workspace', 'safecontracts'); ?></a>
                 <?php endif; ?>
             </div>
 
@@ -102,7 +113,7 @@ final class DashboardPage
                 <input type="hidden" name="page" value="<?php echo esc_attr(AdminShell::SLUG); ?>">
                 <label><?php echo esc_html__('Customer', 'safecontracts'); ?>
                     <select name="customer_id">
-                        <option value="0"><?php echo esc_html__('All customers', 'safecontracts'); ?></option>
+                        <option value="0"><?php echo esc_html__('All customers / counterparties', 'safecontracts'); ?></option>
                         <?php foreach ($customers as $customer) : ?>
                             <option value="<?php echo esc_attr((string) $customer['id']); ?>" <?php selected($filters['customer_id'], $customer['id']); ?>><?php echo esc_html($customer['name']); ?></option>
                         <?php endforeach; ?>
@@ -122,7 +133,7 @@ final class DashboardPage
                 <label><?php echo esc_html__('Status', 'safecontracts'); ?>
                     <select name="status">
                         <option value=""><?php echo esc_html__('Any status', 'safecontracts'); ?></option>
-                        <?php foreach (['active','draft','completed','cancelled','upcoming','due_soon','due','overdue','partially_paid','paid'] as $status) : ?>
+                        <?php foreach (array_values(array_unique(array_merge(['active','draft','completed','cancelled'], PaymentStatus::all()))) as $status) : ?>
                             <option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(self::statusLabel($status)); ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -132,13 +143,16 @@ final class DashboardPage
             </form>
 
             <div class="safecontracts-kpi-grid">
-                <?php self::kpi(__('Contracts', 'safecontracts'), (string) $kpis['contract_count']); ?>
-                <?php self::kpi(__('Scheduled', 'safecontracts'), self::money($kpis['scheduled_total'], $currencyToken)); ?>
-                <?php self::kpi(__('Remaining', 'safecontracts'), self::money($kpis['remaining_total'], $currencyToken)); ?>
-                <?php self::kpi(__('Overdue exposure', 'safecontracts'), self::money($kpis['overdue_exposure'], $currencyToken), true); ?>
-                <?php self::kpi(__('Collected', 'safecontracts'), self::money($kpis['collected_total'], $currencyToken)); ?>
+                <?php self::kpi(__('Contracts in scope', 'safecontracts'), (string) $kpis['contract_count']); ?>
             </div>
-            <p class="description"><?php echo esc_html__('Dashboard payment KPIs use contractual due dates for the selected period. Contract lists use start date (or creation date when start date is empty), and collector attachments use collection date.', 'safecontracts'); ?></p>
+
+            <?php if (is_array($finance)) : ?>
+                <?php self::renderFinanceSummary((array) ($finance['summary'] ?? [])); ?>
+                <?php self::renderActionCenter((array) ($finance['action_center'] ?? [])); ?>
+            <?php elseif (self::canViewFinance()) : ?>
+                <section class="safecontracts-admin-card"><p><?php echo esc_html__('Financial intelligence is temporarily unavailable for this dashboard scope. Contract operations remain available below.', 'safecontracts'); ?></p></section>
+            <?php endif; ?>
+            <p class="description"><?php echo esc_html__('Financial cards are server-authorized and stay separated by Accounts Payable / Accounts Receivable and currency. Contract lists use start date (or creation date when start date is empty). Collector attachments are receivable/customer history and use collection date.', 'safecontracts'); ?></p>
 
             <section class="safecontracts-admin-card safecontracts-table-card safecontracts-dashboard-contracts" aria-labelledby="safecontracts-dashboard-contracts-title">
                 <div class="safecontracts-section-heading">
@@ -153,18 +167,23 @@ final class DashboardPage
                     <table class="widefat striped">
                         <thead><tr>
                             <th><?php echo esc_html__('Contract', 'safecontracts'); ?></th>
-                            <th><?php echo esc_html__('Customer', 'safecontracts'); ?></th>
+                            <th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th>
+                            <th><?php echo esc_html__('Direction', 'safecontracts'); ?></th>
                             <th><?php echo esc_html__('Status', 'safecontracts'); ?></th>
                             <th><?php echo esc_html__('Base value', 'safecontracts'); ?></th>
                             <th><?php echo esc_html__('Actions', 'safecontracts'); ?></th>
                         </tr></thead>
                         <tbody>
-                        <?php foreach ($dashboardContracts as $contract) : ?>
+                        <?php foreach ($dashboardContracts as $contract) :
+                            $direction = (string) ($contract['financial_direction'] ?? '');
+                            $currency = (string) ($contract['currency_code'] ?? '');
+                            ?>
                             <tr>
                                 <td><?php echo esc_html((string) $contract['contract_number']); ?></td>
-                                <td><?php echo esc_html((string) $contract['customer_name']); ?></td>
+                                <td><strong><?php echo esc_html((string) ($contract['counterparty_name'] ?? '')); ?></strong><br><small><?php echo esc_html(self::counterpartyTypeLabel((string) ($contract['counterparty_type'] ?? ''))); ?></small></td>
+                                <td><?php echo esc_html(self::directionLabel($direction)); ?></td>
                                 <td><?php echo esc_html(self::statusLabel((string) $contract['status'])); ?></td>
-                                <td><?php echo esc_html(self::money($contract['base_value'], $currencyToken)); ?></td>
+                                <td><?php echo esc_html(self::money($contract['base_value'], $currency)); ?></td>
                                 <td>
                                     <div class="safecontracts-dashboard-table-actions">
                                         <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => ContractsPage::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a>
@@ -182,14 +201,14 @@ final class DashboardPage
                         <?php endforeach; ?>
                         </tbody>
                     </table>
-                    <p class="description"><?php echo esc_html__('Delete is a safe archive action: the contract disappears from this dashboard list, while financial, collection, history and audit records are preserved.', 'safecontracts'); ?></p>
+                    <p class="description"><?php echo esc_html__('Customer and Supplier contracts share this operational list without fabricating a Customer relationship. Delete is a safe archive action; financial, collection, history and audit records are preserved.', 'safecontracts'); ?></p>
                 <?php endif; ?>
             </section>
 
             <section class="safecontracts-admin-card safecontracts-table-card" aria-labelledby="safecontracts-dashboard-collector-attachments-title">
                 <div class="safecontracts-section-heading">
                     <div>
-                        <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Collection evidence', 'safecontracts'); ?></p>
+                        <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Receivable evidence', 'safecontracts'); ?></p>
                         <h2 id="safecontracts-dashboard-collector-attachments-title"><?php echo esc_html__('Collector attachments', 'safecontracts'); ?></h2>
                     </div>
                 </div>
@@ -202,8 +221,66 @@ final class DashboardPage
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
-                <p class="description"><?php echo esc_html__('Attachments are resolved through WordPress Media and inherit the same customer/contract/accountant scope as the collection ledger. Raw filesystem paths are never exposed.', 'safecontracts'); ?></p>
+                <p class="description"><?php echo esc_html__('Collector attachments belong to Customer receivable history only. They inherit the same customer/contract/accountant scope, resolve through WordPress Media, and never expose raw filesystem paths.', 'safecontracts'); ?></p>
             </section>
+        </section>
+        <?php
+    }
+
+    /** @param list<array<string,mixed>> $rows */
+    private static function renderFinanceSummary(array $rows): void
+    {
+        if ($rows === []) {
+            return;
+        }
+        ?>
+        <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Financial position', 'safecontracts'); ?></p><h2><?php echo esc_html__('AP / AR by currency', 'safecontracts'); ?></h2></div></div>
+        <div class="safecontracts-finance-summary-grid">
+            <?php foreach ($rows as $row) :
+                $direction = (string) ($row['financial_direction'] ?? '');
+                $currency = (string) ($row['currency_code'] ?? 'UNSET');
+                ?>
+                <article class="safecontracts-finance-summary safecontracts-finance-summary--<?php echo esc_attr($direction); ?>">
+                    <div class="safecontracts-finance-summary__head">
+                        <div><span><?php echo esc_html(self::directionLabel($direction)); ?></span><strong><?php echo esc_html($currency); ?></strong></div>
+                        <span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr($direction); ?>"><?php echo esc_html($direction === FinancialDirection::PAYABLE ? __('Cash out', 'safecontracts') : __('Cash in', 'safecontracts')); ?></span>
+                    </div>
+                    <div class="safecontracts-finance-metrics">
+                        <?php self::miniMetric(__('Outstanding', 'safecontracts'), self::money($row['outstanding_total'] ?? 0, $currency)); ?>
+                        <?php self::miniMetric($direction === FinancialDirection::PAYABLE ? __('Paid', 'safecontracts') : __('Received', 'safecontracts'), self::money($row['settled_total'] ?? 0, $currency)); ?>
+                        <?php self::miniMetric(__('Overdue', 'safecontracts'), self::money($row['overdue_total'] ?? 0, $currency), (float) ($row['overdue_total'] ?? 0) > 0); ?>
+                        <?php self::miniMetric(__('Due 7 days', 'safecontracts'), self::money($row['due_7_total'] ?? 0, $currency)); ?>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        </div>
+        <?php
+    }
+
+    /** @param list<array<string,mixed>> $items */
+    private static function renderActionCenter(array $items): void
+    {
+        if ($items === []) {
+            return;
+        }
+        ?>
+        <section class="safecontracts-admin-card safecontracts-finance-panel" aria-labelledby="safecontracts-dashboard-action-center-title">
+            <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Needs attention', 'safecontracts'); ?></p><h2 id="safecontracts-dashboard-action-center-title"><?php echo esc_html__('Finance Action Center', 'safecontracts'); ?></h2></div></div>
+            <div class="safecontracts-action-list">
+                <?php foreach (array_slice($items, 0, 6) as $item) :
+                    $direction = (string) ($item['direction'] ?? '');
+                    $currency = (string) ($item['currency_code'] ?? 'UNSET');
+                    $query = ['page' => FinancePage::SLUG, 'direction' => $direction, 'currency_code' => $currency];
+                    if (($item['kind'] ?? '') === 'overdue') {
+                        $query['status'] = 'overdue';
+                    }
+                    ?>
+                    <a class="safecontracts-action-item safecontracts-action-item--<?php echo esc_attr((string) ($item['priority'] ?? 'normal')); ?>" href="<?php echo esc_url(add_query_arg($query, admin_url('admin.php'))); ?>">
+                        <span><strong><?php echo esc_html(self::actionLabel((string) ($item['kind'] ?? ''), $direction)); ?></strong><small><?php echo esc_html($currency . ' · ' . (int) ($item['count'] ?? 0) . ' ' . __('items', 'safecontracts')); ?></small></span>
+                        <b><?php echo esc_html(self::money($item['amount'] ?? 0, $currency)); ?></b>
+                    </a>
+                <?php endforeach; ?>
+            </div>
         </section>
         <?php
     }
@@ -211,6 +288,11 @@ final class DashboardPage
     private static function kpi(string $label, string $value, bool $alert = false): void
     {
         ?><article class="safecontracts-kpi<?php echo $alert ? ' safecontracts-kpi--alert' : ''; ?>"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html($value); ?></strong></article><?php
+    }
+
+    private static function miniMetric(string $label, string $value, bool $alert = false): void
+    {
+        ?><div class="safecontracts-finance-mini<?php echo $alert ? ' safecontracts-finance-mini--alert' : ''; ?>"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html($value); ?></strong></div><?php
     }
 
     private static function money(mixed $value, string $currencyToken = ''): string
@@ -227,5 +309,33 @@ final class DashboardPage
     private static function statusLabel(string $status): string
     {
         return TranslationCatalog::text(ucwords(str_replace('_', ' ', $status)));
+    }
+
+    private static function directionLabel(string $direction): string
+    {
+        return $direction === FinancialDirection::PAYABLE
+            ? __('Accounts Payable', 'safecontracts')
+            : __('Accounts Receivable', 'safecontracts');
+    }
+
+    private static function counterpartyTypeLabel(string $type): string
+    {
+        return $type === 'supplier' ? __('Supplier', 'safecontracts') : __('Customer', 'safecontracts');
+    }
+
+    private static function actionLabel(string $kind, string $direction): string
+    {
+        $subject = $direction === FinancialDirection::PAYABLE ? __('Payables', 'safecontracts') : __('Receivables', 'safecontracts');
+        return match ($kind) {
+            'overdue' => sprintf(__('%s overdue', 'safecontracts'), $subject),
+            'due_today' => sprintf(__('%s due today', 'safecontracts'), $subject),
+            'due_7_days' => sprintf(__('%s due in 7 days', 'safecontracts'), $subject),
+            default => $subject,
+        };
+    }
+
+    private static function canViewFinance(): bool
+    {
+        return current_user_can(Capabilities::VIEW_PAYABLES) || current_user_can(Capabilities::VIEW_RECEIVABLES);
     }
 }
