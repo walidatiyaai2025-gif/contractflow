@@ -221,6 +221,13 @@ final class FinanceObligation {
     if (!const <String>{'customer', 'supplier'}.contains(type)) {
       throw const FormatException('finance counterparty_type is invalid.');
     }
+    final direction = _direction(data['financial_direction']);
+    if ((type == 'supplier' && direction != 'payable') ||
+        (type == 'customer' && direction != 'receivable')) {
+      throw const FormatException(
+        'finance financial_direction conflicts with counterparty type.',
+      );
+    }
     return FinanceObligation(
       id: _positiveInt(data['id'], 'obligation.id'),
       contractId: _positiveInt(data['contract_id'], 'obligation.contract_id'),
@@ -237,7 +244,7 @@ final class FinanceObligation {
         data['counterparty_name'],
         'obligation.counterparty_name',
       ),
-      direction: _direction(data['financial_direction']),
+      direction: direction,
       currencyCode: _currency(data['currency_code']),
       sequenceNo: _positiveInt(data['sequence_no'], 'obligation.sequence_no'),
       reference: _optionalText(data['reference']),
@@ -449,13 +456,23 @@ final class FinanceController extends ChangeNotifier {
   Future<void> refreshSilently() async {
     if (!canAccess) return;
     try {
-      final next = await repository.loadOverview(
-        direction: direction,
-        currencyCode: currencyCode,
-        status: status,
-        agingBucket: agingBucket,
-      );
-      overview = next;
+      final values = await Future.wait<Object>([
+        repository.loadOverview(
+          direction: direction,
+          currencyCode: currencyCode,
+          status: status,
+          agingBucket: agingBucket,
+        ),
+        repository.loadObligations(
+          direction: direction,
+          currencyCode: currencyCode,
+          status: status,
+          agingBucket: agingBucket,
+          limit: 100,
+        ),
+      ]);
+      overview = values[0] as FinanceOverview;
+      obligations = values[1] as List<FinanceObligation>;
       state = FinanceLoadState.ready;
       errorMessage = null;
     } on Object {
