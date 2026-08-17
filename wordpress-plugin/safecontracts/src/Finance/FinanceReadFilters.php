@@ -36,11 +36,19 @@ final class FinanceReadFilters
         $customerId = self::id($input['customer_id'] ?? null);
         $supplierId = self::id($input['supplier_id'] ?? null);
         $counterpartyId = self::id($input['counterparty_id'] ?? null);
-        if ($customerId > 0 && $counterpartyType === '' && $counterpartyId === 0) {
+        if (
+            $customerId > 0
+            && $counterpartyId === 0
+            && ($counterpartyType === '' || $counterpartyType === Counterparty::CUSTOMER)
+        ) {
             $counterpartyType = Counterparty::CUSTOMER;
             $counterpartyId = $customerId;
         }
-        if ($supplierId > 0 && $counterpartyType === '' && $counterpartyId === 0) {
+        if (
+            $supplierId > 0
+            && $counterpartyId === 0
+            && ($counterpartyType === '' || $counterpartyType === Counterparty::SUPPLIER)
+        ) {
             $counterpartyType = Counterparty::SUPPLIER;
             $counterpartyId = $supplierId;
         }
