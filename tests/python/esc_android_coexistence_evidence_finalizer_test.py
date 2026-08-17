@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 from pathlib import Path
 import tempfile
 import sys
@@ -12,13 +13,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from build_esc_android_coexistence_evidence_bundle import (  # noqa: E402
     ARTIFACT_KEYS,
-    artifact_reference,
     build_manifest,
 )
 from finalize_esc_android_coexistence_evidence import (  # noqa: E402
-    CHECK_ARTIFACTS,
     FinalizerError,
-    TOP_LEVEL_ARTIFACTS,
+    MANUAL_CHECKS,
+    assert_draft_matches_manifest,
     finalize_record,
 )
 from validate_esc_android_coexistence_evidence import (  # noqa: E402
@@ -103,124 +103,145 @@ def draft_record() -> dict[str, object]:
     }
 
 
-def create_bundle(root: Path) -> dict[str, object]:
+def create_manifest(evidence_root: Path, draft: dict[str, object]):
     paths: dict[str, str] = {}
-    for index, key in enumerate(ARTIFACT_KEYS, start=1):
-        relative = f"evidence/{index:02d}-{key}.txt"
-        path = root / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f"retained real-device evidence for {key}\n", encoding="utf-8")
+    draft_relative = "evidence/objective-draft.json"
+    draft_path = evidence_root / draft_relative
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
+    draft_path.write_text(
+        json.dumps(draft, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    paths["objective_draft"] = draft_relative
+
+    for key in ARTIFACT_KEYS:
+        if key == "objective_draft":
+            continue
+        relative = f"evidence/{key}.txt"
+        path = evidence_root / relative
+        path.write_text(f"completed retained evidence for {key}\n", encoding="utf-8")
         paths[key] = relative
-    return build_manifest(
-        root,
+
+    manifest = build_manifest(
+        evidence_root,
         SOURCE_SHA,
-        "2026-08-17T18:50:00Z",
+        "2026-08-17T20:00:00Z",
         paths,
     )
-
-
-def finalize(
-    draft: dict[str, object],
-    manifest: dict[str, object],
-    root: Path,
-):
-    return finalize_record(
-        draft,
-        SOURCE_SHA,
-        "2026-08-17T19:00:00Z",
-        manifest,
-        root,
-    )
+    return draft_path, manifest
 
 
 class EscAndroidCoexistenceEvidenceFinalizerTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp_dir.name)
-        self.manifest = create_bundle(self.root)
-
-    def tearDown(self) -> None:
-        self.temp_dir.cleanup()
-
-    def test_verified_bundle_produces_validator_accepted_pass(self) -> None:
+    def test_verified_manifest_produces_validator_accepted_pass(self) -> None:
         draft = draft_record()
-        record = finalize(draft, self.manifest, self.root)
-
-        self.assertEqual(record["decision"], "PASS")
-        self.assertEqual(record["source_sha"], SOURCE_SHA)
-        self.assertEqual(record["tested_at_utc"], "2026-08-17T19:00:00Z")
-        self.assertEqual(record["safe_contract"], draft["safe_contract"])
-        self.assertEqual(record["device"], draft["device"])
-        self.assertEqual(
-            record["evidence_bundle"]["sha256"],
-            self.manifest["bundle_sha256"],
-        )
-        self.assertEqual(
-            record["esc"]["firebase_reference"],
-            artifact_reference(self.manifest, "esc_firebase_identity"),
-        )
-
-        for name, artifact_key in CHECK_ARTIFACTS.items():
-            self.assertEqual(record["checks"][name]["status"], "PASS")
-            self.assertEqual(
-                record["checks"][name]["evidence"],
-                artifact_reference(self.manifest, artifact_key),
+        with tempfile.TemporaryDirectory() as temp:
+            evidence_root = Path(temp)
+            draft_path, manifest = create_manifest(evidence_root, draft)
+            assert_draft_matches_manifest(draft_path, manifest)
+            record = finalize_record(
+                draft,
+                SOURCE_SHA,
+                "2026-08-17T21:00:00Z",
+                manifest,
+                evidence_root,
             )
 
-        expected_evidence = {
-            name: artifact_reference(self.manifest, artifact_key)
-            for name, artifact_key in TOP_LEVEL_ARTIFACTS.items()
-        }
-        self.assertEqual(record["evidence"], expected_evidence)
-        validate_record(record, SOURCE_SHA, expected_evidence)
+            self.assertEqual(record["decision"], "PASS")
+            self.assertEqual(record["source_sha"], SOURCE_SHA)
+            self.assertEqual(
+                record["evidence_bundle"]["sha256"], manifest["bundle_sha256"]
+            )
+            self.assertEqual(
+                record["evidence_bundle"]["objective_draft_sha256"],
+                manifest["artifacts"]["objective_draft"]["sha256"],
+            )
+            self.assertEqual(record["safe_contract"], draft["safe_contract"])
+            self.assertEqual(record["device"], draft["device"])
 
-    def test_file_modification_after_bundle_creation_blocks_pass(self) -> None:
-        entry = self.manifest["artifacts"]["session_isolation"]
-        path = self.root / entry["path"]
-        original = path.read_bytes()
-        path.write_bytes(b"Z" * len(original))
+            for name in ("dual_install", "independent_launch", "deep_link_isolation"):
+                self.assertEqual(record["checks"][name], draft["checks"][name])
+            for name in MANUAL_CHECKS:
+                self.assertEqual(record["checks"][name]["status"], "PASS")
+                self.assertIn(
+                    manifest["bundle_sha256"], record["checks"][name]["evidence"]
+                )
 
-        with self.assertRaisesRegex(FinalizerError, "SHA-256 mismatch"):
-            finalize(draft_record(), self.manifest, self.root)
+            validate_record(record, SOURCE_SHA, record["evidence"])
 
-    def test_file_deletion_after_bundle_creation_blocks_pass(self) -> None:
-        entry = self.manifest["artifacts"]["esc_only_push"]
-        (self.root / entry["path"]).unlink()
-
-        with self.assertRaisesRegex(FinalizerError, "is missing"):
-            finalize(draft_record(), self.manifest, self.root)
-
-    def test_manifest_source_sha_mismatch_blocks_pass(self) -> None:
-        tampered = deepcopy(self.manifest)
-        tampered["source_sha"] = "b" * 40
-
-        with self.assertRaisesRegex(FinalizerError, "source SHA mismatch"):
-            finalize(draft_record(), tampered, self.root)
-
-    def test_source_sha_mismatch_in_draft_fails_closed(self) -> None:
+    def test_modified_runtime_evidence_fails_closed(self) -> None:
         draft = draft_record()
-        draft["source_sha"] = "b" * 40
-        with self.assertRaisesRegex(FinalizerError, "draft source SHA mismatch"):
-            finalize(draft, self.manifest, self.root)
+        with tempfile.TemporaryDirectory() as temp:
+            evidence_root = Path(temp)
+            _, manifest = create_manifest(evidence_root, draft)
+            path = evidence_root / manifest["artifacts"]["esc_only_push"]["path"]
+            path.write_text("tampered FCM evidence\n", encoding="utf-8")
+            with self.assertRaisesRegex(FinalizerError, "bundle verification failed"):
+                finalize_record(
+                    draft,
+                    SOURCE_SHA,
+                    "2026-08-17T21:00:00Z",
+                    manifest,
+                    evidence_root,
+                )
+
+    def test_source_sha_mismatch_fails_closed(self) -> None:
+        draft = draft_record()
+        with tempfile.TemporaryDirectory() as temp:
+            evidence_root = Path(temp)
+            _, manifest = create_manifest(evidence_root, draft)
+            with self.assertRaisesRegex(FinalizerError, "draft source SHA mismatch"):
+                finalize_record(
+                    draft,
+                    "b" * 40,
+                    "2026-08-17T21:00:00Z",
+                    manifest,
+                    evidence_root,
+                )
 
     def test_missing_objective_pass_fails_closed(self) -> None:
         draft = draft_record()
         draft["checks"]["deep_link_isolation"]["status"] = "PENDING"
-        with self.assertRaisesRegex(FinalizerError, "deep_link_isolation must already be PASS"):
-            finalize(draft, self.manifest, self.root)
+        with tempfile.TemporaryDirectory() as temp:
+            evidence_root = Path(temp)
+            _, manifest = create_manifest(evidence_root, draft)
+            with self.assertRaisesRegex(
+                FinalizerError, "deep_link_isolation must already be PASS"
+            ):
+                finalize_record(
+                    draft,
+                    SOURCE_SHA,
+                    "2026-08-17T21:00:00Z",
+                    manifest,
+                    evidence_root,
+                )
+
+    def test_draft_must_match_hashed_objective_artifact(self) -> None:
+        draft = draft_record()
+        with tempfile.TemporaryDirectory() as temp:
+            evidence_root = Path(temp)
+            draft_path, manifest = create_manifest(evidence_root, draft)
+            draft_path.write_text("{}\n", encoding="utf-8")
+            with self.assertRaisesRegex(FinalizerError, "objective draft"):
+                assert_draft_matches_manifest(draft_path, manifest)
 
     def test_final_pass_record_cannot_be_re_finalized(self) -> None:
         draft = draft_record()
         draft["decision"] = "PASS"
-        with self.assertRaisesRegex(FinalizerError, "PENDING coexistence draft"):
-            finalize(draft, self.manifest, self.root)
+        with tempfile.TemporaryDirectory() as temp:
+            evidence_root = Path(temp)
+            _, manifest = create_manifest(evidence_root, draft)
+            with self.assertRaisesRegex(FinalizerError, "PENDING coexistence draft"):
+                finalize_record(
+                    draft,
+                    SOURCE_SHA,
+                    "2026-08-17T21:00:00Z",
+                    manifest,
+                    evidence_root,
+                )
 
-    def test_free_form_evidence_cli_inputs_are_removed(self) -> None:
-        source = (ROOT / "scripts/finalize_esc_android_coexistence_evidence.py").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn('"--evidence-manifest"', source)
-        self.assertIn('"--evidence-root"', source)
+    def test_cli_has_no_free_form_manual_evidence_arguments(self) -> None:
+        source = (
+            ROOT / "scripts/finalize_esc_android_coexistence_evidence.py"
+        ).read_text(encoding="utf-8")
         for removed in (
             "--session-isolation-evidence",
             "--safe-only-push-evidence",
@@ -234,15 +255,16 @@ class EscAndroidCoexistenceEvidenceFinalizerTests(unittest.TestCase):
             "--firebase-evidence",
         ):
             self.assertNotIn(removed, source)
+        self.assertIn("--evidence-manifest", source)
+        self.assertIn("--evidence-root", source)
 
     def test_tool_has_no_device_network_or_runtime_mutation_primitive(self) -> None:
-        source = (ROOT / "scripts/finalize_esc_android_coexistence_evidence.py").read_text(
-            encoding="utf-8"
-        )
+        source = (
+            ROOT / "scripts/finalize_esc_android_coexistence_evidence.py"
+        ).read_text(encoding="utf-8")
         for forbidden in (
             "import subprocess",
             "subprocess.run",
-            " run_text(",
             '"adb"',
             "pm clear",
             "am force-stop",

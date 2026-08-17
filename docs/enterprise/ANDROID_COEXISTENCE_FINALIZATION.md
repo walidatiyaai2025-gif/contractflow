@@ -2,22 +2,21 @@
 
 ## Boundary
 
-`build_esc_android_coexistence_evidence_bundle.py` and `finalize_esc_android_coexistence_evidence.py` do not perform device testing, send FCM, install/update/uninstall apps, clear app data, authenticate users, or decide whether a screenshot/video/log is semantically truthful.
+`finalize_esc_android_coexistence_evidence.py` does not perform device or Firebase UAT. It only turns an exact-source `PENDING` draft into a candidate final `PASS` record after the real-device operator has separately completed, reviewed, and retained every required runtime scenario.
 
-They only bind already-collected real-device evidence files to one exact ESC source SHA, re-verify those retained files by size and SHA-256, derive immutable evidence references, and allow a candidate final `PASS` record to be written only after the existing coexistence validator accepts it.
-
-The input draft must already contain objective PASS results for:
+The input draft must already contain objective PASS evidence for:
 
 - `dual_install`
 - `independent_launch`
 - `deep_link_isolation`
 
-The remaining runtime scenarios must still be `PENDING` in the draft until the evidence bundle has been created from completed real-device evidence.
+Those three objective check records are preserved unchanged in the final record.
 
-## Required retained evidence files
+## Required retained evidence bundle
 
-Create one explicit evidence root directory for the exact release candidate/source SHA. Place one non-empty retained file under that root for each fixed key below:
+Before finalization, place the exact objective draft and the completed evidence files under one evidence root. The manifest requires exactly these artifact keys:
 
+- `objective_draft`
 - `session_isolation`
 - `safe_only_push`
 - `esc_only_push`
@@ -29,99 +28,75 @@ Create one explicit evidence root directory for the exact release candidate/sour
 - `coexistence`
 - `firebase_delivery`
 
-The files may be screenshots, videos, exported logs, signed UAT records, console exports, or other retained release evidence. The tools validate file existence and integrity only; the tester/release owner remains responsible for evidence meaning and approval.
-
-Artifact paths supplied to the bundle builder must be POSIX-style relative paths below the evidence root. Absolute paths, Windows drive paths, backslashes, `.`/`..` traversal, missing files, empty files, duplicate paths, or missing/unexpected artifact keys fail closed.
+The files may be logs, screenshots, videos, exported records, signed text/PDF evidence, or other approved retained artifacts. The tooling does **not** decide whether their contents are semantically sufficient; the tester and release owner remain responsible for that review.
 
 ## 1. Build the content-addressed manifest
 
-Example evidence layout:
-
-```text
-/path/to/esc-evidence/
-  runtime/session-isolation.txt
-  runtime/safe-only-push.txt
-  runtime/esc-only-push.txt
-  runtime/independent-update.txt
-  runtime/clear-data-uninstall.txt
-  identity/esc-firebase-identity.txt
-  release/device.txt
-  release/business-uat.txt
-  release/coexistence.txt
-  release/firebase-delivery.txt
-```
-
-Build the manifest:
+Every `--artifact` value uses `KEY=RELATIVE_PATH`. Paths are relative to `--evidence-root`. POSIX/Windows absolute paths, backslashes, dot segments, `..` traversal, duplicate paths, missing files, and empty files are rejected.
 
 ```bash
 python3 scripts/build_esc_android_coexistence_evidence_bundle.py \
-  --evidence-root /path/to/esc-evidence \
+  --evidence-root /secure/esc-uat \
   --source-sha <EXACT_40_CHAR_ESC_SHA> \
-  --collected-at-utc 2026-08-17T19:00:00Z \
+  --collected-at-utc 2026-08-17T20:00:00Z \
+  --artifact objective_draft=objective/esc-android-coexistence-draft.json \
   --artifact session_isolation=runtime/session-isolation.txt \
   --artifact safe_only_push=runtime/safe-only-push.txt \
   --artifact esc_only_push=runtime/esc-only-push.txt \
   --artifact independent_update=runtime/independent-update.txt \
   --artifact clear_data_uninstall_isolation=runtime/clear-data-uninstall.txt \
-  --artifact esc_firebase_identity=identity/esc-firebase-identity.txt \
-  --artifact device=release/device.txt \
-  --artifact business_uat=release/business-uat.txt \
-  --artifact coexistence=release/coexistence.txt \
-  --artifact firebase_delivery=release/firebase-delivery.txt \
-  --output /path/to/esc-evidence-manifest.json
+  --artifact esc_firebase_identity=firebase/esc-android-identity.txt \
+  --artifact device=device/device-evidence.txt \
+  --artifact business_uat=approvals/business-uat-signoff.txt \
+  --artifact coexistence=runtime/coexistence-summary.txt \
+  --artifact firebase_delivery=firebase/dual-delivery-evidence.txt \
+  --output /secure/esc-uat/esc-android-coexistence-evidence-manifest.json
 ```
 
-The manifest records, for every required artifact:
+The builder records each safe relative path, byte size and SHA-256 digest, then computes a canonical `bundle_sha256` bound to the exact ESC source SHA.
 
-- a safe relative path;
-- byte size;
-- SHA-256 digest.
-
-It also records the exact ESC source SHA, UTC collection timestamp, and a canonical `bundle_sha256` over the manifest content excluding the bundle-hash field itself.
-
-Retain the manifest together with the evidence root. Moving the evidence root as a whole is safe because manifest paths are relative; modifying, deleting, replacing, or emptying a retained artifact after manifest creation causes finalization to fail.
-
-## 2. Finalize from the verified bundle
-
-Run the finalizer only after the real-device scenarios are actually complete:
+## 2. Finalize only from the verified manifest
 
 ```bash
 python3 scripts/finalize_esc_android_coexistence_evidence.py \
-  --draft /path/to/esc-android-coexistence-draft.json \
+  --draft /secure/esc-uat/objective/esc-android-coexistence-draft.json \
   --source-sha <EXACT_40_CHAR_ESC_SHA> \
-  --tested-at-utc 2026-08-17T19:30:00Z \
-  --evidence-manifest /path/to/esc-evidence-manifest.json \
-  --evidence-root /path/to/esc-evidence \
-  --output /path/to/esc-android-coexistence-final.json
+  --tested-at-utc 2026-08-17T21:00:00Z \
+  --evidence-manifest /secure/esc-uat/esc-android-coexistence-evidence-manifest.json \
+  --evidence-root /secure/esc-uat \
+  --output /secure/esc-uat/esc-android-coexistence-final.json
 ```
 
-There are no free-form final evidence-reference CLI arguments. During finalization the tool:
+Before writing the final record, the finalizer:
 
-1. validates the exact-source `PENDING` draft boundary;
-2. validates the manifest schema and exact source SHA;
-3. resolves every retained artifact under the explicit evidence root;
-4. re-checks every file's current byte size and SHA-256;
-5. recomputes and verifies the canonical bundle SHA-256;
-6. derives all eight check evidence references, all top-level evidence references, and the ESC Firebase identity reference from the verified bundle/artifact digests;
-7. records bundle provenance in the final record; and
-8. calls `validate_esc_android_coexistence_evidence.py` as the final gate before writing `PASS`.
+1. requires the exact-source `PENDING` draft and the three objective PASS checks;
+2. verifies the supplied draft file size/SHA-256 against the manifest `objective_draft` artifact;
+3. validates the exact manifest schema, exact source SHA, collection timestamp and canonical `bundle_sha256`;
+4. re-opens all eleven retained artifacts and re-checks their byte sizes and SHA-256 values;
+5. preserves the objective check evidence exactly as captured by the objective session harness;
+6. promotes only the five remaining manual runtime checks using references derived from the verified bundle/artifact digests;
+7. derives ESC Firebase, device, business-UAT, coexistence and Firebase-delivery references from the same verified bundle;
+8. invokes the existing `validate_esc_android_coexistence_evidence.py` final validator.
 
-Any source-SHA mismatch, manifest tampering, malformed hash, path escape, missing/empty file, file size change, file digest change, missing/unexpected artifact, or bundle-hash mismatch fails closed before a PASS file is written.
+If the objective draft or any retained evidence file is modified, deleted, substituted, or moved outside the declared evidence root, finalization fails closed.
 
-## Release evidence retention
+## Evidence reference format
 
-Retain together:
+Operators no longer type free-form evidence references into the finalizer. Runtime/Firebase/business references are generated from the verified manifest and bind:
 
-- the exact-source PENDING draft;
-- the complete evidence root containing all ten files;
-- the generated evidence manifest;
-- the final PASS JSON;
-- the exact ESC source SHA and release candidate artifacts used during UAT.
+- canonical evidence bundle SHA-256;
+- artifact role;
+- artifact SHA-256;
+- safe relative artifact path.
 
-Do not rebuild a manifest after evidence has been modified merely to make finalization pass. A new manifest represents a new evidence bundle and must be reviewed/approved as such.
+Example shape:
 
-## What these tools do not prove
+`esc-evidence-bundle:sha256:<BUNDLE_SHA256>/artifact:safe_only_push/sha256:<ARTIFACT_SHA256>/path:runtime/safe-only-push.txt`
 
-Content addressing proves that the final PASS references the retained bytes that were bundled and that those bytes did not change between bundle creation and finalization. It does not prove that a screenshot, video, device log, Firebase record, ticket, or business sign-off is truthful or sufficient.
+## What this still does not prove
 
-If any runtime scenario is incomplete, disputed, or not retained as evidence, keep the coexistence draft `PENDING`. Real-device coexistence acceptance under #421 remains a separate release responsibility.
+Hashing proves retention and integrity, not semantic truth. The tooling does not inspect a screenshot, video, log, Firebase export, ticket, or sign-off to decide whether the real-world UAT scenario actually passed.
+
+It also performs no ADB install/update/uninstall, data clear, FCM send, authentication, network call, or backend-session mutation.
+
+Do not build/finalize the manifest until every required runtime scenario has actually been completed and reviewed. If any scenario is incomplete, keep the UAT draft `PENDING` and do not publish the production release.
