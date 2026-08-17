@@ -24,6 +24,9 @@ final class CollectionService
     }
 
     /**
+     * Record a settlement against either a receivable or payable obligation.
+     * The legacy collection terminology is retained for API compatibility.
+     *
      * @param array{
      *   payment_id:mixed,
      *   amount:mixed,
@@ -36,26 +39,29 @@ final class CollectionService
      */
     public function record(array $input): int
     {
-        $this->requireCapability(Capabilities::MANAGE_COLLECTIONS, 'You do not have permission to record collections.');
+        $this->requireAny(
+            [Capabilities::MANAGE_COLLECTIONS, Capabilities::MANAGE_FINANCE],
+            'You do not have permission to record financial settlements.'
+        );
 
         $paymentId = (int) ($input['payment_id'] ?? 0);
         if ($paymentId <= 0) {
-            throw new InvalidArgumentException('Collection payment ID must be positive.');
+            throw new InvalidArgumentException('Settlement payment ID must be positive.');
         }
 
         $amount = ContractMoney::normalizeNonNegative($input['amount'] ?? '');
         if ($amount === '0.0000') {
-            throw new InvalidArgumentException('Collection amount must be greater than zero.');
+            throw new InvalidArgumentException('Settlement amount must be greater than zero.');
         }
         $collectionDate = $this->normalizeDate($input['collection_date'] ?? null);
 
         $paymentMethodId = (int) ($input['payment_method_id'] ?? 0);
         if ($paymentMethodId <= 0) {
-            throw new InvalidArgumentException('Payment method is required for every collection transaction.');
+            throw new InvalidArgumentException('Payment method is required for every settlement transaction.');
         }
 
-        $reference = $this->normalizeOptionalText($input['reference'] ?? null, 191, 'Collection reference');
-        $details = $this->normalizeOptionalText($input['details'] ?? null, 5000, 'Collection details');
+        $reference = $this->normalizeOptionalText($input['reference'] ?? null, 191, 'Settlement reference');
+        $details = $this->normalizeOptionalText($input['details'] ?? null, 5000, 'Settlement details');
         $proofMediaId = $this->normalizeProofMediaId($input['proof_media_id'] ?? null);
         $actorId = get_current_user_id();
 
@@ -63,17 +69,17 @@ final class CollectionService
         try {
             $payment = $this->repository->lockPayment($paymentId);
             if ($payment === null) {
-                throw new InvalidArgumentException('Collection payment was not found.');
+                throw new InvalidArgumentException('Settlement payment was not found.');
             }
             $this->assertScope($payment['accountant_user_id']);
             if (! empty($payment['payment_is_archived'])) {
-                throw new DomainException('Collections cannot be recorded against archived payments.');
+                throw new DomainException('Settlements cannot be recorded against archived payments.');
             }
             if ($payment['contract_is_archived']) {
-                throw new DomainException('Collections cannot be recorded against archived contracts.');
+                throw new DomainException('Settlements cannot be recorded against archived contracts.');
             }
             if (! $this->repository->paymentMethodIsActive($paymentMethodId)) {
-                throw new InvalidArgumentException('Collection payment method must be an active SafeContracts payment method.');
+                throw new InvalidArgumentException('Settlement payment method must be an active SafeContracts payment method.');
             }
 
             $originalAmount = ContractMoney::normalizeNonNegative($payment['original_amount']);
@@ -92,13 +98,15 @@ final class CollectionService
 
             $newPaid = ContractMoney::add($ledgerCollected, $amount);
             if (ContractMoney::compare($newPaid, $originalAmount) > 0) {
-                throw new DomainException('Collection amount exceeds the payment remaining balance.');
+                throw new DomainException('Settlement amount exceeds the payment remaining balance.');
             }
             $newRemaining = ContractMoney::subtract($originalAmount, $newPaid);
             $newStatus = $newRemaining === '0.0000' ? PaymentStatus::PAID : PaymentStatus::PARTIALLY_PAID;
 
             $collectionId = $this->repository->create(
                 $paymentId,
+                $payment['financial_direction'],
+                $payment['currency_code'],
                 $amount,
                 $collectionDate,
                 $paymentMethodId,
@@ -128,7 +136,9 @@ final class CollectionService
             $collectionDate,
             $paymentMethodId,
             $proofMediaId,
-            $actorId
+            $actorId,
+            $payment['financial_direction'],
+            $payment['currency_code']
         );
         do_action(
             'safecontracts_payment_settled',
@@ -140,7 +150,9 @@ final class CollectionService
             $actorId,
             $storedPaid,
             $storedRemaining,
-            $storedStatus
+            $storedStatus,
+            $payment['financial_direction'],
+            $payment['currency_code']
         );
 
         return $collectionId;
@@ -149,11 +161,11 @@ final class CollectionService
     /** @return list<array<string, mixed>> */
     public function forPayment(int $paymentId): array
     {
-        $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts collections.');
+        $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts settlements.');
         $payment = $this->requirePayment($paymentId);
         $this->assertScope($payment['accountant_user_id']);
         if ($payment['is_archived']) {
-            throw new DomainException('Archived payments do not expose an active collection ledger.');
+            throw new DomainException('Archived payments do not expose an active settlement ledger.');
         }
 
         return $this->repository->forPayment($paymentId);
@@ -169,11 +181,11 @@ final class CollectionService
      */
     public function reconcilePayment(int $paymentId): array
     {
-        $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts collection reconciliation.');
+        $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts settlement reconciliation.');
         $payment = $this->requirePayment($paymentId);
         $this->assertScope($payment['accountant_user_id']);
         if ($payment['is_archived']) {
-            throw new DomainException('Archived payments are outside the active collection ledger.');
+            throw new DomainException('Archived payments are outside the active settlement ledger.');
         }
 
         $original = ContractMoney::normalizeNonNegative($payment['original_amount']);
@@ -206,15 +218,15 @@ final class CollectionService
         ];
     }
 
-    /** @return array{id:int, contract_id:int, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool} */
+    /** @return array<string,mixed> */
     private function requirePayment(int $paymentId): array
     {
         if ($paymentId <= 0) {
-            throw new InvalidArgumentException('Collection payment ID must be positive.');
+            throw new InvalidArgumentException('Settlement payment ID must be positive.');
         }
         $payment = $this->payments->find($paymentId);
         if ($payment === null) {
-            throw new InvalidArgumentException('Collection payment was not found.');
+            throw new InvalidArgumentException('Settlement payment was not found.');
         }
 
         return $payment;
@@ -228,14 +240,14 @@ final class CollectionService
         string $status
     ): void {
         if (ContractMoney::compare($ledgerCollected, $originalAmount) > 0) {
-            throw new DomainException('Collection ledger already exceeds the payment original amount.');
+            throw new DomainException('Settlement ledger already exceeds the payment original amount.');
         }
         if (ContractMoney::compare($storedPaid, $ledgerCollected) !== 0) {
-            throw new DomainException('Payment paid amount does not reconcile with the collection ledger.');
+            throw new DomainException('Payment paid amount does not reconcile with the settlement ledger.');
         }
         $expectedRemaining = ContractMoney::subtract($originalAmount, $ledgerCollected);
         if ($storedRemaining !== $expectedRemaining) {
-            throw new DomainException('Payment remaining amount does not reconcile with original amount and collections.');
+            throw new DomainException('Payment remaining amount does not reconcile with original amount and settlements.');
         }
         if (ContractMoney::add($storedPaid, $storedRemaining) !== $originalAmount) {
             throw new DomainException('Payment paid and remaining balances do not reconcile to the original amount.');
@@ -244,7 +256,7 @@ final class CollectionService
         if ($ledgerCollected !== '0.0000') {
             $expectedStatus = $ledgerCollected === $originalAmount ? PaymentStatus::PAID : PaymentStatus::PARTIALLY_PAID;
             if (PaymentStatus::normalize($status) !== $expectedStatus) {
-                throw new DomainException('Payment financial status does not reconcile with collected amount.');
+                throw new DomainException('Payment financial status does not reconcile with settled amount.');
             }
         }
     }
@@ -262,7 +274,7 @@ final class CollectionService
             return;
         }
 
-        throw new DomainException('Collection is outside the current user data scope.');
+        throw new DomainException('Settlement is outside the current user data scope.');
     }
 
     private function normalizeDate(mixed $value): string
@@ -270,7 +282,7 @@ final class CollectionService
         $date = trim((string) $value);
         $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
         if (! $parsed || $parsed->format('Y-m-d') !== $date) {
-            throw new InvalidArgumentException('Collection date must use YYYY-MM-DD and be a valid calendar date.');
+            throw new InvalidArgumentException('Settlement date must use YYYY-MM-DD and be a valid calendar date.');
         }
 
         return $date;
@@ -283,7 +295,7 @@ final class CollectionService
         }
         $mediaId = (int) $value;
         if ($mediaId <= 0 || ! function_exists('get_post_type') || get_post_type($mediaId) !== 'attachment') {
-            throw new InvalidArgumentException('Collection proof must reference a WordPress Media attachment when supplied.');
+            throw new InvalidArgumentException('Settlement proof must reference a WordPress Media attachment when supplied.');
         }
 
         return $mediaId;
@@ -310,5 +322,16 @@ final class CollectionService
         if (! current_user_can($capability)) {
             throw new DomainException($message);
         }
+    }
+
+    /** @param list<string> $capabilities */
+    private function requireAny(array $capabilities, string $message): void
+    {
+        foreach ($capabilities as $capability) {
+            if (current_user_can($capability)) {
+                return;
+            }
+        }
+        throw new DomainException($message);
     }
 }
