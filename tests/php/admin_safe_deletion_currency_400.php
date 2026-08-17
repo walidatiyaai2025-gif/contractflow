@@ -86,10 +86,12 @@ foreach (['c.is_archived = 0', 'p.is_archived = 0', 'cl.is_archived = 0'] as $ma
 }
 sc_400_assert(str_contains($followups, 'p.is_archived = 0'), '#400 follow-up queue excludes archived payments');
 
-// Dashboard currency comes from SafeContracts settings; amounts remain values, not recalculated currency conversions.
-foreach (['GeneralSettings', 'currency_symbol', 'currency_code', 'safecontracts-currency-badge', 'self::money'] as $marker) {
-    sc_400_assert(str_contains($dashboard, $marker), '#400 dashboard currency marker exists: ' . $marker);
+// Dashboard currency is now authoritative per contract/finance row, not a site-wide display assumption.
+foreach (['FinanceOverviewService', 'financial_direction', 'currency_code', 'counterparty_name', 'self::money'] as $marker) {
+    sc_400_assert(str_contains($dashboard, $marker), '#400 dashboard per-record finance/currency marker exists: ' . $marker);
 }
+sc_400_assert(! str_contains($dashboard, 'GeneralSettings'), '#400 dashboard does not override contract/obligation currency with site-wide settings');
+sc_400_assert(str_contains($dashboard, 'AP / AR by currency'), '#400 dashboard explicitly separates AP/AR financial cards by currency');
 sc_400_assert(! str_contains($dashboard, 'exchange_rate') && ! str_contains($dashboard, 'currency_convert'), '#400 dashboard never recalculates authoritative amounts');
 
 // Per-record confirmations are supported and locale remains observational only.
