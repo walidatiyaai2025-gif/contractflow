@@ -84,7 +84,7 @@ esc_p7_release_assert(str_contains($p6RepositorySource, '?callable $afterMutatio
 esc_p7_release_assert(str_contains($p6RepositorySource, 'bool $allowApprovalRouted = false'), 'direct P6 routed execution is denied by default');
 esc_p7_release_assert(str_contains($p6RepositorySource, 'LEFT JOIN {$approvalRoutes}'), 'P6 exact Transition resolution includes exact Approval Route identity');
 esc_p7_release_assert(str_contains($p6RepositorySource, 'requires an approved Approval Request release'), 'P6 direct routed execution has explicit fail-closed boundary');
-esc_p7_release_assert(strpos($p6RepositorySource, '$afterMutation($historyRow') < strpos($p6RepositorySource, "query('COMMIT')"), 'release evidence callback executes before P6 commit');
+esc_p7_release_assert(strpos($p6RepositorySource, '$afterMutation($historyRow') < strrpos($p6RepositorySource, "query('COMMIT')"), 'release evidence callback executes before final P6 commit');
 esc_p7_release_assert(! str_contains($releaseRepositorySource, 'START TRANSACTION') && ! str_contains($releaseServiceSource, 'START TRANSACTION'), 'P7-004 does not create a nested transaction');
 esc_p7_release_assert(str_contains($releaseServiceSource, 'transitionRequestKeyHash'), 'release uses domain-separated P6 transition idempotency identity');
 esc_p7_release_assert(str_contains($releaseServiceSource, '$this->guards->assertAllowed'), 'release performs fresh P6-004 guard evaluation');
@@ -267,15 +267,19 @@ esc_p7_release_throws(
 $GLOBALS['wpdb']->insert_id = 0; $GLOBALS['sc_test_queries'] = []; $GLOBALS['sc_test_result_queue'] = [esc_p7_release_instance(), [], [], esc_p7_release_request(), esc_p7_release_transition(901, 399, 'wrong')];
 $lockedRequest = null;
 esc_p7_release_throws(
-    static fn () => $p6->execute(
-        71, 501, 'submit', hash('sha256', 'snapshot-mismatch'), 42,
-        static fn (array $transition) => $releases->assertTransitionMatchesRequest($lockedRequest ?? [], $transition),
-        static function (array $instance) use (&$lockedRequest, $releases, $releaseHash): void {
-            $lockedRequest = $releases->lockApprovedRequestForRelease(2001, $releaseHash, $instance);
-        },
-        null,
-        true
-    ),
+    static function () use ($p6, $releases, $releaseHash, &$lockedRequest): void {
+        $p6->execute(
+            71, 501, 'submit', hash('sha256', 'snapshot-mismatch'), 42,
+            static function (array $transition) use ($releases, &$lockedRequest): void {
+                $releases->assertTransitionMatchesRequest($lockedRequest ?? [], $transition);
+            },
+            static function (array $instance) use (&$lockedRequest, $releases, $releaseHash): void {
+                $lockedRequest = $releases->lockApprovedRequestForRelease(2001, $releaseHash, $instance);
+            },
+            null,
+            true
+        );
+    },
     RuntimeException::class,
     'does not match the resolved P6 Transition',
     'approved request destination snapshot mismatch fails closed'
