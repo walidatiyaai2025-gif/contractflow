@@ -261,7 +261,7 @@ esc_p9_004_assert(str_contains($serviceSource, 'TenantAuthorization::allowsCapab
 esc_p9_004_assert(str_contains($serviceSource, 'Capabilities::VIEW_ALL') && str_contains($serviceSource, 'Capabilities::VIEW_ASSIGNED'), 'service preserves existing Contract data scope');
 esc_p9_004_assert(str_contains($serviceSource, 'assertDraftMutable($contract)'), 'service rejects archived/non-draft mutation before repository transaction');
 esc_p9_004_assert(str_contains($serviceSource, 'ContractFinancialCurrencyProfileRepository'), 'service resolves the pre-existing P9-003 profile');
-esc_p9_004_assert(str_contains($serviceSource, "CurrencyCode::from($profile['contract_currency'] ?? null)"), 'service derives currency only from persisted P9-003 profile');
+esc_p9_004_assert(str_contains($serviceSource, 'CurrencyCode::from($profile[\'contract_currency\'] ?? null)'), 'service derives currency only from persisted P9-003 profile');
 esc_p9_004_assert(str_contains($serviceSource, 'Money::of($amount, $currency)'), 'service canonicalizes amount and derived currency through P9-001 Money');
 esc_p9_004_assert(! str_contains($serviceSource, "'tenant_id'") && ! str_contains($serviceSource, '$tenantId'), 'service accepts no caller tenant identity');
 
