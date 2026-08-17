@@ -1,0 +1,48 @@
+name: SC P11 Temporary Dart Fix
+
+on:
+  push:
+    branches:
+      - agent/sc-p11-004-mobile-suppliers-finance
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/sc-p11-004-mobile-suppliers-finance
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Apply analyzer-safe fixes
+        run: |
+          dart fix --apply lib/features/contracts
+          dart fix --apply lib/features/finance
+          dart fix --apply lib/features/records
+          dart format lib test
+      - name: Verify analyzer
+        run: flutter analyze
+      - name: Commit fixes
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- mobile/lib mobile/test; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/lib mobile/test
+          git commit -m 'style: apply SC-P11 analyzer fixes'
+          git push origin HEAD:agent/sc-p11-004-mobile-suppliers-finance
