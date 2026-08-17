@@ -1,0 +1,55 @@
+name: ESC P9-019 Diagnostic Labels 2
+
+on:
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fixture-diag-label2:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Run diagnostic and label precise queue state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          output="$(php tests/php/enterprise_contract_financial_schedule_coverage_p9_019_diag.php 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+
+          remaining=$(printf '%s\n' "$output" | sed -n 's/^QUEUE_REMAINING=//p' | tail -1)
+          remaining=${remaining:-unknown}
+          label="diag-p9019-remaining-${remaining}"
+          gh label create "$label" --color FEF2C0 --description "Temporary P9-019 diagnostic" --force
+          gh issue edit 535 --add-label "$label"
+
+          next_block=$(printf '%s\n' "$output" | sed -n '/^NEXT=/,$p')
+          next_label="diag-p9019-next2-unknown"
+          if printf '%s\n' "$next_block" | grep -q "contract_currency"; then
+            next_label="diag-p9019-next2-profile"
+          elif printf '%s\n' "$next_block" | grep -q "line_uuid"; then
+            next_label="diag-p9019-next2-adjustments"
+          elif printf '%s\n' "$next_block" | grep -q "schedule_entry_uuid"; then
+            next_label="diag-p9019-next2-schedule"
+          elif printf '%s\n' "$next_block" | grep -q "accountant_user_id"; then
+            next_label="diag-p9019-next2-contract"
+          elif printf '%s\n' "$next_block" | grep -q "uuid"; then
+            next_label="diag-p9019-next2-base"
+          elif printf '%s\n' "$output" | grep -q "QUEUE_REMAINING=0"; then
+            next_label="diag-p9019-next2-empty"
+          fi
+          gh label create "$next_label" --color FEF2C0 --description "Temporary P9-019 diagnostic" --force
+          gh issue edit 535 --add-label "$next_label"
+          exit "$status"
