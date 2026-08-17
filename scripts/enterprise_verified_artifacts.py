@@ -13,6 +13,13 @@ import shutil
 import sys
 import zipfile
 
+from validate_esc_android_coexistence_evidence import (
+    EvidenceError as CoexistenceEvidenceError,
+    canonical_record_sha256,
+    load_record,
+    validate_record,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_DIR = ROOT / "Last verified Enterprise Plugin"
 APK_DIR = ROOT / "Last verified Enterprise apk"
@@ -100,10 +107,19 @@ def clear_generated(directory: Path, extension: str) -> None:
             path.unlink()
 
 
-def write_provenance(directory: Path, filename: str, kind: str, sha: str, run_id: str, extra: dict[str, object]) -> None:
+def write_provenance(
+    directory: Path,
+    filename: str,
+    kind: str,
+    sha: str,
+    run_id: str,
+    extra: dict[str, object],
+) -> None:
     artifact = directory / filename
     checksum = digest(artifact)
-    (directory / f"{filename}.sha256").write_text(f"{checksum}  {filename}\n", encoding="utf-8")
+    (directory / f"{filename}.sha256").write_text(
+        f"{checksum}  {filename}\n", encoding="utf-8"
+    )
     payload: dict[str, object] = {
         "verified": True,
         "product": PRODUCT,
@@ -120,7 +136,9 @@ def write_provenance(directory: Path, filename: str, kind: str, sha: str, run_id
         "sha256": checksum,
     }
     payload.update(extra)
-    (directory / PROVENANCE_NAME).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (directory / PROVENANCE_NAME).write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def validate_cross_product_isolation() -> int:
@@ -129,7 +147,9 @@ def validate_cross_product_isolation() -> int:
         if directory.exists():
             for path in directory.iterdir():
                 if path.is_file() and path.name.startswith("EnterpriseSafeContracts"):
-                    fail(f"ESC artifact leaked into Safe Contract slot: {path.relative_to(ROOT)}")
+                    fail(
+                        f"ESC artifact leaked into Safe Contract slot: {path.relative_to(ROOT)}"
+                    )
                 checks += 1
     for directory in (PLUGIN_DIR, APK_DIR):
         if not directory.is_dir():
@@ -141,7 +161,36 @@ def validate_cross_product_isolation() -> int:
     return checks
 
 
-def check_one(directory: Path, filename: str, extension: str, kind: str, require_artifact: bool) -> int:
+def validate_embedded_uat_record(payload: dict[str, object], sha: str) -> None:
+    raw_record = payload.get("coexistence_uat_record")
+    if not isinstance(raw_record, dict):
+        fail("ESC APK provenance must embed the coexistence UAT record")
+    expected_digest = str(payload.get("coexistence_uat_record_sha256", "")).strip().lower()
+    actual_digest = canonical_record_sha256(raw_record)
+    if expected_digest != actual_digest:
+        fail("ESC APK coexistence UAT record digest mismatch")
+    expected_evidence = {
+        "device": evidence(str(payload.get("device_evidence", "")), "real-device"),
+        "business_uat": evidence(str(payload.get("uat_evidence", "")), "UAT"),
+        "coexistence": evidence(
+            str(payload.get("coexistence_evidence", "")),
+            "Safe Contract/ESC coexistence",
+        ),
+        "firebase": evidence(str(payload.get("firebase_evidence", "")), "Firebase identity"),
+    }
+    try:
+        validate_record(raw_record, sha, expected_evidence)
+    except CoexistenceEvidenceError as exc:
+        raise PolicyError(f"ESC APK coexistence UAT provenance is invalid: {exc}") from exc
+
+
+def check_one(
+    directory: Path,
+    filename: str,
+    extension: str,
+    kind: str,
+    require_artifact: bool,
+) -> int:
     artifacts = sorted(path for path in directory.glob(f"*{extension}") if path.is_file())
     if len(artifacts) > 1:
         fail(f"{directory.name} must contain at most one {extension} artifact")
@@ -178,7 +227,7 @@ def check_one(directory: Path, filename: str, extension: str, kind: str, require
     for key, expected in required.items():
         if payload.get(key) != expected:
             fail(f"retained {kind} provenance mismatch for {key}")
-    source_sha(str(payload.get("source_sha", "")))
+    sha = source_sha(str(payload.get("source_sha", "")))
     run_id = str(payload.get("quality_run_id", ""))
     if not run_id.isdigit() or int(run_id) <= 0:
         fail(f"retained {kind} has invalid quality run id")
@@ -194,9 +243,15 @@ def check_one(directory: Path, filename: str, extension: str, kind: str, require
         api_url = str(payload.get("api_base_url", ""))
         if HTTPS_RE.fullmatch(api_url) is None:
             fail("ESC APK provenance must contain an HTTPS production API URL")
-        for key in ("device_evidence", "uat_evidence", "coexistence_evidence", "firebase_evidence"):
+        for key in (
+            "device_evidence",
+            "uat_evidence",
+            "coexistence_evidence",
+            "firebase_evidence",
+        ):
             evidence(str(payload.get(key, "")), key)
-    return 12
+        validate_embedded_uat_record(payload, sha)
+    return 14
 
 
 def check_policy(require_plugin: bool = False, require_apk: bool = False) -> int:
@@ -213,7 +268,14 @@ def publish_plugin(args: argparse.Namespace) -> int:
     validate_container(source, ".zip", "wordpress-plugin")
     clear_generated(PLUGIN_DIR, ".zip")
     shutil.copy2(source, PLUGIN_DIR / PLUGIN_NAME)
-    write_provenance(PLUGIN_DIR, PLUGIN_NAME, "wordpress-plugin", sha, run_id, {"package_line": "enterprise"})
+    write_provenance(
+        PLUGIN_DIR,
+        PLUGIN_NAME,
+        "wordpress-plugin",
+        sha,
+        run_id,
+        {"package_line": "enterprise"},
+    )
     check_policy(require_plugin=True)
     print("Published verified Enterprise Safe Contracts plugin ZIP")
     return 0
@@ -229,16 +291,39 @@ def publish_apk(args: argparse.Namespace) -> int:
         fail("ESC production APK API base URL must be absolute HTTPS")
     source = Path(args.apk).expanduser().resolve()
     validate_container(source, ".apk", "android-apk")
+
+    device_ref = evidence(args.device_evidence, "real-device")
+    uat_ref = evidence(args.uat_evidence, "UAT")
+    coexistence_ref = evidence(args.coexistence_evidence, "Safe Contract/ESC coexistence")
+    firebase_ref = evidence(args.firebase_evidence, "Firebase identity")
+    uat_record_path = Path(args.uat_record).expanduser().resolve()
+    try:
+        uat_record = load_record(uat_record_path)
+        validate_record(
+            uat_record,
+            sha,
+            {
+                "device": device_ref,
+                "business_uat": uat_ref,
+                "coexistence": coexistence_ref,
+                "firebase": firebase_ref,
+            },
+        )
+    except CoexistenceEvidenceError as exc:
+        raise PolicyError(f"ESC APK coexistence UAT record is invalid: {exc}") from exc
+
     extra = {
         "application_id": APPLICATION_ID,
         "signing_verified": True,
         "identity_verified": True,
         "firebase_identity_verified": True,
         "api_base_url": api_url,
-        "device_evidence": evidence(args.device_evidence, "real-device"),
-        "uat_evidence": evidence(args.uat_evidence, "UAT"),
-        "coexistence_evidence": evidence(args.coexistence_evidence, "Safe Contract/ESC coexistence"),
-        "firebase_evidence": evidence(args.firebase_evidence, "Firebase identity"),
+        "device_evidence": device_ref,
+        "uat_evidence": uat_ref,
+        "coexistence_evidence": coexistence_ref,
+        "firebase_evidence": firebase_ref,
+        "coexistence_uat_record_sha256": canonical_record_sha256(uat_record),
+        "coexistence_uat_record": uat_record,
     }
     clear_generated(APK_DIR, ".apk")
     shutil.copy2(source, APK_DIR / APK_NAME)
@@ -270,6 +355,7 @@ def build_parser() -> argparse.ArgumentParser:
     apk.add_argument("--signing-verified", action="store_true")
     apk.add_argument("--identity-verified", action="store_true")
     apk.add_argument("--firebase-identity-verified", action="store_true")
+    apk.add_argument("--uat-record", required=True)
     apk.add_argument("--device-evidence", required=True)
     apk.add_argument("--uat-evidence", required=True)
     apk.add_argument("--coexistence-evidence", required=True)
