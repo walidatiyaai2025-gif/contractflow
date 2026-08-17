@@ -172,8 +172,42 @@ Record the following in the UAT ticket/run record:
 - Business UAT evidence reference.
 - Tester, date/time and final PASS/FAIL decision.
 
+### Machine-readable PASS record
+
+A production publication also requires a machine-readable record derived from `docs/enterprise/ANDROID_COEXISTENCE_EVIDENCE_TEMPLATE.json`. Keep the completed record outside Git while testing; the publish workflow embeds the validated record and its canonical SHA-256 inside the retained APK `VERIFIED.json` provenance.
+
+The record must contain the exact 40-character source commit SHA used to build the tested ESC candidate. Every required coexistence check must be `PASS`, the Safe Contract and ESC package/signing identities must remain distinct, and the four top-level evidence references must exactly match the production publish inputs.
+
+Validate a completed record before dispatching publication:
+
+```bash
+python3 scripts/validate_esc_android_coexistence_evidence.py \
+  --record /path/to/completed-esc-coexistence.json \
+  --source-sha <exact-esc-source-sha> \
+  --device-evidence '<device-evidence-reference>' \
+  --uat-evidence '<business-uat-reference>' \
+  --coexistence-evidence '<coexistence-evidence-reference>' \
+  --firebase-evidence '<firebase-evidence-reference>'
+```
+
+The `Publish Enterprise Safe Contracts Mobile Latest` workflow accepts the completed JSON as the `coexistence_record_base64` input. Encode the local file without changing it.
+
+Linux/macOS:
+
+```bash
+base64 -w 0 /path/to/completed-esc-coexistence.json
+```
+
+PowerShell:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\path\completed-esc-coexistence.json'))
+```
+
+If `enterprise-safecontracts` advances after the tested candidate was built, do not rewrite the source SHA in the evidence record. Build and test a new candidate from the new exact source instead.
+
 ## Release decision
 
-Only PASS evidence may be supplied to the ESC production publish workflow inputs `device_evidence`, `uat_evidence`, `coexistence_evidence` and `firebase_evidence`.
+Only PASS evidence may be supplied to the ESC production publish workflow inputs `device_evidence`, `uat_evidence`, `coexistence_evidence` and `firebase_evidence`, together with the validated `coexistence_record_base64`.
 
-The release workflow must fail closed if these references are absent. A verified ESC APK belongs only in `Last verified Enterprise apk/` and the `esc-mobile-latest` GitHub Release namespace. Never copy it into Safe Contract retention slots or releases.
+The release workflow fails closed if the record is not valid Base64/JSON, does not say `PASS`, targets a different source SHA, reuses the Safe Contract package/signing identity, has a missing/failed coexistence check, or disagrees with the four publish evidence references. A verified ESC APK belongs only in `Last verified Enterprise apk/` and the `esc-mobile-latest` GitHub Release namespace. Never copy it into Safe Contract retention slots or releases.

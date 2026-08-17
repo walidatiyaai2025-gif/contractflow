@@ -7,6 +7,10 @@ on:
         description: "Production ESC API base URL ending in /wp-json/safecontracts/v1/"
         required: true
         type: string
+      coexistence_record_base64:
+        description: "Base64 JSON from ANDROID_COEXISTENCE_EVIDENCE_TEMPLATE.json for this exact source SHA"
+        required: true
+        type: string
       device_evidence:
         description: "Reference to real Android device verification evidence"
         required: true
@@ -99,6 +103,35 @@ jobs:
               if len(os.environ[key].strip()) < 3:
                   raise SystemExit(f'FAIL: {key} reference is required')
           PY
+
+      - name: Validate exact-source Android coexistence PASS record
+        shell: bash
+        env:
+          UAT_RECORD_B64: ${{ inputs.coexistence_record_base64 }}
+          DEVICE_EVIDENCE: ${{ inputs.device_evidence }}
+          UAT_EVIDENCE: ${{ inputs.uat_evidence }}
+          COEXISTENCE_EVIDENCE: ${{ inputs.coexistence_evidence }}
+          FIREBASE_EVIDENCE: ${{ inputs.firebase_evidence }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${UAT_RECORD_B64:-}" ]]; then
+            echo "FAIL: coexistence_record_base64 is required" >&2
+            exit 1
+          fi
+          UAT_RECORD="$RUNNER_TEMP/esc-android-coexistence-evidence.json"
+          if ! printf '%s' "$UAT_RECORD_B64" | base64 --decode > "$UAT_RECORD"; then
+            echo "FAIL: coexistence_record_base64 is not valid Base64" >&2
+            exit 1
+          fi
+          test -s "$UAT_RECORD"
+          python3 scripts/validate_esc_android_coexistence_evidence.py \
+            --record "$UAT_RECORD" \
+            --source-sha "$GITHUB_SHA" \
+            --device-evidence "$DEVICE_EVIDENCE" \
+            --uat-evidence "$UAT_EVIDENCE" \
+            --coexistence-evidence "$COEXISTENCE_EVIDENCE" \
+            --firebase-evidence "$FIREBASE_EVIDENCE"
+          echo "ESC_UAT_RECORD=$UAT_RECORD" >> "$GITHUB_ENV"
 
       - name: Materialize isolated ESC signing and Firebase files
         shell: bash
@@ -196,6 +229,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="mobile/build/app/outputs/flutter-apk/app-production-release.apk"
+          test -s "$ESC_UAT_RECORD"
           python3 scripts/enterprise_verified_artifacts.py publish-apk \
             --apk "$APK" \
             --source-sha "$GITHUB_SHA" \
@@ -205,6 +239,7 @@ jobs:
             --signing-verified \
             --identity-verified \
             --firebase-identity-verified \
+            --uat-record "$ESC_UAT_RECORD" \
             --device-evidence "$DEVICE_EVIDENCE" \
             --uat-evidence "$UAT_EVIDENCE" \
             --coexistence-evidence "$COEXISTENCE_EVIDENCE" \
