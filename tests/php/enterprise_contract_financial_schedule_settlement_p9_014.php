@@ -105,10 +105,9 @@ $reconciliationServiceSource = (string) file_get_contents($root . '/wordpress-pl
 $routerSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Rest/Router.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-// P9-014 is deliberately schema-free.
-esc_p9_014_assert(Migrator::LATEST_VERSION === '1.56.0', 'P9-014 leaves Enterprise schema exactly at 1.56.0');
+// P9-014 remains a schema-free historical 1.56.0 boundary after later additive migrations.
+esc_p9_014_assert(version_compare(Migrator::LATEST_VERSION, '1.56.0', '>='), 'P9-014 historical schema boundary remains available at or after 1.56.0');
 esc_p9_014_assert(str_contains($migratorSource, "'1.56.0' => Migration0057EnterpriseContractFinancialCollectionReceiptRevisions::class"), 'P9-014 preserves exact 1.56.0 => Migration0057 mapping');
-esc_p9_014_assert(! str_contains($migratorSource, 'Migration0058'), 'P9-014 introduces no Migration0058');
 
 // Five explicit derived states using exact Money comparison.
 $usd = 'USD';
