@@ -72,6 +72,22 @@ def effective_rules_status_checks(rules: list[Any]) -> tuple[set[str], bool]:
     return contexts, strict
 
 
+def effective_pull_request_controls(rules: list[Any]) -> tuple[bool, bool]:
+    required = False
+    conversation_resolution = False
+    for rule in rules:
+        if not isinstance(rule, dict) or rule.get("type") != "pull_request":
+            continue
+        required = True
+        params = rule.get("parameters")
+        if isinstance(params, dict):
+            conversation_resolution = (
+                conversation_resolution
+                or params.get("required_review_thread_resolution") is True
+            )
+    return required, conversation_resolution
+
+
 def has_rule(rules: list[Any], rule_type: str) -> bool:
     return any(isinstance(rule, dict) and rule.get("type") == rule_type for rule in rules)
 
@@ -85,14 +101,20 @@ def evaluate(
     legacy = protection or {}
     legacy_checks, legacy_strict = legacy_status_checks(legacy)
     rule_checks, rule_strict = effective_rules_status_checks(rules)
+    rule_pr_required, rule_conversation_resolution = effective_pull_request_controls(rules)
     all_checks = legacy_checks | rule_checks
 
     protected = branch.get("name") == TARGET_BRANCH and branch.get("protected") is True
-    pr_required = isinstance(legacy.get("required_pull_request_reviews"), dict) or has_rule(
-        rules, "pull_request"
-    )
+    pr_required = isinstance(legacy.get("required_pull_request_reviews"), dict) or rule_pr_required
     strict_status = legacy_strict or rule_strict
     required_checks = REQUIRED_CHECKS.issubset(all_checks)
+
+    admin_enforced = enabled(legacy.get("enforce_admins")) is True
+
+    legacy_conversation_resolution = enabled(legacy.get("required_conversation_resolution"))
+    conversation_resolution_required = (
+        legacy_conversation_resolution is True or rule_conversation_resolution
+    )
 
     legacy_force = enabled(legacy.get("allow_force_pushes"))
     force_push_blocked = legacy_force is False or has_rule(rules, "non_fast_forward")
@@ -108,6 +130,8 @@ def evaluate(
         "pull_request_required": pr_required,
         "required_status_checks_present": required_checks,
         "strict_up_to_date_status_checks": strict_status,
+        "administrator_enforcement_verified": admin_enforced,
+        "conversation_resolution_required": conversation_resolution_required,
         "force_push_blocked": force_push_blocked,
         "branch_deletion_blocked": deletion_blocked,
         "break_glass_documented": break_glass_documented,
@@ -115,7 +139,7 @@ def evaluate(
     decision = "PASS" if all(checks.values()) else "FAIL"
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "branch": TARGET_BRANCH,
         "decision": decision,
         "checks": checks,
@@ -124,6 +148,9 @@ def evaluate(
         "break_glass_statement": note,
         "sources": {
             "legacy_branch_protection_present": protection is not None,
+            "administrator_enforcement_source": (
+                "legacy_branch_protection" if admin_enforced else "unverified"
+            ),
             "effective_rule_types": sorted(
                 {
                     rule["type"]
