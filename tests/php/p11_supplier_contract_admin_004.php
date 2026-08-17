@@ -8,6 +8,8 @@ require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontract
 use SafeContracts\Admin\AdminShell;
 use SafeContracts\Admin\ContractsPage;
 use SafeContracts\Admin\SuppliersPage;
+use SafeContracts\Audit\AuditRecorder;
+use SafeContracts\Contracts\ContractService;
 use SafeContracts\Plugin;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Suppliers\SupplierService;
@@ -29,6 +31,8 @@ Plugin::instance()->boot();
 $supplierPage = file_get_contents((string) (new ReflectionClass(SuppliersPage::class))->getFileName()) ?: '';
 $contractPage = file_get_contents((string) (new ReflectionClass(ContractsPage::class))->getFileName()) ?: '';
 $supplierService = file_get_contents((string) (new ReflectionClass(SupplierService::class))->getFileName()) ?: '';
+$contractService = file_get_contents((string) (new ReflectionClass(ContractService::class))->getFileName()) ?: '';
+$auditSource = file_get_contents((string) (new ReflectionClass(AuditRecorder::class))->getFileName()) ?: '';
 $pluginSource = file_get_contents((string) (new ReflectionClass(Plugin::class))->getFileName()) ?: '';
 $opsCss = file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/assets/admin/safecontracts-admin-ops.css') ?: '';
 
@@ -61,6 +65,18 @@ sc_p11admin_assert(str_contains($contractPage, 'Customers · Accounts Receivable
 sc_p11admin_assert(str_contains($contractPage, 'counterparty_name') && str_contains($contractPage, 'financial_direction'), 'Contract list/details display counterparty and direction');
 sc_p11admin_assert(str_contains($contractPage, 'Direction is derived server-side') || str_contains($contractPage, 'determined by the backend'), 'Contract UI states that financial direction is server-authoritative');
 sc_p11admin_assert(! str_contains($contractPage, '$wpdb'), 'Contract Admin remains presentation/application wiring without direct SQL');
+
+// Supplier and new contract write paths are auditable.
+foreach (['safecontracts_supplier_created','safecontracts_supplier_updated','safecontracts_supplier_archived'] as $event) {
+    sc_p11admin_assert(str_contains($supplierService, $event), "SupplierService emits {$event}");
+    sc_p11admin_assert(str_contains($auditSource, $event), "AuditRecorder subscribes to {$event}");
+}
+foreach (['safecontracts_contract_counterparty_assigned','safecontracts_contract_currency_changed'] as $event) {
+    sc_p11admin_assert(str_contains($contractService, $event), "ContractService emits {$event}");
+    sc_p11admin_assert(str_contains($auditSource, $event), "AuditRecorder subscribes to {$event}");
+}
+sc_p11admin_assert(str_contains($auditSource, 'contract_counterparty_assigned') && str_contains($auditSource, 'contract_currency_changed'), 'Audit mapping stores counterparty and currency event types');
+sc_p11admin_assert(str_contains($auditSource, 'supplier_created') && str_contains($auditSource, 'supplier_updated') && str_contains($auditSource, 'supplier_archived'), 'Audit mapping stores Supplier lifecycle event types');
 
 // Arabic fallback covers the new counterparty vocabulary without forcing locale globally.
 sc_p11admin_assert(CounterpartyArabicDefaults::default('Suppliers') === 'الموردون', 'Counterparty Arabic defaults translate Suppliers');
