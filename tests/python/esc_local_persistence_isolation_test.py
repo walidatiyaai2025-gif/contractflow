@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import shutil
 import sys
 import tempfile
 import unittest
@@ -11,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from verify_esc_local_persistence_isolation import (  # noqa: E402
+    ESC_LOCALE_STORAGE_KEY,
     ESC_SECURE_STORAGE_KEY,
     PersistenceIsolationError,
     validate_root,
@@ -66,6 +66,29 @@ final class SecureMobileTokenStore implements MobileTokenStore {{
 }}
 """
 
+SAFE_LOCALE_STORE = f"""import 'package:flutter/widgets.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+abstract interface class MobileLocaleStore {{
+  Future<String?> readLanguageCode();
+  Future<void> writeLanguageCode(String languageCode);
+}}
+
+final class SecureMobileLocaleStore implements MobileLocaleStore {{
+  const SecureMobileLocaleStore({{this.storage = const FlutterSecureStorage()}});
+
+  static const _key = '{ESC_LOCALE_STORAGE_KEY}';
+  final FlutterSecureStorage storage;
+
+  @override
+  Future<String?> readLanguageCode() => storage.read(key: _key);
+
+  @override
+  Future<void> writeLanguageCode(String languageCode) =>
+      storage.write(key: _key, value: languageCode);
+}}
+"""
+
 
 def fixture_root() -> tuple[tempfile.TemporaryDirectory[str], Path]:
     temp = tempfile.TemporaryDirectory()
@@ -73,6 +96,9 @@ def fixture_root() -> tuple[tempfile.TemporaryDirectory[str], Path]:
     token = root / "mobile/lib/core/auth/mobile_token_store.dart"
     token.parent.mkdir(parents=True, exist_ok=True)
     token.write_text(SAFE_TOKEN_STORE, encoding="utf-8")
+    locale = root / "mobile/lib/core/localization/mobile_locale_controller.dart"
+    locale.parent.mkdir(parents=True, exist_ok=True)
+    locale.write_text(SAFE_LOCALE_STORE, encoding="utf-8")
     (root / "mobile/pubspec.yaml").write_text(SAFE_PUBSPEC, encoding="utf-8")
     return temp, root
 
@@ -97,10 +123,7 @@ class EscLocalPersistenceIsolationTests(unittest.TestCase):
                 + "  shared_preferences: ^2.5.0\n",
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(
-                PersistenceIsolationError,
-                "shared_preferences",
-            ):
+            with self.assertRaisesRegex(PersistenceIsolationError, "shared_preferences"):
                 validate_root(root)
         finally:
             temp.cleanup()
@@ -119,7 +142,7 @@ class EscLocalPersistenceIsolationTests(unittest.TestCase):
         finally:
             temp.cleanup()
 
-    def test_direct_secure_storage_outside_token_store_fails_closed(self) -> None:
+    def test_direct_secure_storage_outside_audited_stores_fails_closed(self) -> None:
         temp, root = fixture_root()
         try:
             file = root / "mobile/lib/features/contracts/secret_cache.dart"
@@ -131,7 +154,7 @@ class EscLocalPersistenceIsolationTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(
                 PersistenceIsolationError,
-                "only in the audited ESC token store",
+                "only in audited ESC stores",
             ):
                 validate_root(root)
         finally:
@@ -147,10 +170,7 @@ class EscLocalPersistenceIsolationTests(unittest.TestCase):
                 "Future<void> save() async => File('contracts.cache').writeAsString('x');\n",
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(
-                PersistenceIsolationError,
-                "direct dart:io",
-            ):
+            with self.assertRaisesRegex(PersistenceIsolationError, "direct dart:io"):
                 validate_root(root)
         finally:
             temp.cleanup()
@@ -166,10 +186,23 @@ class EscLocalPersistenceIsolationTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(
-                PersistenceIsolationError,
-                "missing isolation marker",
-            ):
+            with self.assertRaisesRegex(PersistenceIsolationError, "missing isolation marker"):
+                validate_root(root)
+        finally:
+            temp.cleanup()
+
+    def test_locale_namespace_drift_fails_closed(self) -> None:
+        temp, root = fixture_root()
+        try:
+            locale = root / "mobile/lib/core/localization/mobile_locale_controller.dart"
+            locale.write_text(
+                locale.read_text(encoding="utf-8").replace(
+                    ESC_LOCALE_STORAGE_KEY,
+                    "safecontracts_mobile_language",
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(PersistenceIsolationError, "missing isolation marker"):
                 validate_root(root)
         finally:
             temp.cleanup()

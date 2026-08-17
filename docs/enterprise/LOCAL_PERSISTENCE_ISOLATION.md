@@ -4,17 +4,16 @@ Enterprise Safe Contracts Android must not inherit or silently share local persi
 
 ## Current production persistence
 
-The current mobile client declares only one local persistence package: `flutter_secure_storage`.
+The current mobile client declares `flutter_secure_storage` as its only local-persistence package and has exactly two audited production owners:
 
-Its only production owner is:
+1. `mobile/lib/core/auth/mobile_token_store.dart`
+   - key: `enterprise_safecontracts.mobile.bearer_token`
+2. `mobile/lib/core/localization/mobile_locale_controller.dart`
+   - key: `enterprise_safecontracts.mobile.language`
 
-`mobile/lib/core/auth/mobile_token_store.dart`
+The locale key was previously inherited as `safecontracts_mobile_language`; P0-002G corrects it to the Enterprise namespace.
 
-The persistent bearer token key is fixed to:
-
-`enterprise_safecontracts.mobile.bearer_token`
-
-Combined with the distinct Android application ID `com.safecontracts.enterprise`, this keeps the current secure token state both application-sandboxed and Enterprise-namespaced.
+Combined with the distinct Android application ID `com.safecontracts.enterprise`, these stores are both application-sandboxed and explicitly Enterprise-namespaced.
 
 ## Fail-closed policy
 
@@ -30,10 +29,11 @@ Combined with the distinct Android application ID `com.safecontracts.enterprise`
 - Realm;
 - path-provider-backed local persistence;
 - direct `dart:io` file/directory persistence primitives;
-- direct `flutter_secure_storage` use outside the audited ESC token store;
-- drift from the Enterprise secure-token key.
+- direct `flutter_secure_storage` use outside the two audited ESC stores;
+- drift from either Enterprise secure-storage key;
+- reintroduction of inherited Safe Contract persistence keys.
 
-The gate is intentionally restrictive. New persistent preferences, cache files, databases, offline queues, or secure-storage records are allowed only after the implementation defines and tests an explicit Enterprise namespace/isolation contract. The correct change is to extend the reviewed storage design and its regression coverage, not to delete or weaken the gate.
+The gate is intentionally restrictive. New persistent preferences, cache files, databases, offline queues, or secure-storage records are allowed only after the implementation defines and tests an explicit Enterprise namespace/isolation contract. The correct change is to extend the reviewed allowlist and regression coverage with the new namespaced store, not to delete or weaken the gate.
 
 ## Runtime-UAT boundary
 

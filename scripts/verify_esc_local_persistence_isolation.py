@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Fail closed if ESC mobile local persistence loses Enterprise namespace isolation.
 
-Enterprise Safe Contracts currently persists only its bearer token through the audited
-Flutter secure-storage module. New preference/database/file-cache persistence must not
+Enterprise Safe Contracts currently has exactly two audited persistent stores: the
+bearer token and the user's locale, both through Flutter secure storage and both using
+Enterprise-prefixed keys. New preference/database/file-cache persistence must not
 silently enter the mobile client: it requires an explicit Enterprise namespace and a
 reviewed isolation contract before this gate may be intentionally extended.
 """
@@ -15,10 +16,11 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN_STORE = Path("mobile/lib/core/auth/mobile_token_store.dart")
+LOCALE_STORE = Path("mobile/lib/core/localization/mobile_locale_controller.dart")
 ESC_SECURE_STORAGE_KEY = "enterprise_safecontracts.mobile.bearer_token"
-SECURE_STORAGE_IMPORT = (
-    "package:flutter_secure_storage/flutter_secure_storage.dart"
-)
+ESC_LOCALE_STORAGE_KEY = "enterprise_safecontracts.mobile.language"
+SECURE_STORAGE_IMPORT = "package:flutter_secure_storage/flutter_secure_storage.dart"
+AUDITED_SECURE_STORAGE_FILES = {TOKEN_STORE, LOCALE_STORE}
 
 FORBIDDEN_DEPENDENCIES = (
     "shared_preferences",
@@ -33,11 +35,9 @@ FORBIDDEN_DEPENDENCIES = (
     "realm",
     "path_provider",
 )
-
 FORBIDDEN_PACKAGE_IMPORTS = tuple(
     f"package:{name}/" for name in FORBIDDEN_DEPENDENCIES
 )
-
 FILE_PERSISTENCE_MARKERS = (
     "File(",
     "File.",
@@ -64,28 +64,32 @@ def read(path: Path) -> str:
 
 def _dependency_declared(pubspec: str, dependency: str) -> bool:
     return (
-        re.search(
-            rf"(?m)^  {re.escape(dependency)}:\s*[^\n]*$",
-            pubspec,
-        )
+        re.search(rf"(?m)^  {re.escape(dependency)}:\s*[^\n]*$", pubspec)
         is not None
     )
+
+
+def _require_markers(text: str, markers: tuple[str, ...], label: str) -> None:
+    for marker in markers:
+        if marker not in text:
+            fail(f"{label} is missing isolation marker: {marker}")
 
 
 def validate_root(root: Path) -> None:
     root = root.resolve()
     pubspec_path = root / "mobile/pubspec.yaml"
     token_store_path = root / TOKEN_STORE
+    locale_store_path = root / LOCALE_STORE
     lib_root = root / "mobile/lib"
 
     pubspec = read(pubspec_path)
     token_store = read(token_store_path)
+    locale_store = read(locale_store_path)
     if not lib_root.is_dir():
         fail("mobile/lib is missing")
 
     if not _dependency_declared(pubspec, "flutter_secure_storage"):
-        fail("ESC pubspec must retain flutter_secure_storage for the audited token store")
-
+        fail("ESC pubspec must retain flutter_secure_storage for audited persistent stores")
     for dependency in FORBIDDEN_DEPENDENCIES:
         if _dependency_declared(pubspec, dependency):
             fail(
@@ -93,43 +97,58 @@ def validate_root(root: Path) -> None:
                 "introduce an explicit Enterprise namespace/isolation contract first"
             )
 
-    required_token_markers = (
-        f"import '{SECURE_STORAGE_IMPORT}';",
-        "final class SecureMobileTokenStore implements MobileTokenStore",
-        "const FlutterSecureStorage()",
-        f"static const _key = '{ESC_SECURE_STORAGE_KEY}';",
-        "_storage.read(key: _key)",
-        "_storage.write(key: _key, value: normalized)",
-        "_storage.delete(key: _key)",
+    _require_markers(
+        token_store,
+        (
+            f"import '{SECURE_STORAGE_IMPORT}';",
+            "final class SecureMobileTokenStore implements MobileTokenStore",
+            "const FlutterSecureStorage()",
+            f"static const _key = '{ESC_SECURE_STORAGE_KEY}';",
+            "_storage.read(key: _key)",
+            "_storage.write(key: _key, value: normalized)",
+            "_storage.delete(key: _key)",
+        ),
+        "ESC secure bearer-token store",
     )
-    for marker in required_token_markers:
-        if marker not in token_store:
-            fail(f"ESC secure token store is missing isolation marker: {marker}")
+    _require_markers(
+        locale_store,
+        (
+            f"import '{SECURE_STORAGE_IMPORT}';",
+            "final class SecureMobileLocaleStore implements MobileLocaleStore",
+            "const FlutterSecureStorage()",
+            f"static const _key = '{ESC_LOCALE_STORAGE_KEY}';",
+            "storage.read(key: _key)",
+            "storage.write(key: _key, value: languageCode)",
+        ),
+        "ESC secure locale store",
+    )
 
-    forbidden_token_keys = (
+    forbidden_legacy_keys = (
         "safecontracts.mobile.bearer_token",
         "safecontracts_mobile.bearer_token",
-        "mobile.bearer_token",
+        "safecontracts_mobile_language",
+        "safecontracts.mobile.language",
     )
-    for value in forbidden_token_keys:
-        if value != ESC_SECURE_STORAGE_KEY and f"'{value}'" in token_store:
-            fail(f"ESC secure token store contains a generic/inherited key: {value}")
+    combined_audited = token_store + "\n" + locale_store
+    for value in forbidden_legacy_keys:
+        if f"'{value}'" in combined_audited:
+            fail(f"ESC persistent storage contains a generic/inherited key: {value}")
 
     dart_files = sorted(lib_root.rglob("*.dart"))
     if not dart_files:
         fail("mobile/lib contains no Dart production sources")
 
-    secure_storage_users: list[Path] = []
+    secure_storage_users: set[Path] = set()
     for path in dart_files:
         relative = path.relative_to(root)
         text = path.read_text(encoding="utf-8")
 
         if SECURE_STORAGE_IMPORT in text or "FlutterSecureStorage" in text:
-            secure_storage_users.append(relative)
-            if relative != TOKEN_STORE:
+            secure_storage_users.add(relative)
+            if relative not in AUDITED_SECURE_STORAGE_FILES:
                 fail(
-                    "direct flutter_secure_storage use is allowed only in the audited "
-                    f"ESC token store; found in {relative.as_posix()}"
+                    "direct flutter_secure_storage use is allowed only in audited ESC "
+                    f"stores; found in {relative.as_posix()}"
                 )
 
         for package_import in FORBIDDEN_PACKAGE_IMPORTS:
@@ -148,10 +167,14 @@ def validate_root(root: Path) -> None:
                 f"{relative.as_posix()}"
             )
 
-    if secure_storage_users != [TOKEN_STORE]:
+    if secure_storage_users != AUDITED_SECURE_STORAGE_FILES:
+        actual = ", ".join(sorted(path.as_posix() for path in secure_storage_users))
+        expected = ", ".join(
+            sorted(path.as_posix() for path in AUDITED_SECURE_STORAGE_FILES)
+        )
         fail(
-            "ESC secure storage must have exactly one audited production owner: "
-            f"{TOKEN_STORE.as_posix()}"
+            "ESC secure storage production owners differ from the audited allowlist; "
+            f"expected [{expected}], found [{actual}]"
         )
 
 
@@ -163,9 +186,9 @@ def main() -> int:
         return 1
 
     print(
-        "ESC local persistence isolation passed: secure bearer-token storage is "
-        "Enterprise-namespaced and unreviewed preference/database/file persistence "
-        "is absent"
+        "ESC local persistence isolation passed: bearer-token and locale secure "
+        "stores are Enterprise-namespaced; unreviewed preference/database/file "
+        "persistence is absent"
     )
     return 0
 
