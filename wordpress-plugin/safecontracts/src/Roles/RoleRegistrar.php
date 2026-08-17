@@ -23,6 +23,10 @@ final class RoleRegistrar
         self::registerRole(self::MANAGER, 'SafeContracts Manager', [
             Capabilities::ACCESS,
             Capabilities::VIEW_ALL,
+            Capabilities::VIEW_SUPPLIERS,
+            Capabilities::CREATE_SUPPLIERS,
+            Capabilities::EDIT_SUPPLIERS,
+            Capabilities::ARCHIVE_SUPPLIERS,
             Capabilities::CREATE_CUSTOMERS,
             Capabilities::EDIT_CUSTOMERS,
             Capabilities::CREATE_CONTRACTS,
@@ -32,6 +36,11 @@ final class RoleRegistrar
             Capabilities::EDIT_PAYMENTS,
             Capabilities::MANAGE_PAYMENTS,
             Capabilities::MANAGE_COLLECTIONS,
+            Capabilities::VIEW_PAYABLES,
+            Capabilities::VIEW_RECEIVABLES,
+            Capabilities::RECORD_PAYMENT,
+            Capabilities::RECORD_RECEIPT,
+            Capabilities::MODIFY_FINANCE,
             Capabilities::MANAGE_FOLLOWUPS,
             Capabilities::VIEW_REPORTS,
             Capabilities::EXPORT_REPORTS,
@@ -41,11 +50,16 @@ final class RoleRegistrar
         self::registerRole(self::ACCOUNTANT, 'SafeContracts Accountant', [
             Capabilities::ACCESS,
             Capabilities::VIEW_ASSIGNED,
+            Capabilities::VIEW_SUPPLIERS,
             Capabilities::CREATE_CONTRACTS,
             Capabilities::CREATE_PAYMENTS,
             Capabilities::EDIT_PAYMENTS,
             Capabilities::MANAGE_PAYMENTS,
             Capabilities::MANAGE_COLLECTIONS,
+            Capabilities::VIEW_PAYABLES,
+            Capabilities::VIEW_RECEIVABLES,
+            Capabilities::RECORD_PAYMENT,
+            Capabilities::RECORD_RECEIPT,
             Capabilities::MANAGE_FOLLOWUPS,
             Capabilities::VIEW_REPORTS,
             Capabilities::EXPORT_REPORTS,
@@ -69,7 +83,6 @@ final class RoleRegistrar
     {
         $grants = Capabilities::toGrantArray($capabilities);
         $role = get_role($slug);
-
         if (! $role) {
             add_role($slug, $name, $grants);
             return;
