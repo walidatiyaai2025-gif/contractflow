@@ -1,0 +1,38 @@
+name: ESC P9-011 Contract Credits
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-credits:
+    name: contract-credits
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+
+      - name: Validate P9-011 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0055EnterpriseContractFinancialCreditRevisions.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialCreditPolicy.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialCreditRevisionRepository.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialCreditRevisionService.php
+          php -l tests/php/enterprise_contract_financial_credits_p9_011.php
+
+      - name: Validate P9-011 credits
+        run: php tests/php/enterprise_contract_financial_credits_p9_011.php
