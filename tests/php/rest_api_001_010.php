@@ -104,7 +104,7 @@ $options = DataController::contractOptions(new WP_REST_Request(['customer_id' =>
 $optionsSql = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
 sc_p8_assert($options instanceof WP_REST_Response && ($options->data['data'][0]['id'] ?? 0) === 11, 'SC-P8-006 dependent contract lookup returns normalized option');
 sc_p8_assert(($options->data['meta']['client_may_offer_all_option'] ?? false) === true, 'SC-P8-006 client may offer All contracts without server inventing an unauthorized record');
-sc_p8_assert(str_contains($optionsSql, 'c.customer_id = 7') && str_contains($optionsSql, 'c.accountant_user_id = 42'), 'SC-P8-006 dependent lookup is customer + assignment scoped');
+sc_p8_assert(str_contains($optionsSql, "c.counterparty_type = 'customer'") && str_contains($optionsSql, 'c.counterparty_id = 7') && str_contains($optionsSql, 'c.accountant_user_id = 42'), 'SC-P8-006 dependent lookup is customer-counterparty + assignment scoped');
 
 // SC-P8-007 — contract detail/list safe projection and direct-object scope.
 $GLOBALS['sc_test_result_queue'] = [[[
