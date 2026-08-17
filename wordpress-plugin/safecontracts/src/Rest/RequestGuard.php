@@ -24,18 +24,19 @@ final class RequestGuard
      * Backward-compatible normalized filter helper for internal/admin callers.
      * REST dashboard callbacks must use strictDashboardFilters().
      *
-     * @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string}
+     * @return array<string,mixed>
      */
     public static function dashboardFilters(WP_REST_Request $request): array
     {
         return DashboardFilters::normalize(self::params($request));
     }
 
-    /** @return array{customer_id:int,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string} */
+    /** @return array<string,mixed> */
     public static function strictDashboardFilters(WP_REST_Request $request): array
     {
         ApiAbuseGuard::safeParams($request, [
-            'customer_id', 'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to',
+            'customer_id', 'counterparty_type', 'counterparty_id', 'financial_direction', 'currency_code',
+            'contract_id', 'accountant_user_id', 'status', 'due_from', 'due_to',
         ]);
         return ApiRequest::filters($request);
     }
