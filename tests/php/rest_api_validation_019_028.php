@@ -123,7 +123,7 @@ $readsBefore = count($GLOBALS['sc_test_read_queries']);
 $options = DataController::contractOptions(new WP_REST_Request(['customer_id' => '7']));
 $optionsSql = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $readsBefore));
 sc_p8v_final_assert(($options->data['meta']['customer_id'] ?? 0) === 7 && ($options->data['meta']['client_may_offer_all_option'] ?? false) === true, 'SC-P8-023 dependent selector returns explicit customer/all-option metadata');
-sc_p8v_final_assert(str_contains($optionsSql, 'c.customer_id = 7') && str_contains($optionsSql, 'c.accountant_user_id = 42'), 'SC-P8-023 dependent contract lookup preserves customer plus accountant scope');
+sc_p8v_final_assert(str_contains($optionsSql, "c.counterparty_type = 'customer'") && str_contains($optionsSql, 'c.counterparty_id = 7') && str_contains($optionsSql, 'c.accountant_user_id = 42'), 'SC-P8-023 dependent contract lookup preserves customer counterparty plus accountant scope');
 
 // SC-P8-024 — Contract endpoint validation.
 $GLOBALS['sc_test_result_queue'] = [[[
@@ -136,7 +136,7 @@ $contracts = DataController::contracts(new WP_REST_Request(['customer_id' => '7'
 $contractSql = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $readsBefore));
 sc_p8v_final_assert($contracts instanceof WP_REST_Response && ($contracts->data['data'][0]['contract_number'] ?? '') === 'SC-11', 'SC-P8-024 contract list returns safe domain row');
 sc_p8v_final_assert(! array_key_exists('notes', $contracts->data['data'][0]), 'SC-P8-024 contract projection excludes internal notes');
-sc_p8v_final_assert(str_contains($contractSql, 'c.customer_id = 7') && str_contains($contractSql, "c.status = 'active'") && str_contains($contractSql, 'c.accountant_user_id = 42'), 'SC-P8-024 contract filters and scope remain server-side');
+sc_p8v_final_assert(str_contains($contractSql, "c.counterparty_type = 'customer'") && str_contains($contractSql, 'c.counterparty_id = 7') && str_contains($contractSql, "c.status = 'active'") && str_contains($contractSql, 'c.accountant_user_id = 42'), 'SC-P8-024 contract customer/status/scope filters remain server-side with counterparty semantics');
 $GLOBALS['sc_test_result_queue'] = [[]];
 $missingContract = DataController::contract(new WP_REST_Request(['id' => '999']));
 sc_p8v_final_assert($missingContract instanceof WP_Error && ($missingContract->data['status'] ?? 0) === 404, 'SC-P8-024 missing contract returns 404');
