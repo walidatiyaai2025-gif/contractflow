@@ -98,10 +98,9 @@ $legacyPaymentSource = (string) file_get_contents($root . '/wordpress-plugin/saf
 $legacyCollectionSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Collections/CollectionRepository.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-// Schema remains unchanged.
-esc_p9_015_assert(Migrator::LATEST_VERSION === '1.56.0', 'P9-015 leaves Enterprise schema exactly at 1.56.0');
+// P9-015 remains a historical 1.56.0 boundary even after later additive migrations.
+esc_p9_015_assert(version_compare(Migrator::LATEST_VERSION, '1.56.0', '>='), 'P9-015 historical schema boundary remains available at or after 1.56.0');
 esc_p9_015_assert(str_contains($migratorSource, "'1.56.0' => Migration0057EnterpriseContractFinancialCollectionReceiptRevisions::class"), 'P9-015 preserves exact Migration0057 mapping');
-esc_p9_015_assert(! str_contains($migratorSource, 'Migration0058'), 'P9-015 introduces no Migration0058');
 
 // Capacity is integrated in P9-013 repository, inside the existing transaction/lock protocol.
 foreach ([

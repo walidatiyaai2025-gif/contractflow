@@ -1,0 +1,50 @@
+name: ESC P9-016 Contract Collection Reversals
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  collection-reversals:
+    name: collection-reversals
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+
+      - name: Validate P9-016 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0058EnterpriseContractFinancialCollectionReversalRevisions.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialCollectionReversalPolicy.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialCollectionReversalRevisionRepository.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialCollectionReversalRevisionService.php
+          php -l tests/php/enterprise_contract_financial_collection_reversals_p9_016.php
+          php -l tests/php/enterprise_contract_financial_collection_capacity_p9_015.php
+          php -l tests/php/enterprise_contract_financial_schedule_settlement_p9_014.php
+          php -l tests/php/enterprise_contract_financial_collection_receipts_p9_013.php
+
+      - name: Validate P9-013 receipt compatibility
+        run: php tests/php/enterprise_contract_financial_collection_receipts_p9_013.php
+
+      - name: Validate P9-014 settlement compatibility
+        run: php tests/php/enterprise_contract_financial_schedule_settlement_p9_014.php
+
+      - name: Validate P9-015 collection capacity compatibility
+        run: php tests/php/enterprise_contract_financial_collection_capacity_p9_015.php
+
+      - name: Validate P9-016 collection reversals
+        run: php tests/php/enterprise_contract_financial_collection_reversals_p9_016.php
