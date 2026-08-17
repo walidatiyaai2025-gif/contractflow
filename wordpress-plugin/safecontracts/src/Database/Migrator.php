@@ -46,11 +46,12 @@ use SafeContracts\Database\Migrations\Migration0038EnterpriseWorkflowTransitionG
 use SafeContracts\Database\Migrations\Migration0039EnterpriseWorkflowTransitionApprovalRoutes;
 use SafeContracts\Database\Migrations\Migration0040EnterpriseWorkflowApprovalRequests;
 use SafeContracts\Database\Migrations\Migration0041EnterpriseWorkflowApprovalDecisions;
+use SafeContracts\Database\Migrations\Migration0042EnterpriseWorkflowApprovalReleases;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.40.0';
+    public const LATEST_VERSION = '1.41.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -95,6 +96,7 @@ final class Migrator
         '1.38.0' => Migration0039EnterpriseWorkflowTransitionApprovalRoutes::class,
         '1.39.0' => Migration0040EnterpriseWorkflowApprovalRequests::class,
         '1.40.0' => Migration0041EnterpriseWorkflowApprovalDecisions::class,
+        '1.41.0' => Migration0042EnterpriseWorkflowApprovalReleases::class,
     ];
 
     public function maybeMigrate(): void
