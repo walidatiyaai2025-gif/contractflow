@@ -23,6 +23,46 @@ source = source.replace(
     "        final customers = await CustomersRepository(widget.client)\n            .loadPage(page: customerPage, perPage: 100, order: 'asc');\n        if (customers.page == _maxReferencePage && customers.hasMore) {\n          throw const FormatException(\n            'Customer references exceed the supported bounded mobile window.',\n          );\n        }\n        var suppliers = const <SafeContractsSupplier>[];",
     1,
 )
+
+old_counterparty_selection = """          if (_counterpartyId == null) {
+            if (customers.customers.isNotEmpty) {
+              _counterpartyType = 'customer';
+              _counterpartyId = customers.customers.first.id;
+            } else if (suppliers.isNotEmpty) {
+              _counterpartyType = 'supplier';
+              _counterpartyId = suppliers.first.id;
+              _currency.text = suppliers.first.defaultCurrency ?? '';
+            }
+          }
+"""
+new_counterparty_selection = """          if (_counterpartyType == 'customer') {
+            final customerStillVisible = customers.customers.any(
+              (customer) => customer.id == _counterpartyId,
+            );
+            if (!customerStillVisible && customers.customers.isNotEmpty) {
+              _counterpartyId = customers.customers.first.id;
+            } else if (customers.customers.isEmpty && suppliers.isNotEmpty) {
+              _counterpartyType = 'supplier';
+              _counterpartyId = suppliers.first.id;
+              _currency.text = suppliers.first.defaultCurrency ?? '';
+            }
+          } else {
+            final supplierStillVisible = suppliers.any(
+              (supplier) => supplier.id == _counterpartyId,
+            );
+            if (!supplierStillVisible && suppliers.isNotEmpty) {
+              _counterpartyId = suppliers.first.id;
+              _currency.text = suppliers.first.defaultCurrency ?? '';
+            } else if (suppliers.isEmpty && customers.customers.isNotEmpty) {
+              _counterpartyType = 'customer';
+              _counterpartyId = customers.customers.first.id;
+            }
+          }
+"""
+if old_counterparty_selection not in source:
+    raise SystemExit('counterparty selection marker not found')
+source = source.replace(old_counterparty_selection, new_counterparty_selection, 1)
+
 old_payment_load = """      final contracts = await ContractsRepository(widget.client).loadPage(
         page: 1,
         perPage: 100,
@@ -59,7 +99,11 @@ new_payment_load = """      final contracts = await ContractsRepository(widget.c
 if old_payment_load not in source:
     raise SystemExit('payment reference load marker not found')
 source = source.replace(old_payment_load, new_payment_load, 1)
-source = source.replace("_customerPage!.page >= 5", "_customerPage!.page >= _maxReferencePage", 1)
+source = source.replace(
+    "_customerPage!.page >= 5",
+    "_customerPage!.page >= _maxReferencePage",
+    1,
+)
 
 old_payment_dropdown_tail = """          onChanged:
               _saving ? null : (v) => setState(() => _paymentContractId = v),
@@ -85,7 +129,11 @@ new_payment_dropdown_tail = """          onChanged:
                 child: Text(ar ? 'السابق' : 'Previous'),
               ),
               const Spacer(),
-              Text(ar ? 'الصفحة ${_contractPage!.page}' : 'Page ${_contractPage!.page}'),
+              Text(
+                ar
+                    ? 'الصفحة ${_contractPage!.page}'
+                    : 'Page ${_contractPage!.page}',
+              ),
               const Spacer(),
               OutlinedButton(
                 onPressed: _saving ||
