@@ -1,0 +1,32 @@
+name: ESC P8-002 Contract Milestones Gate
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-milestones:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Validate P8-002 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0044EnterpriseContractMilestones.php
+          php -l wordpress-plugin/safecontracts/src/Milestones/ContractMilestonePolicy.php
+          php -l wordpress-plugin/safecontracts/src/Milestones/ContractMilestoneRepository.php
+          php -l wordpress-plugin/safecontracts/src/Milestones/ContractMilestoneService.php
+          php -l tests/php/enterprise_contract_milestones_p8_002.php
+      - name: Validate ESC-P8-002 Contract Milestone foundation
+        run: php tests/php/enterprise_contract_milestones_p8_002.php
