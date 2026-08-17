@@ -11,7 +11,7 @@ final class SecureMobileLocaleStore implements MobileLocaleStore {
     this.storage = const FlutterSecureStorage(),
   });
 
-  static const _key = 'safecontracts_mobile_language';
+  static const _key = 'enterprise_safecontracts.mobile.language';
 
   final FlutterSecureStorage storage;
 

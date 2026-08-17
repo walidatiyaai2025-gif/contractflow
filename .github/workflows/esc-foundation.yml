@@ -26,6 +26,10 @@ jobs:
         run: python3 scripts/verify_esc_android_isolation.py
       - name: Validate ESC FCM application identity isolation
         run: python3 scripts/verify_esc_fcm_registration_isolation.py
+      - name: Validate ESC local persistence isolation
+        run: python3 scripts/verify_esc_local_persistence_isolation.py
+      - name: Test ESC local persistence isolation gate
+        run: python3 tests/python/esc_local_persistence_isolation_test.py
       - name: Test ESC protected release workflow contract
         run: python3 tests/python/esc_release_branch_protection_contract_test.py
       - name: Test ESC Android coexistence evidence gate
