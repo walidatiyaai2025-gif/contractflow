@@ -87,15 +87,17 @@ final class ReportExportService
         $date = function_exists('wp_date') ? wp_date('Y-m-d') : gmdate('Y-m-d');
         $filename = 'SafeContracts-report-' . $date . '.xlsx';
         $counts = [
-            'finance_summary' => count((array) ($finance['summary'] ?? [])),
-            'aging' => count((array) ($finance['aging'] ?? [])),
-            'cash_flow' => count((array) ($finance['cash_flow'] ?? [])),
-            'finance_obligations' => count($financeObligations),
             'customers' => count($customers),
             'contracts' => count($contracts),
             'payments' => count($payments),
             'collections' => count($collections),
             'followups' => count($followUps),
+        ];
+        $financeCounts = [
+            'summary' => count((array) ($finance['summary'] ?? [])),
+            'aging' => count((array) ($finance['aging'] ?? [])),
+            'cash_flow' => count((array) ($finance['cash_flow'] ?? [])),
+            'obligations' => count($financeObligations),
         ];
 
         do_action('safecontracts_export_completed', [
@@ -104,6 +106,7 @@ final class ReportExportService
             'filters' => $filters,
             'finance_filters' => $financeInput,
             'row_counts' => $counts,
+            'finance_row_counts' => $financeCounts,
         ], get_current_user_id());
 
         return [
@@ -113,6 +116,7 @@ final class ReportExportService
             'filters' => $filters,
             'finance_filters' => $financeInput,
             'row_counts' => $counts,
+            'finance_row_counts' => $financeCounts,
         ];
     }
 
