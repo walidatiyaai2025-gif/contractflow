@@ -32,6 +32,8 @@ jobs:
         run: python3 tests/python/esc_local_persistence_isolation_test.py
       - name: Test ESC protected release workflow contract
         run: python3 tests/python/esc_release_branch_protection_contract_test.py
+      - name: Test ESC stable verified-artifact branch audit provenance
+        run: python3 tests/python/enterprise_verified_artifacts_branch_audit_test.py
       - name: Test ESC branch protection audit evidence
         run: python3 tests/python/esc_branch_protection_audit_test.py
       - name: Test ESC branch protection apply helper contract
