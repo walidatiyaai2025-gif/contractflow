@@ -26,7 +26,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
 
-      - name: Require live schema-v2 ESC branch enforcement and exact head
+      - name: Require live schema-v3 ESC branch enforcement and exact head
         shell: bash
         env:
           GH_ADMIN_READ_TOKEN: ${{ secrets.ESC_GITHUB_ADMIN_READ_TOKEN }}
@@ -83,10 +83,15 @@ jobs:
 
           path = Path(sys.argv[1])
           record = json.loads(path.read_text(encoding='utf-8'))
-          if record.get('schema_version') != 2:
-              raise SystemExit('FAIL: ESC branch-protection audit must use schema version 2')
+          if record.get('schema_version') != 3:
+              raise SystemExit('FAIL: ESC branch-protection audit must use schema version 3')
           if record.get('decision') != 'PASS':
               raise SystemExit('FAIL: ESC branch-protection audit did not return PASS')
+          if record.get('expected_status_check_app_slug') != 'github-actions':
+              raise SystemExit('FAIL: ESC branch-protection audit did not resolve the GitHub Actions App')
+          expected_app_id = record.get('expected_status_check_app_id')
+          if not isinstance(expected_app_id, int) or expected_app_id <= 0:
+              raise SystemExit('FAIL: ESC branch-protection audit has an invalid expected GitHub Actions App ID')
           checks = record.get('checks')
           if not isinstance(checks, dict) or not checks or not all(value is True for value in checks.values()):
               raise SystemExit('FAIL: ESC branch-protection audit has a missing/false control')
@@ -96,6 +101,7 @@ jobs:
               'protected_branch',
               'pull_request_required',
               'required_status_checks_present',
+              'required_status_check_sources_verified',
               'strict_up_to_date_status_checks',
               'force_push_blocked',
               'branch_deletion_blocked',
@@ -104,6 +110,13 @@ jobs:
           missing = sorted(required - set(checks))
           if missing:
               raise SystemExit('FAIL: ESC branch-protection audit is missing controls: ' + ', '.join(missing))
+          source_ids = record.get('observed_required_check_source_ids')
+          if not isinstance(source_ids, dict):
+              raise SystemExit('FAIL: ESC branch-protection audit is missing source IDs')
+          for context in ('esc-foundation', 'esc-mobile'):
+              values = source_ids.get(context)
+              if not isinstance(values, list) or expected_app_id not in values:
+                  raise SystemExit(f'FAIL: {context} is not pinned to the expected GitHub Actions App')
           PY
 
           AUDIT_SHA256="$(sha256sum "$AUDIT_PATH" | awk '{print $1}')"
@@ -287,7 +300,7 @@ jobs:
               'apk_sha256': os.environ['APK_SHA256'],
               'signer_certificate_sha256': os.environ['ESC_UAT_SIGNER_SHA256'],
               'branch_protection_audit_file': os.environ['AUDIT_NAME'],
-              'branch_protection_audit_schema_version': 2,
+              'branch_protection_audit_schema_version': 3,
               'branch_protection_audit_decision': 'PASS',
               'branch_protection_audit_sha256': os.environ['ACTUAL_AUDIT_SHA256'],
               'api_origin': f'{parsed.scheme}://{parsed.netloc}',
