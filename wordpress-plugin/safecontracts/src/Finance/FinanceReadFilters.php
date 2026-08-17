@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace SafeContracts\Finance;
 
 use DateTimeImmutable;
+use SafeContracts\Counterparties\CounterpartyType;
 use SafeContracts\Payments\PaymentStatus;
 
 final class FinanceReadFilters
 {
-    /** @return array{direction:string,currency_code:string,contract_id:int,counterparty_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string,aging_bucket:string,limit:int} */
+    /** @return array{direction:string,currency_code:string,counterparty_type:string,customer_id:int,supplier_id:int,contract_id:int,counterparty_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string,aging_bucket:string,limit:int} */
     public static function normalize(array $input): array
     {
         $direction = self::enum($input['direction'] ?? '', FinancialDirection::all());
+        $counterpartyType = self::enum($input['counterparty_type'] ?? '', array_merge([''], CounterpartyType::all()));
         $currency = strtoupper(trim(self::scalarString($input['currency_code'] ?? '')));
         if ($currency !== '' && $currency !== 'UNSET' && ! preg_match('/^[A-Z]{3}$/', $currency)) {
             $currency = '';
@@ -28,6 +30,9 @@ final class FinanceReadFilters
         return [
             'direction' => $direction,
             'currency_code' => $currency,
+            'counterparty_type' => $counterpartyType,
+            'customer_id' => self::id($input['customer_id'] ?? null),
+            'supplier_id' => self::id($input['supplier_id'] ?? null),
             'contract_id' => self::id($input['contract_id'] ?? null),
             'counterparty_id' => self::id($input['counterparty_id'] ?? null),
             'accountant_user_id' => self::id($input['accountant_user_id'] ?? null),
