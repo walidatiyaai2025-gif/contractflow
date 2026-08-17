@@ -1,0 +1,38 @@
+name: ESC P9-010 Contract Penalty Rules
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-penalty-rules:
+    name: contract-penalty-rules
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+
+      - name: Validate P9-010 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0054EnterpriseContractFinancialPenaltyRuleRevisions.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialPenaltyRulePolicy.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialPenaltyRuleRevisionRepository.php
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialPenaltyRuleRevisionService.php
+          php -l tests/php/enterprise_contract_financial_penalty_rules_p9_010.php
+
+      - name: Validate P9-010 penalty rules
+        run: php tests/php/enterprise_contract_financial_penalty_rules_p9_010.php
