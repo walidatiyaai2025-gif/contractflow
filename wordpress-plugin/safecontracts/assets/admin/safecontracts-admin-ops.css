@@ -30,6 +30,92 @@
   vertical-align: top;
 }
 
+.safecontracts-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.safecontracts-inline-check {
+  display: inline-flex !important;
+  align-items: center;
+  align-self: center;
+  gap: 8px !important;
+  min-width: 0 !important;
+  font-weight: 600;
+}
+
+.safecontracts-inline-check input {
+  margin: 0;
+}
+
+.safecontracts-count-badge,
+.safecontracts-status-pill {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.safecontracts-count-badge {
+  min-width: 28px;
+  justify-content: center;
+  padding: 6px 9px;
+  background: var(--safecontracts-bg);
+  color: var(--safecontracts-navy);
+}
+
+.safecontracts-status-pill {
+  padding: 5px 9px;
+  border: 1px solid var(--safecontracts-border);
+  background: var(--safecontracts-bg);
+  color: var(--safecontracts-muted);
+}
+
+.safecontracts-status-pill--active {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.safecontracts-status-pill--inactive {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #4b5563;
+}
+
+.safecontracts-status-pill--suspended {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.safecontracts-status-pill--archived {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.safecontracts-supplier-editor,
+.safecontracts-contract-editor {
+  align-self: start;
+}
+
+.safecontracts-supplier-editor textarea,
+.safecontracts-contract-editor textarea {
+  resize: vertical;
+}
+
+.safecontracts-contracts table small,
+.safecontracts-suppliers table small {
+  color: var(--safecontracts-muted);
+}
+
 .safecontracts-finance {
   --safecontracts-finance-payable: #9a3412;
   --safecontracts-finance-payable-soft: #fff7ed;
@@ -160,7 +246,8 @@
   gap: 10px;
 }
 
-.safecontracts-finance-mini-metric {
+.safecontracts-finance-mini-metric,
+.safecontracts-finance-mini {
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--safecontracts-border);
@@ -169,24 +256,29 @@
 }
 
 .safecontracts-finance-mini-metric span,
-.safecontracts-finance-mini-metric strong {
+.safecontracts-finance-mini-metric strong,
+.safecontracts-finance-mini span,
+.safecontracts-finance-mini strong {
   display: block;
 }
 
-.safecontracts-finance-mini-metric span {
+.safecontracts-finance-mini-metric span,
+.safecontracts-finance-mini span {
   margin-bottom: 5px;
   color: var(--safecontracts-muted);
   font-size: 11px;
   font-weight: 700;
 }
 
-.safecontracts-finance-mini-metric strong {
+.safecontracts-finance-mini-metric strong,
+.safecontracts-finance-mini strong {
   overflow-wrap: anywhere;
   color: var(--safecontracts-ink);
   font-size: 15px;
 }
 
-.safecontracts-finance-mini-metric--important strong {
+.safecontracts-finance-mini-metric--important strong,
+.safecontracts-finance-mini--alert strong {
   color: var(--safecontracts-danger);
 }
 
@@ -264,7 +356,9 @@
 }
 
 [dir="rtl"] .safecontracts-finance-legend,
-.rtl .safecontracts-finance-legend {
+.rtl .safecontracts-finance-legend,
+[dir="rtl"] .safecontracts-heading-actions,
+.rtl .safecontracts-heading-actions {
   justify-content: flex-start;
 }
 
@@ -312,8 +406,14 @@
   }
 
   .safecontracts-finance-summary__head,
-  .safecontracts-action-item {
+  .safecontracts-action-item,
+  .safecontracts-section-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .safecontracts-heading-actions {
+    justify-content: flex-start;
+    width: 100%;
   }
 }
