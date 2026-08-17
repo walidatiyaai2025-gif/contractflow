@@ -26,6 +26,7 @@ import '../payments/payments.dart';
 import '../payments/payments_screen.dart';
 import '../profile/profile.dart';
 import '../profile/profile_screen.dart';
+import '../records/mobile_quick_add_screen.dart';
 import '../refresh/silent_refresh.dart';
 import '../session/session_controller.dart';
 import '../ui/safecontracts_design.dart';
@@ -175,6 +176,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     }
 
     final bottomDestinations = _bottomDestinations();
+    final quickAdds = availableMobileQuickAdds(widget.session);
     return Scaffold(
       backgroundColor: SafeContractsVisual.background,
       appBar: AppBar(
@@ -259,10 +261,38 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                 ),
                 actions: const <Widget>[SizedBox.shrink()],
               ),
-            Expanded(child: _body()),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                reverseDuration: const Duration(milliseconds: 190),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  final slide = Tween<Offset>(
+                    begin: const Offset(0.025, 0),
+                    end: Offset.zero,
+                  ).animate(animation);
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(position: slide, child: child),
+                  );
+                },
+                child: KeyedSubtree(
+                  key: ValueKey<MobileDestination>(_selected),
+                  child: _body(),
+                ),
+              ),
+            ),
           ],
         ),
       ),
+      floatingActionButton: quickAdds.isEmpty
+          ? null
+          : _QuickAddFab(
+              tooltip: l10n.isArabic ? 'إضافة جديدة' : 'Quick add',
+              onPressed: () => unawaited(_showQuickAdd(quickAdds)),
+            ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: bottomDestinations.isEmpty
           ? null
           : _SafeContractsBottomNavigation(
@@ -347,6 +377,69 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     };
   }
 
+  Future<void> _showQuickAdd(List<MobileQuickAddType> actions) async {
+    final selected = await showModalBottomSheet<MobileQuickAddType>(
+      context: context,
+      backgroundColor: SafeContractsVisual.surface,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (sheetContext) => _QuickAddSheet(actions: actions),
+    );
+    if (!mounted || selected == null) return;
+
+    final created = await Navigator.of(context).push<bool>(
+      PageRouteBuilder<bool>(
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return MobileQuickAddScreen(
+            client: widget.contractsController.repository.client,
+            session: widget.session,
+            type: selected,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 280),
+        reverseTransitionDuration: const Duration(milliseconds: 210),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      ),
+    );
+    if (!mounted || created != true) return;
+
+    switch (selected) {
+      case MobileQuickAddType.customer:
+        unawaited(widget.customersController.refreshSilently());
+        break;
+      case MobileQuickAddType.contract:
+        unawaited(widget.contractsController.refreshSilently());
+        break;
+      case MobileQuickAddType.payment:
+        setState(() => _liveRefreshRevision++);
+        break;
+    }
+    unawaited(widget.dashboardController.refreshSilently());
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          context.scL10n.isArabic
+              ? 'تمت الإضافة بنجاح.'
+              : 'Added successfully.',
+        ),
+      ),
+    );
+  }
+
   void _openContract(int contractId) {
     final canOpenContractEditor = widget.contractsController.canEditContract ||
         widget.session.can('safecontracts_assign_contracts');
@@ -398,6 +491,188 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 }
 
+final class _QuickAddFab extends StatefulWidget {
+  const _QuickAddFab({required this.tooltip, required this.onPressed});
+
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  State<_QuickAddFab> createState() => _QuickAddFabState();
+}
+
+final class _QuickAddFabState extends State<_QuickAddFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 430),
+    );
+    _scale = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: SafeContractsVisual.navy.withValues(alpha: 0.24),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          tooltip: widget.tooltip,
+          onPressed: widget.onPressed,
+          backgroundColor: SafeContractsVisual.navy,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          child: const Icon(Icons.add_rounded, size: 34),
+        ),
+      ),
+    );
+  }
+}
+
+final class _QuickAddSheet extends StatelessWidget {
+  const _QuickAddSheet({required this.actions});
+
+  final List<MobileQuickAddType> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final arabic = context.scL10n.isArabic;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            arabic ? 'إضافة جديدة' : 'Quick add',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: SafeContractsVisual.ink,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            arabic
+                ? 'المتاح هنا حسب صلاحيات الإضافة الخاصة بحسابك.'
+                : 'Only create actions allowed for your account appear here.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: SafeContractsVisual.muted,
+                ),
+          ),
+          const SizedBox(height: 16),
+          ...actions.indexed.map((entry) {
+            final index = entry.$1;
+            final action = entry.$2;
+            return TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: 1),
+              duration: Duration(milliseconds: 220 + (index * 70)),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: Transform.translate(
+                    offset: Offset(0, 12 * (1 - value)),
+                    child: child,
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: SafeContractsVisual.background,
+                  borderRadius: BorderRadius.circular(18),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () => Navigator.of(context).pop(action),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: SafeContractsVisual.navySoft,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              mobileQuickAddIcon(action),
+                              color: SafeContractsVisual.navy,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  mobileQuickAddLabel(context, action),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  mobileQuickAddDescription(context, action),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: SafeContractsVisual.muted,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Directionality.of(context) == TextDirection.rtl
+                                ? Icons.chevron_left_rounded
+                                : Icons.chevron_right_rounded,
+                            color: SafeContractsVisual.muted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
 final class _SafeContractsBottomNavigation extends StatelessWidget {
   const _SafeContractsBottomNavigation({
     required this.destinations,
@@ -435,16 +710,29 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () => onSelected(destination),
-                  child: Padding(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
                     padding: const EdgeInsets.symmetric(vertical: 5),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? SafeContractsVisual.navySoft.withValues(alpha: 0.74)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          _icon(destination),
-                          color: isSelected
-                              ? SafeContractsVisual.navy
-                              : SafeContractsVisual.muted,
+                        AnimatedScale(
+                          scale: isSelected ? 1.08 : 1,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutBack,
+                          child: Icon(
+                            _icon(destination),
+                            color: isSelected
+                                ? SafeContractsVisual.navy
+                                : SafeContractsVisual.muted,
+                          ),
                         ),
                         const SizedBox(height: 3),
                         Text(
