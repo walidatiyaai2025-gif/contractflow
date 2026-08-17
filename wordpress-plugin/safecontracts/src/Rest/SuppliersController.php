@@ -123,8 +123,13 @@ final class SuppliersController
             if (! array_key_exists('legal_name', $input)) {
                 throw new InvalidArgumentException('Supplier legal name is required.');
             }
-            $id = (new SupplierService())->save($input);
-            return RequestGuard::response(['id' => $id, 'created' => true], [], 201);
+            $service = new SupplierService();
+            $id = $service->save($input);
+            $supplier = $service->find($id);
+            if ($supplier === null) {
+                throw new DomainException('Supplier was saved but could not be reloaded.');
+            }
+            return RequestGuard::response($supplier, ['created' => true], 201);
         });
     }
 
@@ -144,7 +149,11 @@ final class SuppliersController
             $input = array_intersect_key($existing, array_flip(self::FIELDS));
             $input = [...$input, ...$changes, 'id' => $id];
             $service->save($input);
-            return RequestGuard::response(['id' => $id, 'updated' => true]);
+            $supplier = $service->find($id);
+            if ($supplier === null) {
+                throw new DomainException('Supplier was updated but could not be reloaded.');
+            }
+            return RequestGuard::response($supplier, ['updated' => true]);
         });
     }
 
@@ -174,18 +183,14 @@ final class SuppliersController
 
     private static function boolParam(mixed $value): bool
     {
-        if (is_bool($value)) {
-            return $value;
-        }
+        if (is_bool($value)) return $value;
         return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes'], true);
     }
 
     private static function permission(bool $allowed, string $code, string $message): bool|WP_Error
     {
         $access = Router::canAccess();
-        if ($access !== true) {
-            return $access;
-        }
+        if ($access !== true) return $access;
         return $allowed ? true : RequestGuard::forbidden($code, __($message, 'safecontracts'));
     }
 
