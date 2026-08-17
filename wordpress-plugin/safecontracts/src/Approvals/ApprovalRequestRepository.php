@@ -10,7 +10,8 @@ use SafeContracts\Tenancy\TenantContextStore;
 
 final class ApprovalRequestRepository
 {
-    private const REQUEST_COLUMNS = 'id, instance_id, contract_id, workflow_id, workflow_version_id, transition_id, transition_code_snapshot, from_state_id, from_state_code_snapshot, to_state_id, to_state_code_snapshot, route_id_snapshot, request_key_hash, status, requester_user_id, requested_at';
+    private const PUBLIC_REQUEST_COLUMNS = 'id, instance_id, contract_id, workflow_id, workflow_version_id, transition_id, transition_code_snapshot, from_state_id, from_state_code_snapshot, to_state_id, to_state_code_snapshot, route_id_snapshot, status, requester_user_id, requested_at';
+    private const INTERNAL_REQUEST_COLUMNS = 'id, instance_id, contract_id, workflow_id, workflow_version_id, transition_id, transition_code_snapshot, from_state_id, from_state_code_snapshot, to_state_id, to_state_code_snapshot, route_id_snapshot, request_key_hash, status, requester_user_id, requested_at';
 
     /** @return list<array<string,mixed>> */
     public function listRequests(int $contractId, int $limit = 50, int $offset = 0): array
@@ -21,7 +22,7 @@ final class ApprovalRequestRepository
         $limit = max(1, min(100, $limit));
         $offset = max(0, min(100000, $offset));
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT " . self::REQUEST_COLUMNS . " FROM {$requests}
+            "SELECT " . self::PUBLIC_REQUEST_COLUMNS . " FROM {$requests}
              WHERE tenant_id = %d AND contract_id = %d
              ORDER BY requested_at DESC, id DESC LIMIT %d OFFSET %d",
             $tenantId,
@@ -89,7 +90,7 @@ final class ApprovalRequestRepository
             }
 
             $existingRows = $wpdb->get_results($wpdb->prepare(
-                "SELECT " . self::REQUEST_COLUMNS . " FROM {$requests}
+                "SELECT " . self::INTERNAL_REQUEST_COLUMNS . " FROM {$requests}
                  WHERE tenant_id = %d AND instance_id = %d AND request_key_hash = %s
                  LIMIT 1 FOR UPDATE",
                 $tenantId,
@@ -109,7 +110,7 @@ final class ApprovalRequestRepository
                 if ($wpdb->query('COMMIT') === false) {
                     throw new RuntimeException('Unable to commit idempotent Approval Request retry.');
                 }
-                return ['approval_required' => true, 'request' => $existing, 'created' => false];
+                return ['approval_required' => true, 'request' => $this->publicRequest($existing), 'created' => false];
             }
 
             $transitionRows = $wpdb->get_results($wpdb->prepare(
@@ -457,7 +458,6 @@ final class ApprovalRequestRepository
                     'to_state_id' => $toStateId,
                     'to_state_code_snapshot' => $toStateCode,
                     'route_id_snapshot' => $routeId,
-                    'request_key_hash' => $requestKeyHash,
                     'status' => ApprovalRequestPolicy::STATUS_PENDING,
                     'requester_user_id' => $actorId,
                     'requested_at' => null,
@@ -467,6 +467,13 @@ final class ApprovalRequestRepository
             $wpdb->query('ROLLBACK');
             throw $error;
         }
+    }
+
+    /** @param array<string,mixed> $request @return array<string,mixed> */
+    private function publicRequest(array $request): array
+    {
+        unset($request['request_key_hash']);
+        return $request;
     }
 
     /** @return list<array<string,mixed>> */
