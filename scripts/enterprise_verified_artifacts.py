@@ -33,7 +33,21 @@ BRANCH = "enterprise-safecontracts"
 PUBLIC_URL = "https://esc.50sols.com/"
 APPLICATION_ID = "com.safecontracts.enterprise"
 SOURCE_SHA_RE = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$", re.IGNORECASE)
 HTTPS_RE = re.compile(r"^https://[^\s]+$", re.IGNORECASE)
+BRANCH_PROTECTION_AUDIT_SCHEMA_VERSION = 2
+BRANCH_PROTECTION_REQUIRED_CONTROLS = {
+    "protected_branch",
+    "pull_request_required",
+    "required_status_checks_present",
+    "strict_up_to_date_status_checks",
+    "administrator_enforcement_verified",
+    "conversation_resolution_required",
+    "force_push_blocked",
+    "branch_deletion_blocked",
+    "break_glass_documented",
+}
+BRANCH_PROTECTION_REQUIRED_STATUS_CHECKS = {"esc-foundation", "esc-mobile"}
 
 
 class PolicyError(RuntimeError):
@@ -50,6 +64,11 @@ def digest(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             h.update(block)
     return h.hexdigest()
+
+
+def audit_document_digest(payload: dict[str, object]) -> str:
+    rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    return hashlib.sha256(rendered.encode("utf-8")).hexdigest()
 
 
 def now_utc() -> str:
@@ -161,6 +180,100 @@ def validate_cross_product_isolation() -> int:
     return checks
 
 
+def validate_branch_protection_audit_payload(payload: object) -> dict[str, object]:
+    if not isinstance(payload, dict):
+        fail("ESC branch-protection audit must be a JSON object")
+    if payload.get("schema_version") != BRANCH_PROTECTION_AUDIT_SCHEMA_VERSION:
+        fail("ESC branch-protection audit must use schema version 2")
+    if payload.get("branch") != BRANCH:
+        fail("ESC branch-protection audit targets the wrong branch")
+    if payload.get("decision") != "PASS":
+        fail("ESC branch-protection audit must have decision=PASS")
+
+    checks = payload.get("checks")
+    if not isinstance(checks, dict):
+        fail("ESC branch-protection audit checks must be an object")
+    missing_controls = sorted(BRANCH_PROTECTION_REQUIRED_CONTROLS - set(checks))
+    if missing_controls:
+        fail(
+            "ESC branch-protection audit is missing controls: "
+            + ", ".join(missing_controls)
+        )
+    failed_controls = sorted(
+        name
+        for name in BRANCH_PROTECTION_REQUIRED_CONTROLS
+        if checks.get(name) is not True
+    )
+    if failed_controls:
+        fail(
+            "ESC branch-protection audit has failed controls: "
+            + ", ".join(failed_controls)
+        )
+
+    observed = payload.get("observed_required_checks")
+    if not isinstance(observed, list):
+        fail("ESC branch-protection audit observed_required_checks must be an array")
+    observed_set = {item for item in observed if isinstance(item, str)}
+    if not BRANCH_PROTECTION_REQUIRED_STATUS_CHECKS.issubset(observed_set):
+        fail("ESC branch-protection audit does not prove esc-foundation and esc-mobile")
+
+    required = payload.get("required_checks")
+    if not isinstance(required, list):
+        fail("ESC branch-protection audit required_checks must be an array")
+    required_set = {item for item in required if isinstance(item, str)}
+    if required_set != BRANCH_PROTECTION_REQUIRED_STATUS_CHECKS:
+        fail("ESC branch-protection audit required-check contract is unexpected")
+
+    captured = payload.get("captured_input_sha256")
+    if not isinstance(captured, dict):
+        fail("ESC branch-protection audit must retain captured input digests")
+    for key in ("branch_json", "rules_json", "protection_json"):
+        value = str(captured.get(key, "")).strip().lower()
+        if SHA256_RE.fullmatch(value) is None:
+            fail(f"ESC branch-protection audit has invalid {key} digest")
+
+    sources = payload.get("sources")
+    if not isinstance(sources, dict):
+        fail("ESC branch-protection audit sources must be an object")
+    if sources.get("legacy_branch_protection_present") is not True:
+        fail("ESC branch-protection audit must include authoritative legacy protection")
+    if sources.get("administrator_enforcement_source") != "legacy_branch_protection":
+        fail("ESC branch-protection audit does not prove administrator enforcement")
+
+    if len(str(payload.get("break_glass_statement", "")).strip()) < 12:
+        fail("ESC branch-protection audit break-glass statement is missing")
+    if not str(payload.get("audited_utc", "")).endswith("Z"):
+        fail("ESC branch-protection audit audited_utc must be UTC")
+    return payload
+
+
+def load_branch_protection_audit(path: Path) -> tuple[dict[str, object], str]:
+    if not path.is_file() or path.stat().st_size == 0:
+        fail(f"ESC branch-protection audit is missing or empty: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise PolicyError("ESC branch-protection audit is invalid JSON") from exc
+    validated = validate_branch_protection_audit_payload(payload)
+    file_digest = digest(path)
+    deterministic_digest = audit_document_digest(validated)
+    if file_digest != deterministic_digest:
+        fail("ESC branch-protection audit file is not the canonical schema-v2 document")
+    return validated, file_digest
+
+
+def validate_embedded_branch_protection_audit(payload: dict[str, object], sha: str) -> None:
+    raw_audit = payload.get("branch_protection_audit")
+    audit = validate_branch_protection_audit_payload(raw_audit)
+    expected_digest = str(payload.get("branch_protection_audit_sha256", "")).strip().lower()
+    actual_digest = audit_document_digest(audit)
+    if expected_digest != actual_digest:
+        fail("ESC APK branch-protection audit digest mismatch")
+    audit_source_sha = source_sha(str(payload.get("branch_protection_audit_source_sha", "")))
+    if audit_source_sha != sha:
+        fail("ESC APK branch-protection audit source SHA mismatch")
+
+
 def validate_embedded_uat_record(payload: dict[str, object], sha: str) -> None:
     raw_record = payload.get("coexistence_uat_record")
     if not isinstance(raw_record, dict):
@@ -250,6 +363,7 @@ def check_one(
             "firebase_evidence",
         ):
             evidence(str(payload.get(key, "")), key)
+        validate_embedded_branch_protection_audit(payload, sha)
         validate_embedded_uat_record(payload, sha)
     return 14
 
@@ -292,6 +406,9 @@ def publish_apk(args: argparse.Namespace) -> int:
     source = Path(args.apk).expanduser().resolve()
     validate_container(source, ".apk", "android-apk")
 
+    branch_audit_path = Path(args.branch_protection_audit).expanduser().resolve()
+    branch_audit, branch_audit_sha256 = load_branch_protection_audit(branch_audit_path)
+
     device_ref = evidence(args.device_evidence, "real-device")
     uat_ref = evidence(args.uat_evidence, "UAT")
     coexistence_ref = evidence(args.coexistence_evidence, "Safe Contract/ESC coexistence")
@@ -322,6 +439,9 @@ def publish_apk(args: argparse.Namespace) -> int:
         "uat_evidence": uat_ref,
         "coexistence_evidence": coexistence_ref,
         "firebase_evidence": firebase_ref,
+        "branch_protection_audit_source_sha": sha,
+        "branch_protection_audit_sha256": branch_audit_sha256,
+        "branch_protection_audit": branch_audit,
         "coexistence_uat_record_sha256": canonical_record_sha256(uat_record),
         "coexistence_uat_record": uat_record,
     }
@@ -355,6 +475,7 @@ def build_parser() -> argparse.ArgumentParser:
     apk.add_argument("--signing-verified", action="store_true")
     apk.add_argument("--identity-verified", action="store_true")
     apk.add_argument("--firebase-identity-verified", action="store_true")
+    apk.add_argument("--branch-protection-audit", required=True)
     apk.add_argument("--uat-record", required=True)
     apk.add_argument("--device-evidence", required=True)
     apk.add_argument("--uat-evidence", required=True)
