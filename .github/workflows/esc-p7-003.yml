@@ -1,0 +1,24 @@
+name: ESC P7-003 Approval Decision Gate
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  approval-decisions:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Validate PHP syntax and existing backend regressions
+        run: ./scripts/test-php.sh
+      - name: Validate ESC-P7-003 approval decisions
+        run: php tests/php/enterprise_workflow_approval_decisions_p7_003.php
