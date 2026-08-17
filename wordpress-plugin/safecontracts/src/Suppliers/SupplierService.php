@@ -43,6 +43,7 @@ final class SupplierService
         }
         if ($includeArchived
             && ! current_user_can(Capabilities::ARCHIVE_SUPPLIERS)
+            && ! current_user_can(Capabilities::EDIT_SUPPLIERS)
             && ! current_user_can(Capabilities::MANAGE_SUPPLIERS)
             && ! current_user_can(Capabilities::VIEW_ALL)) {
             throw new DomainException('You do not have permission to view archived suppliers.');
@@ -91,8 +92,16 @@ final class SupplierService
 
     public function archive(int $supplierId): void
     {
+        // 1.17 introduces ARCHIVE_SUPPLIERS as the explicit permission. Keep
+        // EDIT_SUPPLIERS as a transition fallback so existing custom roles do
+        // not lose archive access before the migration grants the new cap.
         $this->requireAny(
-            [Capabilities::ARCHIVE_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS, Capabilities::MANAGE_REFERENCE_DATA],
+            [
+                Capabilities::ARCHIVE_SUPPLIERS,
+                Capabilities::EDIT_SUPPLIERS,
+                Capabilities::MANAGE_SUPPLIERS,
+                Capabilities::MANAGE_REFERENCE_DATA,
+            ],
             'You do not have permission to archive suppliers.'
         );
         if ($supplierId <= 0) {
@@ -131,7 +140,7 @@ final class SupplierService
             throw new InvalidArgumentException('Supplier country code must use two letters.');
         }
 
-        $currency = strtoupper(trim((string) ($input['default_currency'] ?? '')));
+        $currency = strtoupper(trim((string) ($input['default_currency'] ?? ''));
         if ($currency !== '') {
             $currency = CurrencyCode::normalize($currency);
         }
