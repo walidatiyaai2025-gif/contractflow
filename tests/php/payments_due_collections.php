@@ -20,9 +20,11 @@ $tests = 0;
 function sc_dc_assert(bool $ok, string $message): void { global $tests; $tests++; if (! $ok) { fwrite(STDERR, "FAIL: {$message}\n"); exit(1); } }
 function sc_dc_expect(string $class, callable $fn, string $message): void { try { $fn(); } catch (Throwable $e) { sc_dc_assert($e instanceof $class, $message); return; } sc_dc_assert(false, $message); }
 function sc_dc_payment(array $overrides = []): array { return array_merge([
-    'id'=>'7001','contract_id'=>'501','sequence_no'=>'1','reference'=>'P-001','due_date'=>'2026-08-20',
+    'id'=>'7001','contract_id'=>'501','financial_direction'=>'receivable','currency_code'=>'XXX',
+    'sequence_no'=>'1','reference'=>'P-001','due_date'=>'2026-08-20',
     'expected_payment_date'=>null,'original_amount'=>'500.0000','paid_amount'=>'0.0000','remaining_amount'=>'500.0000',
     'status'=>'upcoming','accountant_user_id'=>'42','contract_is_archived'=>'0',
+    'counterparty_type'=>'customer','counterparty_id'=>'7',
 ], $overrides); }
 /** @return list<string> */
 function sc_dc_mutations_since(int $offset): array { return array_slice($GLOBALS['sc_test_queries'], $offset); }
@@ -123,7 +125,8 @@ sc_dc_assert(sc_dc_mutations_since($beforeArchived) === ['START TRANSACTION', 'R
 
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS=>true, Capabilities::VIEW_ALL=>true];
 $GLOBALS['sc_test_result_queue'] = [[sc_dc_payment()], [[
-    'id'=>'8101','payment_id'=>'7001','amount'=>'125.5000','collection_date'=>'2026-08-15','payment_method_id'=>'2',
+    'id'=>'8101','payment_id'=>'7001','financial_direction'=>'receivable','currency_code'=>'XXX',
+    'amount'=>'125.5000','collection_date'=>'2026-08-15','payment_method_id'=>'2',
     'reference'=>'REF-1','details'=>'First collection','proof_media_id'=>null,'created_by'=>'42','updated_by'=>'42',
     'created_at'=>'2026-08-15 10:30:00','updated_at'=>'2026-08-15 10:30:00',
 ]]];
