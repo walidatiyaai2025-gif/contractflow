@@ -81,6 +81,8 @@ final class MobileQuickAddScreen extends StatefulWidget {
 }
 
 final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
+  static const _maxReferencePage = 5;
+
   final _name = TextEditingController();
   final _code = TextEditingController();
   final _contact = TextEditingController();
@@ -103,6 +105,7 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
   bool _saving = false;
   String? _loadError;
   CustomerPage? _customerPage;
+  ContractPage? _contractPage;
   List<SafeContractsSupplier> _suppliers = const [];
   List<SafeContractsContract> _contracts = const [];
   List<_AccountantOption> _accountants = const [];
@@ -150,7 +153,10 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
     super.dispose();
   }
 
-  Future<void> _loadReferences({int customerPage = 1}) async {
+  Future<void> _loadReferences({
+    int customerPage = 1,
+    int contractPage = 1,
+  }) async {
     if (widget.type == MobileQuickAddType.customer ||
         widget.type == MobileQuickAddType.supplier) {
       if (mounted) setState(() => _loading = false);
@@ -164,6 +170,11 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
       if (widget.type == MobileQuickAddType.contract) {
         final customers = await CustomersRepository(widget.client)
             .loadPage(page: customerPage, perPage: 100, order: 'asc');
+        if (customers.page == _maxReferencePage && customers.hasMore) {
+          throw const FormatException(
+            'Customer references exceed the supported bounded mobile window.',
+          );
+        }
         var suppliers = const <SafeContractsSupplier>[];
         if (_canViewSuppliers) {
           suppliers =
@@ -183,14 +194,27 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
           _customerPage = customers;
           _suppliers = suppliers;
           _accountants = accountants;
-          if (_counterpartyId == null) {
-            if (customers.customers.isNotEmpty) {
-              _counterpartyType = 'customer';
+          if (_counterpartyType == 'customer') {
+            final customerStillVisible = customers.customers.any(
+              (customer) => customer.id == _counterpartyId,
+            );
+            if (!customerStillVisible && customers.customers.isNotEmpty) {
               _counterpartyId = customers.customers.first.id;
-            } else if (suppliers.isNotEmpty) {
+            } else if (customers.customers.isEmpty && suppliers.isNotEmpty) {
               _counterpartyType = 'supplier';
               _counterpartyId = suppliers.first.id;
               _currency.text = suppliers.first.defaultCurrency ?? '';
+            }
+          } else {
+            final supplierStillVisible = suppliers.any(
+              (supplier) => supplier.id == _counterpartyId,
+            );
+            if (!supplierStillVisible && suppliers.isNotEmpty) {
+              _counterpartyId = suppliers.first.id;
+              _currency.text = suppliers.first.defaultCurrency ?? '';
+            } else if (suppliers.isEmpty && customers.customers.isNotEmpty) {
+              _counterpartyType = 'customer';
+              _counterpartyId = customers.customers.first.id;
             }
           }
           _loading = false;
@@ -198,14 +222,23 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
         return;
       }
       final contracts = await ContractsRepository(widget.client).loadPage(
-        page: 1,
+        page: contractPage,
         perPage: 100,
         filters: const ContractsFilters(),
         sort: ContractSortOption.newest,
       );
+      if (contracts.page == _maxReferencePage && contracts.hasMore) {
+        throw const FormatException(
+          'Contract references exceed the supported bounded mobile window.',
+        );
+      }
       if (!mounted) return;
       setState(() {
+        _contractPage = contracts;
         _contracts = contracts.contracts;
+        if (!_contracts.any((contract) => contract.id == _paymentContractId)) {
+          _paymentContractId = null;
+        }
         _loading = false;
       });
     } on Object catch (error) {
@@ -475,7 +508,7 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
               OutlinedButton(
                 onPressed: _saving ||
                         !_customerPage!.hasMore ||
-                        _customerPage!.page >= 5
+                        _customerPage!.page >= _maxReferencePage
                     ? null
                     : () => unawaited(
                           _loadReferences(
@@ -562,6 +595,42 @@ final class _MobileQuickAddScreenState extends State<MobileQuickAddScreen> {
           onChanged:
               _saving ? null : (v) => setState(() => _paymentContractId = v),
         ),
+        if (_contractPage != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              OutlinedButton(
+                onPressed: _saving || _contractPage!.page <= 1
+                    ? null
+                    : () => unawaited(
+                          _loadReferences(
+                            contractPage: _contractPage!.page - 1,
+                          ),
+                        ),
+                child: Text(ar ? 'السابق' : 'Previous'),
+              ),
+              const Spacer(),
+              Text(
+                ar
+                    ? 'الصفحة ${_contractPage!.page}'
+                    : 'Page ${_contractPage!.page}',
+              ),
+              const Spacer(),
+              OutlinedButton(
+                onPressed: _saving ||
+                        !_contractPage!.hasMore ||
+                        _contractPage!.page >= _maxReferencePage
+                    ? null
+                    : () => unawaited(
+                          _loadReferences(
+                            contractPage: _contractPage!.page + 1,
+                          ),
+                        ),
+                child: Text(ar ? 'التالي' : 'Next'),
+              ),
+            ],
+          ),
+        ],
         _gap(),
         _field(
           _paymentSequence,
