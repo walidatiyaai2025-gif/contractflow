@@ -91,6 +91,7 @@ esc_p8_obligation_assert(str_contains($repositorySource, 'c.tenant_id = o.tenant
 esc_p8_obligation_assert(substr_count($repositorySource, 'START TRANSACTION') >= 3, 'create/update/lifecycle mutations are transactional');
 esc_p8_obligation_assert(substr_count($repositorySource, 'FOR UPDATE') >= 3, 'mutable contract/obligation identities are locked before writes');
 esc_p8_obligation_assert(str_contains($repositorySource, "AND status = %s"), 'lifecycle/update writes use status compare-and-set predicates');
+esc_p8_obligation_assert(str_contains($repositorySource, '$updated === false || ($updated !== 0 && $updated !== 1)'), 'metadata updates accept exact MySQL no-op affected_rows=0 while rejecting query/cardinality failures');
 esc_p8_obligation_assert(str_contains($repositorySource, 'is_archived = 0') && str_contains($repositorySource, "['is_archived']"), 'archived contract mutation is blocked before and during persistence');
 esc_p8_obligation_assert(str_contains($repositorySource, 'completed_at = UTC_TIMESTAMP()') && str_contains($repositorySource, 'completed_by = %d'), 'completion evidence is server-derived');
 esc_p8_obligation_assert(str_contains($repositorySource, 'cancelled_at = UTC_TIMESTAMP()') && str_contains($repositorySource, 'cancelled_by = %d'), 'cancellation evidence is server-derived');
@@ -103,7 +104,7 @@ esc_p8_obligation_assert(str_contains($serviceSource, 'authorize(Capabilities::E
 esc_p8_obligation_assert(str_contains($serviceSource, 'TenantAuthorization::allowsCapability'), 'tenant role remains a narrowing authorization ceiling');
 esc_p8_obligation_assert(str_contains($serviceSource, 'assertScope($contract)'), 'every service path retains Contract data scope checks');
 esc_p8_obligation_assert(str_contains($serviceSource, 'Capabilities::VIEW_ALL') && str_contains($serviceSource, 'Capabilities::VIEW_ASSIGNED'), 'service preserves VIEW_ALL / own VIEW_ASSIGNED semantics');
-esc_p8_obligation_assert(str_contains($serviceSource, "accountantUserId === get_current_user_id()"), 'assigned scope is restricted to the current accountant');
+esc_p8_obligation_assert(str_contains($serviceSource, '$accountantUserId === get_current_user_id()'), 'assigned scope is restricted to the current accountant');
 esc_p8_obligation_assert(str_contains($serviceSource, 'assertContractMutable($contract)'), 'new mutations reject archived Contracts');
 esc_p8_obligation_assert(str_contains($serviceSource, 'public function create(') && str_contains($serviceSource, 'public function update(') && str_contains($serviceSource, 'public function complete(') && str_contains($serviceSource, 'public function cancel('), 'P8-001 exposes explicit service commands only');
 esc_p8_obligation_assert(! str_contains($serviceSource, "'tenant_id'") && ! str_contains($serviceSource, '$tenantId'), 'service accepts no caller tenant identity');
