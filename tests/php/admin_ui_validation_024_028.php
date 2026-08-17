@@ -81,7 +81,7 @@ $GLOBALS['sc_test_result_queue'] = [[]];
 $before = count($GLOBALS['sc_test_read_queries']);
 $read->payments(['customer_id' => 7, 'contract_id' => 9]);
 $dependentQuery = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $before));
-sc_p6v4_assert(str_contains($dependentQuery, 'c.customer_id = 7') && str_contains($dependentQuery, 'c.id = 9'), 'SC-P6-025 customer and dependent contract filters are both enforced server-side');
+sc_p6v4_assert(str_contains($dependentQuery, "c.counterparty_type = 'customer'") && str_contains($dependentQuery, 'c.counterparty_id = 7') && str_contains($dependentQuery, 'c.id = 9'), 'SC-P6-025 customer counterparty and dependent contract filters are both enforced server-side');
 
 // SC-P6-026 — customer screen reads and edit selection stay within assignment scope.
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_ASSIGNED => true];
