@@ -31,7 +31,7 @@ $exportSource = file_get_contents((string) (new ReflectionClass(ReportExportServ
 
 sc_p11fr_assert(str_contains($financePageSource, 'FinanceOverviewService'), 'Finance admin workspace reuses canonical finance overview service');
 sc_p11fr_assert(str_contains($financePageSource, 'Accounts Payable') && str_contains($financePageSource, 'Accounts Receivable'), 'Finance workspace labels AP and AR independently');
-sc_p11fr_assert(str_contains($financePageSource, 'Aging') && str_contains($financePageSource, 'Cash flow'), 'Finance workspace exposes Aging and cash-flow intelligence');
+sc_p11fr_assert(str_contains($financePageSource, 'Aging') && str_contains($financePageSource, 'renderCashFlow') && str_contains($financePageSource, 'Expected cash flow'), 'Finance workspace exposes Aging and cash-flow intelligence');
 sc_p11fr_assert(str_contains($financePageSource, 'currency_code'), 'Finance workspace keeps currency explicit in rendering and filters');
 
 sc_p11fr_assert(str_contains($dashboardSource, 'FinanceOverviewService'), 'Main admin dashboard reuses canonical finance intelligence');
