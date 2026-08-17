@@ -83,6 +83,7 @@ final class MobilePushRegistration {
   })  : _messaging = messaging ?? FirebasePushMessagingGateway(),
         _retryDelay = retryDelay ?? Future<void>.delayed;
 
+  static const applicationId = 'com.safecontracts.enterprise';
   static const _retrySchedule = <Duration>[
     Duration(seconds: 1),
     Duration(seconds: 3),
@@ -121,8 +122,6 @@ final class MobilePushRegistration {
         errorCode: status.value.errorCode,
       );
     } on Object {
-      // Permission prompting is independent from FCM installation registration.
-      // Keep trying to register the device so the profile can diagnose state.
       _setStatus(
         permission: MobilePushPermissionState.unknown,
         tokenAcquired: status.value.tokenAcquired,
@@ -161,7 +160,10 @@ final class MobilePushRegistration {
       try {
         await client.post(
           'devices/revoke',
-          body: <String, Object?>{'token': previousToken},
+          body: <String, Object?>{
+            'token': previousToken,
+            'application_id': applicationId,
+          },
         );
       } on Object {
         // Server cleanup is best-effort; Firebase token rotation must continue.
@@ -270,6 +272,7 @@ final class MobilePushRegistration {
         body: <String, Object?>{
           'token': token,
           'platform': 'android',
+          'application_id': applicationId,
         },
       );
       _registeredToken = token;
@@ -327,7 +330,10 @@ final class MobilePushRegistration {
       try {
         await client.post(
           'devices/revoke',
-          body: <String, Object?>{'token': token},
+          body: <String, Object?>{
+            'token': token,
+            'application_id': applicationId,
+          },
         );
       } on Object {
         // Logout must continue even when the backend cannot revoke immediately.
