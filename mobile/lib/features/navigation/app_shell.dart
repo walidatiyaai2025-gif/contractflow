@@ -241,9 +241,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                   child: Text(
                     SafeContractsBrand.name,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: SafeContractsVisual.navy,
-                    ),
+                          fontWeight: FontWeight.w800,
+                          color: SafeContractsVisual.navy,
+                        ),
                   ),
                 ),
               ],
@@ -335,63 +335,63 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     final apiClient = widget.contractsController.repository.client;
     return switch (_selected) {
       MobileDestination.dashboard => DashboardContextScreen(
-        controller: widget.dashboardController,
-        currency: widget.config.currency,
-        onOpenPayments:
-            widget.policy.destinations.contains(MobileDestination.payments)
-            ? () => _selectDestination(MobileDestination.payments)
-            : null,
-      ),
+          controller: widget.dashboardController,
+          currency: widget.config.currency,
+          onOpenPayments:
+              widget.policy.destinations.contains(MobileDestination.payments)
+                  ? () => _selectDestination(MobileDestination.payments)
+                  : null,
+        ),
       MobileDestination.customers => CustomersScreen(
-        controller: widget.customersController,
-      ),
+          controller: widget.customersController,
+        ),
       MobileDestination.suppliers => SuppliersScreen(
-        controller: widget.suppliersController,
-      ),
+          controller: widget.suppliersController,
+        ),
       MobileDestination.contracts => ContractsScreen(
-        controller: widget.contractsController,
-        customers:
-            widget.dashboardController.overview?.customers ??
-            const <CustomerOption>[],
-        currency: widget.config.currency,
-        onOpenContract: _openContract,
-      ),
+          controller: widget.contractsController,
+          customers: widget.dashboardController.overview?.customers ??
+              const <CustomerOption>[],
+          currency: widget.config.currency,
+          onOpenContract: _openContract,
+        ),
       MobileDestination.payments => PaymentsScreen(
-        repository: PaymentsRepository(apiClient),
-        pageSize: widget.config.defaultPageSize,
-        filters: widget.dashboardController.filters,
-        currency: widget.config.currency,
-        canManagePayments: widget.session.can('safecontracts_manage_payments'),
-        canEnterCollection: widget.policy.canEnterCollection,
-        refreshRevision: _liveRefreshRevision,
-      ),
+          repository: PaymentsRepository(apiClient),
+          pageSize: widget.config.defaultPageSize,
+          filters: widget.dashboardController.filters,
+          currency: widget.config.currency,
+          canManagePayments:
+              widget.session.can('safecontracts_manage_payments'),
+          canEnterCollection: widget.policy.canEnterCollection,
+          refreshRevision: _liveRefreshRevision,
+        ),
       MobileDestination.finance => FinanceScreen(
-        controller: widget.financeController,
-      ),
+          controller: widget.financeController,
+        ),
       MobileDestination.followUps => FollowUpsScreen(
-        repository: FollowUpsRepository(apiClient),
-        pageSize: widget.config.defaultPageSize,
-        filters: widget.dashboardController.filters,
-        currency: widget.config.currency,
-        canManage: widget.policy.canManageFollowUps,
-        refreshRevision: _liveRefreshRevision,
-      ),
+          repository: FollowUpsRepository(apiClient),
+          pageSize: widget.config.defaultPageSize,
+          filters: widget.dashboardController.filters,
+          currency: widget.config.currency,
+          canManage: widget.policy.canManageFollowUps,
+          refreshRevision: _liveRefreshRevision,
+        ),
       MobileDestination.notifications => NotificationsScreen(
-        controller: widget.notificationsController,
-        onOpenDeepLink: _openDeepLink,
-      ),
+          controller: widget.notificationsController,
+          onOpenDeepLink: _openDeepLink,
+        ),
       MobileDestination.export => MobileExcelExportScreen(
-        controller: widget.excelExportController,
-      ),
+          controller: widget.excelExportController,
+        ),
       MobileDestination.profile => ProfileScreen(
-        session: widget.session,
-        config: widget.config,
-        controller: widget.profileController,
-        pushRegistration: widget.pushRegistration,
-        languageCode: widget.languageCode,
-        onLanguageChanged: widget.onLanguageChanged,
-        onClearSession: widget.onClearSession,
-      ),
+          session: widget.session,
+          config: widget.config,
+          controller: widget.profileController,
+          pushRegistration: widget.pushRegistration,
+          languageCode: widget.languageCode,
+          onLanguageChanged: widget.onLanguageChanged,
+          onClearSession: widget.onClearSession,
+        ),
       _ => _PlannedDestination(destination: _selected),
     };
   }
@@ -466,8 +466,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 
   void _openContract(int contractId) {
-    final canOpenContractEditor =
-        widget.contractsController.canEditContract ||
+    final canOpenContractEditor = widget.contractsController.canEditContract ||
         widget.session.can('safecontracts_assign_contracts');
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -594,16 +593,18 @@ final class _QuickAddSheet extends StatelessWidget {
           Text(
             arabic ? 'إضافة جديدة' : 'Quick add',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: SafeContractsVisual.ink,
-              fontWeight: FontWeight.w800,
-            ),
+                  color: SafeContractsVisual.ink,
+                  fontWeight: FontWeight.w800,
+                ),
           ),
           const SizedBox(height: 4),
           Text(
             arabic
                 ? 'المتاح هنا حسب صلاحيات الإضافة الخاصة بحسابك.'
                 : 'Only create actions allowed for your account appear here.',
-            style: Theme.of(context).textTheme.bodyMedium
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
                 ?.copyWith(color: SafeContractsVisual.muted),
           ),
           const SizedBox(height: 16),
@@ -654,7 +655,9 @@ final class _QuickAddSheet extends StatelessWidget {
                               children: [
                                 Text(
                                   mobileQuickAddLabel(context, action),
-                                  style: Theme.of(context).textTheme.titleMedium
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
                                       ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: 2),
@@ -662,7 +665,9 @@ final class _QuickAddSheet extends StatelessWidget {
                                   mobileQuickAddDescription(context, action),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
                                       ?.copyWith(
                                         color: SafeContractsVisual.muted,
                                       ),
@@ -722,46 +727,45 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(6, 8, 6, 6),
           child: Row(
-            children: destinations
-                .map((destination) {
-                  final isSelected = destination == selected;
-                  return Expanded(
-                    child: InkWell(
+            children: destinations.map((destination) {
+              final isSelected = destination == selected;
+              return Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => onSelected(destination),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? SafeContractsVisual.navySoft.withValues(
+                              alpha: 0.74,
+                            )
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(16),
-                      onTap: () => onSelected(destination),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? SafeContractsVisual.navySoft.withValues(
-                                  alpha: 0.74,
-                                )
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedScale(
+                          scale: isSelected ? 1.08 : 1,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutBack,
+                          child: Icon(
+                            _icon(destination),
+                            color: isSelected
+                                ? SafeContractsVisual.navy
+                                : SafeContractsVisual.muted,
+                          ),
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AnimatedScale(
-                              scale: isSelected ? 1.08 : 1,
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeOutBack,
-                              child: Icon(
-                                _icon(destination),
-                                color: isSelected
-                                    ? SafeContractsVisual.navy
-                                    : SafeContractsVisual.muted,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              labelFor(destination),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
+                        const SizedBox(height: 3),
+                        Text(
+                          labelFor(destination),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: isSelected
                                         ? SafeContractsVisual.navy
                                         : SafeContractsVisual.muted,
@@ -769,14 +773,13 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
                                         ? FontWeight.w800
                                         : FontWeight.w500,
                                   ),
-                            ),
-                          ],
                         ),
-                      ),
+                      ],
                     ),
-                  );
-                })
-                .toList(growable: false),
+                  ),
+                ),
+              );
+            }).toList(growable: false),
           ),
         ),
       ),
