@@ -221,7 +221,7 @@ esc_p6_wf_assert(str_contains($schema, 'UNIQUE KEY tenant_code (tenant_id, workf
 esc_p6_wf_assert(str_contains($schema, 'UNIQUE KEY tenant_workflow_version (tenant_id, workflow_id, version_no)'), 'version numbers are unique per tenant Workflow');
 esc_p6_wf_assert(substr_count($schema, 'UNIQUE KEY tenant_version_code (tenant_id, workflow_version_id') === 2, 'state and transition codes are version-local unique');
 esc_p6_wf_assert(str_contains($schema, 'source_state_id bigint(20) unsigned NOT NULL') && str_contains($schema, 'destination_state_id bigint(20) unsigned NOT NULL'), 'transitions persist exact state endpoints');
-esc_p6_wf_assert(Migrator::LATEST_VERSION === '1.34.0', 'P6-001 is current schema version');
+esc_p6_wf_assert(version_compare(Migrator::LATEST_VERSION, '1.34.0', '>='), 'P6-001 schema version remains registered or superseded');
 esc_p6_wf_assert(str_contains($migratorSource, "'1.34.0' => Migration0035EnterpriseWorkflowDefinitions::class"), 'P6-001 migration is registered');
 esc_p6_wf_assert(! str_contains($migrationSource, 'ALTER TABLE'), 'P6-001 schema is additive');
 
