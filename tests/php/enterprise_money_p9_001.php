@@ -52,9 +52,9 @@ $routerSource = (string) file_get_contents($root . '/wordpress-plugin/safecontra
 $pluginSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Plugin.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-// P9-001 is deliberately schema-free.
-esc_p9_money_assert(Migrator::LATEST_VERSION === '1.46.0', 'P9-001 does not advance the database schema version');
-esc_p9_money_assert(! str_contains($migratorSource, 'Migration0048'), 'P9-001 does not consume Migration0048');
+// P9-001 is deliberately schema-free; later persisted Finance tasks may advance the schema.
+esc_p9_money_assert(version_compare(Migrator::LATEST_VERSION, '1.46.0', '>='), 'Enterprise schema remains at or beyond the P9-001 baseline');
+esc_p9_money_assert(str_contains($migratorSource, "'1.46.0' => Migration0047EnterpriseContractDeliverables::class"), 'P9-001 itself consumed no migration and preserves the historical pre-persisted-Finance mapping');
 esc_p9_money_assert(! str_contains($migratorSource, 'EnterpriseMoney') && ! str_contains($migratorSource, 'EnterpriseCurrency'), 'P9-001 registers no financial migration');
 
 // Currency identity is explicit, immutable and syntactically strict.
