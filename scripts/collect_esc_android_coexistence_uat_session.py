@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Collect a non-destructive real-device draft for ESC coexistence UAT.
 
-The harness proves same-device dual installation and independent launcher/process
-startup for Safe Contract and Enterprise Safe Contracts. It deliberately leaves
-session, FCM, deep-link, update and data-lifecycle scenarios PENDING. The output
-is therefore never a final UAT PASS record by itself.
+The harness proves same-device dual installation, independent launcher/process
+startup, and ESC-only custom deep-link resolution for Safe Contract and Enterprise
+Safe Contracts. It deliberately leaves session, FCM, update, and data-lifecycle
+scenarios PENDING. The output is therefore never a final UAT PASS record by itself.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Sequence
 
@@ -26,6 +27,13 @@ from validate_esc_android_coexistence_evidence import (
     ESC_APPLICATION_ID,
     REQUIRED_CHECKS,
     SAFE_APPLICATION_ID,
+)
+
+ESC_DEEP_LINK_URI = "esc-safecontracts://contracts/1"
+ANDROID_VIEW_ACTION = "android.intent.action.VIEW"
+ANDROID_BROWSABLE_CATEGORY = "android.intent.category.BROWSABLE"
+_COMPONENT_RE = re.compile(
+    r"^(?P<package>[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+)/(?P<activity>[A-Za-z0-9_.$]+)$"
 )
 
 
@@ -71,6 +79,103 @@ def launch_package(
         "package_id": package_id,
         "pid": pids[0],
         "launcher_result": "Events injected: 1",
+    }
+
+
+def parse_components(output: str, label: str) -> list[tuple[str, str]]:
+    components: list[tuple[str, str]] = []
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        match = _COMPONENT_RE.fullmatch(line)
+        if match is None:
+            fail(f"{label} returned an unparseable activity component: {line}")
+        components.append((match.group("package"), line))
+    if not components:
+        fail(f"{label} returned no activity resolver")
+    return components
+
+
+def verify_deep_link_isolation(
+    serial: str,
+    *,
+    adb: str = "adb",
+    runner: Runner = run_text,
+) -> dict[str, object]:
+    query_output = runner(
+        [
+            adb,
+            "-s",
+            serial,
+            "shell",
+            "cmd",
+            "package",
+            "query-activities",
+            "--brief",
+            "-a",
+            ANDROID_VIEW_ACTION,
+            "-c",
+            ANDROID_BROWSABLE_CATEGORY,
+            "-d",
+            ESC_DEEP_LINK_URI,
+        ]
+    ).strip()
+    components = parse_components(query_output, "ESC deep-link resolver query")
+    resolver_packages = sorted({package for package, _component in components})
+    if resolver_packages != [ESC_APPLICATION_ID]:
+        fail(
+            "ESC-only deep-link scheme has a non-ESC resolver: "
+            + ", ".join(resolver_packages)
+        )
+
+    launch_output = runner(
+        [
+            adb,
+            "-s",
+            serial,
+            "shell",
+            "am",
+            "start",
+            "-W",
+            "-a",
+            ANDROID_VIEW_ACTION,
+            "-c",
+            ANDROID_BROWSABLE_CATEGORY,
+            "-d",
+            ESC_DEEP_LINK_URI,
+        ]
+    ).strip()
+    if re.search(r"(?mi)^Status:\s*ok\s*$", launch_output) is None:
+        fail("ESC deep-link VIEW launch did not report Status: ok")
+
+    activity_match = re.search(
+        r"(?mi)^Activity:\s*([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+)/([A-Za-z0-9_.$]+)\s*$",
+        launch_output,
+    )
+    if activity_match is None:
+        activity_match = re.search(
+            r"\bcmp=([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+)/([A-Za-z0-9_.$]+)",
+            launch_output,
+        )
+    if activity_match is None:
+        fail("ESC deep-link VIEW launch did not expose the launched activity component")
+
+    launched_package = activity_match.group(1)
+    launched_activity = f"{launched_package}/{activity_match.group(2)}"
+    if launched_package != ESC_APPLICATION_ID:
+        fail(
+            "ESC-only deep-link VIEW launch resolved outside ESC: "
+            f"{launched_activity}"
+        )
+
+    return {
+        "uri": ESC_DEEP_LINK_URI,
+        "resolver_packages": resolver_packages,
+        "resolver_components": [component for _package, component in components],
+        "launched_package": launched_package,
+        "launched_activity": launched_activity,
+        "launch_status": "ok",
     }
 
 
@@ -122,6 +227,7 @@ def collect_session(
     esc_launch = launch_package(
         serial, ESC_APPLICATION_ID, adb=adb, runner=runner
     )
+    deep_link = verify_deep_link_isolation(serial, adb=adb, runner=runner)
 
     timestamp = tested_at_utc or datetime.now(timezone.utc).isoformat().replace(
         "+00:00", "Z"
@@ -146,6 +252,13 @@ def collect_session(
             f"PID {esc_launch['pid']} on device {serial}."
         ),
     }
+    checks["deep_link_isolation"] = {
+        "status": "PASS",
+        "evidence": (
+            f"{ESC_DEEP_LINK_URI} resolved only to {ESC_APPLICATION_ID} and "
+            f"am start -W launched {deep_link['launched_activity']}."
+        ),
+    }
 
     safe = dict(preflight["safe_contract"])
     esc = dict(preflight["esc"])
@@ -162,7 +275,10 @@ def collect_session(
         "esc": esc,
         "checks": checks,
         "evidence": {
-            "device": f"ADB device {serial}; dual install and launcher processes observed",
+            "device": (
+                f"ADB device {serial}; dual install, launcher processes, and ESC-only "
+                "deep-link resolution observed"
+            ),
             "business_uat": "PENDING business-owner runtime UAT sign-off",
             "coexistence": "PENDING remaining runtime coexistence scenarios",
             "firebase": "PENDING Safe-only and ESC-only FCM delivery evidence",
@@ -170,9 +286,11 @@ def collect_session(
         "objective_session": {
             "safe_contract_launch": safe_launch,
             "esc_launch": esc_launch,
+            "deep_link_isolation": deep_link,
             "note": (
-                "This draft only proves objective dual-install and independent-launch "
-                "checks. It must not be published as final UAT PASS."
+                "This draft only proves objective dual-install, independent-launch, "
+                "and ESC deep-link-isolation checks. It must not be published as "
+                "final UAT PASS."
             ),
         },
     }
@@ -218,7 +336,7 @@ def main() -> int:
         return 1
     print(
         "ESC Android UAT draft captured: dual_install=PASS, "
-        "independent_launch=PASS, remaining=PENDING; "
+        "independent_launch=PASS, deep_link_isolation=PASS, remaining=PENDING; "
         f"output={args.output}"
     )
     return 0
