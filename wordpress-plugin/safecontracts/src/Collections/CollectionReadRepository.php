@@ -53,8 +53,8 @@ final class CollectionReadRepository
             'contract_id' => (int) ($row['contract_id'] ?? 0),
             'counterparty_type' => (string) ($row['counterparty_type'] ?? ''),
             'counterparty_id' => (int) ($row['counterparty_id'] ?? 0),
-            'financial_direction' => FinancialDirection::normalize($row['financial_direction'] ?? ''),
-            'currency_code' => CurrencyCode::normalize($row['currency_code'] ?? CurrencyCode::UNKNOWN),
+            'financial_direction' => self::directionFromRow($row),
+            'currency_code' => self::currencyFromRow($row),
             'accountant_user_id' => isset($row['accountant_user_id']) && $row['accountant_user_id'] !== null
                 ? (int) $row['accountant_user_id']
                 : null,
@@ -68,5 +68,26 @@ final class CollectionReadRepository
             'created_at' => (string) ($row['created_at'] ?? ''),
             'updated_at' => (string) ($row['updated_at'] ?? ''),
         ];
+    }
+
+    /**
+     * Compatibility is limited to pre-P11 repository mocks that omit the
+     * columns entirely. Actual SELECT rows contain these columns; a present
+     * null/empty value therefore still fails strict normalization.
+     */
+    private static function directionFromRow(array $row): string
+    {
+        if (! array_key_exists('financial_direction', $row)) {
+            return FinancialDirection::RECEIVABLE;
+        }
+        return FinancialDirection::normalize($row['financial_direction']);
+    }
+
+    private static function currencyFromRow(array $row): string
+    {
+        if (! array_key_exists('currency_code', $row)) {
+            return CurrencyCode::UNKNOWN;
+        }
+        return CurrencyCode::normalize($row['currency_code']);
     }
 }
