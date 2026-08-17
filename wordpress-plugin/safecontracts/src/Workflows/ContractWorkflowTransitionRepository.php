@@ -33,11 +33,22 @@ final class ContractWorkflowTransitionRepository
     }
 
     /**
-     * @param null|callable(array<string,mixed>):void $beforeMutation
+     * @param null|callable(array<string,mixed>):void $beforeMutation Receives the exact resolved Transition before P6 history/state mutation.
+     * @param null|callable(array<string,mixed>):void $afterInstanceLock Receives the authoritative locked P6 instance after P6 idempotency lookup and before Transition resolution.
+     * @param null|callable(array<string,mixed>,array<string,mixed>,array<string,mixed>):void $afterMutation Receives history, Transition and locked instance after history/CAS but before commit.
      * @return array{history:array<string,mixed>,created:bool}
      */
-    public function execute(int $contractId, int $instanceId, string $transitionCode, string $requestKeyHash, int $actorId, ?callable $beforeMutation = null): array
-    {
+    public function execute(
+        int $contractId,
+        int $instanceId,
+        string $transitionCode,
+        string $requestKeyHash,
+        int $actorId,
+        ?callable $beforeMutation = null,
+        ?callable $afterInstanceLock = null,
+        ?callable $afterMutation = null,
+        bool $allowApprovalRouted = false
+    ): array {
         global $wpdb;
         $tenantId = $this->tenantId();
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
@@ -46,6 +57,7 @@ final class ContractWorkflowTransitionRepository
         $versions = $wpdb->prefix . 'safecontracts_workflow_versions';
         $states = $wpdb->prefix . 'safecontracts_workflow_states';
         $transitions = $wpdb->prefix . 'safecontracts_workflow_transitions';
+        $approvalRoutes = $wpdb->prefix . 'safecontracts_workflow_transition_approval_routes';
         $history = $wpdb->prefix . 'safecontracts_contract_workflow_transition_history';
 
         if ($wpdb->query('START TRANSACTION') === false) {
@@ -101,10 +113,15 @@ final class ContractWorkflowTransitionRepository
                 return ['history' => $existing, 'created' => false];
             }
 
+            if ($afterInstanceLock !== null) {
+                $afterInstanceLock($instance);
+            }
+
             $transitionRows = $wpdb->get_results($wpdb->prepare(
                 "SELECT t.id AS transition_id, t.workflow_id, t.workflow_version_id, t.transition_code,
                         t.source_state_id, sf.state_code AS source_state_code,
-                        t.destination_state_id, st.state_code AS destination_state_code
+                        t.destination_state_id, st.state_code AS destination_state_code,
+                        ar.id AS approval_route_id
                  FROM {$transitions} t
                  INNER JOIN {$states} sf ON sf.id = t.source_state_id AND sf.tenant_id = t.tenant_id
                     AND sf.workflow_id = t.workflow_id AND sf.workflow_version_id = t.workflow_version_id
@@ -112,6 +129,9 @@ final class ContractWorkflowTransitionRepository
                     AND st.workflow_id = t.workflow_id AND st.workflow_version_id = t.workflow_version_id
                  INNER JOIN {$versions} v ON v.id = t.workflow_version_id AND v.workflow_id = t.workflow_id AND v.tenant_id = t.tenant_id
                  INNER JOIN {$workflows} w ON w.id = t.workflow_id AND w.tenant_id = t.tenant_id
+                 LEFT JOIN {$approvalRoutes} ar ON ar.tenant_id = t.tenant_id
+                    AND ar.workflow_id = t.workflow_id AND ar.workflow_version_id = t.workflow_version_id
+                    AND ar.transition_id = t.id
                  WHERE t.tenant_id = %d AND t.workflow_id = %d AND t.workflow_version_id = %d
                    AND t.transition_code = %s AND t.source_state_id = %d
                    AND v.version_status = 'published'
@@ -135,6 +155,9 @@ final class ContractWorkflowTransitionRepository
             $toStateCode = (string) ($transition['destination_state_code'] ?? '');
             if ($transitionId <= 0 || $toStateId <= 0 || $toStateCode === '') {
                 throw new RuntimeException('Workflow transition returned invalid destination identity.');
+            }
+            if (! $allowApprovalRouted && (int) ($transition['approval_route_id'] ?? 0) > 0) {
+                throw new RuntimeException('Workflow transition requires an approved Approval Request release.');
             }
 
             if ($beforeMutation !== null) {
@@ -189,29 +212,32 @@ final class ContractWorkflowTransitionRepository
                 throw new RuntimeException('Contract Workflow state changed concurrently before compare-and-set update.');
             }
 
+            $historyRow = [
+                'id' => $historyId,
+                'instance_id' => $instanceId,
+                'contract_id' => $contractId,
+                'workflow_id' => $workflowId,
+                'workflow_version_id' => $workflowVersionId,
+                'transition_id' => $transitionId,
+                'transition_code_snapshot' => $transitionCode,
+                'from_state_id' => $fromStateId,
+                'from_state_code_snapshot' => $fromStateCode,
+                'to_state_id' => $toStateId,
+                'to_state_code_snapshot' => $toStateCode,
+                'request_key_hash' => $requestKeyHash,
+                'actor_user_id' => $actorId,
+                'occurred_at' => null,
+            ];
+
+            if ($afterMutation !== null) {
+                $afterMutation($historyRow, $transition, $instance);
+            }
+
             if ($wpdb->query('COMMIT') === false) {
                 throw new RuntimeException('Unable to commit Contract Workflow transition transaction.');
             }
 
-            return [
-                'history' => [
-                    'id' => $historyId,
-                    'instance_id' => $instanceId,
-                    'contract_id' => $contractId,
-                    'workflow_id' => $workflowId,
-                    'workflow_version_id' => $workflowVersionId,
-                    'transition_id' => $transitionId,
-                    'transition_code_snapshot' => $transitionCode,
-                    'from_state_id' => $fromStateId,
-                    'from_state_code_snapshot' => $fromStateCode,
-                    'to_state_id' => $toStateId,
-                    'to_state_code_snapshot' => $toStateCode,
-                    'request_key_hash' => $requestKeyHash,
-                    'actor_user_id' => $actorId,
-                    'occurred_at' => null,
-                ],
-                'created' => true,
-            ];
+            return ['history' => $historyRow, 'created' => true];
         } catch (\Throwable $error) {
             $wpdb->query('ROLLBACK');
             throw $error;
