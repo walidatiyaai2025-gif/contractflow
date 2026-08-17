@@ -31,8 +31,25 @@ function esc_p7_route_publish_row(bool $stale = false): array { return [[
     'current_destination_state_id'=>'302','current_destination_state_code'=>'review'
 ]]; }
 function esc_p7_route_stage(string $policy = 'all', int $required = 0): array { return [['id'=>'1101','position_no'=>'1','stage_code'=>'finance_review','name'=>'Finance review','decision_policy'=>$policy,'required_approvals'=>(string)$required]]; }
+function esc_p7_route_stage_rows(int $count): array {
+    $rows = [];
+    for ($i = 1; $i <= $count; $i++) {
+        $rows[] = ['id'=>(string)(1100+$i),'position_no'=>(string)$i,'stage_code'=>'stage_'.$i,'name'=>'Stage '.$i,'decision_policy'=>'all','required_approvals'=>'0'];
+    }
+    return $rows;
+}
 function esc_p7_route_user_selector(int $userId = 55): array { return [['position_no'=>'1','selector_type'=>'tenant_user','selector_user_id'=>(string)$userId,'selector_role_code'=>null,'selector_key'=>'user:'.$userId]]; }
+function esc_p7_route_user_selectors(array $userIds): array {
+    $rows = [];
+    foreach (array_values($userIds) as $index => $userId) {
+        $rows[] = ['position_no'=>(string)($index+1),'selector_type'=>'tenant_user','selector_user_id'=>(string)$userId,'selector_role_code'=>null,'selector_key'=>'user:'.$userId];
+    }
+    return $rows;
+}
 function esc_p7_route_role_selector(string $role = 'manager'): array { return [['position_no'=>'1','selector_type'=>'tenant_role','selector_user_id'=>null,'selector_role_code'=>$role,'selector_key'=>'role:'.$role]]; }
+function esc_p7_route_membership_queries(): array {
+    return array_values(array_filter($GLOBALS['sc_test_read_queries'], static fn(string $sql): bool => str_contains($sql, 'safecontracts_tenant_memberships')));
+}
 
 $root = dirname(__DIR__, 2);
 $migrationSource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Database/Migrations/Migration0039EnterpriseWorkflowTransitionApprovalRoutes.php');
@@ -147,7 +164,25 @@ $GLOBALS['sc_test_result_queue'] = [esc_p7_route_locked_transition(), [], []];
 esc_p7_route_throws(static fn()=>$repository->replaceDraftRoute(81,91,701,$allRoute,42), RuntimeException::class, 'inactive or foreign tenant user aborts route authoring');
 esc_p7_route_assert(in_array('ROLLBACK', $GLOBALS['sc_test_queries'], true), 'inactive tenant user causes rollback');
 esc_p7_route_assert(! in_array('COMMIT', $GLOBALS['sc_test_queries'], true), 'inactive tenant user never commits partial route');
-esc_p7_route_assert((bool) array_filter($GLOBALS['sc_test_queries'], static fn(string $sql): bool => str_contains($sql, 'INSERT INTO wp_safecontracts_workflow_transition_approval_routes')), 'rollback test reaches partial route insert before membership failure');
+esc_p7_route_assert(! (bool) array_filter($GLOBALS['sc_test_queries'], static fn(string $sql): bool => str_contains($sql, 'INSERT INTO wp_safecontracts_workflow_transition_approval_')), 'invalid membership fails before any Approval Route write');
+
+$reverseUserRoute = ApprovalRoutePolicy::normalizeRoute([[
+    'stage_code'=>'ordered_users','name'=>'Ordered users','decision_policy'=>'all','required_approvals'=>0,
+    'selectors'=>[['selector_type'=>'tenant_user','user_id'=>90],['selector_type'=>'tenant_user','user_id'=>55]],
+]]);
+$GLOBALS['wpdb']->insert_id = 0;
+$GLOBALS['sc_test_queries'] = [];
+$GLOBALS['sc_test_read_queries'] = [];
+$GLOBALS['sc_test_result_queue'] = [esc_p7_route_locked_transition(), [], esc_p7_route_membership(55), esc_p7_route_membership(90)];
+$repository->replaceDraftRoute(81,91,701,$reverseUserRoute,42);
+$membershipQueries = esc_p7_route_membership_queries();
+esc_p7_route_assert(count($membershipQueries) === 2, 'authoring locks each unique tenant user exactly once');
+esc_p7_route_assert(str_contains($membershipQueries[0], 'm.user_id = 55') && str_contains($membershipQueries[1], 'm.user_id = 90'), 'authoring locks tenant users in ascending deterministic order independent of selector order');
+
+$GLOBALS['sc_test_result_queue'] = [esc_p7_route_publish_row(), esc_p7_route_stage_rows(ApprovalRoutePolicy::MAX_STAGES + 1)];
+esc_p7_route_throws(static fn()=>$repository->getRoute(81,91,701), RuntimeException::class, 'ordinary route read fails closed on stage sentinel overflow');
+$GLOBALS['sc_test_result_queue'] = [esc_p7_route_publish_row(), esc_p7_route_stage(), esc_p7_route_user_selectors(range(1, ApprovalRoutePolicy::MAX_SELECTORS_PER_STAGE + 1))];
+esc_p7_route_throws(static fn()=>$repository->getRoute(81,91,701), RuntimeException::class, 'ordinary route read fails closed on selector sentinel overflow');
 
 $GLOBALS['sc_test_result_queue'] = [esc_p7_route_publish_row(true)];
 esc_p7_route_throws(static fn()=>$repository->assertVersionPublishable(81,91), RuntimeException::class, 'stale route transition snapshot blocks publication');
@@ -165,10 +200,24 @@ esc_p7_route_throws(static fn()=>$repository->assertVersionPublishable(81,91), R
 $GLOBALS['sc_test_result_queue'] = [esc_p7_route_publish_row(), esc_p7_route_stage('quorum', 2), esc_p7_route_role_selector('manager')];
 esc_p7_route_throws(static fn()=>$repository->assertVersionPublishable(81,91), RuntimeException::class, 'stored invalid quorum blocks publication');
 
+$GLOBALS['sc_test_read_queries'] = [];
+$GLOBALS['sc_test_result_queue'] = [
+    esc_p7_route_publish_row(),
+    esc_p7_route_stage(),
+    esc_p7_route_user_selectors([90,55]),
+    esc_p7_route_membership(55),
+    esc_p7_route_membership(90),
+];
+$repository->assertVersionPublishable(81,91);
+$membershipQueries = esc_p7_route_membership_queries();
+esc_p7_route_assert(count($membershipQueries) === 2, 'publication locks each unique tenant user exactly once');
+esc_p7_route_assert(str_contains($membershipQueries[0], 'm.user_id = 55') && str_contains($membershipQueries[1], 'm.user_id = 90'), 'publication locks tenant users in ascending deterministic order independent of stored selector order');
+
 esc_p7_route_assert(str_contains($workflowRepositorySource, 'ApprovalRouteRepository') && str_contains($workflowRepositorySource, 'assertVersionPublishable($workflowId, $versionId)'), 'Workflow publication invokes Approval Route validation');
 esc_p7_route_assert(strpos($workflowRepositorySource, 'assertVersionPublishable($workflowId, $versionId)') < strpos($workflowRepositorySource, "SET version_status = 'published'"), 'Approval Route validation occurs before publication update');
 esc_p7_route_assert(str_contains($repositorySource, 'START TRANSACTION') && str_contains($repositorySource, 'ROLLBACK') && str_contains($repositorySource, 'FOR UPDATE'), 'Approval Route repository is transactionally locked');
-esc_p7_route_assert(str_contains($repositorySource, 'MAX_STAGES + 1') && str_contains($repositorySource, 'MAX_SELECTORS_PER_STAGE + 1'), 'publication scans are sentinel bounded');
+esc_p7_route_assert(str_contains($repositorySource, 'MAX_STAGES + 1') && str_contains($repositorySource, 'MAX_SELECTORS_PER_STAGE + 1'), 'authoritative and ordinary route scans use bounded sentinels');
+esc_p7_route_assert(str_contains($repositorySource, 'sort($ordered, SORT_NUMERIC)') && str_contains($repositorySource, 'lockActiveTenantUsers'), 'tenant-user membership locks are canonicalized before acquisition');
 esc_p7_route_assert(str_contains($serviceSource, 'TenantAuthorization::allowsCapability') && str_contains($serviceSource, 'MANAGE_REFERENCE_DATA'), 'Approval Route service enforces tenant-role mutation ceiling');
 esc_p7_route_assert(! str_contains($policySource, 'eval(') && ! str_contains($policySource, 'exec(') && ! str_contains($policySource, 'callback'), 'Approval Route policy contains no executable language');
 esc_p7_route_assert(! str_contains($transitionRepositorySource, 'ApprovalRoute') && ! str_contains($transitionServiceSource, 'ApprovalRoute'), 'P7-001 does not change P6 runtime transition execution');
