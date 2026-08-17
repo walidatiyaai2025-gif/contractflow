@@ -42,6 +42,8 @@ final class Router
         ExcelExportController::register();
         NotificationsController::register();
         DevicesController::register();
+        SuppliersController::register();
+        CounterpartyContractsController::register();
         ContractMutationController::register();
         MobileMutationController::register();
         MobileCrudController::register();
