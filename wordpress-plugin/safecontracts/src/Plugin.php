@@ -13,6 +13,7 @@ use SafeContracts\Admin\CollectionsPage;
 use SafeContracts\Admin\ContractsPage;
 use SafeContracts\Admin\CustomersPage;
 use SafeContracts\Admin\DashboardPage;
+use SafeContracts\Admin\FinancePage;
 use SafeContracts\Admin\FirebaseSettingsPage;
 use SafeContracts\Admin\FollowUpsPage;
 use SafeContracts\Admin\GeneralSettingsPage;
@@ -102,6 +103,7 @@ final class Plugin
         add_action('admin_menu', [NotificationCenterPage::class, 'register'], 15);
         add_action('admin_menu', [NotificationsPage::class, 'register'], 16);
         add_action('admin_menu', [NotificationSchedulePage::class, 'register'], 17);
+        add_action('admin_menu', [FinancePage::class, 'register'], 18);
         add_action('admin_menu', [ReportsPage::class, 'register'], 18);
         add_action('admin_menu', [ActiveUsersPage::class, 'register'], 19);
         add_action('admin_menu', [UsersRolesPage::class, 'register'], 20);
