@@ -23,10 +23,9 @@ The helper is deliberately safe by default:
 
 The helper configures legacy branch protection with:
 
-- required pull requests;
-- one approving review;
-- stale-review dismissal;
-- last-push approval;
+- pull requests required for branch changes;
+- **zero mandatory approving reviewers**;
+- no last-push approval requirement;
 - `esc-foundation` required;
 - `esc-mobile` required;
 - strict/up-to-date required status checks;
@@ -35,9 +34,20 @@ The helper configures legacy branch protection with:
 - force-push disabled;
 - branch deletion disabled.
 
-It does not lock the branch, require linear history, restrict branch creation or
-configure push restrictions that are unavailable/undesirable for this
-user-owned repository.
+The zero-reviewer setting is intentional. GitHub supports
+`required_approving_review_count=0` while pull-request protection remains
+configured. Parent #522 requires PR-only delivery and mandatory CI, but does not
+require an independent human reviewer. Requiring one approval or last-push
+approval could deadlock a personal/solo-maintained repository without adding an
+acceptance requirement from #522.
+
+If the repository later has an approved independent reviewer policy, increasing
+the approval count should be a separate explicit governance decision rather than
+an implicit release prerequisite.
+
+The helper does not lock the branch, require linear history, restrict branch
+creation or configure push restrictions that are unavailable/undesirable for
+this user-owned repository.
 
 ## Preview first
 
@@ -48,7 +58,14 @@ pwsh -File .\scripts\configure_esc_branch_protection.ps1
 ```
 
 The default execution is preview-only. Review the printed JSON before making any
-administrative change.
+administrative change. Confirm the preview contains:
+
+```text
+required_approving_review_count = 0
+require_last_push_approval = false
+```
+
+alongside strict `esc-foundation` and `esc-mobile` required checks.
 
 ## Authentication
 
