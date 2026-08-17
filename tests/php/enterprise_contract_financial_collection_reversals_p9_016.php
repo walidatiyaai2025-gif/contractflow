@@ -215,10 +215,11 @@ esc_p9_016_assert(! str_contains(strtoupper($repositorySource), 'UPDATE ') && ! 
 esc_p9_016_assert(str_contains($serviceSource, 'authorize(Capabilities::ACCESS)') && substr_count($serviceSource, 'authorize(Capabilities::MANAGE_COLLECTIONS)') >= 3, 'P9-016 preserves ACCESS reads and MANAGE_COLLECTIONS mutations');
 esc_p9_016_assert(str_contains($serviceSource, 'TenantAuthorization::allowsCapability') && str_contains($serviceSource, 'Capabilities::VIEW_ALL') && str_contains($serviceSource, 'Capabilities::VIEW_ASSIGNED'), 'P9-016 preserves tenant-role and Contract data scope');
 esc_p9_016_assert(! str_contains($routerSource, 'ContractFinancialCollectionReversalRevision'), 'P9-016 exposes no REST surface');
-esc_p9_016_assert(! str_contains($receiptRepositorySource, 'ContractFinancialCollectionReversal'), 'P9-013 receipt repository has no reverse coupling to reversals');
+// P9-016 is a historical foundation boundary. Later write-time receipt-capacity stages may consume immutable reversal evidence,
+// but the P9-016 reversal mutation repository must remain independent of receipt-repository implementation details.
+esc_p9_016_assert(! str_contains($repositorySource, 'ContractFinancialCollectionReceiptRevisionRepository'), 'P9-016 reversal mutation repository has no reverse receipt-repository dependency');
 esc_p9_016_assert(! str_contains($scheduleRepositorySource, 'ContractFinancialCollectionReversal'), 'P9-012 schedule repository has no reverse coupling to reversals');
-// P9-016 remains a historical foundation boundary: later read-only settlement stages may consume reversal evidence,
-// but the P9-016 mutation repository itself must never depend on settlement semantics.
+// Later read-only settlement stages may consume reversal evidence, but P9-016 mutation semantics stay independent.
 esc_p9_016_assert(! str_contains($repositorySource, 'ContractFinancialScheduleSettlement'), 'P9-016 reversal mutation repository has no reverse settlement coupling');
 esc_p9_016_assert(! str_contains($legacyPaymentSource, 'ContractFinancialCollectionReversal') && ! str_contains($legacyCollectionSource, 'ContractFinancialCollectionReversal'), 'legacy Payments/Collections remain isolated');
 
