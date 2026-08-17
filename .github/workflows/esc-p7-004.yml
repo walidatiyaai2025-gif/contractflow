@@ -1,0 +1,36 @@
+name: ESC P7-004 Approval Release Gate
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  approval-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Validate P7-004 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Approvals/ApprovalReleasePolicy.php
+          php -l wordpress-plugin/safecontracts/src/Approvals/ApprovalReleaseRepository.php
+          php -l wordpress-plugin/safecontracts/src/Approvals/ApprovalReleaseService.php
+          php -l wordpress-plugin/safecontracts/src/Database/Migrations/Migration0042EnterpriseWorkflowApprovalReleases.php
+          php -l wordpress-plugin/safecontracts/src/Workflows/ContractWorkflowTransitionRepository.php
+          php -l tests/php/enterprise_workflow_approval_release_foundation_p7_004.php
+          php -l tests/php/enterprise_workflow_approval_releases_p7_004.php
+          php -l tests/php/enterprise_workflow_approval_release_service_p7_004.php
+      - name: Validate ESC-P7-004 approval release foundation
+        run: php tests/php/enterprise_workflow_approval_release_foundation_p7_004.php
+      - name: Validate ESC-P7-004 approval release runtime
+        run: php tests/php/enterprise_workflow_approval_releases_p7_004.php
+      - name: Validate ESC-P7-004 service boundary
+        run: php tests/php/enterprise_workflow_approval_release_service_p7_004.php
