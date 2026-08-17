@@ -48,8 +48,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: enterprise-safecontracts
+          ref: ${{ github.sha }}
           fetch-depth: 0
+
+      - name: Require protected ESC integration branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PROTECTED="$(gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" --jq '.protected')"
+          BRANCH_HEAD="$(gh api "repos/${GITHUB_REPOSITORY}/branches/enterprise-safecontracts" --jq '.commit.sha')"
+          if [[ "$PROTECTED" != "true" ]]; then
+            echo "FAIL: enterprise-safecontracts must be protected before ESC production publication" >&2
+            exit 1
+          fi
+          if [[ "$BRANCH_HEAD" != "$GITHUB_SHA" ]]; then
+            echo "FAIL: enterprise-safecontracts advanced after this release dispatch; dispatch a new exact-head release" >&2
+            exit 1
+          fi
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -246,20 +264,16 @@ jobs:
             --firebase-evidence "$FIREBASE_EVIDENCE"
           python3 scripts/enterprise_verified_artifacts.py check --require-apk
 
-      - name: Persist latest verified ESC APK slot
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "Last verified Enterprise apk"
-          if git diff --cached --quiet; then
-            echo "Verified ESC APK slot already matches this build"
-          else
-            git commit -m "ESC-P0-005 retain verified Enterprise Android APK [skip ci]"
-            git pull --rebase origin enterprise-safecontracts
-            git push origin HEAD:enterprise-safecontracts
-          fi
+      - name: Retain verified ESC APK workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-safe-contracts-mobile-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            Last verified Enterprise apk/EnterpriseSafeContracts-latest.apk
+            Last verified Enterprise apk/EnterpriseSafeContracts-latest.apk.sha256
+            Last verified Enterprise apk/VERIFIED.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Publish ESC-only stable GitHub Release
         shell: bash
@@ -279,7 +293,7 @@ jobs:
             "$APK" \
             "$SHA_FILE" \
             "$PROVENANCE" \
-            --target enterprise-safecontracts \
+            --target "$GITHUB_SHA" \
             --title "Enterprise Safe Contracts Mobile Latest" \
             --notes "$RELEASE_NOTES\n\nSource commit: $GITHUB_SHA\nProduct: Enterprise Safe Contracts"
           gh release view esc-mobile-latest --json url,tagName,assets
