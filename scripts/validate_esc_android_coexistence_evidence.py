@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -86,6 +87,16 @@ def utc_timestamp(value: Any) -> str:
     return normalized
 
 
+def canonical_record_sha256(record: dict[str, Any]) -> str:
+    payload = json.dumps(
+        record,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def validate_record(
     record: dict[str, Any],
     expected_source_sha: str,
@@ -157,11 +168,7 @@ def validate_record(
     return normalized_evidence
 
 
-def load_and_validate(
-    path: Path,
-    expected_source_sha: str,
-    expected_evidence: dict[str, str] | None = None,
-) -> dict[str, str]:
+def load_record(path: Path) -> dict[str, Any]:
     if not path.is_file() or path.stat().st_size == 0:
         fail(f"UAT evidence record is missing or empty: {path}")
     try:
@@ -170,7 +177,15 @@ def load_and_validate(
         raise EvidenceError(f"UAT evidence record is invalid JSON: {exc}") from exc
     if not isinstance(record, dict):
         fail("UAT evidence record root must be an object")
-    return validate_record(record, expected_source_sha, expected_evidence)
+    return record
+
+
+def load_and_validate(
+    path: Path,
+    expected_source_sha: str,
+    expected_evidence: dict[str, str] | None = None,
+) -> dict[str, str]:
+    return validate_record(load_record(path), expected_source_sha, expected_evidence)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -198,8 +213,9 @@ def main() -> int:
         print("FAIL: either provide all publish evidence references or none", file=sys.stderr)
         return 1
     try:
-        evidence = load_and_validate(
-            args.record,
+        record = load_record(args.record)
+        evidence = validate_record(
+            record,
             args.source_sha,
             supplied if all_supplied else None,
         )
@@ -208,6 +224,7 @@ def main() -> int:
         return 1
     print(
         "ESC Android coexistence evidence passed: exact-source PASS record; "
+        f"record_sha256={canonical_record_sha256(record)}, "
         f"device={evidence['device']}, coexistence={evidence['coexistence']}"
     )
     return 0
