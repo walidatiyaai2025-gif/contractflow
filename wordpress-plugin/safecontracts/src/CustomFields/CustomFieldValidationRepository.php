@@ -25,13 +25,14 @@ final class CustomFieldValidationRepository
         return is_array($rows) && $rows !== [] && is_array($rows[0]) ? $rows[0] : null;
     }
 
-    public function findBinding(int $contractId): ?array
+    public function findBinding(int $contractId, bool $forUpdate = false): ?array
     {
         global $wpdb;
         $tenantId = $this->tenantId();
         $table = $wpdb->prefix . 'safecontracts_contract_configuration_bindings';
+        $lock = $forUpdate ? ' FOR UPDATE' : '';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT contract_id, contract_type_id FROM {$table} WHERE contract_id = %d AND tenant_id = %d LIMIT 1",
+            "SELECT contract_id, contract_type_id FROM {$table} WHERE contract_id = %d AND tenant_id = %d LIMIT 1{$lock}",
             $contractId,
             $tenantId
         ), ARRAY_A);
@@ -39,17 +40,18 @@ final class CustomFieldValidationRepository
     }
 
     /** @return list<array<string,mixed>> */
-    public function listActiveDefinitions(int $contractTypeId, int $limit = 500): array
+    public function listActiveDefinitions(int $contractTypeId, int $limit = 500, bool $forUpdate = false): array
     {
         global $wpdb;
         $tenantId = $this->tenantId();
         $table = $wpdb->prefix . 'safecontracts_custom_field_definitions';
         $limit = max(1, min(self::MAX_SCAN_ROWS, $limit));
+        $lock = $forUpdate ? ' FOR UPDATE' : '';
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT id, contract_type_id, field_code, data_type, label, is_required, status, sort_order, options_json, validation_json
              FROM {$table}
              WHERE contract_type_id = %d AND tenant_id = %d AND status = 'active'
-             ORDER BY sort_order ASC, label ASC, id ASC LIMIT %d",
+             ORDER BY sort_order ASC, label ASC, id ASC LIMIT %d{$lock}",
             $contractTypeId,
             $tenantId,
             $limit
@@ -61,13 +63,14 @@ final class CustomFieldValidationRepository
      * Returns set values with current definition metadata when it still exists in the tenant.
      * @return list<array<string,mixed>>
      */
-    public function listSetValuesWithDefinitions(int $contractId, int $limit = 500): array
+    public function listSetValuesWithDefinitions(int $contractId, int $limit = 500, bool $forUpdate = false): array
     {
         global $wpdb;
         $tenantId = $this->tenantId();
         $values = $wpdb->prefix . 'safecontracts_custom_field_values';
         $definitions = $wpdb->prefix . 'safecontracts_custom_field_definitions';
         $limit = max(1, min(self::MAX_SCAN_ROWS, $limit));
+        $lock = $forUpdate ? ' FOR UPDATE' : '';
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT v.id, v.contract_id, v.definition_id, v.value_json, v.data_type_snapshot, v.definition_config_hash,
                     d.id AS current_definition_id, d.contract_type_id AS current_contract_type_id, d.field_code, d.data_type,
@@ -75,7 +78,7 @@ final class CustomFieldValidationRepository
              FROM {$values} v
              LEFT JOIN {$definitions} d ON d.id = v.definition_id AND d.tenant_id = v.tenant_id
              WHERE v.contract_id = %d AND v.tenant_id = %d AND v.is_set = 1
-             ORDER BY v.definition_id ASC, v.id ASC LIMIT %d",
+             ORDER BY v.definition_id ASC, v.id ASC LIMIT %d{$lock}",
             $contractId,
             $tenantId,
             $limit

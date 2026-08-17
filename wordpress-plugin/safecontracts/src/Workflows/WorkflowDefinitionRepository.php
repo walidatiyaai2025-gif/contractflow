@@ -225,9 +225,7 @@ final class WorkflowDefinitionRepository
         }
     }
 
-    /**
-     * @return array{states:list<array<string,mixed>>,transitions:list<array<string,mixed>>}
-     */
+    /** @return array{states:list<array<string,mixed>>,transitions:list<array<string,mixed>>} */
     public function getGraph(int $workflowId, int $versionId): array
     {
         global $wpdb;
@@ -292,10 +290,7 @@ final class WorkflowDefinitionRepository
         return ['states' => $states, 'transitions' => $transitions];
     }
 
-    /**
-     * @param list<array<string,mixed>> $states
-     * @param list<array<string,mixed>> $transitions
-     */
+    /** @param list<array<string,mixed>> $states @param list<array<string,mixed>> $transitions */
     public function replaceDraftGraph(int $workflowId, int $versionId, array $states, array $transitions, int $actorId): void
     {
         global $wpdb;
@@ -402,6 +397,7 @@ final class WorkflowDefinitionRepository
                 throw new RuntimeException('Stored Workflow graph exceeds bounded publication limits.');
             }
             WorkflowDefinitionPolicy::normalizeGraph($graph['states'], $graph['transitions']);
+            $this->assertTransitionGuardsPublishable($wpdb, $tenantId, $workflowId, $versionId);
             $result = $wpdb->query($wpdb->prepare(
                 "UPDATE {$versions}
                  SET version_status = 'published', published_by = %d, published_at = UTC_TIMESTAMP(), updated_by = %d, updated_at = UTC_TIMESTAMP()
@@ -424,6 +420,41 @@ final class WorkflowDefinitionRepository
         } catch (\Throwable $error) {
             $wpdb->query('ROLLBACK');
             throw $error;
+        }
+    }
+
+    private function assertTransitionGuardsPublishable(object $wpdb, int $tenantId, int $workflowId, int $versionId): void
+    {
+        $guards = $wpdb->prefix . 'safecontracts_workflow_transition_guards';
+        $transitions = $wpdb->prefix . 'safecontracts_workflow_transitions';
+        $states = $wpdb->prefix . 'safecontracts_workflow_states';
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT g.id
+             FROM {$guards} g
+             LEFT JOIN {$transitions} t ON t.id = g.transition_id AND t.tenant_id = g.tenant_id
+                AND t.workflow_id = g.workflow_id AND t.workflow_version_id = g.workflow_version_id
+             LEFT JOIN {$states} s ON s.id = t.source_state_id AND s.tenant_id = t.tenant_id
+                AND s.workflow_id = t.workflow_id AND s.workflow_version_id = t.workflow_version_id
+             LEFT JOIN {$states} d ON d.id = t.destination_state_id AND d.tenant_id = t.tenant_id
+                AND d.workflow_id = t.workflow_id AND d.workflow_version_id = t.workflow_version_id
+             WHERE g.tenant_id = %d AND g.workflow_id = %d AND g.workflow_version_id = %d
+               AND (
+                    t.id IS NULL
+                    OR g.guard_type <> %s
+                    OR t.transition_code <> g.transition_code_snapshot
+                    OR t.source_state_id <> g.source_state_id_snapshot
+                    OR COALESCE(s.state_code, '') <> g.source_state_code_snapshot
+                    OR t.destination_state_id <> g.destination_state_id_snapshot
+                    OR COALESCE(d.state_code, '') <> g.destination_state_code_snapshot
+               )
+             LIMIT 1 FOR UPDATE",
+            $tenantId,
+            $workflowId,
+            $versionId,
+            WorkflowTransitionGuardPolicy::DYNAMIC_FIELDS_READY
+        ), ARRAY_A);
+        if (is_array($rows) && $rows !== []) {
+            throw new RuntimeException('Workflow transition guard configuration is stale, orphaned or unsupported.');
         }
     }
 

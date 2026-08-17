@@ -16,10 +16,12 @@ final class ContractWorkflowTransitionService
 {
     public function __construct(
         private ?ContractWorkflowInstanceRepository $instances = null,
-        private ?ContractWorkflowTransitionRepository $transitions = null
+        private ?ContractWorkflowTransitionRepository $transitions = null,
+        private ?WorkflowTransitionGuardEvaluator $guards = null
     ) {
         $this->instances ??= new ContractWorkflowInstanceRepository();
         $this->transitions ??= new ContractWorkflowTransitionRepository();
+        $this->guards ??= new WorkflowTransitionGuardEvaluator();
     }
 
     /** @return list<array<string,mixed>> */
@@ -56,7 +58,10 @@ final class ContractWorkflowTransitionService
             (int) $instance['id'],
             $transitionCode,
             $requestKeyHash,
-            $actorId
+            $actorId,
+            function (array $transition) use ($contractId): void {
+                $this->guards->assertAllowed($contractId, $transition);
+            }
         );
 
         if ($result['created']) {

@@ -32,8 +32,11 @@ final class ContractWorkflowTransitionRepository
         return is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
     }
 
-    /** @return array{history:array<string,mixed>,created:bool} */
-    public function execute(int $contractId, int $instanceId, string $transitionCode, string $requestKeyHash, int $actorId): array
+    /**
+     * @param null|callable(array<string,mixed>):void $beforeMutation
+     * @return array{history:array<string,mixed>,created:bool}
+     */
+    public function execute(int $contractId, int $instanceId, string $transitionCode, string $requestKeyHash, int $actorId, ?callable $beforeMutation = null): array
     {
         global $wpdb;
         $tenantId = $this->tenantId();
@@ -99,7 +102,7 @@ final class ContractWorkflowTransitionRepository
             }
 
             $transitionRows = $wpdb->get_results($wpdb->prepare(
-                "SELECT t.id AS transition_id, t.transition_code,
+                "SELECT t.id AS transition_id, t.workflow_id, t.workflow_version_id, t.transition_code,
                         t.source_state_id, sf.state_code AS source_state_code,
                         t.destination_state_id, st.state_code AS destination_state_code
                  FROM {$transitions} t
@@ -132,6 +135,10 @@ final class ContractWorkflowTransitionRepository
             $toStateCode = (string) ($transition['destination_state_code'] ?? '');
             if ($transitionId <= 0 || $toStateId <= 0 || $toStateCode === '') {
                 throw new RuntimeException('Workflow transition returned invalid destination identity.');
+            }
+
+            if ($beforeMutation !== null) {
+                $beforeMutation($transition);
             }
 
             $historySql = $wpdb->prepare(

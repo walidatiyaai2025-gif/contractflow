@@ -32,17 +32,41 @@ final class CustomFieldValidationService
      */
     public function validateContract(int $contractId): array
     {
+        return $this->validate($contractId, false);
+    }
+
+    /**
+     * Intended only for callers that already hold the contract-row lock inside an open transaction.
+     * It locks the P4 binding plus the indexed active-definition and set-value ranges so the readiness
+     * snapshot cannot be changed before the caller commits or rolls back.
+     *
+     * @return array{
+     *   ready:bool,
+     *   error_count:int,
+     *   warning_count:int,
+     *   definition_count:int,
+     *   set_value_count:int,
+     *   issues:list<array<string,mixed>>
+     * }
+     */
+    public function validateContractForWorkflowTransition(int $contractId): array
+    {
+        return $this->validate($contractId, true);
+    }
+
+    private function validate(int $contractId, bool $lockSnapshot): array
+    {
         $this->authorize();
         $contract = $this->requireContract($contractId);
         $this->assertScope($contract);
-        $binding = $this->repository->findBinding($contractId);
+        $binding = $this->repository->findBinding($contractId, $lockSnapshot);
         if ($binding === null || (int) ($binding['contract_type_id'] ?? 0) <= 0) {
             throw new InvalidArgumentException('Dynamic Field validation requires an Enterprise Contract Type binding.');
         }
         $contractTypeId = (int) $binding['contract_type_id'];
 
-        $definitions = $this->repository->listActiveDefinitions($contractTypeId, self::MAX_SCAN + 1);
-        $values = $this->repository->listSetValuesWithDefinitions($contractId, self::MAX_SCAN + 1);
+        $definitions = $this->repository->listActiveDefinitions($contractTypeId, self::MAX_SCAN + 1, $lockSnapshot);
+        $values = $this->repository->listSetValuesWithDefinitions($contractId, self::MAX_SCAN + 1, $lockSnapshot);
 
         $issues = [];
         if (count($definitions) > self::MAX_SCAN) {

@@ -27,6 +27,7 @@ final class WorkflowTransitionGuardEvaluator
         if ($contractId <= 0 || $workflowId <= 0 || $versionId <= 0 || $transitionId <= 0) {
             throw new RuntimeException('Workflow guard evaluation requires valid locked transition identity.');
         }
+
         $rows = $this->guards->listExecutionGuards($workflowId, $versionId, $transitionId);
         if (count($rows) > WorkflowTransitionGuardPolicy::MAX_GUARDS_PER_TRANSITION) {
             throw new RuntimeException('Stored Workflow transition guards exceed the supported bound.');
@@ -46,6 +47,7 @@ final class WorkflowTransitionGuardEvaluator
         }
     }
 
+    /** @param array<string,mixed> $guard @param array<string,mixed> $transition */
     private function assertSnapshot(array $guard, array $transition): void
     {
         if ((int) ($guard['workflow_id'] ?? 0) !== (int) ($transition['workflow_id'] ?? 0)
