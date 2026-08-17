@@ -46,9 +46,9 @@ $generalSettingsSource = (string) file_get_contents($root . '/wordpress-plugin/s
 $legacyMoneySource = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Contracts/ContractMoney.php');
 $gateSource = (string) file_get_contents($root . '/scripts/test-php.sh');
 
-// P9-002 deliberately reuses the P1 tenant metadata and consumes no new schema.
-esc_p9_002_assert(Migrator::LATEST_VERSION === '1.46.0', 'P9-002 does not advance the schema version');
-esc_p9_002_assert(! str_contains($migratorSource, 'Migration0048'), 'P9-002 leaves Migration0048 available');
+// P9-002 deliberately reuses the P1 tenant metadata and consumes no schema of its own.
+esc_p9_002_assert(version_compare(Migrator::LATEST_VERSION, '1.46.0', '>='), 'Enterprise schema remains at or beyond the P9-002 baseline');
+esc_p9_002_assert(str_contains($migratorSource, "'1.46.0' => Migration0047EnterpriseContractDeliverables::class"), 'P9-002 preserves the historical schema version immediately preceding persisted Finance profiles');
 esc_p9_002_assert(str_contains($tenantMigrationSource, "default_currency char(3) NOT NULL DEFAULT 'USD'"), 'existing tenant default_currency remains the persisted source');
 esc_p9_002_assert(! str_contains($tenantMigrationSource, 'base_currency') && ! str_contains($tenantMigrationSource, 'reporting_currency'), 'P9-002 adds no duplicate tenant financial currency column');
 
