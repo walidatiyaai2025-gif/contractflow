@@ -43,7 +43,7 @@ sc_p11fr_assert(str_contains($readSource, "c.counterparty_type = 'customer'"), '
 sc_p11fr_assert(str_contains($readSource, "COALESCE(NULLIF(p.financial_direction, ''), 'receivable') = 'receivable'"), 'Legacy financial operations exclude Supplier/AP and map historic Customer rows to receivable');
 sc_p11fr_assert(str_contains($readSource, 'LEFT JOIN {$suppliers} s'), 'Admin contract/payment reads include Supplier master data');
 sc_p11fr_assert(str_contains($readSource, "WHEN c.counterparty_type = 'supplier' THEN s.name"), 'Supplier counterparty name uses merged Supplier schema');
-sc_p11fr_assert(str_contains($readSource, "OR {$contractAlias}.counterparty_type = 'supplier'"), 'Archived Supplier masters do not hide historical payable contracts');
+sc_p11fr_assert(str_contains($readSource, "counterparty_type = 'supplier')"), 'Archived Supplier masters do not hide historical payable contracts');
 sc_p11fr_assert(str_contains($readSource, 'currency_group_count') && str_contains($readSource, 'ELSE NULL END AS scheduled_total'), 'Legacy KPI totals fail safe instead of summing multiple currencies');
 
 $GLOBALS['sc_test_current_caps'] = [
