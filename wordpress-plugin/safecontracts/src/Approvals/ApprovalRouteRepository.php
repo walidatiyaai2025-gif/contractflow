@@ -74,17 +74,18 @@ final class ApprovalRouteRepository
             $routeId,
             ApprovalRoutePolicy::MAX_STAGES + 1
         ), ARRAY_A);
-        if (! is_array($stageRows)) {
-            return [];
+        $stageRows = is_array($stageRows) ? array_values(array_filter($stageRows, 'is_array')) : [];
+        if ($stageRows === [] || count($stageRows) > ApprovalRoutePolicy::MAX_STAGES) {
+            throw new RuntimeException('Stored Approval Route stage structure is invalid or exceeds the supported bound.');
         }
 
         $result = [];
         $totalSelectors = 0;
         foreach ($stageRows as $stageRow) {
-            if (! is_array($stageRow)) {
-                continue;
-            }
             $stageId = (int) ($stageRow['id'] ?? 0);
+            if ($stageId <= 0) {
+                throw new RuntimeException('Stored Approval Route stage returned invalid identity.');
+            }
             $selectorRows = $wpdb->get_results($wpdb->prepare(
                 "SELECT position_no, selector_type, selector_user_id, selector_role_code, selector_key
                  FROM {$selectors}
@@ -96,6 +97,9 @@ final class ApprovalRouteRepository
                 ApprovalRoutePolicy::MAX_SELECTORS_PER_STAGE + 1
             ), ARRAY_A);
             $selectorRows = is_array($selectorRows) ? array_values(array_filter($selectorRows, 'is_array')) : [];
+            if ($selectorRows === [] || count($selectorRows) > ApprovalRoutePolicy::MAX_SELECTORS_PER_STAGE) {
+                throw new RuntimeException('Stored Approval Route selector structure is invalid or exceeds the supported bound.');
+            }
             $totalSelectors += count($selectorRows);
             if ($totalSelectors > ApprovalRoutePolicy::MAX_SELECTORS_PER_ROUTE) {
                 throw new RuntimeException('Stored Approval Route selector count exceeds the supported limit.');
@@ -137,6 +141,11 @@ final class ApprovalRouteRepository
             $existingRouteId = is_array($existingRows) && $existingRows !== [] && is_array($existingRows[0])
                 ? (int) ($existingRows[0]['id'] ?? 0)
                 : 0;
+
+            // Lock all referenced tenant memberships in a canonical order before any destructive write.
+            // This avoids opposite selector ordering creating cross-route lock inversions/deadlocks.
+            $this->lockActiveTenantUsers($wpdb, $tenantId, $this->tenantUserIds($stagesInput));
+
             if ($existingRouteId > 0) {
                 if ($wpdb->query($wpdb->prepare(
                     "DELETE FROM {$selectors} WHERE tenant_id = %d AND route_id = %d",
@@ -196,12 +205,6 @@ final class ApprovalRouteRepository
             }
 
             foreach ($stagesInput as $stage) {
-                foreach ($stage['selectors'] ?? [] as $selector) {
-                    if (($selector['selector_type'] ?? '') === ApprovalRoutePolicy::SELECTOR_TENANT_USER) {
-                        $this->lockActiveTenantUser($wpdb, $tenantId, (int) ($selector['selector_user_id'] ?? 0));
-                    }
-                }
-
                 $stageSql = $wpdb->prepare(
                     "INSERT INTO {$stages} (
                         tenant_id, route_id, position_no, stage_code, name, decision_policy, required_approvals,
@@ -296,6 +299,8 @@ final class ApprovalRouteRepository
             throw new RuntimeException('Stored Workflow approval route count exceeds the bounded Transition limit.');
         }
 
+        /** @var array<int,true> $tenantUserIds */
+        $tenantUserIds = [];
         foreach ($routeRows as $route) {
             $this->assertRouteSnapshot($route, $workflowId, $versionId);
             $routeId = (int) ($route['id'] ?? 0);
@@ -347,10 +352,12 @@ final class ApprovalRouteRepository
                     $type = (string) ($selector['selector_type'] ?? '');
                     if ($type === ApprovalRoutePolicy::SELECTOR_TENANT_USER) {
                         $userId = (int) ($selector['selector_user_id'] ?? 0);
-                        if ((string) ($selector['selector_key'] ?? '') !== 'user:' . $userId || $selector['selector_role_code'] !== null) {
+                        if ($userId <= 0
+                            || (string) ($selector['selector_key'] ?? '') !== 'user:' . $userId
+                            || $selector['selector_role_code'] !== null) {
                             throw new RuntimeException('Stored tenant_user Approval selector shape is invalid.');
                         }
-                        $this->lockActiveTenantUser($wpdb, $tenantId, $userId);
+                        $tenantUserIds[$userId] = true;
                         $selectorsInput[] = ['selector_type' => $type, 'user_id' => $userId];
                     } elseif ($type === ApprovalRoutePolicy::SELECTOR_TENANT_ROLE) {
                         $roleCode = (string) ($selector['selector_role_code'] ?? '');
@@ -377,6 +384,10 @@ final class ApprovalRouteRepository
                 throw new RuntimeException('Stored Approval Route is malformed and cannot be published.', 0, $error);
             }
         }
+
+        // Memberships are locked only after structural validation, but before publication can update
+        // the Workflow Version. Canonical numeric order prevents cross-route lock inversion.
+        $this->lockActiveTenantUsers($wpdb, $tenantId, array_keys($tenantUserIds));
     }
 
     /** @return array<string,mixed> */
@@ -408,6 +419,49 @@ final class ApprovalRouteRepository
             throw new RuntimeException('Workflow draft Transition changed concurrently or is no longer Approval Route authorable.');
         }
         return $rows[0];
+    }
+
+    /**
+     * @param list<array<string,mixed>> $stagesInput
+     * @return list<int>
+     */
+    private function tenantUserIds(array $stagesInput): array
+    {
+        /** @var array<int,true> $ids */
+        $ids = [];
+        foreach ($stagesInput as $stage) {
+            foreach ($stage['selectors'] ?? [] as $selector) {
+                if (($selector['selector_type'] ?? '') !== ApprovalRoutePolicy::SELECTOR_TENANT_USER) {
+                    continue;
+                }
+                $userId = (int) ($selector['selector_user_id'] ?? 0);
+                if ($userId <= 0) {
+                    throw new RuntimeException('Approval tenant_user selector returned invalid user identity.');
+                }
+                $ids[$userId] = true;
+            }
+        }
+        $userIds = array_keys($ids);
+        sort($userIds, SORT_NUMERIC);
+        return $userIds;
+    }
+
+    /** @param list<int> $userIds */
+    private function lockActiveTenantUsers(object $wpdb, int $tenantId, array $userIds): void
+    {
+        $normalized = [];
+        foreach ($userIds as $userId) {
+            $userId = (int) $userId;
+            if ($userId <= 0) {
+                throw new RuntimeException('Approval tenant_user selector returned invalid user identity.');
+            }
+            $normalized[$userId] = true;
+        }
+        $ordered = array_keys($normalized);
+        sort($ordered, SORT_NUMERIC);
+        foreach ($ordered as $userId) {
+            $this->lockActiveTenantUser($wpdb, $tenantId, $userId);
+        }
     }
 
     private function lockActiveTenantUser(object $wpdb, int $tenantId, int $userId): void
