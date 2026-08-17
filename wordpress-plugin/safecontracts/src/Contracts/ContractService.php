@@ -7,6 +7,7 @@ namespace SafeContracts\Contracts;
 use DateTimeImmutable;
 use DomainException;
 use InvalidArgumentException;
+use SafeContracts\Payments\CurrencyCode;
 use SafeContracts\Roles\Capabilities;
 
 final class ContractService
@@ -16,11 +17,14 @@ final class ContractService
         $this->repository ??= new ContractRepository();
     }
 
-    /** @param array{contract_number:mixed, customer_id:mixed, accountant_user_id?:mixed, notes?:mixed} $input */
+    /** @param array<string,mixed> $input */
     public function create(array $input): int
     {
-        $this->requireCapability(Capabilities::CREATE_CONTRACTS, 'You do not have permission to create contracts.');
+        if (array_key_exists('counterparty_type', $input) || array_key_exists('counterparty_id', $input)) {
+            return (new CounterpartyContractService($this->repository))->create($input);
+        }
 
+        $this->requireCapability(Capabilities::CREATE_CONTRACTS, 'You do not have permission to create contracts.');
         $contractNumber = $this->normalizeContractNumber($input['contract_number'] ?? '');
         $customerId = (int) ($input['customer_id'] ?? 0);
         $notes = trim((string) ($input['notes'] ?? ''));
@@ -79,6 +83,19 @@ final class ContractService
         $actorId = get_current_user_id();
         $this->repository->updateBaseValue($contractId, $amount, $actorId);
         do_action('safecontracts_contract_base_value_changed', $contractId, $amount, $actorId, $contract['base_value']);
+    }
+
+    public function updateCurrency(int $contractId, mixed $currency): void
+    {
+        $this->requireCapability(Capabilities::EDIT_CONTRACTS, 'You do not have permission to edit contract currency.');
+        $contract = $this->editableContract($contractId);
+        $currencyCode = CurrencyCode::normalize($currency);
+        if ($contract['currency_code'] === $currencyCode) {
+            return;
+        }
+        $actorId = get_current_user_id();
+        (new ContractCurrencyRepository())->update($contractId, $currencyCode, $actorId);
+        do_action('safecontracts_contract_currency_changed', $contractId, $currencyCode, $actorId, $contract['currency_code']);
     }
 
     public function addFinancialItem(int $contractId, mixed $description, mixed $amount, mixed $displayOrder = 0): int
@@ -172,6 +189,11 @@ final class ContractService
         do_action('safecontracts_contract_customer_assigned', $contractId, $customerId, $actorId, $contract['customer_id']);
     }
 
+    public function assignCounterparty(int $contractId, mixed $counterpartyType, mixed $counterpartyId): void
+    {
+        (new CounterpartyContractService($this->repository))->assign($contractId, $counterpartyType, $counterpartyId);
+    }
+
     public function assignAccountant(int $contractId, ?int $accountantUserId): void
     {
         $this->requireCapability(Capabilities::ASSIGN_CONTRACTS, 'You do not have permission to assign contracts.');
@@ -203,7 +225,7 @@ final class ContractService
         do_action('safecontracts_contract_status_changed', $contractId, $contract['status'], $targetStatus, $actorId);
     }
 
-    /** @return array{id:int, contract_number:string, customer_id:int, accountant_user_id:?int, status:string, start_date:?string, end_date:?string, base_value:string, notes:string, is_archived:bool} */
+    /** @return array<string,mixed> */
     private function editableContract(int $contractId): array
     {
         $contract = $this->requireContract($contractId);
@@ -214,7 +236,7 @@ final class ContractService
         return $contract;
     }
 
-    /** @return array{id:int, contract_number:string, customer_id:int, accountant_user_id:?int, status:string, start_date:?string, end_date:?string, base_value:string, notes:string, is_archived:bool} */
+    /** @return array<string,mixed> */
     private function requireContract(int $contractId): array
     {
         if ($contractId <= 0) {
