@@ -24,7 +24,12 @@ final class ContractFinancialVariationRevisionService
     {
         $this->assertContractId($contractId);
         $this->authorize(Capabilities::ACCESS);
-        return $this->repository->listCurrentForContract($contractId, fn (array $contract): null => $this->assertScope($contract));
+        return $this->repository->listCurrentForContract(
+            $contractId,
+            function (array $contract): void {
+                $this->assertScope($contract);
+            }
+        );
     }
 
     /** @return array{id:int,variation_uuid:string} */
@@ -41,7 +46,9 @@ final class ContractFinancialVariationRevisionService
             ContractFinancialVariationPolicy::normalizeDescription($description),
             $amount,
             get_current_user_id(),
-            fn (array $contract): null => $this->assertScope($contract)
+            function (array $contract): void {
+                $this->assertScope($contract);
+            }
         );
         return ['id' => $id, 'variation_uuid' => $variationUuid];
     }
@@ -58,7 +65,9 @@ final class ContractFinancialVariationRevisionService
             ContractFinancialVariationPolicy::normalizeDescription($description),
             $amount,
             get_current_user_id(),
-            fn (array $contract): null => $this->assertScope($contract)
+            function (array $contract): void {
+                $this->assertScope($contract);
+            }
         );
     }
 
@@ -71,21 +80,23 @@ final class ContractFinancialVariationRevisionService
             ContractFinancialVariationPolicy::normalizeUuid($variationUuid, 'variation UUID'),
             $this->uuid(),
             get_current_user_id(),
-            fn (array $contract): null => $this->assertScope($contract)
+            function (array $contract): void {
+                $this->assertScope($contract);
+            }
         );
     }
 
     /** @param array<string,mixed> $contract */
-    private function assertScope(array $contract): null
+    private function assertScope(array $contract): void
     {
         if (current_user_can(Capabilities::VIEW_ALL)) {
-            return null;
+            return;
         }
         $accountantUserId = $this->nullableInt($contract['accountant_user_id'] ?? null);
         if (current_user_can(Capabilities::VIEW_ASSIGNED)
             && $accountantUserId !== null
             && $accountantUserId === get_current_user_id()) {
-            return null;
+            return;
         }
         throw new DomainException('Contract is outside the current user data scope.');
     }
