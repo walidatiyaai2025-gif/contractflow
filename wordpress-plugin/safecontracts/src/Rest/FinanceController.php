@@ -6,6 +6,7 @@ namespace SafeContracts\Rest;
 
 use DomainException;
 use InvalidArgumentException;
+use SafeContracts\Finance\FinanceOverviewService;
 use SafeContracts\Finance\SettlementService;
 use SafeContracts\Roles\Capabilities;
 use Throwable;
@@ -21,8 +22,23 @@ final class FinanceController
         'reference', 'details', 'proof_media_id', 'idempotency_key',
     ];
 
+    private const READ_FILTERS = [
+        'direction', 'currency_code', 'contract_id', 'counterparty_id',
+        'accountant_user_id', 'status', 'due_from', 'due_to', 'aging_bucket', 'limit',
+    ];
+
     public static function register(): void
     {
+        register_rest_route(Router::NAMESPACE, '/finance/overview', [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => [self::class, 'overview'],
+            'permission_callback' => [self::class, 'canViewFinance'],
+        ]);
+        register_rest_route(Router::NAMESPACE, '/finance/obligations', [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => [self::class, 'obligations'],
+            'permission_callback' => [self::class, 'canViewFinance'],
+        ]);
         register_rest_route(Router::NAMESPACE, '/finance/settlements', [
             'methods' => WP_REST_Server::CREATABLE,
             'callback' => [self::class, 'recordSettlement'],
@@ -55,14 +71,29 @@ final class FinanceController
         if ($access !== true) {
             return $access;
         }
-        return current_user_can(Capabilities::VIEW_PAYABLES)
-            || current_user_can(Capabilities::VIEW_RECEIVABLES)
-            || current_user_can(Capabilities::VIEW_ALL)
-                ? true
-                : RequestGuard::forbidden(
-                    'safecontracts_finance_view_forbidden',
-                    __('You do not have permission to view SafeContracts finance.', 'safecontracts')
-                );
+        return current_user_can(Capabilities::VIEW_PAYABLES) || current_user_can(Capabilities::VIEW_RECEIVABLES)
+            ? true
+            : RequestGuard::forbidden(
+                'safecontracts_finance_view_forbidden',
+                __('You do not have permission to view SafeContracts finance.', 'safecontracts')
+            );
+    }
+
+    public static function overview(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        return self::guard(function () use ($request): WP_REST_Response {
+            $filters = self::readFilters($request);
+            return RequestGuard::response((new FinanceOverviewService())->overview($filters));
+        });
+    }
+
+    public static function obligations(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        return self::guard(function () use ($request): WP_REST_Response {
+            $filters = self::readFilters($request);
+            $rows = (new FinanceOverviewService())->obligations($filters);
+            return RequestGuard::response($rows, ['count' => count($rows)]);
+        });
     }
 
     public static function recordSettlement(WP_REST_Request $request): WP_REST_Response|WP_Error
@@ -86,6 +117,12 @@ final class FinanceController
             $rows = (new SettlementService())->forPayment($paymentId);
             return RequestGuard::response($rows, ['count' => count($rows)]);
         });
+    }
+
+    /** @return array<string,mixed> */
+    private static function readFilters(WP_REST_Request $request): array
+    {
+        return ApiAbuseGuard::safeParams($request, self::READ_FILTERS);
     }
 
     /** @param list<string> $allowed @return array<string,mixed> */
