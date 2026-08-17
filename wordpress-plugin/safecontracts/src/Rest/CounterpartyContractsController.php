@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Rest;
 
+use DateTimeImmutable;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Contracts\ContractMoney;
@@ -19,9 +20,10 @@ final class CounterpartyContractsController
 {
     public static function register(): void
     {
-        // Adds the modern mutation endpoint to the existing /contracts resource;
-        // DataController remains the readable endpoint for the same resource.
-        register_rest_route(Router::NAMESPACE, '/contracts', [
+        // Keep the established /contracts DataController resource read-only and
+        // expose the new authoritative mutation explicitly, matching the existing
+        // SafeContracts mutation-route convention without shadowing GET registration.
+        register_rest_route(Router::NAMESPACE, '/contracts/create', [
             'methods' => WP_REST_Server::CREATABLE,
             'callback' => [self::class, 'create'],
             'permission_callback' => [self::class, 'canCreate'],
@@ -66,6 +68,26 @@ final class CounterpartyContractsController
                 }
             }
 
+            // Validate optional dependent fields before any INSERT so a malformed
+            // date/value request cannot leave a partially-created contract behind.
+            $hasStart = array_key_exists('start_date', $body);
+            $hasEnd = array_key_exists('end_date', $body);
+            if ($hasStart xor $hasEnd) {
+                throw new InvalidArgumentException('Contract dates must supply start_date and end_date together.');
+            }
+            $startDate = null;
+            $endDate = null;
+            if ($hasStart && $hasEnd) {
+                $startDate = self::dateValue($body['start_date'], 'start_date');
+                $endDate = self::dateValue($body['end_date'], 'end_date');
+                if ($startDate !== null && $endDate !== null && $endDate < $startDate) {
+                    throw new InvalidArgumentException('Contract end date cannot be earlier than start date.');
+                }
+            }
+            $baseValue = array_key_exists('base_value', $body)
+                ? ContractMoney::normalizeNonNegative(self::scalar($body['base_value'], 'base_value'))
+                : null;
+
             $service = new ContractService();
             $id = $service->create([
                 'contract_number' => self::scalar($body['contract_number'], 'contract_number'),
@@ -80,16 +102,11 @@ final class CounterpartyContractsController
                 'notes' => array_key_exists('notes', $body) ? self::optionalText($body['notes'], 5000, 'notes') : '',
             ]);
 
-            $hasStart = array_key_exists('start_date', $body);
-            $hasEnd = array_key_exists('end_date', $body);
-            if ($hasStart xor $hasEnd) {
-                throw new InvalidArgumentException('Contract dates must supply start_date and end_date together.');
-            }
             if ($hasStart && $hasEnd) {
-                $service->updateDates($id, $body['start_date'], $body['end_date']);
+                $service->updateDates($id, $startDate, $endDate);
             }
-            if (array_key_exists('base_value', $body)) {
-                $service->updateBaseValue($id, ContractMoney::normalizeNonNegative(self::scalar($body['base_value'], 'base_value')));
+            if ($baseValue !== null) {
+                $service->updateBaseValue($id, $baseValue);
             }
 
             return RequestGuard::response(['id' => $id, 'created' => true], [], 201);
@@ -189,6 +206,19 @@ final class CounterpartyContractsController
             throw new InvalidArgumentException("{$field} is too long.");
         }
         return $text;
+    }
+
+    private static function dateValue(mixed $value, string $field): ?string
+    {
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return null;
+        }
+        $date = trim((string) self::scalar($value, $field));
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+        if (! $parsed || $parsed->format('Y-m-d') !== $date) {
+            throw new InvalidArgumentException("{$field} must use YYYY-MM-DD and be a valid calendar date.");
+        }
+        return $date;
     }
 
     private static function guard(callable $callback): WP_REST_Response|WP_Error
