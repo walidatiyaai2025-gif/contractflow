@@ -2,14 +2,15 @@
 
 ## Purpose
 
-`enterprise-safecontracts` is the ESC integration and production source branch. Production publication must not depend on bypassing its pull-request protections or on a weak `protected=true` signal.
+`enterprise-safecontracts` is the ESC integration and production source branch. Production publication must not depend on bypassing its pull-request protections, on a weak `protected=true` signal, or on unauthenticated status-context names.
 
 ## Required GitHub enforcement
 
-The repository administrator must complete parent #522 for `enterprise-safecontracts` with all schema-v2 controls:
+The repository administrator must complete parent #522 for `enterprise-safecontracts` with all schema-v3 controls:
 
 - pull requests required for ordinary changes;
 - required status checks `esc-foundation` and `esc-mobile`;
+- both mandatory checks source-pinned to the current GitHub Actions App identity;
 - required checks evaluated against the current/up-to-date merge candidate;
 - administrators enforced for routine branch writes;
 - pull-request conversation resolution required;
@@ -17,7 +18,20 @@ The repository administrator must complete parent #522 for `enterprise-safecontr
 - branch deletion disabled;
 - explicit retained break-glass policy.
 
-The branch is not release-ready while GitHub reports `protected=false`, while any schema-v2 control is absent, or while the independent branch-protection audit does not return `decision=PASS`.
+The branch is not release-ready while GitHub reports `protected=false`, while any schema-v3 control is absent, while either required check is unbound/wrong-source, or while the independent branch-protection audit does not return `decision=PASS`.
+
+## Required-check source identity
+
+GitHub allows required checks to identify the GitHub App that must provide the status. ESC uses that capability as part of the release boundary.
+
+The current `github-actions` App ID is resolved from GitHub's official App endpoint at runtime; the repository does not hardcode the numeric App ID.
+
+Schema v3 accepts source proof from:
+
+- legacy `required_status_checks.checks[].app_id`; or
+- ruleset `required_status_checks[].integration_id`.
+
+Both `esc-foundation` and `esc-mobile` must be bound to the resolved GitHub Actions App ID. A matching context from an unexpected or any-source integration is insufficient.
 
 ## Read-only verification credential
 
@@ -44,11 +58,12 @@ It contains no branch-protection mutation path.
 1. requires `ESC_GITHUB_ADMIN_READ_TOKEN`;
 2. captures the live branch object and requires the current branch head to equal the exact dispatch `GITHUB_SHA`;
 3. captures effective branch rules and authoritative legacy protection;
-4. runs `scripts/audit_esc_branch_protection.py`;
-5. requires audit schema version `2`, `decision=PASS`, and every required #522 control to be true;
-6. records the sanitized audit SHA-256 for stable provenance.
+4. runs `scripts/audit_esc_branch_protection.py`, which independently resolves the current GitHub Actions App identity;
+5. requires audit schema version `3`, `decision=PASS`, every required #522 control true, and `required_status_check_sources_verified=true`;
+6. verifies both `esc-foundation` and `esc-mobile` include the expected GitHub Actions App ID in the observed source IDs;
+7. records the sanitized audit SHA-256 for stable provenance.
 
-A partially protected branch therefore cannot reach production signing, verified-artifact retention or `esc-mobile-latest` publication.
+A partially protected branch or name-only status check therefore cannot reach production signing, verified-artifact retention or `esc-mobile-latest` publication.
 
 If the branch advances after dispatch, start a new release from the new exact head. Do not rewrite the UAT evidence source SHA.
 
@@ -56,18 +71,19 @@ If the branch advances after dispatch, start a new release from the new exact he
 
 The workflow does **not** commit or push `Last verified Enterprise apk/` back to the integration branch. `enterprise_verified_artifacts.py` uses that directory only as an isolated staging contract inside the release job.
 
-For Android publication, `VERIFIED.json` now embeds and validates:
+For Android publication, `VERIFIED.json` embeds and validates:
 
 - exact ESC source SHA;
 - build/run identity;
 - APK SHA-256;
 - signing, Android package and Firebase identity confirmation;
 - finalized exact-source coexistence/UAT evidence;
-- the sanitized schema-v2 branch-protection audit;
+- the sanitized schema-v3 branch-protection audit;
+- the audit's resolved GitHub Actions App identity and observed source bindings;
 - the audit SHA-256;
 - an explicit binding between that audit and the exact stable source SHA.
 
-The script rejects publication if the audit is malformed, non-canonical, targets another branch, has `decision!=PASS`, is missing `esc-foundation`/`esc-mobile`, does not prove administrator enforcement, does not prove conversation resolution, has an invalid captured-input digest, or does not contain every required schema-v2 control.
+The script rejects publication if the audit is malformed, non-canonical, targets another branch, has `decision!=PASS`, is missing `esc-foundation`/`esc-mobile`, does not source-pin both checks to GitHub Actions, does not prove administrator enforcement, does not prove conversation resolution, has an invalid captured-input digest, or omits any required schema-v3 control.
 
 The retained workflow artifact and ESC-only GitHub Release contain:
 
@@ -85,7 +101,9 @@ The GitHub Release tag remains `esc-mobile-latest` and targets the exact source 
 
 Normal publication requires no branch-protection bypass. Do not grant a general human or GitHub Actions bypass merely to make the release workflow succeed.
 
-If an emergency administrator break-glass action is ever unavoidable, it must be time-bounded, explicitly approved, logged in the release incident/evidence record, and removed immediately after the emergency action. A bypass must never substitute for failing `esc-foundation`, `esc-mobile`, Android coexistence UAT, Firebase identity evidence, signing verification or exact-source release validation.
+Do not configure mandatory status checks as any-source merely to unblock a release. If the source identity cannot be resolved or GitHub's captured protection does not show the expected binding, the release remains blocked.
+
+If an emergency administrator break-glass action is ever unavoidable, it must be time-bounded, explicitly approved, logged in the release incident/evidence record, and removed immediately after the emergency action. A bypass must never substitute for failing `esc-foundation`, `esc-mobile`, source authentication, Android coexistence UAT, Firebase identity evidence, signing verification or exact-source release validation.
 
 ## Verification
 
@@ -95,7 +113,7 @@ Repository CI pins the workflow contract with:
 python3 tests/python/esc_release_branch_protection_contract_test.py
 ```
 
-It also validates the stable provenance parser with adversarial schema-v2 audit cases:
+It also validates the stable provenance parser with adversarial schema-v3 source-binding cases:
 
 ```bash
 python3 tests/python/enterprise_verified_artifacts_branch_audit_test.py
