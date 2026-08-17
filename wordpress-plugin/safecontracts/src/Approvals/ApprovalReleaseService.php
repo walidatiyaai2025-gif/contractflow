@@ -47,14 +47,13 @@ final class ApprovalReleaseService
         $contractId = (int) ($request['contract_id'] ?? 0);
         $contract = $this->requireContract($contractId);
         $this->assertScope($contract);
-        if ((int) ($contract['is_archived'] ?? 0) === 1) {
-            throw new DomainException('Archived contracts cannot release Enterprise Approval Requests.');
-        }
 
         $idempotencyKey = ApprovalReleasePolicy::normalizeIdempotencyKey($idempotencyKey);
         $releaseKeyHash = ApprovalReleasePolicy::releaseKeyHash($idempotencyKey);
         $transitionRequestKeyHash = ApprovalReleasePolicy::transitionRequestKeyHash($idempotencyKey);
 
+        // Preserve exact retry semantics after later mutable contract/request lifecycle changes.
+        // Authorization and contract data scope are still enforced above; this path performs no new mutation.
         $existing = $this->releases->findReleaseResult($requestId, $releaseKeyHash);
         if ($existing !== null) {
             return [
@@ -64,6 +63,9 @@ final class ApprovalReleaseService
             ];
         }
 
+        if ((int) ($contract['is_archived'] ?? 0) === 1) {
+            throw new DomainException('Archived contracts cannot release Enterprise Approval Requests.');
+        }
         if ((string) ($request['status'] ?? '') !== ApprovalDecisionPolicy::REQUEST_STATUS_APPROVED) {
             throw new DomainException('Only an approved Approval Request can release a Workflow transition.');
         }
