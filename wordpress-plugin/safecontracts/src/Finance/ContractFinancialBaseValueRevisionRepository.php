@@ -36,9 +36,20 @@ final class ContractFinancialBaseValueRevisionRepository
     {
         global $wpdb;
         $tenantId = $this->tenantId();
+        $profiles = $wpdb->prefix . 'safecontracts_contract_financial_currency_profiles';
         $revisions = $wpdb->prefix . 'safecontracts_contract_financial_base_value_revisions';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT " . self::SELECT_COLUMNS . " FROM {$revisions} WHERE tenant_id = %d AND contract_id = %d ORDER BY revision_number DESC, id DESC LIMIT 1",
+            "SELECT r.id, r.uuid, r.contract_id, r.financial_currency_profile_id, r.revision_number,
+                    r.amount, r.currency_code, r.created_by, r.created_at,
+                    p.id AS profile_match_id, p.contract_currency AS profile_currency
+             FROM {$revisions} r
+             LEFT JOIN {$profiles} p
+               ON p.tenant_id = r.tenant_id
+              AND p.id = r.financial_currency_profile_id
+              AND p.contract_id = r.contract_id
+             WHERE r.tenant_id = %d AND r.contract_id = %d
+             ORDER BY r.revision_number DESC, r.id DESC
+             LIMIT 1",
             $tenantId,
             $contractId
         ), ARRAY_A);
@@ -51,7 +62,18 @@ final class ContractFinancialBaseValueRevisionRepository
         if (! is_array($rows[0])) {
             throw new UnexpectedValueException('Contract base-value revision row is invalid.');
         }
-        return $this->normalizeRevision($rows[0], $contractId);
+
+        $revision = $this->normalizeRevision($rows[0], $contractId);
+        $profileId = (int) ($rows[0]['profile_match_id'] ?? 0);
+        if ($profileId !== (int) $revision['financial_currency_profile_id']) {
+            throw new UnexpectedValueException('Stored Contract base-value revision has no matching current-tenant financial currency profile.');
+        }
+        $profileCurrency = CurrencyCode::from($rows[0]['profile_currency'] ?? null);
+        if (! $profileCurrency->equals(CurrencyCode::from($revision['currency_code']))) {
+            throw new UnexpectedValueException('Stored Contract base-value revision currency differs from its financial currency profile.');
+        }
+
+        return $revision;
     }
 
     public function appendOrGetLatest(int $contractId, string $uuid, Money $money, int $actorId): int
