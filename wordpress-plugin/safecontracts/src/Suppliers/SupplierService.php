@@ -140,7 +140,7 @@ final class SupplierService
             throw new InvalidArgumentException('Supplier country code must use two letters.');
         }
 
-        $currency = strtoupper(trim((string) ($input['default_currency'] ?? ''));
+        $currency = strtoupper(trim((string) ($input['default_currency'] ?? '')));
         if ($currency !== '') {
             $currency = CurrencyCode::normalize($currency);
         }
