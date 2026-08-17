@@ -3,15 +3,22 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
+import tempfile
 import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from build_esc_android_coexistence_evidence_bundle import (  # noqa: E402
+    ARTIFACT_KEYS,
+    artifact_reference,
+    build_manifest,
+)
 from finalize_esc_android_coexistence_evidence import (  # noqa: E402
+    CHECK_ARTIFACTS,
     FinalizerError,
-    MANUAL_CHECKS,
+    TOP_LEVEL_ARTIFACTS,
     finalize_record,
 )
 from validate_esc_android_coexistence_evidence import (  # noqa: E402
@@ -96,34 +103,48 @@ def draft_record() -> dict[str, object]:
     }
 
 
-def manual_evidence() -> dict[str, str]:
-    return {
-        "session_isolation": "UAT/session-isolation/run-2026-08-17",
-        "safe_only_push": "UAT/fcm-safe-only/run-2026-08-17",
-        "esc_only_push": "UAT/fcm-esc-only/run-2026-08-17",
-        "independent_update": "UAT/independent-update/run-2026-08-17",
-        "clear_data_uninstall_isolation": "UAT/data-lifecycle/run-2026-08-17",
-    }
+def create_bundle(root: Path) -> dict[str, object]:
+    paths: dict[str, str] = {}
+    for index, key in enumerate(ARTIFACT_KEYS, start=1):
+        relative = f"evidence/{index:02d}-{key}.txt"
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"retained real-device evidence for {key}\n", encoding="utf-8")
+        paths[key] = relative
+    return build_manifest(
+        root,
+        SOURCE_SHA,
+        "2026-08-17T18:50:00Z",
+        paths,
+    )
 
 
-def finalize(draft: dict[str, object], evidence: dict[str, str] | None = None):
+def finalize(
+    draft: dict[str, object],
+    manifest: dict[str, object],
+    root: Path,
+):
     return finalize_record(
         draft,
         SOURCE_SHA,
         "2026-08-17T19:00:00Z",
-        evidence or manual_evidence(),
-        esc_firebase_reference="Firebase/ESC/android-app/production-2026-08-17",
-        device_evidence="UAT/device/device-01-2026-08-17",
-        business_uat_evidence="UAT/business-owner/signoff-2026-08-17",
-        coexistence_evidence="UAT/coexistence/full-run-2026-08-17",
-        firebase_evidence="UAT/firebase/dual-delivery-2026-08-17",
+        manifest,
+        root,
     )
 
 
 class EscAndroidCoexistenceEvidenceFinalizerTests(unittest.TestCase):
-    def test_complete_explicit_uat_evidence_produces_validator_accepted_pass(self) -> None:
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp_dir.name)
+        self.manifest = create_bundle(self.root)
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def test_verified_bundle_produces_validator_accepted_pass(self) -> None:
         draft = draft_record()
-        record = finalize(draft)
+        record = finalize(draft, self.manifest, self.root)
 
         self.assertEqual(record["decision"], "PASS")
         self.assertEqual(record["source_sha"], SOURCE_SHA)
@@ -131,56 +152,88 @@ class EscAndroidCoexistenceEvidenceFinalizerTests(unittest.TestCase):
         self.assertEqual(record["safe_contract"], draft["safe_contract"])
         self.assertEqual(record["device"], draft["device"])
         self.assertEqual(
-            record["esc"]["apk_sha256"], draft["esc"]["apk_sha256"]
+            record["evidence_bundle"]["sha256"],
+            self.manifest["bundle_sha256"],
         )
         self.assertEqual(
             record["esc"]["firebase_reference"],
-            "Firebase/ESC/android-app/production-2026-08-17",
+            artifact_reference(self.manifest, "esc_firebase_identity"),
         )
-        for name in MANUAL_CHECKS:
+
+        for name, artifact_key in CHECK_ARTIFACTS.items():
             self.assertEqual(record["checks"][name]["status"], "PASS")
-            self.assertEqual(record["checks"][name]["evidence"], manual_evidence()[name])
+            self.assertEqual(
+                record["checks"][name]["evidence"],
+                artifact_reference(self.manifest, artifact_key),
+            )
 
-        validate_record(
-            record,
-            SOURCE_SHA,
-            {
-                "device": "UAT/device/device-01-2026-08-17",
-                "business_uat": "UAT/business-owner/signoff-2026-08-17",
-                "coexistence": "UAT/coexistence/full-run-2026-08-17",
-                "firebase": "UAT/firebase/dual-delivery-2026-08-17",
-            },
-        )
+        expected_evidence = {
+            name: artifact_reference(self.manifest, artifact_key)
+            for name, artifact_key in TOP_LEVEL_ARTIFACTS.items()
+        }
+        self.assertEqual(record["evidence"], expected_evidence)
+        validate_record(record, SOURCE_SHA, expected_evidence)
 
-    def test_missing_manual_evidence_key_fails_closed(self) -> None:
-        evidence = manual_evidence()
-        evidence.pop("safe_only_push")
-        with self.assertRaisesRegex(FinalizerError, "exactly the remaining runtime checks"):
-            finalize(draft_record(), evidence)
+    def test_file_modification_after_bundle_creation_blocks_pass(self) -> None:
+        entry = self.manifest["artifacts"]["session_isolation"]
+        path = self.root / entry["path"]
+        original = path.read_bytes()
+        path.write_bytes(b"Z" * len(original))
 
-    def test_placeholder_manual_evidence_fails_closed(self) -> None:
-        evidence = manual_evidence()
-        evidence["esc_only_push"] = "PENDING FCM evidence"
-        with self.assertRaisesRegex(FinalizerError, "placeholder"):
-            finalize(draft_record(), evidence)
+        with self.assertRaisesRegex(FinalizerError, "SHA-256 mismatch"):
+            finalize(draft_record(), self.manifest, self.root)
 
-    def test_source_sha_mismatch_fails_closed(self) -> None:
+    def test_file_deletion_after_bundle_creation_blocks_pass(self) -> None:
+        entry = self.manifest["artifacts"]["esc_only_push"]
+        (self.root / entry["path"]).unlink()
+
+        with self.assertRaisesRegex(FinalizerError, "is missing"):
+            finalize(draft_record(), self.manifest, self.root)
+
+    def test_manifest_source_sha_mismatch_blocks_pass(self) -> None:
+        tampered = deepcopy(self.manifest)
+        tampered["source_sha"] = "b" * 40
+
+        with self.assertRaisesRegex(FinalizerError, "source SHA mismatch"):
+            finalize(draft_record(), tampered, self.root)
+
+    def test_source_sha_mismatch_in_draft_fails_closed(self) -> None:
         draft = draft_record()
         draft["source_sha"] = "b" * 40
-        with self.assertRaisesRegex(FinalizerError, "source SHA mismatch"):
-            finalize(draft)
+        with self.assertRaisesRegex(FinalizerError, "draft source SHA mismatch"):
+            finalize(draft, self.manifest, self.root)
 
     def test_missing_objective_pass_fails_closed(self) -> None:
         draft = draft_record()
         draft["checks"]["deep_link_isolation"]["status"] = "PENDING"
         with self.assertRaisesRegex(FinalizerError, "deep_link_isolation must already be PASS"):
-            finalize(draft)
+            finalize(draft, self.manifest, self.root)
 
     def test_final_pass_record_cannot_be_re_finalized(self) -> None:
         draft = draft_record()
         draft["decision"] = "PASS"
         with self.assertRaisesRegex(FinalizerError, "PENDING coexistence draft"):
-            finalize(draft)
+            finalize(draft, self.manifest, self.root)
+
+    def test_free_form_evidence_cli_inputs_are_removed(self) -> None:
+        source = (ROOT / "scripts/finalize_esc_android_coexistence_evidence.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"--evidence-manifest"', source)
+        self.assertIn('"--evidence-root"', source)
+        for removed in (
+            "--session-isolation-evidence",
+            "--safe-only-push-evidence",
+            "--esc-only-push-evidence",
+            "--independent-update-evidence",
+            "--clear-data-uninstall-evidence",
+            "--esc-firebase-reference",
+            "--device-evidence",
+            "--business-uat-evidence",
+            "--coexistence-evidence",
+            "--firebase-evidence",
+        ):
+            self.assertNotIn(removed, source)
 
     def test_tool_has_no_device_network_or_runtime_mutation_primitive(self) -> None:
         source = (ROOT / "scripts/finalize_esc_android_coexistence_evidence.py").read_text(
