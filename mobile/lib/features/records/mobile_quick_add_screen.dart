@@ -6,7 +6,6 @@ import '../../core/api/api_client.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../contracts/contracts.dart';
 import '../customers/customers.dart';
-import '../dashboard/dashboard_models.dart';
 import '../session/session_controller.dart';
 import '../ui/safecontracts_design.dart';
 
