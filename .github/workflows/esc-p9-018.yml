@@ -1,0 +1,55 @@
+name: ESC P9-018 Reversal-Aware Collection Capacity
+
+on:
+  push:
+    branches:
+      - enterprise-safecontracts
+  pull_request:
+    branches:
+      - enterprise-safecontracts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reversal-aware-capacity:
+    name: reversal-aware-capacity
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+
+      - name: Validate P9-018 PHP syntax
+        run: |
+          php -l wordpress-plugin/safecontracts/src/Finance/ContractFinancialCollectionReceiptRevisionRepository.php
+          php -l tests/php/enterprise_contract_financial_reversal_aware_capacity_p9_018.php
+          php -l tests/php/enterprise_contract_financial_reversal_aware_settlement_p9_017.php
+          php -l tests/php/enterprise_contract_financial_collection_reversals_p9_016.php
+          php -l tests/php/enterprise_contract_financial_collection_capacity_p9_015.php
+          php -l tests/php/enterprise_contract_financial_schedule_settlement_p9_014.php
+          php -l tests/php/enterprise_contract_financial_collection_receipts_p9_013.php
+
+      - name: Validate P9-013 receipt compatibility
+        run: php tests/php/enterprise_contract_financial_collection_receipts_p9_013.php
+
+      - name: Validate P9-014 settlement compatibility
+        run: php tests/php/enterprise_contract_financial_schedule_settlement_p9_014.php
+
+      - name: Validate P9-015 collection capacity compatibility
+        run: php tests/php/enterprise_contract_financial_collection_capacity_p9_015.php
+
+      - name: Validate P9-016 reversal compatibility
+        run: php tests/php/enterprise_contract_financial_collection_reversals_p9_016.php
+
+      - name: Validate P9-017 reversal-aware settlement compatibility
+        run: php tests/php/enterprise_contract_financial_reversal_aware_settlement_p9_017.php
+
+      - name: Validate P9-018 reversal-aware capacity
+        run: php tests/php/enterprise_contract_financial_reversal_aware_capacity_p9_018.php
