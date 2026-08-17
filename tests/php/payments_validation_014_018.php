@@ -33,10 +33,12 @@ function sc_p3v_expect(string $class, callable $callback, string $message): void
 function sc_p3v_payment(array $overrides = []): array
 {
     return array_merge([
-        'id'=>'7001','contract_id'=>'501','sequence_no'=>'1','reference'=>'VAL-001',
+        'id'=>'7001','contract_id'=>'501','financial_direction'=>'receivable','currency_code'=>'XXX',
+        'sequence_no'=>'1','reference'=>'VAL-001',
         'due_date'=>'2026-08-25','expected_payment_date'=>null,
         'original_amount'=>'500.0000','paid_amount'=>'0.0000','remaining_amount'=>'500.0000',
         'status'=>PaymentStatus::UPCOMING,'accountant_user_id'=>'42','contract_is_archived'=>'0',
+        'counterparty_type'=>'customer','counterparty_id'=>'7',
     ], $overrides);
 }
 
@@ -132,7 +134,8 @@ sc_p3v_expect(DomainException::class, fn () => $collections->forPayment(7001), '
 
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS=>true, Capabilities::VIEW_ALL=>true];
 $GLOBALS['sc_test_result_queue'] = [[sc_p3v_payment()], [[
-    'id'=>'9201','payment_id'=>'7001','amount'=>'100.0000','collection_date'=>'2026-08-15','payment_method_id'=>'1',
+    'id'=>'9201','payment_id'=>'7001','financial_direction'=>'receivable','currency_code'=>'XXX',
+    'amount'=>'100.0000','collection_date'=>'2026-08-15','payment_method_id'=>'1',
     'reference'=>'VALIDATION-001','details'=>null,'proof_media_id'=>null,'created_by'=>'42','updated_by'=>'42',
     'created_at'=>'2026-08-15 10:50:00','updated_at'=>'2026-08-15 10:50:00',
 ]]];
