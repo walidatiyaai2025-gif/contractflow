@@ -53,6 +53,10 @@ final class FinanceController
 
     public static function overview(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
+        $access = self::canViewFinance();
+        if ($access !== true) {
+            return $access;
+        }
         return self::guard(function () use ($request): WP_REST_Response {
             $filters = FinanceReadFilters::strict(ApiAbuseGuard::safeParams($request, self::READ_FILTERS));
             return RequestGuard::response((new FinanceOverviewService())->overview($filters), [
@@ -64,6 +68,10 @@ final class FinanceController
 
     public static function obligations(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
+        $access = self::canViewFinance();
+        if ($access !== true) {
+            return $access;
+        }
         return self::guard(function () use ($request): WP_REST_Response {
             $filters = FinanceReadFilters::strict(ApiAbuseGuard::safeParams($request, self::READ_FILTERS));
             $rows = (new FinanceOverviewService())->obligations($filters);
