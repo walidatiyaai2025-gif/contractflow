@@ -79,7 +79,8 @@ esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizeCode(' Non Renewal
 esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizePurpose(' Non_Renewal ') === 'non_renewal', 'notice purpose normalization is deterministic');
 esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizeDirection(' OUTBOUND ') === 'outbound', 'notice direction normalization is deterministic');
 esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizePeriod(90, ' DAY ') === ['period_value' => 90, 'period_unit' => 'day'], 'notice duration is normalized');
-esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizeActive(true) === 1 && ContractNoticePeriodRulePolicy::normalizeActive(false) === 0, 'active flag canonicalizes to 1/0');
+esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizeActive(true) === 1 && ContractNoticePeriodRulePolicy::normalizeActive(false) === 0, 'boolean active flag canonicalizes to 1/0');
+esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizeActive(1) === 1 && ContractNoticePeriodRulePolicy::normalizeActive(0) === 0, 'integer active flag accepts only canonical 1/0 values');
 esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizeNotes('  Written notice  ') === 'Written notice', 'notice notes are normalized');
 esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizeNotes('   ') === null, 'blank notice notes canonicalize to null');
 esc_p8_notice_assert(ContractNoticePeriodRulePolicy::normalizeExpectedRevision(1) === 1, 'positive expected revision is accepted');
@@ -89,6 +90,7 @@ esc_p8_notice_expect_invalid(static fn (): string => ContractNoticePeriodRulePol
 esc_p8_notice_expect_invalid(static fn (): array => ContractNoticePeriodRulePolicy::normalizePeriod(0, 'day'), 'zero notice period is rejected');
 esc_p8_notice_expect_invalid(static fn (): array => ContractNoticePeriodRulePolicy::normalizePeriod(10001, 'day'), 'excessive notice period is rejected');
 esc_p8_notice_expect_invalid(static fn (): array => ContractNoticePeriodRulePolicy::normalizePeriod(30, 'week'), 'unknown notice period unit is rejected');
+esc_p8_notice_expect_invalid(static fn (): int => ContractNoticePeriodRulePolicy::normalizeActive(2), 'non-boolean integer active flag is rejected');
 esc_p8_notice_expect_invalid(static fn (): int => ContractNoticePeriodRulePolicy::normalizeExpectedRevision(0), 'non-positive expected revision is rejected');
 esc_p8_notice_assert(str_contains($policySource, "PURPOSE_RENEWAL_ELECTION = 'renewal_election'") && str_contains($policySource, "PURPOSE_NON_RENEWAL = 'non_renewal'") && str_contains($policySource, "PURPOSE_TERMINATION = 'termination'") && str_contains($policySource, "PURPOSE_OTHER = 'other'"), 'notice purposes are explicitly allowlisted');
 esc_p8_notice_assert(str_contains($policySource, "DIRECTION_OUTBOUND = 'outbound'") && str_contains($policySource, "DIRECTION_INBOUND = 'inbound'") && str_contains($policySource, "DIRECTION_EITHER = 'either'"), 'notice directions are explicitly allowlisted');
