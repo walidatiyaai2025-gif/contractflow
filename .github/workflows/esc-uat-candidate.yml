@@ -1,0 +1,30 @@
+# Default-branch registration copy for GitHub workflow_dispatch discovery.
+#
+# GitHub only accepts workflow_dispatch events for workflows present on the
+# repository default branch. Operators must select `enterprise-safecontracts`
+# when dispatching. GitHub then runs that ref's full fail-closed workflow.
+# This registration copy intentionally contains no production signing logic or
+# secret references. If it is ever executed directly, it fails closed.
+name: ESC Android UAT Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Production ESC API base URL ending in /wp-json/safecontracts/v1/"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  default-branch-registration-only:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require enterprise-safecontracts workflow ref
+        shell: bash
+        run: |
+          echo "FAIL: this default-branch file only registers the ESC Android UAT Candidate workflow." >&2
+          echo "Select the enterprise-safecontracts ref so GitHub executes that branch's full candidate workflow." >&2
+          exit 1
