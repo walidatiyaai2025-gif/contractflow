@@ -15,10 +15,11 @@ void main() {
 
     final screen = File('lib/features/help/mobile_user_guide_screen.dart')
         .readAsStringSync();
-    final referenced = RegExp(r"mobileGuideText\(\s*l10n,\s*'([^']+)'", multiLine: true)
-        .allMatches(screen)
-        .map((match) => match.group(1)!)
-        .toSet();
+    final referenced =
+        RegExp(r"mobileGuideText\(\s*l10n,\s*'([^']+)'", multiLine: true)
+            .allMatches(screen)
+            .map((match) => match.group(1)!)
+            .toSet();
     for (final source in referenced) {
       expect(
         defaults.containsKey(source),
