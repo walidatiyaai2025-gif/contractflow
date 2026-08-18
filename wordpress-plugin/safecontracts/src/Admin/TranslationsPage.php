@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Translations\AdminArabicDefaults;
+use SafeContracts\Translations\ControlledInputArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
 use SafeContracts\Translations\ProductionUxArabicDefaults;
 use SafeContracts\Translations\RuntimeLabels;
@@ -170,6 +171,9 @@ final class TranslationsPage
             }
             if ($row['ar'] === $source) {
                 $row['ar'] = MigrationRecoveryArabicDefaults::default($source);
+            }
+            if ($row['ar'] === $source) {
+                $row['ar'] = ControlledInputArabicDefaults::default($source);
             }
         }
         unset($row);
