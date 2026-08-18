@@ -160,17 +160,16 @@ final class TranslationsPage
             if ($row['ar'] !== $source) {
                 continue;
             }
-            foreach ([
-                AdminArabicDefaults::class,
-                RuntimeLabels::class,
-                ProductionUxArabicDefaults::class,
-                MigrationRecoveryArabicDefaults::class,
-            ] as $provider) {
-                $candidate = $provider::default($source);
-                if ($candidate !== $source) {
-                    $row['ar'] = $candidate;
-                    break;
-                }
+
+            $row['ar'] = AdminArabicDefaults::default($source);
+            if ($row['ar'] === $source) {
+                $row['ar'] = RuntimeLabels::default($source);
+            }
+            if ($row['ar'] === $source) {
+                $row['ar'] = ProductionUxArabicDefaults::default($source);
+            }
+            if ($row['ar'] === $source) {
+                $row['ar'] = MigrationRecoveryArabicDefaults::default($source);
             }
         }
         unset($row);
