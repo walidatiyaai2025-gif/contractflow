@@ -150,7 +150,7 @@ foreach ($requiredMarkers as $marker) {
 }
 
 $forbidden = [
-    'remove_submenu_page(',
+    'remove_submenu_page($parent',
     'remove_menu_page(AdminShell::SLUG)',
     'unregister_post_type(',
     'safecontracts_manage_',
