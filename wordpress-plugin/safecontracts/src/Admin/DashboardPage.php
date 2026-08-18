@@ -73,6 +73,7 @@ final class DashboardPage
         ], static fn (string $value): bool => trim($value) !== '')));
         $customers = $read->customerOptions();
         $contracts = $read->contractOptions($filters['customer_id']);
+        $accountants = current_user_can(Capabilities::VIEW_ALL) ? AdminLookupOptions::accountants() : [];
         $tableFilters = $filters;
         if (! in_array($tableFilters['status'], ['draft', 'active', 'completed', 'cancelled'], true)) {
             $tableFilters['status'] = '';
@@ -117,7 +118,14 @@ final class DashboardPage
                     </select>
                 </label>
                 <?php if (current_user_can(Capabilities::VIEW_ALL)) : ?>
-                    <label><?php echo esc_html__('Accountant ID', 'safecontracts'); ?><input type="number" min="0" name="accountant_user_id" value="<?php echo esc_attr((string) $filters['accountant_user_id']); ?>"></label>
+                    <label><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?>
+                        <select name="accountant_user_id">
+                            <option value="0"><?php echo esc_html__('All responsible accountants', 'safecontracts'); ?></option>
+                            <?php foreach ($accountants as $accountant) : ?>
+                                <option value="<?php echo esc_attr((string) $accountant['id']); ?>" <?php selected((int) $filters['accountant_user_id'], $accountant['id']); ?>><?php echo esc_html($accountant['label']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
                 <?php endif; ?>
                 <label><?php echo esc_html__('Status', 'safecontracts'); ?>
                     <select name="status">
