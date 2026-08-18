@@ -11,6 +11,19 @@ These instructions apply to every contributor, coding agent, release operator an
 - Never commit credentials, tokens, database passwords, Firebase private credentials, signing keys, keystores or production configuration containing secrets.
 - `docs/PROJECT_STATUS.md` is machine-maintained. Do not edit its status table manually.
 
+## Mandatory production-change safety
+
+All SafeContracts / Alkenzy ADV work targeting `main` must follow `docs/PRODUCTION_CHANGE_SAFETY_STANDARD.md`.
+
+- Every new database migration requires a matching `docs/migrations/MigrationNNNN.md` plan with preflight, backup checkpoint, post-migration invariants, rollback trigger, exact rollback procedure and code/schema compatibility matrix.
+- Prefer expand → migrate/backfill → verify → contract. Do not introduce destructive schema removal in the same release that first removes legacy-read compatibility.
+- A partial or failed migration must fail closed and remain safely retryable; do not continue normal production writes against an unknown schema state.
+- Every new end-user string, validation message, empty state, navigation item, permission label/description and help instruction must be covered by the translation system in Arabic and English.
+- Never expose raw capability codes, database/API field keys, internal enum/status codes or foreign-key IDs as the end-user label.
+- When a bounded lookup exists, users select a human-readable option from a dropdown/autocomplete/search picker; they do not type internal IDs/codes. Numeric entry is reserved for actual business quantities with range/unit validation.
+- Every major workflow must include contextual guidance explaining what it does, prerequisites, steps, where to go next and permission-aware troubleshooting.
+- Run `python3 scripts/production_change_guard.py` for production-change work in addition to existing quality gates.
+
 ## Mandatory quality gate
 
 No build, package, APK or plugin ZIP may be called **verified**, **release**, or **production-ready** unless the exact functional source candidate has passed all required SafeContracts Quality Gates:
