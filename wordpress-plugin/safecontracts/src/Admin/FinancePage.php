@@ -42,7 +42,25 @@ final class FinancePage
             wp_die(__('You do not have permission to view SafeContracts finance.', 'safecontracts'));
         }
 
-        $filters = FinanceReadFilters::normalize($_GET);
+        $financeInput = $_GET;
+        $counterpartyRef = isset($_GET['counterparty_ref']) && is_scalar($_GET['counterparty_ref'])
+            ? sanitize_text_field((string) $_GET['counterparty_ref'])
+            : '';
+        if ($counterpartyRef !== '') {
+            $parsed = AdminLookupOptions::parseCounterpartyRef($counterpartyRef);
+            if ($parsed !== null) {
+                $financeInput['counterparty_type'] = $parsed['type'];
+                $financeInput['counterparty_id'] = $parsed['id'];
+            } else {
+                $financeInput['counterparty_type'] = '';
+                $financeInput['counterparty_id'] = 0;
+            }
+        } else {
+            $financeInput['counterparty_type'] = '';
+            $financeInput['counterparty_id'] = 0;
+        }
+
+        $filters = FinanceReadFilters::normalize($financeInput);
         $overview = [
             'directions' => [], 'summary' => [], 'aging' => [], 'cash_flow' => [],
             'action_center' => [], 'work_queue_preview' => [],
@@ -57,7 +75,11 @@ final class FinancePage
             $error = __('SafeContracts could not load the finance workspace.', 'safecontracts');
         }
 
+        $read = new AdminReadRepository();
         $directions = FinanceReadAccess::authorizedDirections();
+        $counterparties = AdminLookupOptions::counterparties($read);
+        $accountants = AdminLookupOptions::accountants();
+        $currencies = AdminLookupOptions::currencies($read, (string) ($filters['currency_code'] ?? ''));
         ?>
         <div class="wrap safecontracts-settings safecontracts-finance" dir="auto">
             <div class="safecontracts-section-heading">
@@ -72,7 +94,7 @@ final class FinancePage
                 <div class="notice notice-error inline"><p><?php echo esc_html($error); ?></p></div>
             <?php endif; ?>
 
-            <?php self::renderFilters($filters, $directions); ?>
+            <?php self::renderFilters($filters, $directions, $counterparties, $accountants, $currencies, $counterpartyRef); ?>
             <?php if ($error === '') : ?>
                 <?php self::renderSummary((array) ($overview['summary'] ?? [])); ?>
                 <div class="safecontracts-finance-layout">
@@ -86,9 +108,21 @@ final class FinancePage
         <?php
     }
 
-    /** @param array<string,mixed> $filters @param list<string> $directions */
-    private static function renderFilters(array $filters, array $directions): void
-    {
+    /**
+     * @param array<string,mixed> $filters
+     * @param list<string> $directions
+     * @param list<array{ref:string,type:string,id:int,label:string}> $counterparties
+     * @param list<array{id:int,label:string}> $accountants
+     * @param list<string> $currencies
+     */
+    private static function renderFilters(
+        array $filters,
+        array $directions,
+        array $counterparties,
+        array $accountants,
+        array $currencies,
+        string $counterpartyRef
+    ): void {
         ?>
         <section class="safecontracts-admin-card" aria-labelledby="safecontracts-finance-filters-title">
             <div class="safecontracts-section-heading">
@@ -104,16 +138,17 @@ final class FinancePage
                         <?php if (in_array(FinancialDirection::RECEIVABLE, $directions, true)) : ?><option value="receivable" <?php selected($filters['direction'], 'receivable'); ?>><?php echo esc_html__('Accounts Receivable', 'safecontracts'); ?></option><?php endif; ?>
                     </select>
                 </label>
-                <label><?php echo esc_html__('Currency', 'safecontracts'); ?><input name="currency_code" maxlength="3" value="<?php echo esc_attr((string) $filters['currency_code']); ?>" placeholder="KWD / USD / XXX"></label>
-                <label><?php echo esc_html__('Counterparty type', 'safecontracts'); ?>
-                    <select name="counterparty_type">
-                        <option value=""><?php echo esc_html__('Any type', 'safecontracts'); ?></option>
-                        <option value="supplier" <?php selected($filters['counterparty_type'], 'supplier'); ?>><?php echo esc_html__('Supplier', 'safecontracts'); ?></option>
-                        <option value="customer" <?php selected($filters['counterparty_type'], 'customer'); ?>><?php echo esc_html__('Customer', 'safecontracts'); ?></option>
-                    </select>
+                <label><?php echo esc_html__('Currency', 'safecontracts'); ?>
+                    <select name="currency_code"><option value=""><?php echo esc_html__('All currencies', 'safecontracts'); ?></option><?php foreach ($currencies as $currency) : ?><option value="<?php echo esc_attr($currency); ?>" <?php selected((string) $filters['currency_code'], $currency); ?>><?php echo esc_html($currency); ?></option><?php endforeach; ?></select>
                 </label>
-                <label><?php echo esc_html__('Counterparty ID', 'safecontracts'); ?><input type="number" min="1" name="counterparty_id" value="<?php echo esc_attr($filters['counterparty_id'] > 0 ? (string) $filters['counterparty_id'] : ''); ?>"></label>
-                <?php if (current_user_can(Capabilities::VIEW_ALL)) : ?><label><?php echo esc_html__('Accountant ID', 'safecontracts'); ?><input type="number" min="1" name="accountant_user_id" value="<?php echo esc_attr($filters['accountant_user_id'] > 0 ? (string) $filters['accountant_user_id'] : ''); ?>"></label><?php endif; ?>
+                <label><?php echo esc_html__('Counterparty', 'safecontracts'); ?>
+                    <select name="counterparty_ref"><option value=""><?php echo esc_html__('All counterparties', 'safecontracts'); ?></option><?php foreach ($counterparties as $counterparty) : ?><option value="<?php echo esc_attr($counterparty['ref']); ?>" <?php selected($counterpartyRef, $counterparty['ref']); ?>><?php echo esc_html($counterparty['label']); ?></option><?php endforeach; ?></select>
+                </label>
+                <?php if (current_user_can(Capabilities::VIEW_ALL)) : ?>
+                    <label><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?>
+                        <select name="accountant_user_id"><option value="0"><?php echo esc_html__('All responsible accountants', 'safecontracts'); ?></option><?php foreach ($accountants as $accountant) : ?><option value="<?php echo esc_attr((string) $accountant['id']); ?>" <?php selected((int) $filters['accountant_user_id'], $accountant['id']); ?>><?php echo esc_html($accountant['label']); ?></option><?php endforeach; ?></select>
+                    </label>
+                <?php endif; ?>
                 <label><?php echo esc_html__('Status', 'safecontracts'); ?>
                     <select name="status"><option value=""><?php echo esc_html__('Any status', 'safecontracts'); ?></option><?php foreach (PaymentStatus::all() as $status) : ?><option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(self::statusLabel($status)); ?></option><?php endforeach; ?></select>
                 </label>
@@ -169,7 +204,7 @@ final class FinancePage
     /** @param list<array<string,mixed>> $rows */
     private static function renderWorkQueue(array $rows): void
     {
-        ?><section class="safecontracts-admin-card safecontracts-table-card"><h2><?php echo esc_html__('Finance work queue', 'safecontracts'); ?></h2><table class="widefat striped"><thead><tr><th><?php echo esc_html__('Due', 'safecontracts'); ?></th><th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Direction', 'safecontracts'); ?></th><th><?php echo esc_html__('Currency', 'safecontracts'); ?></th><th><?php echo esc_html__('Remaining', 'safecontracts'); ?></th><th><?php echo esc_html__('Aging', 'safecontracts'); ?></th></tr></thead><tbody><?php foreach ($rows as $row) : $currency = (string) ($row['currency_code'] ?? CurrencyCode::UNKNOWN); ?><tr><td><?php echo esc_html((string) ($row['due_date'] ?? '')); ?></td><td><strong><?php echo esc_html((string) ($row['counterparty_name'] ?? '')); ?></strong><br><small><?php echo esc_html((string) ($row['counterparty_type'] ?? '') . ' #' . (string) ($row['counterparty_id'] ?? '')); ?></small></td><td><?php echo esc_html((string) ($row['contract_number'] ?? '')); ?></td><td><?php echo esc_html(self::directionLabel((string) ($row['financial_direction'] ?? ''))); ?></td><td><?php echo esc_html($currency); ?></td><td><?php echo esc_html(self::money($row['remaining_amount'] ?? 0, $currency)); ?></td><td><?php echo esc_html(self::agingLabel((string) ($row['aging_bucket'] ?? ''))); ?></td></tr><?php endforeach; ?></tbody></table></section><?php
+        ?><section class="safecontracts-admin-card safecontracts-table-card"><h2><?php echo esc_html__('Finance work queue', 'safecontracts'); ?></h2><table class="widefat striped"><thead><tr><th><?php echo esc_html__('Due', 'safecontracts'); ?></th><th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Direction', 'safecontracts'); ?></th><th><?php echo esc_html__('Currency', 'safecontracts'); ?></th><th><?php echo esc_html__('Remaining', 'safecontracts'); ?></th><th><?php echo esc_html__('Aging', 'safecontracts'); ?></th></tr></thead><tbody><?php foreach ($rows as $row) : $currency = (string) ($row['currency_code'] ?? CurrencyCode::UNKNOWN); ?><tr><td><?php echo esc_html((string) ($row['due_date'] ?? '')); ?></td><td><strong><?php echo esc_html((string) ($row['counterparty_name'] ?? '')); ?></strong><br><small><?php echo esc_html(self::counterpartyTypeLabel((string) ($row['counterparty_type'] ?? ''))); ?></small></td><td><?php echo esc_html((string) ($row['contract_number'] ?? '')); ?></td><td><?php echo esc_html(self::directionLabel((string) ($row['financial_direction'] ?? ''))); ?></td><td><?php echo esc_html($currency); ?></td><td><?php echo esc_html(self::money($row['remaining_amount'] ?? 0, $currency)); ?></td><td><?php echo esc_html(self::agingLabel((string) ($row['aging_bucket'] ?? ''))); ?></td></tr><?php endforeach; ?></tbody></table></section><?php
     }
 
     private static function canViewFinance(): bool
@@ -180,6 +215,11 @@ final class FinancePage
     private static function directionLabel(string $direction): string
     {
         return $direction === FinancialDirection::PAYABLE ? __('Accounts Payable', 'safecontracts') : __('Accounts Receivable', 'safecontracts');
+    }
+
+    private static function counterpartyTypeLabel(string $type): string
+    {
+        return $type === 'supplier' ? __('Supplier', 'safecontracts') : __('Customer', 'safecontracts');
     }
 
     private static function agingLabel(string $bucket): string
