@@ -1,0 +1,101 @@
+name: ESC Live API Diagnostics
+
+on:
+  push:
+    branches: [agent/esc-live-api-diagnostics]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: esc-live-api-diagnostics
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe ESC WordPress REST routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p esc-live-diagnostics
+
+          probe() {
+            local name="$1"
+            local url="$2"
+            local prefix="esc-live-diagnostics/$name"
+            echo "=== $name ===" | tee -a esc-live-diagnostics/summary.txt
+            echo "URL: $url" | tee -a esc-live-diagnostics/summary.txt
+
+            curl -sS -L \
+              --connect-timeout 15 \
+              --max-time 30 \
+              -H 'Accept: application/json' \
+              -D "$prefix.headers" \
+              -o "$prefix.body" \
+              -w 'http_code=%{http_code}\ncontent_type=%{content_type}\nfinal_url=%{url_effective}\n' \
+              "$url" | tee "$prefix.meta" | tee -a esc-live-diagnostics/summary.txt
+
+            printf 'body_prefix=' | tee -a esc-live-diagnostics/summary.txt
+            head -c 240 "$prefix.body" | tr '\r\n' '  ' | tee -a esc-live-diagnostics/summary.txt
+            printf '\n\n' | tee -a esc-live-diagnostics/summary.txt
+          }
+
+          probe root 'https://esc.50sols.com/'
+          probe wp_json 'https://esc.50sols.com/wp-json/'
+          probe pretty_health 'https://esc.50sols.com/wp-json/safecontracts/v1/health'
+          probe pretty_session 'https://esc.50sols.com/wp-json/safecontracts/v1/session'
+          probe query_health 'https://esc.50sols.com/?rest_route=/safecontracts/v1/health'
+          probe query_session 'https://esc.50sols.com/?rest_route=/safecontracts/v1/session'
+
+          echo '=== CLASSIFICATION ===' | tee -a esc-live-diagnostics/summary.txt
+          python3 - <<'PY' | tee -a esc-live-diagnostics/summary.txt
+          from pathlib import Path
+          import json
+
+          root = Path('esc-live-diagnostics')
+
+          def read(name, ext):
+              return (root / f'{name}.{ext}').read_text(errors='replace')
+
+          def meta(name):
+              result = {}
+              for line in read(name, 'meta').splitlines():
+                  if '=' in line:
+                      k, v = line.split('=', 1)
+                      result[k] = v
+              return result
+
+          def is_json(name):
+              try:
+                  json.loads(read(name, 'body'))
+                  return True
+              except Exception:
+                  return False
+
+          for name in ('wp_json', 'pretty_health', 'pretty_session', 'query_health', 'query_session'):
+              m = meta(name)
+              print(f'{name}: code={m.get("http_code")} type={m.get("content_type")} json={is_json(name)} final={m.get("final_url")}')
+
+          pretty_health_json = is_json('pretty_health')
+          query_health_json = is_json('query_health')
+          wp_json_json = is_json('wp_json')
+
+          if pretty_health_json:
+              print('decision=PRETTY_REST_OK')
+          elif query_health_json:
+              print('decision=PRETTY_REWRITE_BROKEN_QUERY_REST_OK')
+          elif wp_json_json:
+              print('decision=WORDPRESS_REST_OK_ESC_ROUTE_MISSING_OR_PLUGIN_INACTIVE')
+          else:
+              print('decision=WORDPRESS_REST_NOT_REACHABLE_OR_INTERCEPTED')
+          PY
+
+      - name: Upload diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-live-api-diagnostics
+          path: esc-live-diagnostics/
+          if-no-files-found: error
+          retention-days: 7
