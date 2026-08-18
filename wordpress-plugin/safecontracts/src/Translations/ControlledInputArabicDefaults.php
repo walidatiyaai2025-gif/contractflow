@@ -10,6 +10,8 @@ final class ControlledInputArabicDefaults
     private const MAP = [
         'All currencies' => 'كل العملات',
         'Select currency' => 'اختر العملة',
+        'System currency' => 'عملة النظام',
+        'Choose the system currency from the approved list and set the display symbol used by mobile financial values. Leaving either blank keeps it explicitly unconfigured.' => 'اختر عملة النظام من القائمة المعتمدة وحدد رمز العرض المستخدم في القيم المالية على الموبايل. ترك أي منهما فارغاً يبقيه غير مهيأ بشكل صريح.',
         'All counterparties' => 'كل جهات التعاقد',
         'All responsible accountants' => 'كل المحاسبين المسؤولين',
         'Assigned user unavailable' => 'المستخدم المسند غير متاح',
