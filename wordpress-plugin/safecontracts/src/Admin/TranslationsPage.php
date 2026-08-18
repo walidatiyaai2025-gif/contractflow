@@ -8,6 +8,7 @@ use SafeContracts\Roles\Capabilities;
 use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\ControlledInputArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
+use SafeContracts\Translations\NavigationArabicDefaults;
 use SafeContracts\Translations\ProductionUxArabicDefaults;
 use SafeContracts\Translations\RuntimeLabels;
 use SafeContracts\Translations\TranslationCatalog;
@@ -168,6 +169,9 @@ final class TranslationsPage
             }
             if ($row['ar'] === $source) {
                 $row['ar'] = ProductionUxArabicDefaults::default($source);
+            }
+            if ($row['ar'] === $source) {
+                $row['ar'] = NavigationArabicDefaults::default($source);
             }
             if ($row['ar'] === $source) {
                 $row['ar'] = MigrationRecoveryArabicDefaults::default($source);
