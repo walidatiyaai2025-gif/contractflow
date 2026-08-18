@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 find "$ROOT/wordpress-plugin/safecontracts" "$ROOT/tests/php" -name '*.php' -print0 \
   | xargs -0 -n1 php -l >/dev/null
+php -l "$ROOT/scripts/collect_alkenzy_production_preflight.php" >/dev/null
 
 php "$ROOT/tests/php/run.php"
 php "$ROOT/tests/php/contracts_schema.php"
@@ -43,6 +44,7 @@ php "$ROOT/tests/php/translations_404.php"
 php "$ROOT/tests/php/translation_completeness_586.php"
 php "$ROOT/tests/php/production_migration_guard_586.php"
 php "$ROOT/tests/php/production_ux_contract_586.php"
+php "$ROOT/tests/php/production_preflight_collector_590.php"
 php "$ROOT/tests/php/brand_identity_silent_refresh_411.php"
 php "$ROOT/tests/php/admin_apk_attachments_status_period_414.php"
 php "$ROOT/tests/php/admin_notification_schedule_416.php"
