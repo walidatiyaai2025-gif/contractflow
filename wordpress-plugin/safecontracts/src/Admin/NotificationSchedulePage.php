@@ -130,7 +130,7 @@ final class NotificationSchedulePage
         foreach ($recipientIds as $userId) {
             $userId = (int) $userId;
             $user = function_exists('get_userdata') ? get_userdata($userId) : false;
-            $name = $user && isset($user->display_name) && trim((string) $user->display_name) !== '' ? (string) $user->display_name : '#' . $userId;
+            $name = $user && isset($user->display_name) && trim((string) $user->display_name) !== '' ? (string) $user->display_name : __('Unnamed WordPress user', 'safecontracts');
             $outcome = $outcomes[$userId] ?? null;
             $state = is_array($outcome) ? (string) $outcome['status'] : 'pending';
             echo '<div><strong>' . esc_html($name) . '</strong> — ' . esc_html(self::recipientStateLabel($state));

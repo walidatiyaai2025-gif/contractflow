@@ -20,6 +20,7 @@ use SafeContracts\Admin\GeneralSettingsPage;
 use SafeContracts\Admin\ImportPeriodNotice;
 use SafeContracts\Admin\ImportsPage;
 use SafeContracts\Admin\LoginBranding;
+use SafeContracts\Admin\MigrationRecoveryPage;
 use SafeContracts\Admin\MobileConfigurationPage;
 use SafeContracts\Admin\NavigationCleanup;
 use SafeContracts\Admin\NotificationCenterPage;
@@ -32,6 +33,7 @@ use SafeContracts\Admin\PaymentsPage;
 use SafeContracts\Admin\ReportsPage;
 use SafeContracts\Admin\SuppliersPage;
 use SafeContracts\Admin\TranslationsPage;
+use SafeContracts\Admin\UserGuidePage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Audit\AuditRecorder;
 use SafeContracts\Audit\ContractArchiveAuditRecorder;
@@ -40,16 +42,21 @@ use SafeContracts\Audit\NotificationScheduleAuditRecorder;
 use SafeContracts\Audit\SafeDeletionAuditRecorder;
 use SafeContracts\Auth\MobileBearerAuthentication;
 use SafeContracts\Contracts\ContractHistoryRecorder;
+use SafeContracts\Database\MigrationGuard;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Presence\PresenceService;
 use SafeContracts\Rest\Router;
 use SafeContracts\Translations\AdminArabicDefaults;
+use SafeContracts\Translations\ControlledInputArabicDefaults;
+use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
 use SafeContracts\Translations\NotificationCenterArabicDefaults;
 use SafeContracts\Translations\NotificationScheduleArabicDefaults;
+use SafeContracts\Translations\ProductionUxArabicDefaults;
 use SafeContracts\Translations\RuntimeLabels;
 use SafeContracts\Translations\TranslationCatalog;
+use Throwable;
 
 final class Plugin
 {
@@ -75,14 +82,29 @@ final class Plugin
 
         TranslationCatalog::register();
         AdminArabicDefaults::register();
+        ProductionUxArabicDefaults::register();
+        MigrationRecoveryArabicDefaults::register();
+        ControlledInputArabicDefaults::register();
         NotificationScheduleArabicDefaults::register();
         NotificationCenterArabicDefaults::register();
         RuntimeLabels::register();
+
+        // Schema compatibility is established before business services, REST
+        // routes, schedulers or mutation handlers are exposed. A migration
+        // failure therefore leaves Alkenzy ADV in a recovery-only state instead
+        // of continuing against a partial or incompatible schema.
+        try {
+            (new Migrator())->maybeMigrate();
+        } catch (Throwable) {
+            MigrationRecoveryPage::register();
+            do_action('safecontracts_database_migration_blocked', MigrationGuard::failureState());
+            return;
+        }
+
         MobileBearerAuthentication::register();
         PresenceService::register();
         FirebaseAccessTokenProvider::register();
         NotificationScheduler::register();
-        (new Migrator())->maybeMigrate();
         ContractHistoryRecorder::register();
         AuditRecorder::register();
         ContractArchiveAuditRecorder::register();
@@ -92,6 +114,7 @@ final class Plugin
         LoginBranding::register();
         NavigationCleanup::register();
         AdminPageSummaryInjector::register();
+        UserGuidePage::registerContextualHelp();
         NotificationEmailTestControl::register();
 
         add_action('rest_api_init', [Router::class, 'register']);
@@ -117,6 +140,7 @@ final class Plugin
         add_action('admin_menu', [FirebaseSettingsPage::class, 'register'], 33);
         add_action('admin_menu', [MobileConfigurationPage::class, 'register'], 34);
         add_action('admin_menu', [TranslationsPage::class, 'register'], 35);
+        add_action('admin_menu', [UserGuidePage::class, 'register'], 36);
         add_action('admin_enqueue_scripts', [AdminShell::class, 'enqueueAssets']);
         add_action('admin_enqueue_scripts', [AdminFeedback::class, 'enqueueAssets'], 20);
         add_action('admin_notices', [AdminFeedback::class, 'render']);

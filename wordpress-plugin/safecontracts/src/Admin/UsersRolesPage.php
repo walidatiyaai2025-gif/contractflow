@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Roles\CapabilityPresentation;
 use SafeContracts\Roles\RoleRegistrar;
 use Throwable;
 
@@ -119,13 +120,17 @@ final class UsersRolesPage
                 ?>
                 <section class="safecontracts-admin-card">
                     <h2><?php echo esc_html($label); ?></h2>
-                    <p><code><?php echo esc_html($slug); ?></code> · <?php echo esc_html(sprintf(__('%d users', 'safecontracts'), count($users))); ?></p>
+                    <p><?php echo esc_html(sprintf(__('%d users', 'safecontracts'), count($users))); ?></p>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_CAPABILITIES_ACTION); ?>"><input type="hidden" name="role_slug" value="<?php echo esc_attr($slug); ?>"><?php wp_nonce_field(self::SAVE_CAPABILITIES_ACTION); ?>
-                        <h3><?php echo esc_html__('Effective Safe Contracts capabilities', 'safecontracts'); ?></h3>
+                        <h3><?php echo esc_html__('Role permissions', 'safecontracts'); ?></h3>
+                        <p class="description"><?php echo esc_html__('Choose business permissions by their clear names. Internal capability codes are intentionally hidden.', 'safecontracts'); ?></p>
                         <div class="safecontracts-capability-list">
                         <?php foreach (Capabilities::all() as $capability) : ?>
-                            <label class="safecontracts-check-row"><input type="checkbox" name="capabilities[]" value="<?php echo esc_attr($capability); ?>" <?php checked(! empty($grants[$capability])); ?>><code><?php echo esc_html($capability); ?></code></label>
+                            <label class="safecontracts-check-row">
+                                <input type="checkbox" name="capabilities[]" value="<?php echo esc_attr($capability); ?>" <?php checked(! empty($grants[$capability])); ?>>
+                                <span><strong><?php echo esc_html(CapabilityPresentation::label($capability)); ?></strong><br><small class="description"><?php echo esc_html(CapabilityPresentation::description($capability)); ?></small></span>
+                            </label>
                         <?php endforeach; ?>
                         </div>
                         <?php submit_button(__('Save role permissions', 'safecontracts'), 'secondary'); ?>
@@ -152,20 +157,26 @@ final class UsersRolesPage
     private static function userLabel(mixed $user): string
     {
         if (is_object($user)) {
-            $id = isset($user->ID) ? (int) $user->ID : 0;
-            $name = isset($user->display_name) ? (string) $user->display_name : '';
-            $email = isset($user->user_email) ? (string) $user->user_email : '';
+            $name = isset($user->display_name) ? trim((string) $user->display_name) : '';
+            $email = isset($user->user_email) ? trim((string) $user->user_email) : '';
         } elseif (is_array($user)) {
-            $id = (int) ($user['ID'] ?? $user['id'] ?? 0);
-            $name = (string) ($user['display_name'] ?? $user['name'] ?? '');
-            $email = (string) ($user['user_email'] ?? $user['email'] ?? '');
+            $name = trim((string) ($user['display_name'] ?? $user['name'] ?? ''));
+            $email = trim((string) ($user['user_email'] ?? $user['email'] ?? ''));
         } else {
-            $id = (int) $user;
             $name = '';
             $email = '';
         }
-        $identity = trim($name . ($email !== '' ? ' — ' . $email : ''));
-        return '#' . $id . ($identity !== '' ? ' · ' . $identity : '');
+
+        if ($name !== '' && $email !== '') {
+            return $name . ' — ' . $email;
+        }
+        if ($name !== '') {
+            return $name;
+        }
+        if ($email !== '') {
+            return $email;
+        }
+        return __('Unnamed WordPress user', 'safecontracts');
     }
 
     private static function requireManage(): void

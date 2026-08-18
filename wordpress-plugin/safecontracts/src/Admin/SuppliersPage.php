@@ -39,6 +39,8 @@ final class SuppliersPage
 
         $status = 'saved';
         try {
+            $countryCode = strtoupper(sanitize_text_field((string) ($_POST['country_code'] ?? '')));
+            $defaultCurrency = strtoupper(sanitize_text_field((string) ($_POST['default_currency'] ?? '')));
             $supplierId = (new SupplierService())->save([
                 'id' => $supplierId,
                 'internal_code' => sanitize_text_field((string) ($_POST['internal_code'] ?? '')),
@@ -48,10 +50,10 @@ final class SuppliersPage
                 'phone' => sanitize_text_field((string) ($_POST['phone'] ?? '')),
                 'email' => sanitize_email((string) ($_POST['email'] ?? '')),
                 'address' => sanitize_textarea_field((string) ($_POST['address'] ?? '')),
-                'country_code' => sanitize_text_field((string) ($_POST['country_code'] ?? '')),
+                'country_code' => $countryCode,
                 'registration_number' => sanitize_text_field((string) ($_POST['registration_number'] ?? '')),
                 'tax_number' => sanitize_text_field((string) ($_POST['tax_number'] ?? '')),
-                'default_currency' => sanitize_text_field((string) ($_POST['default_currency'] ?? '')),
+                'default_currency' => $defaultCurrency,
                 'payment_terms' => sanitize_text_field((string) ($_POST['payment_terms'] ?? '')),
                 'status' => sanitize_key((string) ($_POST['status'] ?? SupplierStatus::ACTIVE)),
                 'notes' => sanitize_textarea_field((string) ($_POST['notes'] ?? '')),
@@ -121,6 +123,10 @@ final class SuppliersPage
         $canCreate = current_user_can(Capabilities::CREATE_SUPPLIERS) || current_user_can(Capabilities::MANAGE_REFERENCE_DATA);
         $canEdit = current_user_can(Capabilities::EDIT_SUPPLIERS) || current_user_can(Capabilities::MANAGE_REFERENCE_DATA);
         $canArchive = current_user_can(Capabilities::ARCHIVE_SUPPLIERS) || current_user_can(Capabilities::MANAGE_REFERENCE_DATA);
+        $selectedCountry = strtoupper(trim((string) ($selected['country_code'] ?? '')));
+        $selectedCurrency = strtoupper(trim((string) ($selected['default_currency'] ?? '')));
+        $countryChoices = AdminLookupOptions::countryChoices($selectedCountry);
+        $currencyChoices = AdminLookupOptions::currencyChoices(new AdminReadRepository(), $selectedCurrency);
         ?>
         <div class="wrap safecontracts-settings safecontracts-suppliers" dir="auto">
             <div class="safecontracts-section-heading">
@@ -192,9 +198,9 @@ final class SuppliersPage
                         <div class="safecontracts-field-row"><label><?php echo esc_html__('Legal name', 'safecontracts'); ?><input name="legal_name" maxlength="191" required value="<?php echo esc_attr((string) ($selected['legal_name'] ?? '')); ?>"></label><label><?php echo esc_html__('Trading name', 'safecontracts'); ?><input name="trading_name" maxlength="191" value="<?php echo esc_attr((string) ($selected['trading_name'] ?? '')); ?>"></label></div>
                         <div class="safecontracts-field-row"><label><?php echo esc_html__('Internal code', 'safecontracts'); ?><input name="internal_code" maxlength="100" value="<?php echo esc_attr((string) ($selected['internal_code'] ?? '')); ?>"></label><label><?php echo esc_html__('Status', 'safecontracts'); ?><select name="status"><?php foreach ([SupplierStatus::ACTIVE, SupplierStatus::INACTIVE, SupplierStatus::SUSPENDED] as $supplierStatus) : ?><option value="<?php echo esc_attr($supplierStatus); ?>" <?php selected((string) ($selected['status'] ?? SupplierStatus::ACTIVE), $supplierStatus); ?>><?php echo esc_html(self::statusLabel($supplierStatus)); ?></option><?php endforeach; ?></select></label></div>
                         <div class="safecontracts-field-row"><label><?php echo esc_html__('Contact name', 'safecontracts'); ?><input name="contact_name" maxlength="191" value="<?php echo esc_attr((string) ($selected['contact_name'] ?? '')); ?>"></label><label><?php echo esc_html__('Phone', 'safecontracts'); ?><input name="phone" maxlength="64" value="<?php echo esc_attr((string) ($selected['phone'] ?? '')); ?>"></label></div>
-                        <div class="safecontracts-field-row"><label><?php echo esc_html__('Email', 'safecontracts'); ?><input type="email" name="email" maxlength="191" value="<?php echo esc_attr((string) ($selected['email'] ?? '')); ?>"></label><label><?php echo esc_html__('Country code', 'safecontracts'); ?><input name="country_code" maxlength="2" pattern="[A-Za-z]{2}" placeholder="KW" value="<?php echo esc_attr((string) ($selected['country_code'] ?? '')); ?>"></label></div>
+                        <div class="safecontracts-field-row"><label><?php echo esc_html__('Email', 'safecontracts'); ?><input type="email" name="email" maxlength="191" value="<?php echo esc_attr((string) ($selected['email'] ?? '')); ?>"></label><label><?php echo esc_html__('Country', 'safecontracts'); ?><select name="country_code"><option value=""><?php echo esc_html__('Select country', 'safecontracts'); ?></option><?php foreach ($countryChoices as $countryCode => $countryLabel) : ?><option value="<?php echo esc_attr($countryCode); ?>" <?php selected($selectedCountry, $countryCode); ?>><?php echo esc_html($countryLabel); ?></option><?php endforeach; ?></select></label></div>
                         <div class="safecontracts-field-row"><label><?php echo esc_html__('Registration number', 'safecontracts'); ?><input name="registration_number" maxlength="100" value="<?php echo esc_attr((string) ($selected['registration_number'] ?? '')); ?>"></label><label><?php echo esc_html__('Tax / VAT number', 'safecontracts'); ?><input name="tax_number" maxlength="100" value="<?php echo esc_attr((string) ($selected['tax_number'] ?? '')); ?>"></label></div>
-                        <div class="safecontracts-field-row"><label><?php echo esc_html__('Default currency', 'safecontracts'); ?><input name="default_currency" maxlength="3" pattern="[A-Za-z]{3}" placeholder="KWD" value="<?php echo esc_attr((string) ($selected['default_currency'] ?? '')); ?>"></label><label><?php echo esc_html__('Payment terms', 'safecontracts'); ?><input name="payment_terms" maxlength="191" placeholder="<?php echo esc_attr__('e.g. Net 30', 'safecontracts'); ?>" value="<?php echo esc_attr((string) ($selected['payment_terms'] ?? '')); ?>"></label></div>
+                        <div class="safecontracts-field-row"><label><?php echo esc_html__('Default currency', 'safecontracts'); ?><select name="default_currency"><option value=""><?php echo esc_html__('Select currency', 'safecontracts'); ?></option><?php foreach ($currencyChoices as $currencyChoice) : ?><option value="<?php echo esc_attr($currencyChoice); ?>" <?php selected($selectedCurrency, $currencyChoice); ?>><?php echo esc_html($currencyChoice); ?></option><?php endforeach; ?></select></label><label><?php echo esc_html__('Payment terms', 'safecontracts'); ?><input name="payment_terms" maxlength="191" placeholder="<?php echo esc_attr__('e.g. Net 30', 'safecontracts'); ?>" value="<?php echo esc_attr((string) ($selected['payment_terms'] ?? '')); ?>"></label></div>
                         <p><label><?php echo esc_html__('Address', 'safecontracts'); ?><textarea class="widefat" rows="3" name="address"><?php echo esc_textarea((string) ($selected['address'] ?? '')); ?></textarea></label></p>
                         <p><label><?php echo esc_html__('Notes', 'safecontracts'); ?><textarea class="widefat" rows="4" name="notes"><?php echo esc_textarea((string) ($selected['notes'] ?? '')); ?></textarea></label></p>
                         <?php submit_button($selected ? __('Save supplier', 'safecontracts') : __('Create supplier', 'safecontracts')); ?>
