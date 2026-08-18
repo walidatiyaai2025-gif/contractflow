@@ -111,7 +111,8 @@ sc_prod_ux_assert(str_contains($usersRoles, 'CapabilityPresentation::description
 
 $adminDir = $root . '/wordpress-plugin/safecontracts/src/Admin';
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($adminDir));
-$lookupNamePattern = '(?:user|customer|supplier|contract|payment|collection|accountant|counterparty|method)_id';
+$lookupNamePattern = '/(?:^|[^a-z0-9_])(?:user|customer|supplier|contract|payment|collection|accountant|counterparty|method)_id(?:\[\])?(?:[^a-z0-9_]|$)/i';
+$controlledCodeNames = ['currency_code', 'default_currency', 'country_code'];
 foreach ($iterator as $file) {
     if (! $file instanceof SplFileInfo || ! $file->isFile() || strtolower($file->getExtension()) !== 'php') {
         continue;
@@ -120,11 +121,44 @@ foreach ($iterator as $file) {
     if (! is_string($source)) {
         continue;
     }
-    $hasRawLookupNumber = preg_match(
-        '/<input\b(?=[^>]*type=["\']number["\'])(?=[^>]*name=["\'][^"\']*' . $lookupNamePattern . '[^"\']*["\'])[^>]*>/i',
+
+    preg_match_all('/<input\b[^>]*>/i', $source, $inputMatches);
+    foreach ($inputMatches[0] ?? [] as $inputTag) {
+        $name = '';
+        if (preg_match('/\bname=["\']([^"\']+)["\']/i', $inputTag, $nameMatch) === 1) {
+            $name = (string) $nameMatch[1];
+        }
+        if ($name === '') {
+            continue;
+        }
+        $type = 'text';
+        if (preg_match('/\btype=["\']([^"\']+)["\']/i', $inputTag, $typeMatch) === 1) {
+            $type = strtolower((string) $typeMatch[1]);
+        }
+
+        if (preg_match($lookupNamePattern, $name) === 1) {
+            sc_prod_ux_assert(
+                $type === 'hidden',
+                'admin relationship IDs may only be hidden transport fields; users must choose a lookup: ' . $file->getFilename() . ' :: ' . $name
+            );
+        }
+
+        if (in_array($name, $controlledCodeNames, true)) {
+            sc_prod_ux_assert(
+                $type === 'hidden',
+                'finite business codes must use controlled selects, never free-text inputs: ' . $file->getFilename() . ' :: ' . $name
+            );
+        }
+    }
+
+    $hasRawIdFallback = preg_match(
+        '/["\']#["\']\s*\.\s*\$[A-Za-z_][A-Za-z0-9_]*(?:Id|_id|id)\b/',
         $source
     ) === 1;
-    sc_prod_ux_assert(! $hasRawLookupNumber, 'admin lookup IDs are selected, never typed as number inputs: ' . $file->getFilename());
+    sc_prod_ux_assert(
+        ! $hasRawIdFallback,
+        'admin end-user labels must never fall back to #<internal id>: ' . $file->getFilename()
+    );
 }
 
 $mobileDir = $root . '/mobile/lib';
