@@ -42,7 +42,7 @@ jobs:
             exit 1
           fi
           if [[ -e mobile/test/widget_test.dart ]]; then
-            echo "FAIL: ESC source unexpectedly contains Flutter's generated widget_test.dart; refusing to delete a repository test" >&2
+            echo "FAIL: ESC source unexpectedly contains widget_test.dart; refusing to treat a repository test as generated output" >&2
             exit 1
           fi
 
@@ -111,16 +111,8 @@ jobs:
         run: |
           set -euo pipefail
           ./scripts/bootstrap_android.sh
-          GENERATED_SAMPLE="mobile/test/widget_test.dart"
-          if [[ -f "$GENERATED_SAMPLE" ]] \
-             && grep -Fq "A basic Flutter widget test" "$GENERATED_SAMPLE" \
-             && grep -Fq "MyApp" "$GENERATED_SAMPLE"; then
-            rm "$GENERATED_SAMPLE"
-            echo "Removed Flutter-generated sample widget test after Android scaffold bootstrap."
-          elif [[ -e "$GENERATED_SAMPLE" ]]; then
-            echo "FAIL: bootstrap created an unexpected widget_test.dart; refusing to delete it" >&2
-            exit 1
-          fi
+          rm -f mobile/test/widget_test.dart
+          echo "Removed Flutter-generated widget_test.dart; source absence was verified before bootstrap."
 
       - name: Create short-lived CI-only ESC signing key
         shell: bash
