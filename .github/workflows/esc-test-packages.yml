@@ -1,0 +1,227 @@
+name: ESC Test Packages
+
+on:
+  push:
+    branches: [agent/esc-test-packages]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ESC_TEST_API_BASE_URL: https://esc.50sols.com/wp-json/safecontracts/v1/
+  ESC_APPLICATION_ID: com.safecontracts.enterprise
+  SAFE_CONTRACT_APPLICATION_ID: com.safecontracts.safecontracts_mobile
+
+jobs:
+  esc-test-packages:
+    name: esc-test-packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enforce ESC product-line isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_esc_android_isolation.py
+          test "$ESC_TEST_API_BASE_URL" = "https://esc.50sols.com/wp-json/safecontracts/v1/"
+          if grep -R -n -F "cms.50sols.com" mobile/lib mobile/config 2>/dev/null; then
+            echo "FAIL: ESC mobile source/config contains the SafeContracts/Alkenzy ADV cms.50sols.com host" >&2
+            exit 1
+          fi
+
+      - name: Build deterministic ESC plugin ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          python3 scripts/package_plugin.py build --output dist/EnterpriseSafeContracts-plugin-TEST.zip
+          python3 scripts/package_plugin.py check dist/EnterpriseSafeContracts-plugin-TEST.zip
+
+      - name: Build deterministic ESC theme ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 wordpress-theme/package_theme.py build --output dist/EnterpriseSafeContracts-theme-TEST.zip
+          python3 wordpress-theme/package_theme.py check dist/EnterpriseSafeContracts-theme-TEST.zip
+
+      - name: Create CI-only ESC Firebase identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          FIREBASE_DIR="$RUNNER_TEMP/esc-ci-firebase"
+          mkdir -p "$FIREBASE_DIR"
+          python3 - "$FIREBASE_DIR" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          out = Path(sys.argv[1])
+          configs = (
+              ("dev", "com.safecontracts.enterprise.dev", "1:900000000001:android:escdev0000000001", "900000000001"),
+              ("staging", "com.safecontracts.enterprise.staging", "1:900000000002:android:escstg0000000002", "900000000002"),
+              ("production", "com.safecontracts.enterprise", "1:900000000003:android:escprd0000000003", "900000000003"),
+          )
+          for flavor, package, app_id, sender in configs:
+              payload = {
+                  "project_info": {
+                      "project_number": sender,
+                      "project_id": f"esc-ci-{flavor}",
+                      "storage_bucket": f"esc-ci-{flavor}.invalid",
+                  },
+                  "client": [
+                      {
+                          "client_info": {
+                              "mobilesdk_app_id": app_id,
+                              "android_client_info": {"package_name": package},
+                          },
+                          "api_key": [{"current_key": f"ESC_CI_ONLY_{flavor.upper()}"}],
+                      }
+                  ],
+                  "configuration_version": "1",
+              }
+              (out / f"{flavor}-google-services.json").write_text(
+                  json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+              )
+          PY
+          {
+            echo "ESC_FIREBASE_ANDROID_CONFIG_DEV=$FIREBASE_DIR/dev-google-services.json"
+            echo "ESC_FIREBASE_ANDROID_CONFIG_STAGING=$FIREBASE_DIR/staging-google-services.json"
+            echo "ESC_FIREBASE_ANDROID_CONFIG_PRODUCTION=$FIREBASE_DIR/production-google-services.json"
+          } >> "$GITHUB_ENV"
+
+      - name: Bootstrap isolated ESC Android platform
+        shell: bash
+        run: ./scripts/bootstrap_android.sh
+
+      - name: Create short-lived CI-only ESC signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE="$RUNNER_TEMP/esc-ci-test.p12"
+          keytool -genkeypair -v \
+            -keystore "$KEYSTORE" \
+            -storetype PKCS12 \
+            -storepass esc-test-only \
+            -keypass esc-test-only \
+            -alias esc-ci-test \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 2 \
+            -dname "CN=Enterprise Safe Contracts CI Test, OU=CI, O=50 Solutions, L=CI, ST=CI, C=US"
+          {
+            echo "ESC_ANDROID_KEYSTORE_PATH=$KEYSTORE"
+            echo "ESC_ANDROID_KEYSTORE_PASSWORD=esc-test-only"
+            echo "ESC_ANDROID_KEY_ALIAS=esc-ci-test"
+            echo "ESC_ANDROID_KEY_PASSWORD=esc-test-only"
+          } >> "$GITHUB_ENV"
+
+      - name: Run ESC mobile quality checks
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          dart format --output=none --set-exit-if-changed lib test
+          flutter analyze
+          flutter test
+
+      - name: Build ESC test APK for esc.50sols.com
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --flavor production --release \
+            --dart-define=ESC_ENV=production \
+            --dart-define=ESC_API_BASE_URL="$ESC_TEST_API_BASE_URL"
+
+      - name: Verify ESC APK identity endpoint and separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="mobile/build/app/outputs/flutter-apk/app-production-release.apk"
+          test -s "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -x "$AAPT"
+          test -x "$APKSIGNER"
+          BADGING="$($AAPT dump badging "$APK")"
+          grep -Fq "package: name='$ESC_APPLICATION_ID'" <<<"$BADGING"
+          if grep -Fq "package: name='$SAFE_CONTRACT_APPLICATION_ID'" <<<"$BADGING"; then
+            echo "FAIL: ESC test APK resolved to the SafeContracts/Alkenzy ADV package" >&2
+            exit 1
+          fi
+          "$APKSIGNER" verify --verbose "$APK"
+          python3 scripts/verify_esc_android_isolation.py --esc-apk "$APK" --aapt "$AAPT"
+
+          TMP_STRINGS="$RUNNER_TEMP/esc-apk-strings.txt"
+          while IFS= read -r so; do
+            unzip -p "$APK" "$so" | strings >> "$TMP_STRINGS"
+          done < <(unzip -Z1 "$APK" | grep -E '^lib/.+/libapp\.so$')
+          grep -Fq "esc.50sols.com" "$TMP_STRINGS"
+          if grep -Fq "cms.50sols.com" "$TMP_STRINGS"; then
+            echo "FAIL: ESC test APK contains the SafeContracts/Alkenzy ADV cms.50sols.com host" >&2
+            exit 1
+          fi
+
+          cp "$APK" dist/EnterpriseSafeContracts-TEST-esc.50sols.com.apk
+
+      - name: Write ESC test provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum \
+            dist/EnterpriseSafeContracts-plugin-TEST.zip \
+            dist/EnterpriseSafeContracts-theme-TEST.zip \
+            dist/EnterpriseSafeContracts-TEST-esc.50sols.com.apk \
+            > dist/SHA256SUMS.txt
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          record = {
+              "schema_version": 1,
+              "product_line": "Enterprise Safe Contracts (ESC)",
+              "source_branch": os.environ.get("GITHUB_REF_NAME", ""),
+              "source_sha": os.environ.get("GITHUB_SHA", ""),
+              "api_base_url": "https://esc.50sols.com/wp-json/safecontracts/v1/",
+              "application_id": "com.safecontracts.enterprise",
+              "safecontracts_product_name": "Alkenzy ADV",
+              "safecontracts_api_host": "cms.50sols.com",
+              "release_eligible": False,
+              "signing": "short-lived CI-only test key",
+              "firebase": "CI-only isolated placeholder identities; production FCM is not certified by this artifact",
+              "purpose": "ESC API/UI installation testing only",
+          }
+          Path("dist/ESC-TEST-PROVENANCE.json").write_text(
+              json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+          )
+          PY
+          cat > dist/README-TEST.txt <<'EOF'
+          Enterprise Safe Contracts (ESC) TEST package set.
+          ESC API: https://esc.50sols.com/wp-json/safecontracts/v1/
+          Android package: com.safecontracts.enterprise
+          SafeContracts is a separate product named Alkenzy ADV and uses cms.50sols.com.
+          This APK uses a short-lived CI-only signing key and CI-only isolated Firebase placeholders.
+          It is for installation/API/UI testing only and must not be promoted as a stable production APK.
+          Stable ESC publication remains governed by the protected-branch, production-signing, Firebase and physical-device UAT controls.
+          EOF
+
+      - name: Upload isolated ESC test packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-test-packages
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
