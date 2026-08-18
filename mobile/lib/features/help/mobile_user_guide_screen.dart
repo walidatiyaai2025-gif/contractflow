@@ -40,10 +40,11 @@ final class MobileUserGuideScreen extends StatelessWidget {
                   children: [
                     Text(
                       mobileGuideText(l10n, 'How to use Alkenzy ADV'),
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: SafeContractsVisual.ink,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: SafeContractsVisual.ink,
+                                fontWeight: FontWeight.w800,
+                              ),
                     ),
                     const SizedBox(height: 8),
                     Text(
