@@ -23,11 +23,18 @@ use SafeContracts\Database\Migrations\Migration0016MobileCrudCapabilities;
 use SafeContracts\Database\Migrations\Migration0017CounterpartySupplierApar;
 use SafeContracts\Database\Migrations\Migration0018SupplierFinanceReconciliation;
 use RuntimeException;
+use Throwable;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
     public const LATEST_VERSION = '1.17.0';
+
+    /**
+     * All migrations introduced after this already-released baseline must use
+     * ProductionMigration so preflight, verification and rollback are explicit.
+     */
+    public const PRODUCTION_GUARD_BASELINE = '1.17.0';
 
     /** @var array<string, class-string<Migration>> */
     private const MIGRATIONS = [
@@ -51,11 +58,30 @@ final class Migrator
         '1.17.0' => Migration0018SupplierFinanceReconciliation::class,
     ];
 
+    /** @var array<string, class-string<Migration>> */
+    private array $migrations;
+    private MigrationGuard $guard;
+    private string $latestVersion;
+
+    /**
+     * @param array<string, class-string<Migration>>|null $migrations
+     */
+    public function __construct(
+        ?array $migrations = null,
+        ?MigrationGuard $guard = null,
+        ?string $latestVersion = null
+    ) {
+        $this->migrations = $migrations ?? self::MIGRATIONS;
+        $this->guard = $guard ?? new MigrationGuard();
+        $this->latestVersion = $latestVersion ?? self::LATEST_VERSION;
+    }
+
     public function maybeMigrate(): void
     {
         $current = (string) get_option(self::VERSION_OPTION, '0.0.0');
+        $this->guard->assertDatabaseCompatible($current, $this->latestVersion);
 
-        if (version_compare($current, self::LATEST_VERSION, '<')) {
+        if (version_compare($current, $this->latestVersion, '<')) {
             $this->migrate();
         }
     }
@@ -69,21 +95,91 @@ final class Migrator
         }
 
         $current = (string) get_option(self::VERSION_OPTION, '0.0.0');
+        $this->guard->assertDatabaseCompatible($current, $this->latestVersion);
 
-        foreach (self::MIGRATIONS as $version => $migrationClass) {
-            if (version_compare($current, $version, '>=')) {
-                continue;
-            }
-
-            /** @var Migration $migration */
-            $migration = new $migrationClass();
-            $migration->up($wpdb);
-
-            update_option(self::VERSION_OPTION, $version, false);
-            update_option('safecontracts_db_migrated_at', gmdate('c'), false);
-            $current = $version;
-
-            do_action('safecontracts_database_migrated', $version);
+        if (version_compare($current, $this->latestVersion, '>=')) {
+            return;
         }
+
+        $this->guard->withLock(function () use ($wpdb, &$current): void {
+            // Re-read after acquiring the single-writer lock in case another
+            // request completed the migration immediately before this one.
+            $current = (string) get_option(self::VERSION_OPTION, '0.0.0');
+            $this->guard->assertDatabaseCompatible($current, $this->latestVersion);
+
+            foreach ($this->migrations as $version => $migrationClass) {
+                if (version_compare($version, $this->latestVersion, '>')) {
+                    continue;
+                }
+                if (version_compare($current, $version, '>=')) {
+                    continue;
+                }
+
+                $fromVersion = $current;
+                $runId = $this->guard->startMigration($fromVersion, $version, $migrationClass);
+                $rollbackStatus = 'not_supported';
+
+                /** @var Migration $migration */
+                $migration = new $migrationClass();
+
+                try {
+                    if (version_compare($version, self::PRODUCTION_GUARD_BASELINE, '>') && ! $migration instanceof ProductionMigration) {
+                        throw new RuntimeException(sprintf(
+                            'Migration %s (%s) must implement ProductionMigration before it can run in production.',
+                            $migrationClass,
+                            $version
+                        ));
+                    }
+
+                    if ($migration instanceof ProductionMigration) {
+                        $rollbackStatus = 'not_required';
+                        $migration->preflight($wpdb);
+                    }
+
+                    $migration->up($wpdb);
+
+                    if ($migration instanceof ProductionMigration) {
+                        $migration->verify($wpdb);
+                    }
+
+                    if (! update_option(self::VERSION_OPTION, $version, false)) {
+                        throw new RuntimeException('SafeContracts could not persist the migrated database version.');
+                    }
+                    update_option('safecontracts_db_migrated_at', gmdate('c'), false);
+
+                    $this->guard->markSucceeded($runId, $fromVersion, $version, $migrationClass);
+                    $current = $version;
+                    do_action('safecontracts_database_migrated', $version);
+                } catch (Throwable $error) {
+                    if ($migration instanceof ProductionMigration) {
+                        try {
+                            $migration->rollback($wpdb);
+                            $rollbackStatus = 'succeeded';
+                        } catch (Throwable) {
+                            $rollbackStatus = 'failed_restore_backup_required';
+                        }
+                    }
+
+                    $this->guard->markFailed(
+                        $runId,
+                        $fromVersion,
+                        $version,
+                        $migrationClass,
+                        $error,
+                        $rollbackStatus
+                    );
+
+                    throw new RuntimeException(
+                        sprintf(
+                            'SafeContracts migration to %s failed. Database version remains %s. Review migration recovery evidence before retrying.',
+                            $version,
+                            $fromVersion
+                        ),
+                        0,
+                        $error
+                    );
+                }
+            }
+        });
     }
 }
