@@ -24,6 +24,26 @@ Before installing a plugin package that contains a database migration:
 - Put the deployment into a controlled maintenance window. Do not allow parallel plugin updates or migration attempts.
 - Run the normal Quality Gates and production release-readiness checks on the exact artifact that will be deployed.
 
+### Read-only preflight evidence collector
+
+From the production WordPress root, run the repository collector through WP-CLI before changing the plugin:
+
+```bash
+wp eval-file /path/to/contractflow/scripts/collect_alkenzy_production_preflight.php > safecontracts-preflight-before.json
+```
+
+The collector is intentionally read-only. It does not acquire the migration lock and does not add, update or delete WordPress options. It reports the running plugin version, current/target database versions, database compatibility, migration-lock state without the lock token, unresolved migration-failure state, and a bounded tail of the migration journal.
+
+Exit code `0` means no database compatibility, active-lock or unresolved-failure blocker was found. Exit code `3` means deployment must stop and the reported blocker must be resolved first. Exit code `2` means WordPress/SafeContracts was not available to the collector or evidence encoding failed.
+
+The collector does **not** prove that a backup exists and does not replace backup/rollback evidence. Keep the generated JSON together with the backup identifier, backup checksum/size/timestamp/storage location, current rollback plugin artifact, exact target plugin SHA-256 and deployment-window evidence.
+
+Run the same collector again after deployment and retain the second JSON as post-deployment migration evidence:
+
+```bash
+wp eval-file /path/to/contractflow/scripts/collect_alkenzy_production_preflight.php > safecontracts-preflight-after.json
+```
+
 ## Runtime migration guard
 
 The plugin enforces the following sequence:
