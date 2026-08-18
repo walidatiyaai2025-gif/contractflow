@@ -20,6 +20,24 @@ void main() {
       );
     });
 
+    test('derives same-origin WordPress query REST fallback', () {
+      final environment = AppEnvironment.fromValues(
+        name: 'production',
+        apiBaseUrl: 'https://esc.50sols.com/wp-json/safecontracts/v1/',
+      );
+
+      final fallback = environment.wordpressQueryEndpoint('session');
+
+      expect(fallback, isNotNull);
+      expect(fallback!.scheme, 'https');
+      expect(fallback.host, 'esc.50sols.com');
+      expect(fallback.path, '/');
+      expect(
+        fallback.queryParameters['rest_route'],
+        '/safecontracts/v1/session',
+      );
+    });
+
     test('requires HTTPS in production', () {
       expect(
         () => AppEnvironment.fromValues(
