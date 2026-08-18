@@ -104,7 +104,7 @@ sc_prod_ux_assert(is_string($usersRoles), 'UsersRolesPage source is readable');
 $usersRoles = is_string($usersRoles) ? $usersRoles : '';
 sc_prod_ux_assert(! str_contains($usersRoles, '<code><?php echo esc_html($capability); ?></code>'), 'users/roles UI never renders raw capability codes');
 sc_prod_ux_assert(! str_contains($usersRoles, '<code><?php echo esc_html($slug); ?></code>'), 'users/roles UI never renders raw role slugs');
-sc_prod_ux_assert(! str_contains($usersRoles, "return '#' . $id"), 'user labels do not expose internal numeric user IDs');
+sc_prod_ux_assert(! str_contains($usersRoles, "return '#' . \$id"), 'user labels do not expose internal numeric user IDs');
 sc_prod_ux_assert(str_contains($usersRoles, 'CapabilityPresentation::label($capability)'), 'users/roles uses friendly permission labels');
 sc_prod_ux_assert(str_contains($usersRoles, 'CapabilityPresentation::description($capability)'), 'users/roles explains each permission');
 
@@ -125,6 +125,26 @@ foreach ($iterator as $file) {
     ) === 1;
     sc_prod_ux_assert(! $hasRawLookupNumber, 'admin lookup IDs are selected, never typed as number inputs: ' . $file->getFilename());
 }
+
+$mobileDir = $root . '/mobile/lib';
+$mobileIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($mobileDir));
+$mobileLookupLabelPattern = '/labelText\s*:\s*l10n\.t\(\s*["\'][^"\']*(?:user|customer|supplier|contract|payment|collection|accountant|counterparty|media|method)\s+(?:user\s+)?ID\b[^"\']*["\']/i';
+foreach ($mobileIterator as $file) {
+    if (! $file instanceof SplFileInfo || ! $file->isFile() || strtolower($file->getExtension()) !== 'dart') {
+        continue;
+    }
+    $source = file_get_contents($file->getPathname());
+    if (! is_string($source)) {
+        continue;
+    }
+    sc_prod_ux_assert(
+        preg_match($mobileLookupLabelPattern, $source) !== 1,
+        'mobile lookup IDs are selected by business label, never typed as raw IDs: ' . $file->getFilename()
+    );
+}
+
+$collectionDialog = file_get_contents($root . '/mobile/lib/features/payments/collection_entry_dialog.dart');
+sc_prod_ux_assert(is_string($collectionDialog) && ! str_contains($collectionDialog, 'Proof media ID (optional)'), 'mobile collection form does not ask users for WordPress media IDs');
 
 $guideSource = file_get_contents($root . '/wordpress-plugin/safecontracts/src/Translations/UserGuideTranslationSources.php');
 sc_prod_ux_assert(is_string($guideSource) && str_contains($guideSource, "__('The User Guide explains every Alkenzy ADV area"), 'guide wording is statically discoverable by translation catalog');
