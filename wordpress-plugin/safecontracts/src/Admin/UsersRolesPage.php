@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Roles\CapabilityPresentation;
 use SafeContracts\Roles\RoleRegistrar;
 use Throwable;
 
@@ -94,11 +95,12 @@ final class UsersRolesPage
             <?php AdminSummaryCards::render([
                 ['label' => __('Safe Contracts roles', 'safecontracts'), 'value' => count($definitions)],
                 ['label' => __('WordPress users', 'safecontracts'), 'value' => is_array($allUsers) ? count($allUsers) : 0],
-                ['label' => __('Editable capabilities', 'safecontracts'), 'value' => count(Capabilities::all())],
+                ['label' => __('Available permissions', 'safecontracts'), 'value' => count(Capabilities::all())],
             ]); ?>
 
             <section class="safecontracts-admin-card safecontracts-settings-card">
                 <h2><?php echo esc_html__('Assign Safe Contracts role to user', 'safecontracts'); ?></h2>
+                <p class="description"><?php echo esc_html__('Choose a user and a business role from the lists below. Internal user IDs and permission codes are handled by the system and are not required from the administrator.', 'safecontracts'); ?></p>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="<?php echo esc_attr(self::ASSIGN_ROLE_ACTION); ?>"><?php wp_nonce_field(self::ASSIGN_ROLE_ACTION); ?>
                     <div class="safecontracts-field-row">
@@ -119,13 +121,22 @@ final class UsersRolesPage
                 ?>
                 <section class="safecontracts-admin-card">
                     <h2><?php echo esc_html($label); ?></h2>
-                    <p><code><?php echo esc_html($slug); ?></code> · <?php echo esc_html(sprintf(__('%d users', 'safecontracts'), count($users))); ?></p>
+                    <p><?php echo esc_html(sprintf(__('%d users', 'safecontracts'), count($users))); ?></p>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_CAPABILITIES_ACTION); ?>"><input type="hidden" name="role_slug" value="<?php echo esc_attr($slug); ?>"><?php wp_nonce_field(self::SAVE_CAPABILITIES_ACTION); ?>
-                        <h3><?php echo esc_html__('Effective Safe Contracts capabilities', 'safecontracts'); ?></h3>
+                        <h3><?php echo esc_html__('Business permissions', 'safecontracts'); ?></h3>
+                        <p class="description"><?php echo esc_html__('Select the business actions this role may perform. Technical permission codes remain internal to the system.', 'safecontracts'); ?></p>
                         <div class="safecontracts-capability-list">
-                        <?php foreach (Capabilities::all() as $capability) : ?>
-                            <label class="safecontracts-check-row"><input type="checkbox" name="capabilities[]" value="<?php echo esc_attr($capability); ?>" <?php checked(! empty($grants[$capability])); ?>><code><?php echo esc_html($capability); ?></code></label>
+                        <?php foreach (self::groupedCapabilities() as $group => $items) : ?>
+                            <div class="safecontracts-capability-group">
+                                <h4><?php echo esc_html($group); ?></h4>
+                                <?php foreach ($items as $capability => $presentation) : ?>
+                                    <label class="safecontracts-check-row">
+                                        <input type="checkbox" name="capabilities[]" value="<?php echo esc_attr($capability); ?>" <?php checked(! empty($grants[$capability])); ?>>
+                                        <span><strong><?php echo esc_html($presentation['label']); ?></strong><br><span class="description"><?php echo esc_html($presentation['description']); ?></span></span>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
                         <?php endforeach; ?>
                         </div>
                         <?php submit_button(__('Save role permissions', 'safecontracts'), 'secondary'); ?>
@@ -149,23 +160,31 @@ final class UsersRolesPage
         ];
     }
 
+    /** @return array<string,array<string,array{group:string,label:string,description:string}>> */
+    private static function groupedCapabilities(): array
+    {
+        $groups = [];
+        foreach (Capabilities::all() as $capability) {
+            $presentation = CapabilityPresentation::describe($capability);
+            $groups[$presentation['group']][$capability] = $presentation;
+        }
+        return $groups;
+    }
+
     private static function userLabel(mixed $user): string
     {
         if (is_object($user)) {
-            $id = isset($user->ID) ? (int) $user->ID : 0;
             $name = isset($user->display_name) ? (string) $user->display_name : '';
             $email = isset($user->user_email) ? (string) $user->user_email : '';
         } elseif (is_array($user)) {
-            $id = (int) ($user['ID'] ?? $user['id'] ?? 0);
             $name = (string) ($user['display_name'] ?? $user['name'] ?? '');
             $email = (string) ($user['user_email'] ?? $user['email'] ?? '');
         } else {
-            $id = (int) $user;
             $name = '';
             $email = '';
         }
         $identity = trim($name . ($email !== '' ? ' — ' . $email : ''));
-        return '#' . $id . ($identity !== '' ? ' · ' . $identity : '');
+        return $identity !== '' ? $identity : __('Unnamed user', 'safecontracts');
     }
 
     private static function requireManage(): void
