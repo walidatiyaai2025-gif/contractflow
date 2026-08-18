@@ -72,8 +72,10 @@ void main() {
 
       expect(apiObjectMap(envelope.data, 'data')['ok'], isTrue);
       expect(transport.requests, hasLength(1));
-      expect(transport.requests.single.uri.path, '/wp-json/safecontracts/v1/health');
-      expect(transport.requests.single.uri.queryParameters['rest_route'], isNull);
+      expect(transport.requests.single.uri.path,
+          '/wp-json/safecontracts/v1/health');
+      expect(
+          transport.requests.single.uri.queryParameters['rest_route'], isNull);
     });
 
     test('200 HTML pretty route retries once through WordPress rest_route',
@@ -218,8 +220,10 @@ void main() {
       expect(fallback.body, first.body);
       expect(jsonDecode(fallback.body!)['username'], 'esc-user');
       expect(fallback.headers['Authorization'], 'Bearer existing-token');
-      expect(fallback.headers[SafeContractsApiClient.enterpriseTenantHeader], '7');
-      expect(fallback.headers['Content-Type'], 'application/json; charset=utf-8');
+      expect(
+          fallback.headers[SafeContractsApiClient.enterpriseTenantHeader], '7');
+      expect(
+          fallback.headers['Content-Type'], 'application/json; charset=utf-8');
       expect(fallback.uri.host, first.uri.host);
       expect(fallback.uri.scheme, first.uri.scheme);
       expect(
