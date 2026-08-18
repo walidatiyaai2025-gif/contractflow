@@ -35,42 +35,6 @@ final class AdminLookupOptions
         'SAR', 'SEK', 'SGD', 'THB', 'TND', 'TRY', 'UAH', 'USD', 'ZAR',
     ];
 
-    /** @var array<string,string> */
-    private const BUSINESS_COUNTRIES = [
-        'AE' => 'United Arab Emirates',
-        'AU' => 'Australia',
-        'BH' => 'Bahrain',
-        'CA' => 'Canada',
-        'CH' => 'Switzerland',
-        'CN' => 'China',
-        'DE' => 'Germany',
-        'DZ' => 'Algeria',
-        'EG' => 'Egypt',
-        'ES' => 'Spain',
-        'FR' => 'France',
-        'GB' => 'United Kingdom',
-        'IN' => 'India',
-        'IQ' => 'Iraq',
-        'IT' => 'Italy',
-        'JO' => 'Jordan',
-        'JP' => 'Japan',
-        'KW' => 'Kuwait',
-        'LB' => 'Lebanon',
-        'MA' => 'Morocco',
-        'MY' => 'Malaysia',
-        'NL' => 'Netherlands',
-        'NZ' => 'New Zealand',
-        'OM' => 'Oman',
-        'PK' => 'Pakistan',
-        'QA' => 'Qatar',
-        'SA' => 'Saudi Arabia',
-        'SG' => 'Singapore',
-        'TN' => 'Tunisia',
-        'TR' => 'Türkiye',
-        'US' => 'United States',
-        'ZA' => 'South Africa',
-    ];
-
     /** @return list<array{ref:string,type:string,id:int,label:string}> */
     public static function counterparties(?AdminReadRepository $read = null): array
     {
@@ -218,14 +182,48 @@ final class AdminLookupOptions
     }
 
     /**
-     * Controlled country choices. The selected legacy value is preserved even
-     * when it is outside the built-in business list.
+     * Controlled, translated country choices. The selected legacy value is
+     * preserved even when it is outside the built-in business list.
      *
      * @return array<string,string>
      */
     public static function countryChoices(string $selected = ''): array
     {
-        $countries = self::BUSINESS_COUNTRIES;
+        $countries = [
+            'AE' => __('United Arab Emirates', 'safecontracts'),
+            'AU' => __('Australia', 'safecontracts'),
+            'BH' => __('Bahrain', 'safecontracts'),
+            'CA' => __('Canada', 'safecontracts'),
+            'CH' => __('Switzerland', 'safecontracts'),
+            'CN' => __('China', 'safecontracts'),
+            'DE' => __('Germany', 'safecontracts'),
+            'DZ' => __('Algeria', 'safecontracts'),
+            'EG' => __('Egypt', 'safecontracts'),
+            'ES' => __('Spain', 'safecontracts'),
+            'FR' => __('France', 'safecontracts'),
+            'GB' => __('United Kingdom', 'safecontracts'),
+            'IN' => __('India', 'safecontracts'),
+            'IQ' => __('Iraq', 'safecontracts'),
+            'IT' => __('Italy', 'safecontracts'),
+            'JO' => __('Jordan', 'safecontracts'),
+            'JP' => __('Japan', 'safecontracts'),
+            'KW' => __('Kuwait', 'safecontracts'),
+            'LB' => __('Lebanon', 'safecontracts'),
+            'MA' => __('Morocco', 'safecontracts'),
+            'MY' => __('Malaysia', 'safecontracts'),
+            'NL' => __('Netherlands', 'safecontracts'),
+            'NZ' => __('New Zealand', 'safecontracts'),
+            'OM' => __('Oman', 'safecontracts'),
+            'PK' => __('Pakistan', 'safecontracts'),
+            'QA' => __('Qatar', 'safecontracts'),
+            'SA' => __('Saudi Arabia', 'safecontracts'),
+            'SG' => __('Singapore', 'safecontracts'),
+            'TN' => __('Tunisia', 'safecontracts'),
+            'TR' => __('Türkiye', 'safecontracts'),
+            'US' => __('United States', 'safecontracts'),
+            'ZA' => __('South Africa', 'safecontracts'),
+        ];
+
         $selected = strtoupper(trim($selected));
         if (preg_match('/^[A-Z]{2}$/', $selected) === 1 && ! isset($countries[$selected])) {
             $countries[$selected] = $selected;
