@@ -74,7 +74,7 @@ final class UserGuidePage
                         <h2><?php echo esc_html((string) $entry['title']); ?></h2>
                         <?php self::renderEntryBody($entry, false); ?>
                         <?php if ($slug !== self::SLUG) : ?>
-                            <p><a class="button" href="<?php echo esc_url(self::pageUrl((string) $slug)); ?>"><?php echo esc_html(sprintf(__('Open %s', 'safecontracts'), (string) $entry['title'])); ?></a></p>
+                            <p><a class="button" href="<?php echo esc_url(self::pageUrl((string) $slug)); ?>"><?php echo esc_html(__('Open', 'safecontracts') . ' ' . (string) $entry['title']); ?></a></p>
                         <?php endif; ?>
                     </section>
                 <?php endforeach; ?>
