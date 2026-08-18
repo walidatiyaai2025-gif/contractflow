@@ -72,9 +72,10 @@ sc_p11_assert(is_callable($activate), 'P11 activation hook is available');
 $GLOBALS['sc_test_options']['safecontracts_general_settings'] = ['currency_code' => 'KWD'];
 $activate();
 
-sc_p11_assert(Migrator::LATEST_VERSION === '1.16.0', 'P11 migration is the current schema version');
+sc_p11_assert(Migrator::LATEST_VERSION === '1.17.0', 'P11 reconciliation migration is the current schema version');
 $schema = implode("\n---\n", $GLOBALS['sc_test_dbdelta']);
 sc_p11_assert(str_contains($schema, 'wp_safecontracts_suppliers'), 'P11 creates dedicated supplier master data');
+sc_p11_assert(str_contains($schema, 'legal_name varchar(191) NULL'), 'P11 reconciliation adds the rich Supplier profile additively');
 sc_p11_assert(str_contains($schema, 'customer_id bigint(20) unsigned NULL'), 'legacy customer bridge becomes nullable');
 sc_p11_assert(str_contains($schema, 'counterparty_type varchar(16) NULL') && str_contains($schema, 'counterparty_id bigint(20) unsigned NULL'), 'contracts persist explicit counterparty identity');
 sc_p11_assert(str_contains($schema, 'financial_direction varchar(16) NULL') && str_contains($schema, 'currency_code char(3) NULL'), 'financial rows persist AP/AR direction and currency');
@@ -235,6 +236,6 @@ sc_p11_assert(is_array($GLOBALS['sc_test_routes']['safecontracts/v1/finance/summ
 
 $dbDeltaCount = count($GLOBALS['sc_test_dbdelta']);
 do_action('plugins_loaded');
-sc_p11_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'P11 migration is idempotent after 1.16.0');
+sc_p11_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'P11 migration is idempotent after 1.17.0');
 
 echo "SafeContracts P11 counterparty/supplier/AP-AR tests passed ({$p11Tests} assertions).\n";

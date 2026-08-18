@@ -12,11 +12,19 @@ use Throwable;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
+use WP_REST_Server;
 
 final class CounterpartyContractsController
 {
     public static function register(): void
     {
+        // Canonical POST /contracts is registered by DataController. Keep this
+        // explicit create alias for mobile clients released during SC-P11.
+        register_rest_route(Router::NAMESPACE, '/contracts/create', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [self::class, 'create'],
+            'permission_callback' => [self::class, 'canCreate'],
+        ]);
         register_rest_route(Router::NAMESPACE, '/contracts/(?P<id>\d+)/counterparty', [
             'methods' => 'PATCH',
             'callback' => [self::class, 'assign'],

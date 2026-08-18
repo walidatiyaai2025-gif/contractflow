@@ -67,10 +67,7 @@ final class _ContractsScreenState extends State<ContractsScreen> {
 }
 
 final class _ContractsToolbar extends StatelessWidget {
-  const _ContractsToolbar({
-    required this.controller,
-    required this.customers,
-  });
+  const _ContractsToolbar({required this.controller, required this.customers});
 
   final ContractsController controller;
   final List<CustomerOption> customers;
@@ -115,10 +112,7 @@ final class _ContractsToolbar extends StatelessWidget {
                 ...customers.map(
                   (customer) => DropdownMenuItem<int>(
                     value: customer.id,
-                    child: Text(
-                      customer.name,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: Text(customer.name, overflow: TextOverflow.ellipsis),
                   ),
                 ),
               ],

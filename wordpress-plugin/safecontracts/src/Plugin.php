@@ -30,6 +30,7 @@ use SafeContracts\Admin\NotificationsPage;
 use SafeContracts\Admin\PaymentMethodsPage;
 use SafeContracts\Admin\PaymentsPage;
 use SafeContracts\Admin\ReportsPage;
+use SafeContracts\Admin\SuppliersPage;
 use SafeContracts\Admin\TranslationsPage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Audit\AuditRecorder;
@@ -96,6 +97,7 @@ final class Plugin
         add_action('rest_api_init', [Router::class, 'register']);
         add_action('admin_menu', [AdminShell::class, 'register'], 5);
         add_action('admin_menu', [CustomersPage::class, 'register'], 10);
+        add_action('admin_menu', [SuppliersPage::class, 'register'], 11);
         add_action('admin_menu', [ContractsPage::class, 'register'], 11);
         add_action('admin_menu', [PaymentsPage::class, 'register'], 12);
         add_action('admin_menu', [CollectionsPage::class, 'register'], 13);
@@ -122,6 +124,8 @@ final class Plugin
 
         add_action('admin_post_' . CustomersPage::SAVE_ACTION, [CustomersPage::class, 'handleSave']);
         add_action('admin_post_' . CustomersPage::DELETE_ACTION, [CustomersPage::class, 'handleDelete']);
+        add_action('admin_post_' . SuppliersPage::SAVE_ACTION, [SuppliersPage::class, 'handleSave']);
+        add_action('admin_post_' . SuppliersPage::ARCHIVE_ACTION, [SuppliersPage::class, 'handleArchive']);
         add_action('admin_post_' . ContractsPage::SAVE_ACTION, [ContractsPage::class, 'handleSave']);
         add_action('admin_post_' . ContractsPage::BULK_ASSIGN_ACTION, [ContractsPage::class, 'handleBulkAssign']);
         add_action('admin_post_' . ContractsPage::DELETE_ACTION, [ContractsPage::class, 'handleDelete']);

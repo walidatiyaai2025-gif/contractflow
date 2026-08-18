@@ -17,6 +17,7 @@ final class Capabilities
     public const VIEW_SUPPLIERS = 'safecontracts_view_suppliers';
     public const CREATE_SUPPLIERS = 'safecontracts_create_suppliers';
     public const EDIT_SUPPLIERS = 'safecontracts_edit_suppliers';
+    public const ARCHIVE_SUPPLIERS = 'safecontracts_archive_suppliers';
     public const MANAGE_SUPPLIERS = 'safecontracts_manage_suppliers';
     public const CREATE_CONTRACTS = 'safecontracts_create_contracts';
     public const EDIT_CONTRACTS = 'safecontracts_edit_contracts';
@@ -26,6 +27,8 @@ final class Capabilities
     public const MANAGE_PAYMENTS = 'safecontracts_manage_payments';
     public const VIEW_FINANCE = 'safecontracts_view_finance';
     public const MANAGE_FINANCE = 'safecontracts_manage_finance';
+    public const VIEW_PAYABLES = 'safecontracts_view_payables';
+    public const VIEW_RECEIVABLES = 'safecontracts_view_receivables';
     public const MANAGE_COLLECTIONS = 'safecontracts_manage_collections';
     public const MANAGE_FOLLOWUPS = 'safecontracts_manage_followups';
     public const VIEW_REPORTS = 'safecontracts_view_reports';
@@ -49,6 +52,7 @@ final class Capabilities
             self::VIEW_SUPPLIERS,
             self::CREATE_SUPPLIERS,
             self::EDIT_SUPPLIERS,
+            self::ARCHIVE_SUPPLIERS,
             self::MANAGE_SUPPLIERS,
             self::CREATE_CONTRACTS,
             self::EDIT_CONTRACTS,
@@ -58,6 +62,8 @@ final class Capabilities
             self::MANAGE_PAYMENTS,
             self::VIEW_FINANCE,
             self::MANAGE_FINANCE,
+            self::VIEW_PAYABLES,
+            self::VIEW_RECEIVABLES,
             self::MANAGE_COLLECTIONS,
             self::MANAGE_FOLLOWUPS,
             self::VIEW_REPORTS,

@@ -16,10 +16,23 @@ final class FinanceReadAccess
         if (! current_user_can(Capabilities::ACCESS)) {
             return [];
         }
-        if (! current_user_can(Capabilities::VIEW_FINANCE) && ! current_user_can(Capabilities::MANAGE_FINANCE)) {
-            return [];
+
+        $directions = [];
+        if (current_user_can(Capabilities::VIEW_RECEIVABLES)) {
+            $directions[] = FinancialDirection::RECEIVABLE;
         }
-        return [FinancialDirection::RECEIVABLE, FinancialDirection::PAYABLE];
+        if (current_user_can(Capabilities::VIEW_PAYABLES)) {
+            $directions[] = FinancialDirection::PAYABLE;
+        }
+
+        // Compatibility bridge for installations/custom roles that already had
+        // the 1.16 unified finance grant before the granular capabilities exist.
+        if ($directions === []
+            && (current_user_can(Capabilities::VIEW_FINANCE) || current_user_can(Capabilities::MANAGE_FINANCE))) {
+            return [FinancialDirection::RECEIVABLE, FinancialDirection::PAYABLE];
+        }
+
+        return $directions;
     }
 
     /** @return list<string> */

@@ -48,32 +48,27 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.scL10n;
+    final controller = widget.controller;
     return AnimatedBuilder(
-      animation: widget.controller,
+      animation: controller,
       builder: (context, child) {
-        final controller = widget.controller;
         final contract = controller.selectedContract;
-        final readyForCurrent =
-            controller.detailState == ContractDetailLoadState.ready &&
-                controller.selectedContractId == widget.contractId &&
-                contract != null;
-        final canOpenContractAction = widget.onEditContract != null;
-        final contractActionLabel = controller.canEditContract
-            ? l10n.t('Edit contract')
-            : l10n.t('Responsible accountant');
-
+        final ready = controller.detailState == ContractDetailLoadState.ready &&
+            controller.selectedContractId == widget.contractId &&
+            contract != null;
         return Scaffold(
           appBar: AppBar(
             title: Text(
-              readyForCurrent
+              ready
                   ? contract.contractNumber
-                  : l10n.t('Contract details'),
+                  : context.scL10n.t('Contract details'),
             ),
             actions: [
-              if (readyForCurrent && canOpenContractAction)
+              if (ready && widget.onEditContract != null)
                 IconButton(
-                  tooltip: contractActionLabel,
+                  tooltip: controller.canEditContract
+                      ? context.scL10n.t('Edit contract')
+                      : context.scL10n.t('Responsible accountant'),
                   onPressed: () => widget.onEditContract!(contract.id),
                   icon: Icon(
                     controller.canEditContract
@@ -83,101 +78,84 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
                 ),
             ],
           ),
-          body: SafeArea(
-            child: _ContractDetailsBody(
-              controller: controller,
-              contractId: widget.contractId,
-              currency: widget.currency,
-              onEditContract: widget.onEditContract,
-            ),
-          ),
+          body: SafeArea(child: _body(context)),
         );
       },
     );
   }
-}
 
-final class _ContractDetailsBody extends StatelessWidget {
-  const _ContractDetailsBody({
-    required this.controller,
-    required this.contractId,
-    required this.currency,
-    required this.onEditContract,
-  });
-
-  final ContractsController controller;
-  final int contractId;
-  final MobileCurrencyConfig currency;
-  final ValueChanged<int>? onEditContract;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    if (controller.selectedContractId != contractId ||
+  Widget _body(BuildContext context) {
+    final controller = widget.controller;
+    if (controller.selectedContractId != widget.contractId ||
         controller.detailState == ContractDetailLoadState.loading ||
         controller.detailState == ContractDetailLoadState.idle) {
       return const Center(child: CircularProgressIndicator());
     }
-
-    return switch (controller.detailState) {
-      ContractDetailLoadState.ready => _ReadyContractDetails(
-          contract: controller.selectedContract!,
-          currency: currency,
-          canEdit: controller.canEditContract,
-          onEditContract: onEditContract,
-        ),
-      ContractDetailLoadState.notFound => _ContractDetailError(
-          icon: Icons.search_off_outlined,
-          title: l10n.t('Contract not found'),
-          message: l10n.rawMessage(
-            controller.detailErrorMessage ??
-                'This contract was not found in your authorized scope.',
-          ),
-          onRetry: () => unawaited(controller.openContract(contractId)),
-        ),
-      ContractDetailLoadState.forbidden => _ContractDetailError(
-          icon: Icons.lock_outline,
-          title: l10n.t('Contract access denied'),
-          message: l10n.rawMessage(
-            controller.detailErrorMessage ??
-                'You do not have permission to view this contract.',
-          ),
-          onRetry: () => unawaited(controller.openContract(contractId)),
-        ),
-      ContractDetailLoadState.error => _ContractDetailError(
-          icon: Icons.error_outline,
-          title: l10n.t('Unable to load contract'),
-          message: l10n.rawMessage(
-            controller.detailErrorMessage ??
-                'SafeContracts could not load this contract.',
-          ),
-          onRetry: () => unawaited(controller.openContract(contractId)),
-        ),
-      ContractDetailLoadState.idle ||
-      ContractDetailLoadState.loading =>
-        const Center(child: CircularProgressIndicator()),
+    if (controller.detailState == ContractDetailLoadState.ready &&
+        controller.selectedContract != null) {
+      return _ReadyContractDetails(
+        contract: controller.selectedContract!,
+        canEdit: controller.canEditContract,
+        onEditContract: widget.onEditContract,
+      );
+    }
+    final l10n = context.scL10n;
+    final title = switch (controller.detailState) {
+      ContractDetailLoadState.notFound => l10n.t('Contract not found'),
+      ContractDetailLoadState.forbidden => l10n.t('Contract access denied'),
+      _ => l10n.t('Unable to load contract'),
     };
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48),
+            const SizedBox(height: 12),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              l10n.rawMessage(
+                controller.detailErrorMessage ??
+                    'SafeContracts could not load this contract.',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () =>
+                  unawaited(controller.openContract(widget.contractId)),
+              child: Text(l10n.t('Retry')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
 final class _ReadyContractDetails extends StatelessWidget {
   const _ReadyContractDetails({
     required this.contract,
-    required this.currency,
     required this.canEdit,
     required this.onEditContract,
   });
 
   final SafeContractsContract contract;
-  final MobileCurrencyConfig currency;
   final bool canEdit;
   final ValueChanged<int>? onEditContract;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
-    final contractActionLabel =
-        canEdit ? l10n.t('Edit contract') : l10n.t('Responsible accountant');
+    final ar = l10n.isArabic;
+    final typeLabel = contract.isSupplier
+        ? (ar ? 'مورد' : 'Supplier')
+        : (ar ? 'عميل' : 'Customer');
+    final directionLabel = contract.financialDirection == 'payable'
+        ? (ar ? 'مطلوب الدفع (AP)' : 'Payable (AP)')
+        : (ar ? 'مستحق القبض (AR)' : 'Receivable (AR)');
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -186,13 +164,23 @@ final class _ReadyContractDetails extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 contract.contractNumber,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Chip(label: Text(l10n.status(contract.status))),
+              Chip(
+                avatar: Icon(
+                  contract.isSupplier
+                      ? Icons.local_shipping_outlined
+                      : Icons.person_outline,
+                  size: 16,
+                ),
+                label: Text(typeLabel),
+              ),
+              Chip(label: Text(directionLabel)),
+              Chip(label: Text(contract.currencyCode)),
               if (contract.isArchived)
                 Chip(
                   avatar: const Icon(Icons.archive_outlined, size: 16),
@@ -201,63 +189,36 @@ final class _ReadyContractDetails extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          _DetailsSection(
-            title: l10n.t('Contract'),
-            children: [
-              _DetailValue(
-                label: l10n.t('Contract ID'),
-                value: '${contract.id}',
-              ),
-              _DetailValue(
-                label: l10n.t('Status'),
-                value: l10n.status(contract.status),
-              ),
-              _DetailValue(
-                label: l10n.t('Start date'),
-                value: contract.startDate ?? '—',
-              ),
-              _DetailValue(
-                label: l10n.t('End date'),
-                value: contract.endDate ?? '—',
-              ),
-            ],
-          ),
+          _section(context, ar ? 'جهة التعاقد' : 'Counterparty', [
+            _row(ar ? 'النوع' : 'Type', typeLabel),
+            _row(ar ? 'الاسم' : 'Name', contract.displayCounterparty),
+            _row(ar ? 'المعرف' : 'ID', '${contract.counterpartyId}'),
+            _row(ar ? 'الاتجاه المالي' : 'Financial direction', directionLabel),
+            _row(ar ? 'العملة' : 'Currency', contract.currencyCode),
+          ]),
           const SizedBox(height: 16),
-          _DetailsSection(
-            title: l10n.t('Customer & assignment'),
-            children: [
-              _DetailValue(
-                label: l10n.t('Customer'),
-                value: contract.customerName ??
-                    l10n.customerNumber(contract.customerId),
-              ),
-              _DetailValue(
-                label: l10n.t('Customer ID'),
-                value: '${contract.customerId}',
-              ),
-              _DetailValue(
-                label: l10n.t('Assigned accountant user ID'),
-                value: contract.accountantUserId?.toString() ?? '—',
-              ),
-            ],
-          ),
+          _section(context, l10n.t('Contract'), [
+            _row(l10n.t('Contract ID'), '${contract.id}'),
+            _row(l10n.t('Status'), l10n.status(contract.status)),
+            _row(l10n.t('Start date'), contract.startDate ?? '—'),
+            _row(l10n.t('End date'), contract.endDate ?? '—'),
+            _row(
+              l10n.t('Assigned accountant user ID'),
+              contract.accountantUserId?.toString() ?? '—',
+            ),
+          ]),
           const SizedBox(height: 16),
-          _DetailsSection(
-            title: l10n.t('Financial values'),
-            children: [
-              _DetailValue(
-                label: l10n.t('Base value'),
-                value: contract.baseValue == null
-                    ? '—'
-                    : l10n.money(contract.baseValue!, currency),
-              ),
-            ],
-          ),
+          _section(context, l10n.t('Financial values'), [
+            _row(
+              l10n.t('Base value'),
+              _displayMoney(contract.baseValue),
+            ),
+          ]),
           const SizedBox(height: 12),
           Text(
-            l10n.t(
-              'Financial values are formatted to two decimal places for display. Status and amounts remain server-authoritative; the mobile app does not recalculate them.',
-            ),
+            ar
+                ? 'الاتجاه المالي والأرصدة يحددها السيرفر. التطبيق لا يعيد حساب AP أو AR محليًا.'
+                : 'Financial direction and balances remain server-authoritative. Mobile does not recalculate AP or AR locally.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 24),
@@ -267,7 +228,11 @@ final class _ReadyContractDetails extends StatelessWidget {
               icon: Icon(
                 canEdit ? Icons.edit_outlined : Icons.assignment_ind_outlined,
               ),
-              label: Text(contractActionLabel),
+              label: Text(
+                canEdit
+                    ? l10n.t('Edit contract')
+                    : l10n.t('Responsible accountant'),
+              ),
             )
           else
             Text(
@@ -278,88 +243,44 @@ final class _ReadyContractDetails extends StatelessWidget {
       ),
     );
   }
-}
 
-final class _DetailsSection extends StatelessWidget {
-  const _DetailsSection({required this.title, required this.children});
+  Widget _section(BuildContext context, String title, List<Widget> children) =>
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              ...children,
+            ],
+          ),
+        ),
+      );
 
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+  Widget _row(String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            ...children,
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 3),
+            SelectableText(value),
           ],
         ),
-      ),
-    );
-  }
+      );
 }
 
-final class _DetailValue extends StatelessWidget {
-  const _DetailValue({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 3),
-          SelectableText(value),
-        ],
-      ),
-    );
+String _displayMoney(String? value) {
+  if (value == null) return '—';
+  final parts = value.split('.');
+  if (parts.length == 1) return '${parts[0]}.00';
+  final whole = parts[0];
+  var fraction = parts[1];
+  while (fraction.length > 2 && fraction.endsWith('0')) {
+    fraction = fraction.substring(0, fraction.length - 1);
   }
-}
-
-final class _ContractDetailError extends StatelessWidget {
-  const _ContractDetailError({
-    required this.icon,
-    required this.title,
-    required this.message,
-    required this.onRetry,
-  });
-
-  final IconData icon;
-  final String title;
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48),
-            const SizedBox(height: 12),
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onRetry,
-              child: Text(context.scL10n.t('Retry')),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  if (fraction.length == 1) fraction = '${fraction}0';
+  return '$whole.$fraction';
 }

@@ -16,6 +16,12 @@ use WP_REST_Server;
 
 final class SuppliersController
 {
+    private const FIELDS = [
+        'internal_code', 'name', 'legal_name', 'trading_name', 'contact_name', 'phone', 'email', 'address',
+        'country_code', 'registration_number', 'tax_number', 'default_currency', 'payment_terms', 'status', 'notes',
+        'is_active',
+    ];
+
     public static function register(): void
     {
         register_rest_route(Router::NAMESPACE, '/suppliers', [
@@ -44,15 +50,20 @@ final class SuppliersController
             [
                 'methods' => 'DELETE',
                 'callback' => [self::class, 'archive'],
-                'permission_callback' => [self::class, 'canEdit'],
+                'permission_callback' => [self::class, 'canArchive'],
             ],
+        ]);
+        register_rest_route(Router::NAMESPACE, '/suppliers/(?P<id>\d+)/archive', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [self::class, 'archive'],
+            'permission_callback' => [self::class, 'canArchive'],
         ]);
     }
 
     public static function canView(): bool|WP_Error
     {
         return self::permission(
-            [Capabilities::VIEW_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS],
+            [Capabilities::VIEW_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS, Capabilities::VIEW_ALL, Capabilities::MANAGE_REFERENCE_DATA],
             'safecontracts_suppliers_view_forbidden',
             'You do not have permission to view SafeContracts suppliers.'
         );
@@ -61,7 +72,7 @@ final class SuppliersController
     public static function canCreate(): bool|WP_Error
     {
         return self::permission(
-            [Capabilities::CREATE_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS],
+            [Capabilities::CREATE_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS, Capabilities::MANAGE_REFERENCE_DATA],
             'safecontracts_suppliers_create_forbidden',
             'You do not have permission to create SafeContracts suppliers.'
         );
@@ -70,20 +81,33 @@ final class SuppliersController
     public static function canEdit(): bool|WP_Error
     {
         return self::permission(
-            [Capabilities::EDIT_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS],
+            [Capabilities::EDIT_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS, Capabilities::MANAGE_REFERENCE_DATA],
             'safecontracts_suppliers_edit_forbidden',
             'You do not have permission to edit SafeContracts suppliers.'
         );
     }
 
+    public static function canArchive(): bool|WP_Error
+    {
+        return self::permission(
+            [Capabilities::ARCHIVE_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS, Capabilities::MANAGE_REFERENCE_DATA],
+            'safecontracts_suppliers_archive_forbidden',
+            'You do not have permission to archive SafeContracts suppliers.'
+        );
+    }
+
     public static function index(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
-        unset($request);
-        return self::guard(function (): WP_REST_Response {
-            $rows = (new SupplierService())->active(500);
+        return self::guard(function () use ($request): WP_REST_Response {
+            $params = ApiAbuseGuard::safeParams($request, ['search', 'limit', 'include_archived']);
+            $rows = (new SupplierService())->search(
+                $params['search'] ?? '',
+                isset($params['limit']) ? (int) $params['limit'] : 100,
+                self::boolParam($params['include_archived'] ?? false)
+            );
             return ApiResponse::ok($rows, [
                 'returned' => count($rows),
-                'bounded_window' => 500,
+                'bounded_window' => min(500, max(1, (int) ($params['limit'] ?? 100))),
             ]);
         });
     }
@@ -99,20 +123,41 @@ final class SuppliersController
     public static function create(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         return self::guard(function () use ($request): WP_REST_Response {
-            $body = self::body($request);
-            unset($body['id']);
-            $id = (new SupplierService())->save($body);
-            return ApiResponse::ok(['id' => $id, 'created' => true]);
+            $input = self::body($request);
+            if (! array_key_exists('legal_name', $input) && ! array_key_exists('name', $input)) {
+                throw new InvalidArgumentException('Supplier legal name is required.');
+            }
+            $service = new SupplierService();
+            $id = $service->save($input);
+            $supplier = $service->find($id);
+            if ($supplier === null) {
+                throw new DomainException('Supplier was saved but could not be reloaded.');
+            }
+            return ApiResponse::ok($supplier, ['created' => true]);
         });
     }
 
     public static function update(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
-        return self::guard(function () use ($request): WP_REST_Response {
-            $body = self::body($request);
-            $body['id'] = ApiRequest::routeId($request);
-            $id = (new SupplierService())->save($body);
-            return ApiResponse::ok(['id' => $id, 'updated' => true]);
+        return self::guard(function () use ($request): WP_REST_Response|WP_Error {
+            $id = ApiRequest::routeId($request);
+            $service = new SupplierService();
+            $existing = $service->find($id);
+            if ($existing === null) {
+                return ApiResponse::notFound('Supplier');
+            }
+            $changes = self::body($request);
+            if ($changes === []) {
+                throw new InvalidArgumentException('At least one supplier field is required.');
+            }
+            $input = array_intersect_key($existing, array_flip(self::FIELDS));
+            $input = [...$input, ...$changes, 'id' => $id];
+            $service->save($input);
+            $supplier = $service->find($id);
+            if ($supplier === null) {
+                throw new DomainException('Supplier was updated but could not be reloaded.');
+            }
+            return ApiResponse::ok($supplier, ['updated' => true]);
         });
     }
 
@@ -132,13 +177,20 @@ final class SuppliersController
         if (! is_array($body)) {
             throw new InvalidArgumentException('Supplier mutation requires a JSON object body.');
         }
-        $allowed = ['id', 'internal_code', 'name', 'contact_name', 'email', 'phone', 'notes', 'is_active'];
-        foreach (array_keys($body) as $key) {
-            if (! is_string($key) || ! in_array($key, $allowed, true)) {
+        foreach (array_keys($body) as $field) {
+            if (! is_string($field) || ! in_array($field, self::FIELDS, true)) {
                 throw new InvalidArgumentException('Unsupported supplier mutation field.');
             }
         }
         return $body;
+    }
+
+    private static function boolParam(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes'], true);
     }
 
     /** @param list<string> $capabilities */

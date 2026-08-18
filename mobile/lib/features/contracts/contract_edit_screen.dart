@@ -14,7 +14,7 @@ enum ContractEditState {
   validationError,
   forbidden,
   conflict,
-  error
+  error,
 }
 
 final class AccountantOption {
@@ -439,8 +439,9 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                         icon: assigning
                             ? const SizedBox.square(
                                 dimension: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.assignment_ind_outlined),
                         label: Text(l10n.t('Assign responsible accountant')),
@@ -526,7 +527,8 @@ String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
     throw const FormatException(
-        'Accountant text field must be string or null.');
+      'Accountant text field must be string or null.',
+    );
   }
   final normalized = value.trim();
   if (normalized.length > 254) {
