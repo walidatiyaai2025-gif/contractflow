@@ -148,7 +148,7 @@ final class AdminNavigationGroups
         <?php
     }
 
-    public static function highlightGroup(string $submenuFile, string $parentFile): string
+    public static function highlightGroup(?string $submenuFile, string $parentFile): ?string
     {
         if ($parentFile !== AdminShell::SLUG) {
             return $submenuFile;
