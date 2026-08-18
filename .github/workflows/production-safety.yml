@@ -1,0 +1,33 @@
+name: Alkenzy ADV Production Safety
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-safety:
+    name: production-safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Resolve PR base
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: echo "SAFE_CONTRACTS_BASE_SHA=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+
+      - name: Enforce migration rollback and end-user permission contracts
+        run: python3 scripts/production_change_guard.py
+
+      - name: Validate existing SafeContracts foundation
+        run: python3 scripts/validate-foundation.py
