@@ -23,7 +23,7 @@ $required = [
     "'safe_to_start_deployment'",
     "'backup_evidence_required_separately' => true",
     "'rollback_artifact_required_separately' => true",
-    "exit($safeToStart ? 0 : 3);",
+    'exit($safeToStart ? 0 : 3);',
 ];
 
 foreach ($required as $marker) {
@@ -59,7 +59,7 @@ foreach ($forbiddenMutations as $marker) {
 }
 
 $forbiddenSecretExports = [
-    "$lock['token']",
+    '$lock[\'token\']',
     "'token' =>",
     "'password' =>",
     "'authorization' =>",
@@ -75,7 +75,7 @@ foreach ($forbiddenSecretExports as $marker) {
     $assertions++;
 }
 
-if (! str_contains($source, "array_slice($journal, -5)")) {
+if (! str_contains($source, 'array_slice($journal, -5)')) {
     fwrite(STDERR, "FAIL: ALK-PROD-002 collector must bound migration journal output.\n");
     exit(1);
 }
