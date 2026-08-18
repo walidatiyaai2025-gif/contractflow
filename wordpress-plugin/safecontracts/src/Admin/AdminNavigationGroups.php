@@ -87,7 +87,7 @@ final class AdminNavigationGroups
                 continue;
             }
             $submenu[$parent][] = [
-                __($definition['title'], 'safecontracts'),
+                $definition['title'],
                 Capabilities::ACCESS,
                 self::groupUrl($key),
             ];
@@ -124,8 +124,8 @@ final class AdminNavigationGroups
             <div class="safecontracts-section-heading">
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Grouped navigation', 'safecontracts'); ?></p>
-                    <h2 id="safecontracts-navigation-group-title"><?php echo esc_html__($definition['title'], 'safecontracts'); ?></h2>
-                    <p><?php echo esc_html__($definition['description'], 'safecontracts'); ?></p>
+                    <h2 id="safecontracts-navigation-group-title"><?php echo esc_html($definition['title']); ?></h2>
+                    <p><?php echo esc_html($definition['description']); ?></p>
                 </div>
             </div>
 
@@ -135,7 +135,7 @@ final class AdminNavigationGroups
                 <div class="safecontracts-summary-cards safecontracts-navigation-group__cards">
                     <?php foreach ($items as $item) : ?>
                         <article class="safecontracts-summary-card safecontracts-navigation-group__card">
-                            <span class="safecontracts-summary-card__label"><?php echo esc_html__($definition['title'], 'safecontracts'); ?></span>
+                            <span class="safecontracts-summary-card__label"><?php echo esc_html($definition['title']); ?></span>
                             <strong class="safecontracts-summary-card__value safecontracts-navigation-group__title"><?php echo esc_html($item['title']); ?></strong>
                             <a class="button button-primary" href="<?php echo esc_url(add_query_arg(['page' => $item['slug']], admin_url('admin.php'))); ?>">
                                 <?php echo esc_html__('Open', 'safecontracts'); ?>
@@ -201,36 +201,36 @@ final class AdminNavigationGroups
     {
         return [
             'contracts' => [
-                'title' => 'Parties & Contracts',
-                'description' => 'Customers, suppliers and their customer or supplier contracts.',
+                'title' => __('Parties & Contracts', 'safecontracts'),
+                'description' => __('Customers, suppliers and their customer or supplier contracts.', 'safecontracts'),
             ],
             'finance' => [
-                'title' => 'Finance',
-                'description' => 'Payment schedules, collections, receivables, payables and financial reports.',
+                'title' => __('Finance', 'safecontracts'),
+                'description' => __('Payment schedules, collections, receivables, payables and financial reports.', 'safecontracts'),
             ],
             'operations' => [
-                'title' => 'Operations',
-                'description' => 'Follow-up, archive and controlled data import operations.',
+                'title' => __('Operations', 'safecontracts'),
+                'description' => __('Follow-up, archive and controlled data import operations.', 'safecontracts'),
             ],
             'notifications' => [
-                'title' => 'Notifications',
-                'description' => 'Notification center, delivery activity, schedules and notification settings.',
+                'title' => __('Notifications', 'safecontracts'),
+                'description' => __('Notification center, delivery activity, schedules and notification settings.', 'safecontracts'),
             ],
             'access' => [
-                'title' => 'Users & Access',
-                'description' => 'Active-user visibility, user roles and business permission management.',
+                'title' => __('Users & Access', 'safecontracts'),
+                'description' => __('Active-user visibility, user roles and business permission management.', 'safecontracts'),
             ],
             'system' => [
-                'title' => 'Settings & Integrations',
-                'description' => 'Organization settings, Firebase, mobile configuration and translations.',
+                'title' => __('Settings & Integrations', 'safecontracts'),
+                'description' => __('Organization settings, Firebase, mobile configuration and translations.', 'safecontracts'),
             ],
             'help' => [
-                'title' => 'User Guide',
-                'description' => 'Clear guidance for every area and the next related task.',
+                'title' => __('User Guide', 'safecontracts'),
+                'description' => __('Clear guidance for every area and the next related task.', 'safecontracts'),
             ],
             'other' => [
-                'title' => 'More',
-                'description' => 'Additional authorized areas that are not yet assigned to a primary group.',
+                'title' => __('More', 'safecontracts'),
+                'description' => __('Additional authorized areas that are not yet assigned to a primary group.', 'safecontracts'),
             ],
         ];
     }
