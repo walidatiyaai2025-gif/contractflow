@@ -31,6 +31,7 @@ use SafeContracts\Admin\UserGuidePage;
 use SafeContracts\Admin\UsersRolesPage;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Roles\CapabilityPresentation;
+use SafeContracts\Translations\ControlledInputArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
 use SafeContracts\Translations\ProductionUxArabicDefaults;
 
@@ -157,10 +158,14 @@ foreach (ProductionUxArabicDefaults::all() as $source => $arabic) {
 foreach (MigrationRecoveryArabicDefaults::all() as $source => $arabic) {
     sc_prod_ux_assert(trim($source) !== '' && trim($arabic) !== '' && $source !== $arabic, 'migration recovery Arabic default is complete: ' . $source);
 }
+foreach (ControlledInputArabicDefaults::all() as $source => $arabic) {
+    sc_prod_ux_assert(trim($source) !== '' && trim($arabic) !== '' && $source !== $arabic, 'controlled lookup Arabic default is complete: ' . $source);
+}
 
 $plugin = file_get_contents($root . '/wordpress-plugin/safecontracts/src/Plugin.php');
 sc_prod_ux_assert(is_string($plugin) && str_contains($plugin, 'UserGuidePage::registerContextualHelp()'), 'contextual guide is wired into every Alkenzy admin request');
 sc_prod_ux_assert(is_string($plugin) && str_contains($plugin, "[UserGuidePage::class, 'register']"), 'full user guide page is wired into admin navigation');
 sc_prod_ux_assert(is_string($plugin) && str_contains($plugin, 'MigrationRecoveryPage::register()'), 'migration failures switch plugin to recovery-only surface');
+sc_prod_ux_assert(is_string($plugin) && str_contains($plugin, 'ControlledInputArabicDefaults::register()'), 'controlled lookup defaults are registered at runtime');
 
 fwrite(STDOUT, "Alkenzy production UX contract #586 passed ({$tests} assertions).\n");
