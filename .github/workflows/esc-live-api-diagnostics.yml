@@ -3,6 +3,8 @@ name: ESC Live API Diagnostics
 on:
   push:
     branches: [agent/esc-live-api-diagnostics]
+  pull_request:
+    branches: [enterprise-safecontracts]
   workflow_dispatch:
 
 permissions:
