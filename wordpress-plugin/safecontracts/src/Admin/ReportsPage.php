@@ -9,7 +9,10 @@ use SafeContracts\Payments\CurrencyCode;
 use SafeContracts\Payments\FinancialDirection;
 use SafeContracts\Reports\ReportExportService;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Roles\RoleRegistrar;
+use SafeContracts\Suppliers\SupplierService;
 use SafeContracts\Translations\TranslationCatalog;
+use Throwable;
 
 final class ReportsPage
 {
@@ -42,7 +45,26 @@ final class ReportsPage
         if (! current_user_can(Capabilities::VIEW_REPORTS)) {
             wp_die(__('You do not have permission to view reports.', 'safecontracts'));
         }
-        $filters = DashboardFilters::normalize($_GET);
+
+        $reportInput = $_GET;
+        $counterpartyRef = isset($_GET['counterparty_ref']) && is_scalar($_GET['counterparty_ref'])
+            ? sanitize_text_field((string) $_GET['counterparty_ref'])
+            : '';
+        if ($counterpartyRef !== '') {
+            $parsed = self::parseCounterpartyRef($counterpartyRef);
+            if ($parsed !== null) {
+                $reportInput['counterparty_type'] = $parsed['type'];
+                $reportInput['counterparty_id'] = $parsed['id'];
+            } else {
+                $reportInput['counterparty_type'] = '';
+                $reportInput['counterparty_id'] = 0;
+            }
+        } else {
+            $reportInput['counterparty_type'] = '';
+            $reportInput['counterparty_id'] = 0;
+        }
+
+        $filters = DashboardFilters::normalize($reportInput);
         $read = new AdminReadRepository();
         $summary = empty($filters['date_range_error'])
             ? $read->reportSummary($filters)
@@ -54,10 +76,14 @@ final class ReportsPage
             ];
         $customers = $read->customerOptions();
         $contracts = $read->contractOptions($filters['customer_id']);
+        $allContracts = $read->contractOptions();
+        $counterparties = self::counterpartyOptions($customers);
+        $accountants = self::accountantOptions();
+        $currencies = self::currencyOptions($allContracts, (string) ($filters['currency_code'] ?? ''));
         $canViewFinance = current_user_can(Capabilities::VIEW_FINANCE) || current_user_can(Capabilities::MANAGE_FINANCE);
         $finance = ['summary' => [], 'aging' => []];
         if ($canViewFinance && empty($filters['date_range_error'])) {
-            $financeInput = $_GET;
+            $financeInput = $reportInput;
             $financeInput['due_from'] = $financeInput['due_from'] ?? ($filters['date_from'] ?? null);
             $financeInput['due_to'] = $financeInput['due_to'] ?? ($filters['date_to'] ?? null);
             $finance = (new FinanceOverviewService())->overview($financeInput);
@@ -75,11 +101,10 @@ final class ReportsPage
                     <label><?php echo esc_html__('Contract', 'safecontracts'); ?><select name="contract_id"><option value="0"><?php echo esc_html__('All contracts', 'safecontracts'); ?></option><?php foreach ($contracts as $contract) : ?><option value="<?php echo esc_attr((string) $contract['id']); ?>" <?php selected($filters['contract_id'], $contract['id']); ?>><?php echo esc_html($contract['contract_number']); ?></option><?php endforeach; ?></select></label>
                     <?php if ($canViewFinance) : ?>
                         <label><?php echo esc_html__('Direction', 'safecontracts'); ?><select name="financial_direction"><option value=""><?php echo esc_html__('All AP / AR', 'safecontracts'); ?></option><option value="payable" <?php selected($filters['financial_direction'] ?? '', 'payable'); ?>><?php echo esc_html__('Accounts Payable', 'safecontracts'); ?></option><option value="receivable" <?php selected($filters['financial_direction'] ?? '', 'receivable'); ?>><?php echo esc_html__('Accounts Receivable', 'safecontracts'); ?></option></select></label>
-                        <label><?php echo esc_html__('Currency', 'safecontracts'); ?><input maxlength="3" name="currency_code" value="<?php echo esc_attr((string) ($filters['currency_code'] ?? '')); ?>" placeholder="KWD / USD / XXX"></label>
-                        <label><?php echo esc_html__('Counterparty type', 'safecontracts'); ?><select name="counterparty_type"><option value=""><?php echo esc_html__('Any type', 'safecontracts'); ?></option><option value="customer" <?php selected($filters['counterparty_type'] ?? '', 'customer'); ?>><?php echo esc_html__('Customer', 'safecontracts'); ?></option><option value="supplier" <?php selected($filters['counterparty_type'] ?? '', 'supplier'); ?>><?php echo esc_html__('Supplier', 'safecontracts'); ?></option></select></label>
-                        <label><?php echo esc_html__('Counterparty ID', 'safecontracts'); ?><input type="number" min="1" name="counterparty_id" value="<?php echo esc_attr((string) (($filters['counterparty_id'] ?? 0) ?: '')); ?>"></label>
+                        <label><?php echo esc_html__('Currency', 'safecontracts'); ?><select name="currency_code"><option value=""><?php echo esc_html__('All currencies', 'safecontracts'); ?></option><?php foreach ($currencies as $currency) : ?><option value="<?php echo esc_attr($currency); ?>" <?php selected((string) ($filters['currency_code'] ?? ''), $currency); ?>><?php echo esc_html($currency); ?></option><?php endforeach; ?></select></label>
+                        <label><?php echo esc_html__('Counterparty', 'safecontracts'); ?><select name="counterparty_ref"><option value=""><?php echo esc_html__('All counterparties', 'safecontracts'); ?></option><?php foreach ($counterparties as $counterparty) : ?><option value="<?php echo esc_attr($counterparty['ref']); ?>" <?php selected($counterpartyRef, $counterparty['ref']); ?>><?php echo esc_html($counterparty['label']); ?></option><?php endforeach; ?></select></label>
                     <?php endif; ?>
-                    <?php if (current_user_can(Capabilities::VIEW_ALL)) : ?><label><?php echo esc_html__('Accountant ID', 'safecontracts'); ?><input type="number" min="0" name="accountant_user_id" value="<?php echo esc_attr((string) $filters['accountant_user_id']); ?>"></label><?php endif; ?>
+                    <?php if (current_user_can(Capabilities::VIEW_ALL)) : ?><label><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?><select name="accountant_user_id"><option value="0"><?php echo esc_html__('All responsible accountants', 'safecontracts'); ?></option><?php foreach ($accountants as $accountant) : ?><option value="<?php echo esc_attr((string) $accountant['id']); ?>" <?php selected((int) $filters['accountant_user_id'], $accountant['id']); ?>><?php echo esc_html($accountant['label']); ?></option><?php endforeach; ?></select></label><?php endif; ?>
                     <label><?php echo esc_html__('Status', 'safecontracts'); ?><select name="status"><option value=""><?php echo esc_html__('Any status', 'safecontracts'); ?></option><?php foreach (['active','draft','completed','cancelled','upcoming','due_soon','due','overdue','partially_paid','paid'] as $status) : ?><option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(self::statusLabel($status)); ?></option><?php endforeach; ?></select></label>
                     <?php AdminPeriodFilter::renderFields($filters); ?>
                     <button class="button button-primary" type="submit"><?php echo esc_html__('Run report', 'safecontracts'); ?></button>
@@ -123,6 +148,91 @@ final class ReportsPage
             </section>
         </div>
         <?php
+    }
+
+    /** @param list<array{id:int,name:string}> $customers @return list<array{ref:string,label:string}> */
+    private static function counterpartyOptions(array $customers): array
+    {
+        $options = [];
+        foreach ($customers as $customer) {
+            $id = (int) ($customer['id'] ?? 0);
+            $name = trim((string) ($customer['name'] ?? ''));
+            if ($id > 0 && $name !== '') {
+                $options[] = ['ref' => 'customer:' . $id, 'label' => __('Customer', 'safecontracts') . ' — ' . $name];
+            }
+        }
+
+        if (current_user_can(Capabilities::VIEW_SUPPLIERS) || current_user_can(Capabilities::VIEW_PAYABLES) || current_user_can(Capabilities::MANAGE_FINANCE)) {
+            try {
+                $suppliers = (new SupplierService())->search('', 500, false);
+                foreach ($suppliers as $supplier) {
+                    $id = (int) ($supplier['id'] ?? 0);
+                    $name = trim((string) ($supplier['legal_name'] ?? $supplier['trading_name'] ?? ''));
+                    if ($id > 0 && $name !== '') {
+                        $options[] = ['ref' => 'supplier:' . $id, 'label' => __('Supplier', 'safecontracts') . ' — ' . $name];
+                    }
+                }
+            } catch (Throwable) {
+                // The report remains usable for other authorized filters.
+            }
+        }
+
+        usort($options, static fn (array $left, array $right): int => strcasecmp($left['label'], $right['label']));
+        return $options;
+    }
+
+    /** @return list<array{id:int,label:string}> */
+    private static function accountantOptions(): array
+    {
+        $users = get_users(['role' => RoleRegistrar::ACCOUNTANT, 'orderby' => 'display_name', 'order' => 'ASC']);
+        if (! is_array($users)) {
+            return [];
+        }
+        $options = [];
+        foreach ($users as $user) {
+            $id = (int) ($user->ID ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $name = trim((string) ($user->display_name ?? ''));
+            $email = trim((string) ($user->user_email ?? ''));
+            $label = $name !== '' ? $name : $email;
+            if ($label === '') {
+                $label = __('Unnamed WordPress user', 'safecontracts');
+            } elseif ($name !== '' && $email !== '') {
+                $label .= ' — ' . $email;
+            }
+            $options[] = ['id' => $id, 'label' => $label];
+        }
+        return $options;
+    }
+
+    /** @param list<array<string,mixed>> $contracts @return list<string> */
+    private static function currencyOptions(array $contracts, string $selected): array
+    {
+        $currencies = [];
+        foreach ($contracts as $contract) {
+            $currency = strtoupper(trim((string) ($contract['currency_code'] ?? '')));
+            if (preg_match('/^[A-Z]{3}$/', $currency) === 1) {
+                $currencies[$currency] = true;
+            }
+        }
+        $selected = strtoupper(trim($selected));
+        if (preg_match('/^[A-Z]{3}$/', $selected) === 1) {
+            $currencies[$selected] = true;
+        }
+        $result = array_keys($currencies);
+        sort($result, SORT_STRING);
+        return array_values($result);
+    }
+
+    /** @return array{type:string,id:int}|null */
+    private static function parseCounterpartyRef(string $reference): ?array
+    {
+        if (preg_match('/^(customer|supplier):([1-9][0-9]*)$/', trim($reference), $matches) !== 1) {
+            return null;
+        }
+        return ['type' => $matches[1], 'id' => (int) $matches[2]];
     }
 
     private static function metric(string $label, string $value, bool $alert = false): void
