@@ -27,7 +27,6 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
   final _amount = TextEditingController();
   final _date = TextEditingController();
   final _reference = TextEditingController();
-  final _proof = TextEditingController();
   bool _loadingMethods = true;
   bool _submitting = false;
   String? _error;
@@ -92,12 +91,6 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
       setState(() => _error = 'Reference cannot exceed 191 characters.');
       return;
     }
-    final proofText = _proof.text.trim();
-    final proofId = proofText.isEmpty ? null : int.tryParse(proofText);
-    if (proofText.isNotEmpty && (proofId == null || proofId <= 0)) {
-      setState(() => _error = 'Proof media ID must be a positive integer.');
-      return;
-    }
 
     setState(() {
       _submitting = true;
@@ -110,7 +103,6 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
         collectionDate: date,
         paymentMethodId: methodId,
         reference: reference,
-        proofMediaId: proofId,
       );
       if (!mounted) return;
       Navigator.pop(context, receipt);
@@ -140,7 +132,6 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
     _amount.dispose();
     _date.dispose();
     _reference.dispose();
-    _proof.dispose();
     super.dispose();
   }
 
@@ -216,14 +207,6 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
                 maxLength: 191,
                 decoration: InputDecoration(
                   labelText: l10n.t('Reference (optional)'),
-                ),
-              ),
-              TextField(
-                controller: _proof,
-                enabled: !_submitting,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: l10n.t('Proof media ID (optional)'),
                 ),
               ),
               if (_error != null) ...[
