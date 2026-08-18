@@ -170,26 +170,30 @@ final class AdminNavigationGroups
     public static function groupKeyForSlug(string $slug): string
     {
         $slug = sanitize_key($slug);
+        $prefix = AdminShell::SLUG . '-';
+        $feature = str_starts_with($slug, $prefix)
+            ? substr($slug, strlen($prefix))
+            : $slug;
 
-        if (self::containsAny($slug, ['customers', 'suppliers', 'contracts'])) {
+        if (self::containsAny($feature, ['customers', 'suppliers', 'contracts'])) {
             return 'contracts';
         }
-        if (self::containsAny($slug, ['payment-method', 'payments', 'collections', 'finance', 'reports'])) {
+        if (self::containsAny($feature, ['payment-method', 'payments', 'collections', 'finance', 'reports'])) {
             return 'finance';
         }
-        if (self::containsAny($slug, ['follow', 'archive', 'imports'])) {
+        if (self::containsAny($feature, ['follow', 'archive', 'imports'])) {
             return 'operations';
         }
-        if (str_contains($slug, 'notification')) {
+        if (str_contains($feature, 'notification')) {
             return 'notifications';
         }
-        if (self::containsAny($slug, ['active-users', 'users-roles'])) {
+        if (self::containsAny($feature, ['active-users', 'users-roles'])) {
             return 'access';
         }
-        if (self::containsAny($slug, ['settings', 'firebase', 'mobile-configuration', 'translations'])) {
+        if (self::containsAny($feature, ['settings', 'firebase', 'mobile-configuration', 'translations'])) {
             return 'system';
         }
-        if (str_contains($slug, 'user-guide')) {
+        if (str_contains($feature, 'user-guide')) {
             return 'help';
         }
 
