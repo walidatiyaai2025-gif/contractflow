@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 abstract final class SafeContractsBrand {
-  static const name = 'Enterprise Safe Contracts';
+  static const name = 'Safe Contracts';
   static const assetPath = 'assets/brand/safe_contracts_identity.jpg';
 }
 
