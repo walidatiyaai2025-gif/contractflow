@@ -36,7 +36,10 @@ void main() {
         File('lib/features/profile/profile_screen.dart').readAsStringSync();
 
     expect(guide, contains('required this.destinations'));
-    expect(guide, contains('destinations.map(_entryFor)'));
+    expect(
+      RegExp(r'destinations\s*\.map\(_entryFor\)').hasMatch(guide),
+      isTrue,
+    );
     expect(profile, contains('MobileNavigationPolicy.resolve'));
     expect(profile, contains('MobileUserGuideScreen'));
   });
