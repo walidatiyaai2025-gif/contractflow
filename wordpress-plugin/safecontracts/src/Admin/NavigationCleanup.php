@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\NavigationArabicDefaults;
 
 final class NavigationCleanup
 {
@@ -27,6 +28,8 @@ final class NavigationCleanup
 
     public static function register(): void
     {
+        AdminNavigationGroups::register();
+        NavigationArabicDefaults::register();
         add_action('admin_menu', [self::class, 'cleanup'], 999);
     }
 
