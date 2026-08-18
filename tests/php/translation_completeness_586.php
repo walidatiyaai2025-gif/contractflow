@@ -6,6 +6,7 @@ require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
 use SafeContracts\Translations\AdminArabicDefaults;
+use SafeContracts\Translations\CompleteArabicDefaults;
 use SafeContracts\Translations\ControlledInputArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
 use SafeContracts\Translations\NavigationArabicDefaults;
@@ -43,6 +44,9 @@ foreach ($catalog as $source => $row) {
     }
     if ($arabic === $source) {
         $arabic = ControlledInputArabicDefaults::default($source);
+    }
+    if ($arabic === $source) {
+        $arabic = CompleteArabicDefaults::default($source);
     }
     if (trim($arabic) === '' || $arabic === $source) {
         $missing[] = $source;
