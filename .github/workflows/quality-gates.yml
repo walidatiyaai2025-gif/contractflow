@@ -21,8 +21,12 @@ jobs:
 
   backend-foundation:
     runs-on: ubuntu-latest
+    env:
+      ALKENZY_TRANSLATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.1"
