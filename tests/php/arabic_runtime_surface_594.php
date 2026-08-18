@@ -13,14 +13,7 @@ if (! function_exists('get_locale')) {
 
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
-use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\ArabicRuntimeSafety;
-use SafeContracts\Translations\CompleteArabicDefaults;
-use SafeContracts\Translations\ControlledInputArabicDefaults;
-use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
-use SafeContracts\Translations\NavigationArabicDefaults;
-use SafeContracts\Translations\ProductionUxArabicDefaults;
-use SafeContracts\Translations\RuntimeLabels;
 
 $assertions = 0;
 $failures = [];
@@ -30,29 +23,6 @@ $assert = static function (bool $condition, string $message) use (&$assertions, 
     if (! $condition) {
         $failures[] = $message;
     }
-};
-
-$resolveArabic = static function (string $source): string {
-    $value = AdminArabicDefaults::default($source);
-    if ($value === $source) {
-        $value = RuntimeLabels::default($source);
-    }
-    if ($value === $source) {
-        $value = ProductionUxArabicDefaults::default($source);
-    }
-    if ($value === $source) {
-        $value = NavigationArabicDefaults::default($source);
-    }
-    if ($value === $source) {
-        $value = MigrationRecoveryArabicDefaults::default($source);
-    }
-    if ($value === $source) {
-        $value = ControlledInputArabicDefaults::default($source);
-    }
-    if ($value === $source) {
-        $value = CompleteArabicDefaults::default($source);
-    }
-    return $value;
 };
 
 $criticalExpected = [
@@ -73,10 +43,17 @@ $criticalExpected = [
     'Responsible accountant' => 'المحاسب المسؤول',
     'Outstanding' => 'القائم',
     'Payment terms' => 'شروط السداد',
+    'Currency' => 'العملة',
+    'Status' => 'الحالة',
+    'Contract' => 'العقد',
+    'Reports' => 'التقارير',
 ];
 
 foreach ($criticalExpected as $source => $expected) {
-    $assert($resolveArabic($source) === $expected, sprintf('Critical Arabic wording mismatch for "%s".', $source));
+    $assert(
+        ArabicRuntimeSafety::resolveArabic($source) === $expected,
+        sprintf('Critical Arabic wording mismatch for "%s".', $source)
+    );
 }
 
 $brandSource = 'SafeContracts could not load the finance workspace.';
@@ -118,7 +95,7 @@ foreach ($targetFiles as $fileName) {
     $assert($sources !== [], $fileName . ' must expose translatable user-facing strings.');
 
     foreach ($sources as $source) {
-        $arabic = $resolveArabic($source);
+        $arabic = ArabicRuntimeSafety::resolveArabic($source);
         $assert(
             trim($arabic) !== '' && $arabic !== $source,
             sprintf('%s has an untranslated gettext source: %s', $fileName, $source)
