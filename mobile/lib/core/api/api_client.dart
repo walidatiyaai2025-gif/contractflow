@@ -163,7 +163,8 @@ final class SafeContractsApiClient {
             code: _isSuccess(response.statusCode)
                 ? 'safecontracts_invalid_api_response'
                 : 'safecontracts_invalid_error_response',
-            message: 'Enterprise Safe Contracts API returned an invalid response.',
+            message:
+                'Enterprise Safe Contracts API returned an invalid response.',
             statusCode: response.statusCode,
           );
         }
@@ -183,7 +184,8 @@ final class SafeContractsApiClient {
     if (!_isSuccess(response.statusCode)) {
       throw SafeContractsApiException(
         code: _string(root['code'], 'safecontracts_request_failed'),
-        message: _string(root['message'], 'Enterprise Safe Contracts request failed.'),
+        message: _string(
+            root['message'], 'Enterprise Safe Contracts request failed.'),
         statusCode: response.statusCode,
       );
     }
