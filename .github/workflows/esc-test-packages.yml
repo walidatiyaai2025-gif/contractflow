@@ -41,6 +41,10 @@ jobs:
             echo "FAIL: ESC mobile source/config contains the SafeContracts/Alkenzy ADV cms.50sols.com host" >&2
             exit 1
           fi
+          if [[ -e mobile/test/widget_test.dart ]]; then
+            echo "FAIL: ESC source unexpectedly contains Flutter's generated widget_test.dart; refusing to delete a repository test" >&2
+            exit 1
+          fi
 
       - name: Build deterministic ESC plugin ZIP
         shell: bash
@@ -104,7 +108,19 @@ jobs:
 
       - name: Bootstrap isolated ESC Android platform
         shell: bash
-        run: ./scripts/bootstrap_android.sh
+        run: |
+          set -euo pipefail
+          ./scripts/bootstrap_android.sh
+          GENERATED_SAMPLE="mobile/test/widget_test.dart"
+          if [[ -f "$GENERATED_SAMPLE" ]] \
+             && grep -Fq "A basic Flutter widget test" "$GENERATED_SAMPLE" \
+             && grep -Fq "MyApp" "$GENERATED_SAMPLE"; then
+            rm "$GENERATED_SAMPLE"
+            echo "Removed Flutter-generated sample widget test after Android scaffold bootstrap."
+          elif [[ -e "$GENERATED_SAMPLE" ]]; then
+            echo "FAIL: bootstrap created an unexpected widget_test.dart; refusing to delete it" >&2
+            exit 1
+          fi
 
       - name: Create short-lived CI-only ESC signing key
         shell: bash
