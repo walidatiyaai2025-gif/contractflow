@@ -6,6 +6,7 @@ require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
 use SafeContracts\Admin\AdminNavigationGroups;
+use SafeContracts\Admin\AdminShell;
 use SafeContracts\Translations\NavigationArabicDefaults;
 
 $assertions = 0;
@@ -71,6 +72,40 @@ foreach ($requiredArabic as $source) {
     $assertions++;
 }
 
+// WordPress' submenu_file filter contract allows the first argument to be
+// null. Preserve that value unless SafeContracts has a concrete grouped leaf
+// to highlight; this regression guards the production fatal from issue #596.
+$originalGet = $_GET;
+$_GET = [];
+if (AdminNavigationGroups::highlightGroup(null, 'tools.php') !== null) {
+    fwrite(STDERR, "FAIL: unrelated parent must preserve nullable submenu_file.\n");
+    exit(1);
+}
+$assertions++;
+
+if (AdminNavigationGroups::highlightGroup(null, AdminShell::SLUG) !== null) {
+    fwrite(STDERR, "FAIL: SafeContracts dashboard must preserve nullable submenu_file.\n");
+    exit(1);
+}
+$assertions++;
+
+$_GET = ['page' => 'safecontracts-finance'];
+$financeHighlight = AdminNavigationGroups::highlightGroup(null, AdminShell::SLUG);
+if ($financeHighlight !== 'admin.php?page=safecontracts&safecontracts_group=finance') {
+    fwrite(STDERR, "FAIL: nullable submenu_file did not resolve the finance group highlight.\n");
+    exit(1);
+}
+$assertions++;
+
+$_GET = [AdminNavigationGroups::QUERY_KEY => 'contracts'];
+$contractsHighlight = AdminNavigationGroups::highlightGroup(null, AdminShell::SLUG);
+if ($contractsHighlight !== 'admin.php?page=safecontracts&safecontracts_group=contracts') {
+    fwrite(STDERR, "FAIL: nullable submenu_file did not resolve the requested group highlight.\n");
+    exit(1);
+}
+$assertions++;
+$_GET = $originalGet;
+
 $sourcePath = dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Admin/AdminNavigationGroups.php';
 $source = file_get_contents($sourcePath);
 if (! is_string($source) || $source === '') {
@@ -111,4 +146,4 @@ foreach ($forbidden as $marker) {
     $assertions++;
 }
 
-fwrite(STDOUT, "Alkenzy grouped admin navigation #592 passed ({$assertions} assertions).\n");
+fwrite(STDOUT, "Alkenzy grouped admin navigation #592/#596 passed ({$assertions} assertions).\n");
