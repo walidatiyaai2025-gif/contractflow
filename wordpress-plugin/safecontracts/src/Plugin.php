@@ -48,6 +48,7 @@ use SafeContracts\Rest\Router;
 use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\NotificationCenterArabicDefaults;
 use SafeContracts\Translations\NotificationScheduleArabicDefaults;
+use SafeContracts\Translations\PermissionArabicDefaults;
 use SafeContracts\Translations\RuntimeLabels;
 use SafeContracts\Translations\TranslationCatalog;
 
@@ -77,6 +78,7 @@ final class Plugin
         AdminArabicDefaults::register();
         NotificationScheduleArabicDefaults::register();
         NotificationCenterArabicDefaults::register();
+        PermissionArabicDefaults::register();
         RuntimeLabels::register();
         MobileBearerAuthentication::register();
         PresenceService::register();
