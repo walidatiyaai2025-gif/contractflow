@@ -69,34 +69,8 @@ final class AppEnvironment {
   }
 
   Uri endpoint(String relativePath) {
-    final rawPath = relativePath.trim();
-    if (rawPath.isEmpty || rawPath.contains('\\')) {
-      throw FormatException('Enterprise Safe Contracts API path is invalid.');
-    }
-
-    final parsed = Uri.tryParse(rawPath);
-    if (parsed == null ||
-        parsed.hasScheme ||
-        parsed.hasAuthority ||
-        parsed.host.isNotEmpty ||
-        parsed.userInfo.isNotEmpty ||
-        parsed.hasQuery ||
-        parsed.fragment.isNotEmpty) {
-      throw FormatException(
-        'Enterprise Safe Contracts API path must be relative.',
-      );
-    }
-    if (_containsTraversal(parsed.pathSegments)) {
-      throw FormatException(
-        'Enterprise Safe Contracts API path must not traverse upward.',
-      );
-    }
-
-    final cleanPath = parsed.path.replaceFirst(RegExp(r'^/+'), '');
-    if (cleanPath.isEmpty) {
-      throw FormatException('Enterprise Safe Contracts API path is empty.');
-    }
-    final endpoint = apiBaseUri.resolve(cleanPath);
+    final parsed = _validatedRelativePath(relativePath);
+    final endpoint = apiBaseUri.resolve(parsed.path);
     if (endpoint.scheme != apiBaseUri.scheme ||
         endpoint.host != apiBaseUri.host ||
         endpoint.port != apiBaseUri.port ||
@@ -107,6 +81,82 @@ final class AppEnvironment {
     }
     return endpoint;
   }
+
+  /// Builds WordPress' query-style REST endpoint on the exact same origin.
+  ///
+  /// The fallback exists only for structurally valid WordPress pretty REST
+  /// bases (`.../wp-json/<namespace>/`). Scheme, host, port and REST namespace
+  /// are derived from the validated ESC base URI and cannot be replaced by a
+  /// response or caller-provided URL.
+  Uri? wordpressQueryEndpoint(
+    String relativePath, {
+    Map<String, String> query = const <String, String>{},
+  }) {
+    final prettyEndpoint = endpoint(relativePath);
+    const marker = '/wp-json/';
+    final basePath = apiBaseUri.path;
+    final markerIndex = basePath.indexOf(marker);
+    if (markerIndex < 0 ||
+        basePath.indexOf(marker, markerIndex + marker.length) >= 0) {
+      return null;
+    }
+
+    final namespace = basePath.substring(markerIndex + marker.length);
+    if (namespace.isEmpty || namespace == '/' || !namespace.endsWith('/')) {
+      return null;
+    }
+
+    final routeStart = markerIndex + '/wp-json'.length;
+    if (prettyEndpoint.path.length <= routeStart) {
+      return null;
+    }
+    final restRoute = prettyEndpoint.path.substring(routeStart);
+    if (!restRoute.startsWith('/') ||
+        _containsTraversal(Uri(path: restRoute).pathSegments)) {
+      return null;
+    }
+
+    final wordpressRootPath = basePath.substring(0, markerIndex + 1);
+    return apiBaseUri.replace(
+      path: wordpressRootPath,
+      queryParameters: <String, String>{
+        ...query,
+        'rest_route': restRoute,
+      },
+      fragment: '',
+    );
+  }
+}
+
+Uri _validatedRelativePath(String relativePath) {
+  final rawPath = relativePath.trim();
+  if (rawPath.isEmpty || rawPath.contains('\\')) {
+    throw FormatException('Enterprise Safe Contracts API path is invalid.');
+  }
+
+  final parsed = Uri.tryParse(rawPath);
+  if (parsed == null ||
+      parsed.hasScheme ||
+      parsed.hasAuthority ||
+      parsed.host.isNotEmpty ||
+      parsed.userInfo.isNotEmpty ||
+      parsed.hasQuery ||
+      parsed.fragment.isNotEmpty) {
+    throw FormatException(
+      'Enterprise Safe Contracts API path must be relative.',
+    );
+  }
+  if (_containsTraversal(parsed.pathSegments)) {
+    throw FormatException(
+      'Enterprise Safe Contracts API path must not traverse upward.',
+    );
+  }
+
+  final cleanPath = parsed.path.replaceFirst(RegExp(r'^/+'), '');
+  if (cleanPath.isEmpty) {
+    throw FormatException('Enterprise Safe Contracts API path is empty.');
+  }
+  return parsed.replace(path: cleanPath);
 }
 
 bool _containsTraversal(List<String> segments) {
