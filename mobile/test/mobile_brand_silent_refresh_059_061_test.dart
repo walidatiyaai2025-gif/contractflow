@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/core/branding/safe_contracts_brand.dart';
 
 void main() {
-  test('Enterprise Safe Contracts uses the supplied packaged identity', () {
-    expect(SafeContractsBrand.name, 'Enterprise Safe Contracts');
+  test('Safe Contracts uses the supplied packaged identity', () {
+    expect(SafeContractsBrand.name, 'Safe Contracts');
     expect(
       SafeContractsBrand.assetPath,
       'assets/brand/safe_contracts_identity.jpg',
