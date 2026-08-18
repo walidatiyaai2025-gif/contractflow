@@ -124,16 +124,18 @@ final class SafeContractsApiClient {
       );
     }
 
-    final response = await transport.send(
+    final requestHeaders = <String, String>{
+      ...sessionHeaders,
+      if (tenantId != null) enterpriseTenantHeader: '$tenantId',
+      'Accept': 'application/json',
+      if (encodedBody != null)
+        'Content-Type': 'application/json; charset=utf-8',
+    };
+
+    var response = await transport.send(
       uri: uri,
       method: normalizedMethod,
-      headers: <String, String>{
-        ...sessionHeaders,
-        if (tenantId != null) enterpriseTenantHeader: '$tenantId',
-        'Accept': 'application/json',
-        if (encodedBody != null)
-          'Content-Type': 'application/json; charset=utf-8',
-      },
+      headers: requestHeaders,
       body: encodedBody,
     );
 
@@ -141,20 +143,47 @@ final class SafeContractsApiClient {
     try {
       root = _decodeObject(response.body);
     } on FormatException {
-      if (response.statusCode < 200 || response.statusCode >= 300) {
+      final canUseWordPressFallback =
+          _isSuccess(response.statusCode) && _looksLikeHtml(response);
+      final fallbackUri = canUseWordPressFallback
+          ? environment.wordpressQueryEndpoint(path, query: query)
+          : null;
+
+      if (fallbackUri != null && fallbackUri != uri) {
+        response = await transport.send(
+          uri: fallbackUri,
+          method: normalizedMethod,
+          headers: requestHeaders,
+          body: encodedBody,
+        );
+        try {
+          root = _decodeObject(response.body);
+        } on FormatException {
+          throw SafeContractsApiException(
+            code: _isSuccess(response.statusCode)
+                ? 'safecontracts_invalid_api_response'
+                : 'safecontracts_invalid_error_response',
+            message: 'Enterprise Safe Contracts API returned an invalid response.',
+            statusCode: response.statusCode,
+          );
+        }
+      } else {
         throw SafeContractsApiException(
-          code: 'safecontracts_invalid_error_response',
-          message: 'SafeContracts request failed.',
+          code: _isSuccess(response.statusCode)
+              ? 'safecontracts_invalid_api_response'
+              : 'safecontracts_invalid_error_response',
+          message: _isSuccess(response.statusCode)
+              ? 'Enterprise Safe Contracts API returned an invalid response.'
+              : 'Enterprise Safe Contracts request failed.',
           statusCode: response.statusCode,
         );
       }
-      rethrow;
     }
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    if (!_isSuccess(response.statusCode)) {
       throw SafeContractsApiException(
         code: _string(root['code'], 'safecontracts_request_failed'),
-        message: _string(root['message'], 'SafeContracts request failed.'),
+        message: _string(root['message'], 'Enterprise Safe Contracts request failed.'),
         statusCode: response.statusCode,
       );
     }
@@ -204,6 +233,24 @@ Map<String, Object?> _decodeObject(String body) {
   }
   final Object? decoded = jsonDecode(body) as Object?;
   return _objectMap(decoded, 'response');
+}
+
+bool _isSuccess(int statusCode) => statusCode >= 200 && statusCode < 300;
+
+bool _looksLikeHtml(ApiTransportResponse response) {
+  String? contentType;
+  for (final entry in response.headers.entries) {
+    if (entry.key.toLowerCase() == 'content-type') {
+      contentType = entry.value.toLowerCase();
+      break;
+    }
+  }
+  if (contentType != null && contentType.contains('text/html')) {
+    return true;
+  }
+
+  final prefix = response.body.trimLeft().toLowerCase();
+  return prefix.startsWith('<!doctype html') || prefix.startsWith('<html');
 }
 
 Map<String, Object?> _objectMap(Object? value, String field) {
