@@ -22,6 +22,7 @@ final class AdminNavigationGroups
     {
         add_action('admin_menu', [self::class, 'organize'], 998);
         add_filter('submenu_file', [self::class, 'highlightGroup'], 20, 2);
+        add_action('admin_head', [self::class, 'printSidebarStyles']);
     }
 
     public static function organize(): void
@@ -63,18 +64,16 @@ final class AdminNavigationGroups
             ];
         }
 
-        // Hide every original leaf from the sidebar only. remove_submenu_page()
-        // does not unregister the callbacks created by add_submenu_page(), so
-        // old URLs, bookmarks and contextual links remain backward-compatible.
-        foreach ($rows as $row) {
-            if (! is_array($row) || count($row) < 3) {
-                continue;
-            }
-            $slug = (string) ($row[2] ?? '');
-            if ($slug !== '' && $slug !== $parent) {
-                remove_submenu_page($parent, $slug);
-            }
-        }
+        /*
+         * Do not remove registered leaf submenu rows here.
+         *
+         * WordPress core uses the live $submenu structure when resolving the
+         * parent and registered hook for admin.php?page=... access. Removing a
+         * leaf with remove_submenu_page() can therefore make an otherwise
+         * authorized plugin screen fail user_can_access_admin_page(). The leaf
+         * rows stay registered for routing/security and are hidden visually by
+         * printSidebarStyles() instead.
+         */
 
         // WordPress creates a duplicate first submenu for the top-level page.
         // Keep it, but present it with the clear business label Dashboard.
@@ -92,6 +91,23 @@ final class AdminNavigationGroups
                 self::groupUrl($key),
             ];
         }
+    }
+
+    /**
+     * Keep leaf submenu rows in WordPress' authorization structure but hide
+     * their sidebar links. The grouped entries remain visible because their
+     * URLs use page=safecontracts plus safecontracts_group, not page=safecontracts-*.
+     */
+    public static function printSidebarStyles(): void
+    {
+        if (! current_user_can(Capabilities::ACCESS)) {
+            return;
+        }
+        ?>
+        <style id="safecontracts-grouped-navigation-visibility">
+            #toplevel_page_safecontracts .wp-submenu a[href*="page=safecontracts-"] { display: none !important; }
+        </style>
+        <?php
     }
 
     public static function requestedGroup(): ?string
