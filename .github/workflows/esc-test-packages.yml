@@ -3,6 +3,8 @@ name: ESC Test Packages
 on:
   push:
     branches: [agent/esc-test-packages]
+  pull_request:
+    branches: [enterprise-safecontracts]
   workflow_dispatch:
 
 permissions:
