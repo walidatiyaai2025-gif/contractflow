@@ -7,6 +7,7 @@ require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontract
 
 use SafeContracts\Admin\AdminNavigationGroups;
 use SafeContracts\Admin\AdminShell;
+use SafeContracts\Roles\Capabilities;
 use SafeContracts\Translations\NavigationArabicDefaults;
 
 $assertions = 0;
@@ -106,6 +107,19 @@ if ($contractsHighlight !== 'admin.php?page=safecontracts&safecontracts_group=co
 $assertions++;
 $_GET = $originalGet;
 
+// Issue #598: leaf submenu rows must remain registered in WordPress for
+// get_admin_page_parent()/user_can_access_admin_page(). Compactness is visual
+// only; printSidebarStyles() hides those links without deleting routing data.
+$GLOBALS['sc_test_current_caps'][Capabilities::ACCESS] = true;
+ob_start();
+AdminNavigationGroups::printSidebarStyles();
+$sidebarStyles = (string) ob_get_clean();
+if (! str_contains($sidebarStyles, '#toplevel_page_safecontracts .wp-submenu a[href*="page=safecontracts-"]')) {
+    fwrite(STDERR, "FAIL: grouped navigation leaf-hiding CSS is missing.\n");
+    exit(1);
+}
+$assertions++;
+
 $sourcePath = dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Admin/AdminNavigationGroups.php';
 $source = file_get_contents($sourcePath);
 if (! is_string($source) || $source === '') {
@@ -116,8 +130,10 @@ if (! is_string($source) || $source === '') {
 $requiredMarkers = [
     "current_user_can(Capabilities::ACCESS)",
     'current_user_can($capability)',
-    'remove_submenu_page($parent, $slug)',
     "add_filter('submenu_file'",
+    "add_action('admin_head'",
+    'printSidebarStyles',
+    '#toplevel_page_safecontracts .wp-submenu a[href*="page=safecontracts-"]',
     'safecontracts_group',
     "return 'other';",
     'AdminNavigationGroups::renderRequestedGroup()',
@@ -134,6 +150,7 @@ foreach ($requiredMarkers as $marker) {
 }
 
 $forbidden = [
+    'remove_submenu_page($parent',
     'remove_menu_page(AdminShell::SLUG)',
     'unregister_post_type(',
     'safecontracts_manage_',
@@ -146,4 +163,4 @@ foreach ($forbidden as $marker) {
     $assertions++;
 }
 
-fwrite(STDOUT, "Alkenzy grouped admin navigation #592/#596 passed ({$assertions} assertions).\n");
+fwrite(STDOUT, "Alkenzy grouped admin navigation #592/#596/#598 passed ({$assertions} assertions).\n");
