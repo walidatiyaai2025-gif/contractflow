@@ -38,8 +38,7 @@ final class CounterpartyContractService
             throw new InvalidArgumentException('Contract counterparty must reference an active SafeContracts customer or supplier.');
         }
         if ($type === Counterparty::SUPPLIER) {
-            $this->requireAny(
-                [Capabilities::VIEW_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS],
+            $this->requireSupplierReadAccess(
                 'You do not have permission to use SafeContracts suppliers as contract counterparties.'
             );
         }
@@ -111,8 +110,7 @@ final class CounterpartyContractService
             throw new InvalidArgumentException('Contract counterparty must reference an active SafeContracts customer or supplier.');
         }
         if ($type === Counterparty::SUPPLIER) {
-            $this->requireAny(
-                [Capabilities::VIEW_SUPPLIERS, Capabilities::MANAGE_SUPPLIERS],
+            $this->requireSupplierReadAccess(
                 'You do not have permission to assign SafeContracts suppliers.'
             );
         }
@@ -174,6 +172,19 @@ final class CounterpartyContractService
         if (! $hasAccess || ! $canCreate || ! $hasScope) {
             throw new InvalidArgumentException('Assigned user must be an eligible SafeContracts Accountant.');
         }
+    }
+
+    private function requireSupplierReadAccess(string $message): void
+    {
+        $this->requireAny(
+            [
+                Capabilities::VIEW_SUPPLIERS,
+                Capabilities::MANAGE_SUPPLIERS,
+                Capabilities::VIEW_ALL,
+                Capabilities::MANAGE_REFERENCE_DATA,
+            ],
+            $message
+        );
     }
 
     private function requireCapability(string $capability, string $message): void
