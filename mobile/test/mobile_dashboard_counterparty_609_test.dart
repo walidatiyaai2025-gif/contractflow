@@ -173,7 +173,8 @@ void main() {
       expect(payment.displayOwner, 'Supplier Eighteen');
     });
 
-    test('source audit keeps contract and payment customer bridges optional', () {
+    test('source audit keeps contract and payment customer bridges optional',
+        () {
       final forbidden = <RegExp>[
         RegExp(
           r"_positiveInt\(\s*data\['customer_id'\]\s*,\s*'contract\.customer_id'",
