@@ -78,7 +78,10 @@ final class DashboardFilters {
         status!.isNotEmpty &&
         !dashboardSupportedStatuses.contains(status)) {
       throw ArgumentError.value(
-          status, 'status', 'Unsupported dashboard status.');
+        status,
+        'status',
+        'Unsupported dashboard status.',
+      );
     }
     _validateIsoDate(dueFrom, 'dueFrom');
     _validateIsoDate(dueTo, 'dueTo');
@@ -165,21 +168,73 @@ final class ContractOption {
     required this.id,
     required this.contractNumber,
     required this.customerId,
+    this.counterpartyType,
+    this.counterpartyId,
+    this.counterpartyName,
   });
 
   final int id;
   final String contractNumber;
-  final int customerId;
+
+  /// Legacy Customer bridge. Supplier contracts intentionally have no Customer.
+  /// Production 1.18 payloads may serialize the absent bridge as null, empty,
+  /// numeric zero, or string zero; all are normalized to null.
+  final int? customerId;
+  final String? counterpartyType;
+  final int? counterpartyId;
+  final String? counterpartyName;
+
+  bool get isSupplier => counterpartyType == 'supplier';
+  bool get isCustomer => counterpartyType == 'customer';
 
   factory ContractOption.fromData(Object? value) {
     final data = apiObjectMap(value, 'dashboard.contract');
+    final legacyCustomerId = _optionalLegacyPositiveInt(
+      data['customer_id'],
+      'contract.customer_id',
+    );
+    final type = _optionalText(
+          data['counterparty_type'],
+          'contract.counterparty_type',
+        )
+            ?.toLowerCase() ??
+        (legacyCustomerId != null ? 'customer' : '');
+    if (type != 'customer' && type != 'supplier') {
+      throw const FormatException('contract.counterparty_type is invalid.');
+    }
+
+    final canonicalId = _optionalPositiveInt(
+          data['counterparty_id'],
+          'contract.counterparty_id',
+        ) ??
+        (type == 'customer' ? legacyCustomerId : null);
+    if (canonicalId == null) {
+      throw const FormatException('contract.counterparty_id is required.');
+    }
+    if (type == 'customer' &&
+        legacyCustomerId != null &&
+        legacyCustomerId != canonicalId) {
+      throw const FormatException(
+        'contract customer and counterparty identities conflict.',
+      );
+    }
+    if (type == 'supplier' && legacyCustomerId != null) {
+      throw const FormatException(
+        'supplier contract must not contain a legacy customer identity.',
+      );
+    }
+
     return ContractOption(
       id: _positiveInt(data['id'], 'contract.id'),
       contractNumber: _requiredText(
         data['contract_number'],
         'contract.contract_number',
       ),
-      customerId: _positiveInt(data['customer_id'], 'contract.customer_id'),
+      customerId:
+          type == 'customer' ? (legacyCustomerId ?? canonicalId) : null,
+      counterpartyType: type,
+      counterpartyId: canonicalId,
+      counterpartyName: _counterpartyName(data, 'contract'),
     );
   }
 }
@@ -238,6 +293,9 @@ final class DashboardRecord {
   final String title;
   final String? status;
   final String? date;
+
+  /// Display owner retained under the legacy field name for source
+  /// compatibility. It now resolves Customer or Supplier counterparties.
   final String? customerName;
   final String? remainingAmount;
   final String? amount;
@@ -249,10 +307,7 @@ final class DashboardRecord {
       type: DashboardRecordType.contract,
       title: _requiredText(data['contract_number'], 'contract.contract_number'),
       status: _optionalText(data['status'], 'contract.status'),
-      customerName: _optionalText(
-        data['customer_name'],
-        'contract.customer_name',
-      ),
+      customerName: _counterpartyName(data, 'contract'),
       amount: _optionalMoneyText(data['base_value'], 'contract.base_value'),
     );
   }
@@ -267,10 +322,7 @@ final class DashboardRecord {
           'Payment #$id',
       status: _optionalText(data['status'], 'payment.status'),
       date: _optionalDate(data['due_date'], 'payment.due_date'),
-      customerName: _optionalText(
-        data['customer_name'],
-        'payment.customer_name',
-      ),
+      customerName: _counterpartyName(data, 'payment'),
       remainingAmount: _optionalMoneyText(
         data['remaining_amount'],
         'payment.remaining_amount',
@@ -298,10 +350,7 @@ final class DashboardRecord {
         data['collection_date'],
         'collection.collection_date',
       ),
-      customerName: _optionalText(
-        data['customer_name'],
-        'collection.customer_name',
-      ),
+      customerName: _counterpartyName(data, 'collection'),
       remainingAmount: _optionalMoneyText(
         data['remaining_amount'],
         'collection.remaining_amount',
@@ -358,6 +407,16 @@ int _positiveInt(Object? value, String field) {
   return parsed;
 }
 
+int? _optionalPositiveInt(Object? value, String field) {
+  if (value == null || value == '') return null;
+  return _positiveInt(value, field);
+}
+
+int? _optionalLegacyPositiveInt(Object? value, String field) {
+  if (value == null || value == '' || value == 0 || value == '0') return null;
+  return _positiveInt(value, field);
+}
+
 int _nonNegativeInt(Object? value, String field) {
   final parsed = _parseInt(value);
   if (parsed == null || parsed < 0) {
@@ -392,6 +451,15 @@ String? _optionalText(Object? value, String field) {
   }
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;
+}
+
+String? _counterpartyName(Map<String, Object?> data, String fieldPrefix) {
+  return _optionalText(
+        data['counterparty_name'],
+        '$fieldPrefix.counterparty_name',
+      ) ??
+      _optionalText(data['supplier_name'], '$fieldPrefix.supplier_name') ??
+      _optionalText(data['customer_name'], '$fieldPrefix.customer_name');
 }
 
 String _moneyText(Object? value, String field) {
