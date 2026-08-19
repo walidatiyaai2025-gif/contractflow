@@ -5,7 +5,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
-use DomainException;
 use SafeContracts\Contracts\CounterpartyContractService;
 use SafeContracts\Roles\Capabilities;
 
@@ -26,7 +25,7 @@ function sc_600_expect_domain(callable $callback, string $message): void
     try {
         $callback();
     } catch (Throwable $error) {
-        sc_600_assert($error instanceof DomainException, $message . ' (' . get_class($error) . ')');
+        sc_600_assert($error instanceof \DomainException, $message . ' (' . get_class($error) . ')');
         return;
     }
     sc_600_assert(false, $message . ' (no exception)');
