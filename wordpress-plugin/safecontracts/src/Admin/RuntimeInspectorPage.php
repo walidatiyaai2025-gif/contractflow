@@ -93,7 +93,7 @@ final class RuntimeInspectorPage
                 <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Check', 'safecontracts'); ?></th><th><?php echo esc_html__('Result', 'safecontracts'); ?></th><th><?php echo esc_html__('Details', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($checks as $check) : ?>
                         <tr><td><?php echo esc_html($check['label']); ?></td><td><strong><?php echo esc_html(strtoupper($check['state'])); ?></strong></td><td><?php echo esc_html($check['detail']); ?></td></tr>
-                    <?php foreach; ?>
+                    <?php endforeach; ?>
                 </tbody></table>
             </section>
 
