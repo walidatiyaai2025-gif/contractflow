@@ -73,11 +73,11 @@ jobs:
         run: python3 scripts/final_release_validation.py --check
 
   release-candidates:
-    name: release-candidates
+    name: alkenzy-sys-client-candidates
     needs: [release-readiness]
     runs-on: ubuntu-latest
     env:
-      SC_PRODUCTION_API_BASE_URL: https://cms.50sols.com/wp-json/safecontracts/v1/
+      SC_PRODUCTION_API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -95,38 +95,45 @@ jobs:
         run: |
           python3 wordpress-theme/package_theme.py build --output dist/SafeContracts-theme-candidate.zip
           python3 wordpress-theme/package_theme.py check dist/SafeContracts-theme-candidate.zip
-      - name: Verify production SafeContracts health
-        run: python3 scripts/verify_production_health.py "$SC_PRODUCTION_API_BASE_URL"
+      - name: Probe sys.alkenzy.com SafeContracts health
+        shell: bash
+        run: |
+          set -uo pipefail
+          if python3 scripts/verify_production_health.py "$SC_PRODUCTION_API_BASE_URL"; then
+            echo "sys.alkenzy.com SafeContracts API is already healthy."
+          else
+            echo "::warning::sys.alkenzy.com SafeContracts API is not healthy yet. Candidate packaging will continue so the plugin/theme can be deployed first."
+          fi
       - name: Bootstrap Android release platform
         run: bash scripts/bootstrap_android.sh
-      - name: Create CI-only candidate signing key
+      - name: Create CI-only client-test signing key
         shell: bash
         run: |
           set -euo pipefail
           keytool -genkeypair -v \
-            -keystore "$RUNNER_TEMP/safecontracts-ci-candidate.p12" \
+            -keystore "$RUNNER_TEMP/safecontracts-ci-client-test.p12" \
             -storetype PKCS12 \
-            -storepass candidate-only \
-            -keypass candidate-only \
-            -alias ci-candidate \
+            -storepass client-test-only \
+            -keypass client-test-only \
+            -alias ci-client-test \
             -keyalg RSA \
             -keysize 2048 \
-            -validity 2 \
-            -dname "CN=SafeContracts CI Candidate, OU=CI, O=SafeContracts, L=CI, ST=CI, C=US"
+            -validity 14 \
+            -dname "CN=Alkenzy ADV Client Test, OU=CI, O=Alkenzy, L=CI, ST=CI, C=KW"
           {
-            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/safecontracts-ci-candidate.p12"
-            echo "SC_ANDROID_KEYSTORE_PASSWORD=candidate-only"
-            echo "SC_ANDROID_KEY_ALIAS=ci-candidate"
-            echo "SC_ANDROID_KEY_PASSWORD=candidate-only"
+            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/safecontracts-ci-client-test.p12"
+            echo "SC_ANDROID_KEYSTORE_PASSWORD=client-test-only"
+            echo "SC_ANDROID_KEY_ALIAS=ci-client-test"
+            echo "SC_ANDROID_KEY_PASSWORD=client-test-only"
           } >> "$GITHUB_ENV"
-      - name: Build Android release candidate
+      - name: Build Android client-test APK for sys.alkenzy.com
         working-directory: mobile
         run: |
           flutter pub get
           flutter build apk --release \
             --dart-define=SC_ENV=production \
             --dart-define=SC_API_BASE_URL="$SC_PRODUCTION_API_BASE_URL"
-      - name: Verify candidate APK and collect artifacts
+      - name: Verify client-test APK and collect artifacts
         shell: bash
         run: |
           set -euo pipefail
@@ -137,35 +144,38 @@ jobs:
           test -n "$APKSIGNER"
           test -n "$AAPT"
           "$APKSIGNER" verify --verbose "$APK"
+          BADGING="$($AAPT dump badging "$APK")"
+          grep -Fq "package: name='com.safecontracts.safecontracts_mobile'" <<<"$BADGING"
+          grep -Fq "application-label:'Alkenzy ADV'" <<<"$BADGING"
           "$AAPT" dump permissions "$APK" | tee "$RUNNER_TEMP/safecontracts-apk-permissions.txt"
           grep -Fq "android.permission.INTERNET" "$RUNNER_TEMP/safecontracts-apk-permissions.txt"
           grep -Fq "android.permission.POST_NOTIFICATIONS" "$RUNNER_TEMP/safecontracts-apk-permissions.txt"
           "$AAPT" dump resources "$APK" | tee "$RUNNER_TEMP/safecontracts-apk-resources.txt" >/dev/null
           grep -Fq "google_app_id" "$RUNNER_TEMP/safecontracts-apk-resources.txt"
           grep -Fq "gcm_defaultSenderId" "$RUNNER_TEMP/safecontracts-apk-resources.txt"
-          cp "$APK" dist/SafeContracts-apk-release-candidate.apk
+          cp "$APK" dist/AlkenzyADV-sys-client-test.apk
           sha256sum \
             dist/SafeContracts-plugin-candidate.zip \
             dist/SafeContracts-theme-candidate.zip \
-            dist/SafeContracts-apk-release-candidate.apk \
+            dist/AlkenzyADV-sys-client-test.apk \
             > dist/SHA256SUMS.txt
-          cat > dist/CANDIDATE-NOTICE.txt <<EOF
-          These files are release-engineering candidates from the exact CI source.
-          The plugin and theme ZIPs are deterministic, validated install packages from the tested head.
-          The APK targets the real production SafeContracts API at:
-          $SC_PRODUCTION_API_BASE_URL
-          The final APK manifest has android.permission.INTERNET and POST_NOTIFICATIONS.
-          Firebase Android resources google_app_id and gcm_defaultSenderId are present.
-          Mobile username/password login uses a server-issued opaque Bearer session token.
-          The APK still uses a short-lived CI-only signing key and MUST NOT be copied to
-          Last verified apk/ or deployed as the production Android release.
-          Production APK publication still requires production signing secrets,
-          signature verification, real-device evidence and business UAT evidence.
+          cat > dist/CLIENT-TEST-NOTICE.txt <<EOF
+          Alkenzy ADV client real-data test package.
+          Source branch: release/alkenzy-sys-client-test
+          Source commit: $GITHUB_SHA
+          WordPress site: https://sys.alkenzy.com/
+          Mobile API: $SC_PRODUCTION_API_BASE_URL
+          Android package/applicationId remains: com.safecontracts.safecontracts_mobile
+          Visible application name remains: Alkenzy ADV
+          Existing Firebase Android project/client configuration is intentionally unchanged.
+          Plugin and theme are deterministic install packages from the same tested source.
+          This APK is signed with a short-lived CI client-test key and is for direct client testing only.
+          It is NOT a Google Play production artifact and must not be used for Play Store submission.
           EOF
-      - name: Upload release candidates
+      - name: Upload Alkenzy sys client candidates
         uses: actions/upload-artifact@v4
         with:
-          name: safecontracts-release-candidates
+          name: alkenzy-sys-client-candidates
           path: dist/
           if-no-files-found: error
           retention-days: 14
