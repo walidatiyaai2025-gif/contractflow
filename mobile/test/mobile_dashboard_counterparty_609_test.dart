@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/core/api/api_client.dart';
@@ -12,7 +13,8 @@ import 'fake_api_transport.dart';
 
 void main() {
   group('ALK-MOBILE #609 dashboard counterparty compatibility', () {
-    test('dashboard accepts production supplier contract option with customer 0',
+    test(
+        'dashboard accepts production supplier contract option with customer 0',
         () async {
       final transport = FakeApiTransport((uri) {
         if (uri.path.endsWith('/dashboard')) {
@@ -56,7 +58,8 @@ void main() {
       expect(supplier.counterpartyName, 'Supplier Eighteen');
     });
 
-    test('dependent contract options accept null empty and zero supplier bridge',
+    test(
+        'dependent contract options accept null empty and zero supplier bridge',
         () async {
       final sentinels = <Object?>[null, '', 0, '0'];
       for (final sentinel in sentinels) {
@@ -143,7 +146,8 @@ void main() {
       expect(record.customerName, 'Canonical Supplier Name');
     });
 
-    test('payment model accepts zero customer bridge and preserves supplier', () {
+    test('payment model accepts zero customer bridge and preserves supplier',
+        () {
       final payment = SafeContractsPayment.fromData(<String, Object?>{
         'id': 601,
         'contract_id': 80,
@@ -167,6 +171,36 @@ void main() {
       expect(payment.customerId, isNull);
       expect(payment.counterpartyName, 'Supplier Eighteen');
       expect(payment.displayOwner, 'Supplier Eighteen');
+    });
+
+    test('source audit keeps contract and payment customer bridges optional', () {
+      final forbidden = <RegExp>[
+        RegExp(
+          r"_positiveInt\(\s*data\['customer_id'\]\s*,\s*'contract\.customer_id'",
+        ),
+        RegExp(
+          r"_positiveInt\(\s*data\['customer_id'\]\s*,\s*'payment\.customer_id'",
+        ),
+      ];
+      final offenders = <String>[];
+
+      for (final entity in Directory('lib').listSync(
+        recursive: true,
+        followLinks: false,
+      )) {
+        if (entity is! File || !entity.path.endsWith('.dart')) continue;
+        final source = entity.readAsStringSync();
+        if (forbidden.any((pattern) => pattern.hasMatch(source))) {
+          offenders.add(entity.path);
+        }
+      }
+
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'Legacy Customer bridges for contract/payment payloads must remain optional for Supplier/AP records.',
+      );
     });
   });
 }
