@@ -15,6 +15,7 @@ final class SafeContractsPayment {
     this.contractNumber,
     this.customerId,
     this.customerName,
+    this.counterpartyName,
     this.accountantUserId,
     this.reference,
     this.expectedPaymentDate,
@@ -25,6 +26,7 @@ final class SafeContractsPayment {
   final String? contractNumber;
   final int? customerId;
   final String? customerName;
+  final String? counterpartyName;
   final int? accountantUserId;
   final int sequenceNo;
   final String? reference;
@@ -36,15 +38,22 @@ final class SafeContractsPayment {
   final String status;
   final bool contractIsArchived;
 
+  String? get displayOwner => counterpartyName ?? customerName ?? contractNumber;
+
   factory SafeContractsPayment.fromData(Object? value) {
     final data = apiObjectMap(value, 'payment');
     return SafeContractsPayment(
       id: _positiveInt(data['id'], 'payment.id'),
       contractId: _positiveInt(data['contract_id'], 'payment.contract_id'),
       contractNumber: _optionalText(data['contract_number']),
-      customerId:
-          _optionalPositiveInt(data['customer_id'], 'payment.customer_id'),
+      customerId: _optionalLegacyPositiveInt(
+        data['customer_id'],
+        'payment.customer_id',
+      ),
       customerName: _optionalText(data['customer_name']),
+      counterpartyName: _optionalText(data['counterparty_name']) ??
+          _optionalText(data['supplier_name']) ??
+          _optionalText(data['customer_name']),
       accountantUserId: _optionalPositiveInt(
         data['accountant_user_id'],
         'payment.accountant_user_id',
@@ -125,7 +134,9 @@ final class PaymentMethodOption {
       code: _boundedText(data['code'], 'payment_method.code', 64),
       name: _boundedText(data['name'], 'payment_method.name', 191),
       displayOrder: _nonNegativeInt(
-          data['display_order'], 'payment_method.display_order'),
+        data['display_order'],
+        'payment_method.display_order',
+      ),
     );
   }
 }
@@ -289,6 +300,11 @@ int _nonNegativeInt(Object? value, String field) {
 
 int? _optionalPositiveInt(Object? value, String field) {
   if (value == null || value == '') return null;
+  return _positiveInt(value, field);
+}
+
+int? _optionalLegacyPositiveInt(Object? value, String field) {
+  if (value == null || value == '' || value == 0 || value == '0') return null;
   return _positiveInt(value, field);
 }
 
