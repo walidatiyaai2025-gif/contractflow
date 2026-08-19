@@ -323,7 +323,7 @@ final class _ContractTile extends StatelessWidget {
       if (contract.endDate != null) '${l10n.t('End')} ${contract.endDate}',
     ].join(' • ');
     final secondary = <String>[
-      if (contract.customerName != null) contract.customerName!,
+      contract.displayCounterparty,
       if (dates.isNotEmpty) dates,
       if (contract.baseValue != null)
         '${l10n.t('Value')} ${l10n.money(contract.baseValue!, currency)}',
