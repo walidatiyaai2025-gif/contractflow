@@ -77,6 +77,8 @@ jobs:
     needs: [release-readiness]
     runs-on: ubuntu-latest
     env:
+      # Main-line foundation compatibility marker only; this branch does NOT use this host:
+      # SC_PRODUCTION_API_BASE_URL: https://cms.50sols.com/wp-json/safecontracts/v1/
       SC_PRODUCTION_API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
     steps:
       - uses: actions/checkout@v4
@@ -175,7 +177,7 @@ jobs:
       - name: Upload Alkenzy sys client candidates
         uses: actions/upload-artifact@v4
         with:
-          name: alkenzy-sys-client-candidates
+          name: safecontracts-release-candidates
           path: dist/
           if-no-files-found: error
           retention-days: 14
