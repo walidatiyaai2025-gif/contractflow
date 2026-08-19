@@ -213,7 +213,10 @@ def validate_migration_upgrade() -> int:
             / f"{migration_class}.php"
         )
         migration_source = path.read_text(encoding="utf-8")
-        if f"final class {migration_class} implements Migration" not in migration_source:
+        migration_contract = re.compile(
+            rf"final\s+class\s+{re.escape(migration_class)}\s+implements\s+(?:Migration|ProductionMigration)\b"
+        )
+        if migration_contract.search(migration_source) is None:
             fail(f"migration contract changed: {migration_class}")
         checks += 2
 

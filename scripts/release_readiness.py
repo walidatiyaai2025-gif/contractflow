@@ -66,6 +66,9 @@ MIGRATION_ENTRY = re.compile(
 LATEST_VERSION = re.compile(
     r"public const LATEST_VERSION\s*=\s*['\"](\d+\.\d+\.\d+)['\"]\s*;"
 )
+MIGRATION_CONTRACT = re.compile(
+    r"final\s+class\s+{class_name}\s+implements\s+(?:Migration|ProductionMigration)\b"
+)
 
 
 def fail(message: str) -> None:
@@ -146,7 +149,10 @@ def validate_migration_chain() -> int:
         if not path.exists():
             fail(f"registered migration source is missing: {migration_class}")
         migration_source = path.read_text(encoding="utf-8")
-        if f"final class {migration_class} implements Migration" not in migration_source:
+        contract_pattern = re.compile(
+            MIGRATION_CONTRACT.pattern.format(class_name=re.escape(migration_class))
+        )
+        if contract_pattern.search(migration_source) is None:
             fail(f"migration does not implement the Migration contract: {migration_class}")
         checks += 1
 

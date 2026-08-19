@@ -51,6 +51,7 @@ final class SC_Test_Wpdb
 {
     public string $prefix = 'wp_';
     public int $insert_id = 0;
+    public bool $contractsCustomerIdNullable = false;
 
     public function get_charset_collate(): string
     {
@@ -73,6 +74,11 @@ final class SC_Test_Wpdb
         if (str_starts_with(ltrim($sql), 'INSERT INTO') && $this->insert_id === 0) {
             $this->insert_id = 1001;
         }
+        if (str_contains($sql, 'ALTER TABLE wp_safecontracts_contracts MODIFY customer_id bigint(20) unsigned NOT NULL')) {
+            $this->contractsCustomerIdNullable = false;
+        } elseif (str_contains($sql, 'ALTER TABLE wp_safecontracts_contracts MODIFY customer_id bigint(20) unsigned NULL')) {
+            $this->contractsCustomerIdNullable = true;
+        }
         return 1;
     }
 
@@ -83,6 +89,14 @@ final class SC_Test_Wpdb
         if ($GLOBALS['sc_test_result_queue'] !== []) {
             $rows = array_shift($GLOBALS['sc_test_result_queue']);
             return is_array($rows) ? $rows : [];
+        }
+        if (str_contains($sql, 'SHOW COLUMNS FROM wp_safecontracts_contracts')) {
+            return [
+                ['Field' => 'customer_id', 'Type' => 'bigint(20) unsigned', 'Null' => $this->contractsCustomerIdNullable ? 'YES' : 'NO'],
+                ['Field' => 'counterparty_type', 'Type' => 'varchar(16)', 'Null' => 'YES'],
+                ['Field' => 'counterparty_id', 'Type' => 'bigint(20) unsigned', 'Null' => 'YES'],
+                ['Field' => 'financial_direction', 'Type' => 'varchar(16)', 'Null' => 'YES'],
+            ];
         }
         return $GLOBALS['sc_test_results'];
     }

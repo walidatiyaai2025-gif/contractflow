@@ -72,7 +72,7 @@ sc_p11_assert(is_callable($activate), 'P11 activation hook is available');
 $GLOBALS['sc_test_options']['safecontracts_general_settings'] = ['currency_code' => 'KWD'];
 $activate();
 
-sc_p11_assert(Migrator::LATEST_VERSION === '1.17.0', 'P11 reconciliation migration is the current schema version');
+sc_p11_assert(version_compare(Migrator::LATEST_VERSION, '1.17.0', '>='), 'P11 reconciliation migration remains included in the current schema');
 $schema = implode("\n---\n", $GLOBALS['sc_test_dbdelta']);
 sc_p11_assert(str_contains($schema, 'wp_safecontracts_suppliers'), 'P11 creates dedicated supplier master data');
 sc_p11_assert(str_contains($schema, 'legal_name varchar(191) NULL'), 'P11 reconciliation adds the rich Supplier profile additively');
@@ -236,6 +236,6 @@ sc_p11_assert(is_array($GLOBALS['sc_test_routes']['safecontracts/v1/finance/summ
 
 $dbDeltaCount = count($GLOBALS['sc_test_dbdelta']);
 do_action('plugins_loaded');
-sc_p11_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'P11 migration is idempotent after 1.17.0');
+sc_p11_assert(count($GLOBALS['sc_test_dbdelta']) === $dbDeltaCount, 'P11 and guarded compatibility migrations are idempotent after activation');
 
 echo "SafeContracts P11 counterparty/supplier/AP-AR tests passed ({$p11Tests} assertions).\n";

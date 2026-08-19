@@ -22,13 +22,14 @@ use SafeContracts\Database\Migrations\Migration0015NotificationCenter;
 use SafeContracts\Database\Migrations\Migration0016MobileCrudCapabilities;
 use SafeContracts\Database\Migrations\Migration0017CounterpartySupplierApar;
 use SafeContracts\Database\Migrations\Migration0018SupplierFinanceReconciliation;
+use SafeContracts\Database\Migrations\Migration0019NullableLegacyCustomer;
 use RuntimeException;
 use Throwable;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.17.0';
+    public const LATEST_VERSION = '1.18.0';
 
     /**
      * All migrations introduced after this already-released baseline must use
@@ -56,6 +57,7 @@ final class Migrator
         '1.15.0' => Migration0016MobileCrudCapabilities::class,
         '1.16.0' => Migration0017CounterpartySupplierApar::class,
         '1.17.0' => Migration0018SupplierFinanceReconciliation::class,
+        '1.18.0' => Migration0019NullableLegacyCustomer::class,
     ];
 
     /** @var array<string, class-string<Migration>> */
