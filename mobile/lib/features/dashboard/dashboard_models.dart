@@ -196,8 +196,7 @@ final class ContractOption {
     final type = _optionalText(
           data['counterparty_type'],
           'contract.counterparty_type',
-        )
-            ?.toLowerCase() ??
+        )?.toLowerCase() ??
         (legacyCustomerId != null ? 'customer' : '');
     if (type != 'customer' && type != 'supplier') {
       throw const FormatException('contract.counterparty_type is invalid.');
@@ -230,8 +229,7 @@ final class ContractOption {
         data['contract_number'],
         'contract.contract_number',
       ),
-      customerId:
-          type == 'customer' ? (legacyCustomerId ?? canonicalId) : null,
+      customerId: type == 'customer' ? (legacyCustomerId ?? canonicalId) : null,
       counterpartyType: type,
       counterpartyId: canonicalId,
       counterpartyName: _counterpartyName(data, 'contract'),
