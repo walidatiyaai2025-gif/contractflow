@@ -31,6 +31,7 @@ use SafeContracts\Admin\NotificationsPage;
 use SafeContracts\Admin\PaymentMethodsPage;
 use SafeContracts\Admin\PaymentsPage;
 use SafeContracts\Admin\ReportsPage;
+use SafeContracts\Admin\RuntimeInspectorPage;
 use SafeContracts\Admin\SuppliersPage;
 use SafeContracts\Admin\TranslationsPage;
 use SafeContracts\Admin\UserGuidePage;
@@ -44,6 +45,7 @@ use SafeContracts\Auth\MobileBearerAuthentication;
 use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\MigrationGuard;
 use SafeContracts\Database\Migrator;
+use SafeContracts\Diagnostics\RuntimeInspector;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Presence\PresenceService;
@@ -116,6 +118,7 @@ final class Plugin
         AdminPageSummaryInjector::register();
         UserGuidePage::registerContextualHelp();
         NotificationEmailTestControl::register();
+        RuntimeInspector::register();
 
         add_action('rest_api_init', [Router::class, 'register']);
         add_action('admin_menu', [AdminShell::class, 'register'], 5);
@@ -141,8 +144,10 @@ final class Plugin
         add_action('admin_menu', [MobileConfigurationPage::class, 'register'], 34);
         add_action('admin_menu', [TranslationsPage::class, 'register'], 35);
         add_action('admin_menu', [UserGuidePage::class, 'register'], 36);
+        add_action('admin_menu', [RuntimeInspectorPage::class, 'register'], 37);
         add_action('admin_enqueue_scripts', [AdminShell::class, 'enqueueAssets']);
         add_action('admin_enqueue_scripts', [AdminFeedback::class, 'enqueueAssets'], 20);
+        add_action('admin_notices', [RuntimeInspectorPage::class, 'renderCapturedNotice'], 8);
         add_action('admin_notices', [AdminFeedback::class, 'render']);
         add_action('admin_notices', [ImportPeriodNotice::class, 'render'], 30);
 
@@ -183,6 +188,7 @@ final class Plugin
         add_action('admin_post_' . FirebaseSettingsPage::TEST_PUSH_ACTION, [FirebaseSettingsPage::class, 'handleTestPush']);
         add_action('admin_post_' . MobileConfigurationPage::SAVE_ACTION, [MobileConfigurationPage::class, 'handleSave']);
         add_action('admin_post_' . TranslationsPage::SAVE_ACTION, [TranslationsPage::class, 'handleSave']);
+        add_action('admin_post_' . RuntimeInspectorPage::CLEAR_ACTION, [RuntimeInspectorPage::class, 'handleClear']);
         do_action('safecontracts_loaded');
     }
 }

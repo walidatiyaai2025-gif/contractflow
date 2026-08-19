@@ -206,7 +206,7 @@ final class AdminNavigationGroups
         if (self::containsAny($feature, ['active-users', 'users-roles'])) {
             return 'access';
         }
-        if (self::containsAny($feature, ['settings', 'firebase', 'mobile-configuration', 'translations'])) {
+        if (self::containsAny($feature, ['settings', 'firebase', 'mobile-configuration', 'translations', 'runtime-inspector'])) {
             return 'system';
         }
         if (str_contains($feature, 'user-guide')) {
