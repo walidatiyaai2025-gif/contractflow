@@ -21,8 +21,9 @@ final class RuntimeInspector
     public const MAX_EVENTS = 50;
 
     /** @var array{id:string,operation:string,stage:string,context:array<string,mixed>}|null */
-    private static ?array $current = null;
-    private static ?string $capturedId = null;
+    private static $current = null;
+    /** @var string|null */
+    private static $capturedId = null;
 
     public static function register(): void
     {
