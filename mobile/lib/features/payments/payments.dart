@@ -38,7 +38,8 @@ final class SafeContractsPayment {
   final String status;
   final bool contractIsArchived;
 
-  String? get displayOwner => counterpartyName ?? customerName ?? contractNumber;
+  String? get displayOwner =>
+      counterpartyName ?? customerName ?? contractNumber;
 
   factory SafeContractsPayment.fromData(Object? value) {
     final data = apiObjectMap(value, 'payment');
