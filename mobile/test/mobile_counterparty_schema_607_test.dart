@@ -60,7 +60,8 @@ void main() {
       expect(contract.counterpartyId, 3102);
     });
 
-    test('customer contract keeps legacy and counterparty identity aligned', () {
+    test('customer contract keeps legacy and counterparty identity aligned',
+        () {
       final contract = SafeContractsContract.fromData(<String, Object?>{
         'id': 4201,
         'contract_number': 'CUS-CON-4201',
