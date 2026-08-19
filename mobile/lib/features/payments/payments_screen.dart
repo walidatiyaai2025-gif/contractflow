@@ -228,8 +228,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final payment = page.payments[index];
-                final owner = payment.customerName ??
-                    payment.contractNumber ??
+                final owner = payment.displayOwner ??
                     l10n.contractNumber(payment.contractId);
                 return Card(
                   child: ListTile(
