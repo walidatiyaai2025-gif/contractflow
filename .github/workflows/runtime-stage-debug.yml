@@ -1,0 +1,22 @@
+name: Runtime Inspector Stage Debug
+
+on:
+  push:
+    branches:
+      - agent/alkenzy-runtime-inspector-602
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stage-debug:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          ini-file: production
+      - name: Print runtime inspector stage
+        run: php tests/php/runtime_inspector_stage_debug.php
