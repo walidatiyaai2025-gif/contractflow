@@ -123,4 +123,19 @@ sc_fcm_invalid_assert(
     'Rejected invalid registrations follow the existing owner-scoped device deactivation path'
 );
 
+$pushDeliverySource = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Notifications/PushDeliveryService.php');
+sc_fcm_invalid_assert(
+    str_contains($pushDeliverySource, "\$errorCode === 'firebase_token_not_found'")
+        && str_contains($pushDeliverySource, 'deactivateOwnedById')
+        && str_contains($pushDeliverySource, "'retryable' => \$retryableFailures > 0"),
+    'Scheduled production push retires rejected FCM tokens and does not classify them as retryable failures'
+);
+
+$directDeliverySource = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Notifications/DirectNotificationService.php');
+sc_fcm_invalid_assert(
+    str_contains($directDeliverySource, "\$errorCode === 'firebase_token_not_found'")
+        && str_contains($directDeliverySource, 'deactivateOwnedById'),
+    'Direct admin push also retires rejected FCM tokens instead of leaving them active'
+);
+
 printf("SafeContracts FCM request/recovery tests passed (%d assertions).\n", $tests);
