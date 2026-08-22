@@ -5,7 +5,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php';
 
-use InvalidArgumentException;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Settings\MobileConfiguration;
 
@@ -60,7 +59,7 @@ try {
     ]);
     fwrite(STDERR, "FAIL: production ads accepted an empty banner unit ID.\n");
     exit(1);
-} catch (InvalidArgumentException) {
+} catch (\InvalidArgumentException) {
     $assertions++;
 }
 
@@ -75,7 +74,7 @@ try {
     ]);
     fwrite(STDERR, "FAIL: malformed AdMob unit ID was accepted.\n");
     exit(1);
-} catch (InvalidArgumentException) {
+} catch (\InvalidArgumentException) {
     $assertions++;
 }
 
