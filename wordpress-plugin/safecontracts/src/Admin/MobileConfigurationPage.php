@@ -93,7 +93,7 @@ final class MobileConfigurationPage
                                 <input class="regular-text code" type="text" name="ads_admob_banner_unit_id" placeholder="ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY" value="<?php echo esc_attr($config['ads_admob_banner_unit_id']); ?>">
                             </label>
                         </p>
-                        <p class="description"><?php echo esc_html__('The production AdMob App ID belongs to the signed Android build and is supplied through release secrets, not saved in WordPress. The banner Ad Unit ID is safe to manage here at runtime.', 'safecontracts'); ?></p>
+                        <p class="description"><?php echo esc_html__('The production AdMob App ID is already embedded in the signed Android build. The Banner Ad Unit ID below remains editable from WordPress at runtime.', 'safecontracts'); ?></p>
 
                         <h3><?php echo esc_html__('AppLovin MAX', 'safecontracts'); ?></h3>
                         <p>
@@ -107,7 +107,7 @@ final class MobileConfigurationPage
                             </label>
                         </p>
                         <p class="description"><?php echo esc_html__('For AppLovin QA, add the test device GAID in MAX > Mediation > Manage > Test Mode. AppLovin does not provide a universal public banner test unit like AdMob.', 'safecontracts'); ?></p>
-                        <p class="description"><?php echo esc_html__('The AdMob App ID remains a signed-build release secret. AppLovin uses only the SDK key here; never paste an AppLovin Management Key, API Key, or Ad Review Key into this page.', 'safecontracts'); ?></p>
+                        <p class="description"><?php echo esc_html__('The AdMob App ID is fixed in the signed Android build. AppLovin uses only the SDK key here; never paste an AppLovin Management Key, API Key, or Ad Review Key into this page.', 'safecontracts'); ?></p>
                     </fieldset>
                     <?php submit_button(__('Save Mobile Configuration', 'safecontracts')); ?>
                 </form>
@@ -127,8 +127,8 @@ final class MobileConfigurationPage
                 <ol dir="rtl">
                     <li>افتح AdMob وسجّل تطبيق Android باسم Alkenzy ADV.</li>
                     <li>استخدم Package ID نفسه الموجود في نسخة التطبيق الموقعة.</li>
-                    <li>انسخ App ID الذي يبدأ عادةً بـ ca-app-pub-...~... وضعه في GitHub production secret باسم SC_ADMOB_APP_ID.</li>
-                    <li>أنشئ Banner Ad Unit وانسخ Ad Unit ID إلى الحقل الموجود بالأعلى.</li>
+                    <li>تم تثبيت App ID ‏ca-app-pub-3218037275900725~7401372044 داخل نسخة أندرويد الموقعة؛ لا تحتاج GitHub secret له.</li>
+                    <li>تم ضبط Banner Ad Unit ID الافتراضي على ca-app-pub-3218037275900725/8818395498 ويمكن تغييره من الحقل الموجود بالأعلى.</li>
                     <li>أثناء الاختبار اترك Test / QA mode مفعلاً؛ لا تضغط على إعلانات إنتاج حقيقية من أجهزة الاختبار.</li>
                     <li>أكمل Payments وIdentity/verification وPrivacy &amp; messaging داخل AdMob قبل التحويل للإنتاج.</li>
                 </ol>
