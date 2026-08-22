@@ -26,7 +26,7 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Require production signing and advertising material
+      - name: Require production signing material
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
@@ -34,12 +34,11 @@ jobs:
           KEY_ALIAS: ${{ secrets.SC_ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.SC_ANDROID_KEY_PASSWORD }}
           CERT_SHA256: ${{ secrets.SC_ANDROID_CERT_SHA256 }}
-          ADMOB_APP_ID: ${{ secrets.SC_ADMOB_APP_ID }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_SHA256 ADMOB_APP_ID; do
+          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_SHA256; do
             if [[ -z "${!name:-}" ]]; then
-              echo "FAIL: production release input $name is missing" >&2
+              echo "FAIL: production signing secret $name is missing" >&2
               exit 1
             fi
           done
@@ -65,7 +64,6 @@ jobs:
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
-          SC_ADMOB_APP_ID: ${{ secrets.SC_ADMOB_APP_ID }}
           SC_REQUIRE_PRODUCTION_ADMOB: "1"
         run: |
           set -euo pipefail
@@ -112,7 +110,7 @@ jobs:
           grep -Fq "package: name='com.safecontracts.safecontracts_mobile'" <<<"$BADGING"
           cp "$APK" SafeContracts-Mobile.apk
           sha256sum SafeContracts-Mobile.apk > SafeContracts-Mobile.apk.sha256
-          printf 'source_commit=%s\napi_base_url=%s\nsigning_cert_sha256=%s\n' "$GITHUB_SHA" "${{ inputs.api_base_url }}" "$EXPECTED" > MOBILE-RELEASE.txt
+          printf 'source_commit=%s\napi_base_url=%s\nsigning_cert_sha256=%s\nadmob_app_id=ca-app-pub-3218037275900725~7401372044\n' "$GITHUB_SHA" "${{ inputs.api_base_url }}" "$EXPECTED" > MOBILE-RELEASE.txt
       - name: Publish stable mobile-latest GitHub Release
         shell: bash
         env:
