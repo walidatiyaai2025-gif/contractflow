@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/localization/runtime_translation_overrides.dart';
+import '../ads/mobile_ads_config.dart';
 
 final class MobileFeatureFlags {
   const MobileFeatureFlags({
@@ -47,6 +48,7 @@ final class SafeContractsMobileConfig {
     required this.defaultPageSize,
     this.currency = const MobileCurrencyConfig.defaults(),
     required this.features,
+    this.ads = const MobileAdvertisingConfig.defaults(),
     this.translationOverrides = const {
       'en': <String, String>{},
       'ar': <String, String>{},
@@ -58,6 +60,7 @@ final class SafeContractsMobileConfig {
         defaultPageSize = 25,
         currency = const MobileCurrencyConfig.defaults(),
         features = const MobileFeatureFlags.defaults(),
+        ads = const MobileAdvertisingConfig.defaults(),
         translationOverrides = const {
           'en': <String, String>{},
           'ar': <String, String>{},
@@ -69,6 +72,7 @@ final class SafeContractsMobileConfig {
   final int defaultPageSize;
   final MobileCurrencyConfig currency;
   final MobileFeatureFlags features;
+  final MobileAdvertisingConfig ads;
   final Map<String, Map<String, String>> translationOverrides;
 
   factory SafeContractsMobileConfig.fromData(Object? value) {
@@ -90,6 +94,7 @@ final class SafeContractsMobileConfig {
         pushNotifications: features['push_notifications'] == true,
         collectionEntry: features['collection_entry'] == true,
       ),
+      ads: MobileAdvertisingConfig.fromData(data['ads']),
       translationOverrides: <String, Map<String, String>>{
         'en': SafeContractsRuntimeTranslations.parseLanguage(
           translationData['en'],
