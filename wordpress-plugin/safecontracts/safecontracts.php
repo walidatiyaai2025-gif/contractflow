@@ -33,6 +33,7 @@ require_once SAFECONTRACTS_DIR . 'src/Support/Autoloader.php';
 register_activation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Activator::class, 'activate']);
 register_deactivation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Deactivator::class, 'deactivate']);
 
+add_action('admin_menu', [\SafeContracts\Admin\PlayReviewAccount::class, 'registerPage'], 35);
 add_action('admin_post_' . \SafeContracts\Admin\PlayReviewAccount::CREATE_ACTION, [\SafeContracts\Admin\PlayReviewAccount::class, 'handleCreate']);
 add_action('admin_post_' . \SafeContracts\Admin\PlayReviewAccount::DISABLE_ACTION, [\SafeContracts\Admin\PlayReviewAccount::class, 'handleDisable']);
 
