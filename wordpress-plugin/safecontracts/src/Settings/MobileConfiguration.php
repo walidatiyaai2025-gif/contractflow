@@ -12,13 +12,17 @@ use SafeContracts\Support\Input;
 final class MobileConfiguration
 {
     public const OPTION = 'safecontracts_mobile_configuration';
+    public const AD_PROVIDER_ADMOB = 'admob';
+    public const AD_PROVIDER_APPLOVIN = 'applovin';
 
-    /** @return array{support_text:string,default_page_size:int,excel_export_enabled:bool,push_notifications_enabled:bool,collection_entry_enabled:bool,ads_enabled:bool,ads_test_mode:bool,ads_banner_enabled:bool,ads_banner_unit_id:string} */
+    /** @return array<string,mixed> */
     public function read(): array
     {
         $stored = get_option(self::OPTION, []);
         $stored = is_array($stored) ? $stored : [];
         $defaults = self::defaults();
+        $legacyAdMobUnit = $stored['ads_admob_banner_unit_id'] ?? $stored['ads_banner_unit_id'] ?? $defaults['ads_admob_banner_unit_id'];
+        $adMobUnit = $this->readAdMobUnitId($legacyAdMobUnit);
 
         return [
             'support_text' => $this->readText($stored['support_text'] ?? $defaults['support_text']),
@@ -29,14 +33,24 @@ final class MobileConfiguration
             'ads_enabled' => $this->readBool($stored['ads_enabled'] ?? $defaults['ads_enabled']),
             'ads_test_mode' => $this->readBool($stored['ads_test_mode'] ?? $defaults['ads_test_mode']),
             'ads_banner_enabled' => $this->readBool($stored['ads_banner_enabled'] ?? $defaults['ads_banner_enabled']),
-            'ads_banner_unit_id' => $this->readAdUnitId($stored['ads_banner_unit_id'] ?? $defaults['ads_banner_unit_id']),
+            'ads_provider' => $this->readProvider($stored['ads_provider'] ?? $defaults['ads_provider']),
+            // Keep the legacy key readable for older clients while the new provider-aware contract rolls out.
+            'ads_banner_unit_id' => $adMobUnit,
+            'ads_admob_banner_unit_id' => $adMobUnit,
+            'ads_applovin_sdk_key' => $this->readAppLovinToken($stored['ads_applovin_sdk_key'] ?? $defaults['ads_applovin_sdk_key'], 20, 256),
+            'ads_applovin_banner_unit_id' => $this->readAppLovinToken($stored['ads_applovin_banner_unit_id'] ?? $defaults['ads_applovin_banner_unit_id'], 8, 128),
         ];
     }
 
-    /** @return array{support_text:string,default_page_size:int,excel_export_enabled:bool,push_notifications_enabled:bool,collection_entry_enabled:bool,ads_enabled:bool,ads_test_mode:bool,ads_banner_enabled:bool,ads_banner_unit_id:string} */
+    /** @return array<string,mixed> */
     public function save(array $input): array
     {
         $this->requireManage();
+        $provider = $this->normalizeProvider($input['ads_provider'] ?? self::AD_PROVIDER_ADMOB);
+        $adMobUnit = $this->normalizeAdMobUnitId($input['ads_admob_banner_unit_id'] ?? $input['ads_banner_unit_id'] ?? '');
+        $appLovinSdkKey = $this->normalizeAppLovinToken($input['ads_applovin_sdk_key'] ?? '', 'AppLovin SDK key', 20, 256);
+        $appLovinBannerUnit = $this->normalizeAppLovinToken($input['ads_applovin_banner_unit_id'] ?? '', 'AppLovin banner ad unit ID', 8, 128);
+
         $config = [
             'support_text' => $this->normalizeText($input['support_text'] ?? ''),
             'default_page_size' => $this->normalizePageSize($input['default_page_size'] ?? 25),
@@ -46,11 +60,20 @@ final class MobileConfiguration
             'ads_enabled' => $this->normalizeBool($input['ads_enabled'] ?? false),
             'ads_test_mode' => $this->normalizeBool($input['ads_test_mode'] ?? true),
             'ads_banner_enabled' => $this->normalizeBool($input['ads_banner_enabled'] ?? true),
-            'ads_banner_unit_id' => $this->normalizeAdUnitId($input['ads_banner_unit_id'] ?? ''),
+            'ads_provider' => $provider,
+            'ads_banner_unit_id' => $adMobUnit,
+            'ads_admob_banner_unit_id' => $adMobUnit,
+            'ads_applovin_sdk_key' => $appLovinSdkKey,
+            'ads_applovin_banner_unit_id' => $appLovinBannerUnit,
         ];
 
-        if ($config['ads_enabled'] && $config['ads_banner_enabled'] && ! $config['ads_test_mode'] && $config['ads_banner_unit_id'] === '') {
-            throw new InvalidArgumentException('A production AdMob banner ad unit ID is required when mobile ads are enabled outside test mode.');
+        if ($config['ads_enabled'] && $config['ads_banner_enabled']) {
+            if ($provider === self::AD_PROVIDER_ADMOB && ! $config['ads_test_mode'] && $adMobUnit === '') {
+                throw new InvalidArgumentException('A production AdMob banner ad unit ID is required when AdMob is enabled outside test mode.');
+            }
+            if ($provider === self::AD_PROVIDER_APPLOVIN && ($appLovinSdkKey === '' || $appLovinBannerUnit === '')) {
+                throw new InvalidArgumentException('AppLovin MAX requires both the SDK key and banner ad unit ID before it can be enabled.');
+            }
         }
 
         update_option(self::OPTION, $config, false);
@@ -58,7 +81,7 @@ final class MobileConfiguration
         return $config;
     }
 
-    /** @return array{support_text:string,default_page_size:int,excel_export_enabled:bool,push_notifications_enabled:bool,collection_entry_enabled:bool,ads_enabled:bool,ads_test_mode:bool,ads_banner_enabled:bool,ads_banner_unit_id:string} */
+    /** @return array<string,mixed> */
     public static function defaults(): array
     {
         return [
@@ -70,7 +93,11 @@ final class MobileConfiguration
             'ads_enabled' => false,
             'ads_test_mode' => true,
             'ads_banner_enabled' => true,
+            'ads_provider' => self::AD_PROVIDER_ADMOB,
             'ads_banner_unit_id' => '',
+            'ads_admob_banner_unit_id' => '',
+            'ads_applovin_sdk_key' => '',
+            'ads_applovin_banner_unit_id' => '',
         ];
     }
 
@@ -106,7 +133,16 @@ final class MobileConfiguration
         throw new InvalidArgumentException('Mobile feature flag value is invalid.');
     }
 
-    private function normalizeAdUnitId(mixed $value): string
+    private function normalizeProvider(mixed $value): string
+    {
+        $provider = strtolower(trim(Input::string($value, 'Advertising provider')));
+        if (! in_array($provider, [self::AD_PROVIDER_ADMOB, self::AD_PROVIDER_APPLOVIN], true)) {
+            throw new InvalidArgumentException('Advertising provider must be AdMob or AppLovin MAX.');
+        }
+        return $provider;
+    }
+
+    private function normalizeAdMobUnitId(mixed $value): string
     {
         $id = trim(strip_tags(Input::string($value, 'AdMob banner ad unit ID')));
         if ($id === '') {
@@ -116,6 +152,19 @@ final class MobileConfiguration
             throw new InvalidArgumentException('AdMob banner ad unit ID must use the ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY format.');
         }
         return $id;
+    }
+
+    private function normalizeAppLovinToken(mixed $value, string $label, int $min, int $max): string
+    {
+        $token = trim(strip_tags(Input::string($value, $label)));
+        if ($token === '') {
+            return '';
+        }
+        $length = strlen($token);
+        if ($length < $min || $length > $max || preg_match('/[\s\x00-\x1F\x7F]/', $token)) {
+            throw new InvalidArgumentException($label . ' has an invalid format.');
+        }
+        return $token;
     }
 
     private function readText(mixed $value): string
@@ -138,13 +187,34 @@ final class MobileConfiguration
         return $value === true || $value === 1 || $value === '1' || $value === 'true' || $value === 'on';
     }
 
-    private function readAdUnitId(mixed $value): string
+    private function readProvider(mixed $value): string
+    {
+        if (! is_scalar($value) && $value !== null) {
+            return self::AD_PROVIDER_ADMOB;
+        }
+        $provider = strtolower(trim((string) $value));
+        return in_array($provider, [self::AD_PROVIDER_ADMOB, self::AD_PROVIDER_APPLOVIN], true)
+            ? $provider
+            : self::AD_PROVIDER_ADMOB;
+    }
+
+    private function readAdMobUnitId(mixed $value): string
     {
         if (! is_scalar($value) && $value !== null) {
             return '';
         }
         $id = trim(strip_tags((string) $value));
         return preg_match('/^ca-app-pub-\d{16}\/\d{10}$/', $id) ? $id : '';
+    }
+
+    private function readAppLovinToken(mixed $value, int $min, int $max): string
+    {
+        if (! is_scalar($value) && $value !== null) {
+            return '';
+        }
+        $token = trim(strip_tags((string) $value));
+        $length = strlen($token);
+        return $length >= $min && $length <= $max && ! preg_match('/[\s\x00-\x1F\x7F]/', $token) ? $token : '';
     }
 
     private function requireManage(): void
