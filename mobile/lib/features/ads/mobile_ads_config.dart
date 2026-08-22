@@ -43,10 +43,10 @@ final class MobileAdvertisingConfig {
   bool get canRequestBanner {
     if (!enabled || !bannerEnabled) return false;
     return switch (provider) {
-      MobileAdProvider.admob => testMode || _isAdMobAdUnitId(adMobBannerAdUnitId),
-      MobileAdProvider.applovin =>
-        _isAppLovinToken(appLovinSdkKey, 20, 256) &&
-            _isAppLovinToken(appLovinBannerAdUnitId, 8, 128),
+      MobileAdProvider.admob =>
+        testMode || _isAdMobAdUnitId(adMobBannerAdUnitId),
+      MobileAdProvider.applovin => _isAppLovinToken(appLovinSdkKey, 20, 256) &&
+          _isAppLovinToken(appLovinBannerAdUnitId, 8, 128),
     };
   }
 
@@ -55,8 +55,8 @@ final class MobileAdvertisingConfig {
 
   factory MobileAdvertisingConfig.fromData(Object? value) {
     final data = _optionalObjectMap(value);
-    final legacyAdMobUnit = data['admob_banner_ad_unit_id'] ??
-        data['banner_ad_unit_id'];
+    final legacyAdMobUnit =
+        data['admob_banner_ad_unit_id'] ?? data['banner_ad_unit_id'];
     return MobileAdvertisingConfig(
       enabled: data['enabled'] == true,
       testMode: data['test_mode'] != false,
