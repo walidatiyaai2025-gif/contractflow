@@ -20,8 +20,7 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   int _generation = 0;
 
   BannerAd? get banner => _bannerLoaded ? _banner : null;
-  bool get privacyOptionsRequired =>
-      _config.enabled && _privacyOptionsRequired;
+  bool get privacyOptionsRequired => _config.enabled && _privacyOptionsRequired;
 
   Future<void> configure(MobileAdvertisingConfig config) async {
     _generation++;
@@ -35,7 +34,9 @@ final class SafeContractsMobileAds extends ChangeNotifier {
     }
 
     final canRequestAds = await _ensureConsent();
-    if (generation != _generation || !canRequestAds || !_config.canRequestBanner) {
+    if (generation != _generation ||
+        !canRequestAds ||
+        !_config.canRequestBanner) {
       return;
     }
 
