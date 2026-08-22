@@ -14,6 +14,7 @@ final class MobileConfiguration
     public const OPTION = 'safecontracts_mobile_configuration';
     public const AD_PROVIDER_ADMOB = 'admob';
     public const AD_PROVIDER_APPLOVIN = 'applovin';
+    public const DEFAULT_ADMOB_BANNER_UNIT_ID = 'ca-app-pub-3218037275900725/8818395498';
 
     /** @return array<string,mixed> */
     public function read(): array
@@ -22,6 +23,9 @@ final class MobileConfiguration
         $stored = is_array($stored) ? $stored : [];
         $defaults = self::defaults();
         $legacyAdMobUnit = $stored['ads_admob_banner_unit_id'] ?? $stored['ads_banner_unit_id'] ?? $defaults['ads_admob_banner_unit_id'];
+        if ((is_scalar($legacyAdMobUnit) || $legacyAdMobUnit === null) && trim((string) $legacyAdMobUnit) === '') {
+            $legacyAdMobUnit = $defaults['ads_admob_banner_unit_id'];
+        }
         $adMobUnit = $this->readAdMobUnitId($legacyAdMobUnit);
 
         return [
@@ -94,8 +98,8 @@ final class MobileConfiguration
             'ads_test_mode' => true,
             'ads_banner_enabled' => true,
             'ads_provider' => self::AD_PROVIDER_ADMOB,
-            'ads_banner_unit_id' => '',
-            'ads_admob_banner_unit_id' => '',
+            'ads_banner_unit_id' => self::DEFAULT_ADMOB_BANNER_UNIT_ID,
+            'ads_admob_banner_unit_id' => self::DEFAULT_ADMOB_BANNER_UNIT_ID,
             'ads_applovin_sdk_key' => '',
             'ads_applovin_banner_unit_id' => '',
         ];
