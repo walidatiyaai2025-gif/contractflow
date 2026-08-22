@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
+import '../welcome/company_welcome_screen.dart';
 import 'mobile_auth.dart';
 
 final class SafeContractsLoginScreen extends StatefulWidget {
@@ -34,6 +35,7 @@ final class _SafeContractsLoginScreenState
   final _password = TextEditingController();
   bool _obscurePassword = true;
   bool _bootstrapping = false;
+  bool _showWelcome = true;
 
   @override
   void dispose() {
@@ -60,6 +62,19 @@ final class _SafeContractsLoginScreenState
     }
   }
 
+  void _openLogin() {
+    if (_showWelcome) setState(() => _showWelcome = false);
+  }
+
+  void _returnToWelcome() {
+    final externalBack = widget.onBack;
+    if (externalBack != null) {
+      externalBack();
+      return;
+    }
+    if (!_showWelcome) setState(() => _showWelcome = true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
@@ -68,6 +83,14 @@ final class _SafeContractsLoginScreenState
       return _BlockingBootstrapSplash(
         label: l10n.t('Loading'),
         scheme: scheme,
+      );
+    }
+
+    if (_showWelcome) {
+      return AlkenzyCompanyWelcomeScreen(
+        languageCode: widget.languageCode,
+        onLanguageChanged: widget.onLanguageChanged,
+        onSignIn: _openLogin,
       );
     }
 
@@ -101,12 +124,12 @@ final class _SafeContractsLoginScreenState
                       children: [
                         Row(
                           children: [
-                            if (widget.onBack != null)
-                              IconButton.filledTonal(
-                                onPressed: submitting ? null : widget.onBack,
-                                tooltip: l10n.t('Previous'),
-                                icon: const Icon(Icons.arrow_back_rounded),
-                              ),
+                            IconButton.filledTonal(
+                              key: const Key('loginBackToWelcome'),
+                              onPressed: submitting ? null : _returnToWelcome,
+                              tooltip: l10n.t('Previous'),
+                              icon: const Icon(Icons.arrow_back_rounded),
+                            ),
                             const Spacer(),
                             SegmentedButton<String>(
                               segments: <ButtonSegment<String>>[
