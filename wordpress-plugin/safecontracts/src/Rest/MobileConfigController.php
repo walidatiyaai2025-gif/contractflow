@@ -42,6 +42,12 @@ final class MobileConfigController
                     'push_notifications' => $config['push_notifications_enabled'],
                     'collection_entry' => $config['collection_entry_enabled'],
                 ],
+                'ads' => [
+                    'enabled' => $config['ads_enabled'],
+                    'test_mode' => $config['ads_test_mode'],
+                    'banner_enabled' => $config['ads_banner_enabled'],
+                    'banner_ad_unit_id' => $config['ads_banner_unit_id'],
+                ],
                 'translation_overrides' => TranslationCatalog::mobileOverrides(),
             ]);
         } catch (Throwable $error) {
