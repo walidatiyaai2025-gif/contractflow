@@ -17,14 +17,15 @@ if (
     || $defaults['ads_test_mode'] !== true
     || $defaults['ads_banner_enabled'] !== true
     || $defaults['ads_provider'] !== MobileConfiguration::AD_PROVIDER_ADMOB
-    || $defaults['ads_admob_banner_unit_id'] !== ''
+    || $defaults['ads_admob_banner_unit_id'] !== MobileConfiguration::DEFAULT_ADMOB_BANNER_UNIT_ID
+    || $defaults['ads_banner_unit_id'] !== MobileConfiguration::DEFAULT_ADMOB_BANNER_UNIT_ID
     || $defaults['ads_applovin_sdk_key'] !== ''
     || $defaults['ads_applovin_banner_unit_id'] !== ''
 ) {
-    fwrite(STDERR, "FAIL: mobile advertising defaults must be disabled, AdMob-first and test-safe.\n");
+    fwrite(STDERR, "FAIL: mobile advertising defaults must be disabled, AdMob-first, production-unit aware and test-safe.\n");
     exit(1);
 }
-$assertions += 7;
+$assertions += 8;
 
 $GLOBALS['sc_test_current_caps'][Capabilities::MANAGE_SYSTEM] = true;
 $saved = $config->save([
@@ -41,6 +42,13 @@ if ($saved['ads_enabled'] !== true || $saved['ads_test_mode'] !== true || $saved
     exit(1);
 }
 $assertions += 3;
+
+$read = $config->read();
+if ($read['ads_admob_banner_unit_id'] !== MobileConfiguration::DEFAULT_ADMOB_BANNER_UNIT_ID) {
+    fwrite(STDERR, "FAIL: blank legacy AdMob configuration did not fall back to the configured Alkenzy production banner unit.\n");
+    exit(1);
+}
+$assertions++;
 
 $productionUnit = 'ca-app-pub-1234567890123456/1234567890';
 $saved = $config->save([
