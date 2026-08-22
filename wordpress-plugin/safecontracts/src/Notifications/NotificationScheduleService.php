@@ -93,7 +93,10 @@ final class NotificationScheduleService
                 return true;
             }
 
-            $result = $this->delivery->deliver($plan, $attemptNo);
+            // The rule occurrence number (0..max_repeats) is business cadence,
+            // not a Firebase transport retry counter. A fresh schedule dispatch
+            // starts at transport retry 0 even when this is occurrence 27/28/29.
+            $result = $this->delivery->deliver($plan, $attemptNo, 0);
             $sent = (int) ($result['sent'] ?? 0);
             $failed = (int) ($result['failed'] ?? 0);
             $attempted = (int) ($result['attempted'] ?? 0);
