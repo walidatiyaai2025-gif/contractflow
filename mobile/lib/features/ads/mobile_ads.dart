@@ -132,14 +132,18 @@ final class SafeContractsMobileAds extends ChangeNotifier {
       max.AppLovinMAX.setTermsOfServiceUrl(config.termsUrl);
     }
 
-    if (!_appLovinSdkInitialized ||
-        _appLovinInitializedKey != config.appLovinSdkKey) {
+    if (!_appLovinSdkInitialized) {
       final result = await max.AppLovinMAX.initialize(config.appLovinSdkKey);
       if (generation != _generation || result == null) {
         return;
       }
       _appLovinSdkInitialized = true;
       _appLovinInitializedKey = config.appLovinSdkKey;
+    } else if (_appLovinInitializedKey != config.appLovinSdkKey) {
+      // MAX documents SDK initialization as a one-time process. A remotely
+      // changed SDK key therefore fails closed for this process and is picked
+      // up after the next app start rather than attempting a second init.
+      return;
     }
 
     if (generation != _generation ||
