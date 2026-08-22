@@ -89,6 +89,59 @@ flutter create \
   --project-name safecontracts_mobile \
   .
 
+# AppLovin MAX Flutter 4.6.4 still declares Android compileSdk 31 in its
+# plugin Gradle file. Its current AndroidX dependencies require compileSdk 34+
+# and Alkenzy itself targets API 36. Patch only that dependency's build-time
+# compileSdk in the local Pub cache; no runtime/provider behavior is changed.
+APPLOVIN_ANDROID_BUILD="$(python3 - <<'PY'
+import json
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+config = json.loads(Path('.dart_tool/package_config.json').read_text(encoding='utf-8'))
+for package in config.get('packages', []):
+    if package.get('name') != 'applovin_max':
+        continue
+    uri = urlparse(package['rootUri'])
+    if uri.scheme != 'file':
+        raise SystemExit('FAIL: applovin_max package root is not a local file URI')
+    root = Path(unquote(uri.path))
+    for filename in ('build.gradle', 'build.gradle.kts'):
+        candidate = root / 'android' / filename
+        if candidate.is_file():
+            print(candidate)
+            raise SystemExit(0)
+    raise SystemExit('FAIL: applovin_max Android Gradle file was not found')
+raise SystemExit('FAIL: applovin_max package was not resolved')
+PY
+)"
+python3 - "$APPLOVIN_ANDROID_BUILD" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding='utf-8')
+original = text
+patterns = (
+    (r'compileSdkVersion\s*=\s*\d+', 'compileSdkVersion = 36'),
+    (r'compileSdkVersion\s+\d+', 'compileSdkVersion 36'),
+    (r'compileSdk\s*=\s*\d+', 'compileSdk = 36'),
+)
+for pattern, replacement in patterns:
+    text, count = re.subn(pattern, replacement, text, count=1)
+    if count:
+        break
+if text == original:
+    if not re.search(r'(?:compileSdkVersion|compileSdk)\D+36\b', text):
+        raise SystemExit('FAIL: unable to enforce compileSdk 36 for applovin_max')
+else:
+    path.write_text(text, encoding='utf-8')
+if not re.search(r'(?:compileSdkVersion|compileSdk)\D+36\b', text):
+    raise SystemExit('FAIL: applovin_max compileSdk 36 verification failed')
+print(f'Patched {path} to compileSdk 36 for AndroidX compatibility.')
+PY
+
 cp "$TEMPLATE" android/app/build.gradle.kts
 cp "$FIREBASE_CONFIG" android/app/google-services.json
 MAIN_ACTIVITY_TARGET="android/app/src/main/kotlin/com/safecontracts/safecontracts_mobile/MainActivity.kt"
