@@ -28,6 +28,7 @@ require_once SAFECONTRACTS_DIR . 'src/Support/Autoloader.php';
 \SafeContracts\Translations\CompleteArabicDefaults::register();
 \SafeContracts\Translations\MobileAdvertisingArabicDefaults::register();
 \SafeContracts\Translations\ArabicRuntimeSafety::register();
+\SafeContracts\PublicSite\AppStorePages::register();
 
 register_activation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Activator::class, 'activate']);
 register_deactivation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Deactivator::class, 'deactivate']);
