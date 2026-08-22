@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.safecontracts.safecontracts_mobile"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = maxOf(flutter.compileSdkVersion, 36)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -21,7 +21,10 @@ android {
     defaultConfig {
         applicationId = "com.safecontracts.safecontracts_mobile"
         minSdk = maxOf(flutter.minSdkVersion, 23)
-        targetSdk = flutter.targetSdkVersion
+        // Google Play requires new apps and app updates to target Android 16
+        // (API 36) from 2026-08-31. Keep the release template ahead of that
+        // deadline even when an older Flutter stable default is installed.
+        targetSdk = maxOf(flutter.targetSdkVersion, 36)
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
