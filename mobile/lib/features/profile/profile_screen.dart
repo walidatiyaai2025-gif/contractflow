@@ -45,7 +45,8 @@ final class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _openUserGuide() async {
-    final policy = MobileNavigationPolicy.resolve(widget.session, widget.config);
+    final policy =
+        MobileNavigationPolicy.resolve(widget.session, widget.config);
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => MobileUserGuideScreen(
@@ -88,7 +89,9 @@ final class _ProfileScreenState extends State<ProfileScreen> {
           padding: const EdgeInsets.only(bottom: 12),
           children: [
             ListTile(
-              title: Text(l10n.isArabic ? 'الخصوصية والمعلومات القانونية' : 'Privacy & legal'),
+              title: Text(l10n.isArabic
+                  ? 'الخصوصية والمعلومات القانونية'
+                  : 'Privacy & legal'),
               subtitle: Text(
                 l10n.isArabic
                     ? 'روابط Alkenzy ADV الرسمية المنشورة من خادم النظام.'
@@ -98,7 +101,8 @@ final class _ProfileScreenState extends State<ProfileScreen> {
             if (links.privacyPolicy.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.privacy_tip_outlined),
-                title: Text(l10n.isArabic ? 'سياسة الخصوصية' : 'Privacy policy'),
+                title:
+                    Text(l10n.isArabic ? 'سياسة الخصوصية' : 'Privacy policy'),
                 trailing: const Icon(Icons.open_in_new_rounded),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
@@ -108,7 +112,8 @@ final class _ProfileScreenState extends State<ProfileScreen> {
             if (links.accountDeletion.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.person_remove_outlined),
-                title: Text(l10n.isArabic ? 'طلب حذف الحساب' : 'Account deletion'),
+                title:
+                    Text(l10n.isArabic ? 'طلب حذف الحساب' : 'Account deletion'),
                 trailing: const Icon(Icons.open_in_new_rounded),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
@@ -198,7 +203,9 @@ final class _ProfileScreenState extends State<ProfileScreen> {
               child: ListTile(
                 leading: const Icon(Icons.shield_outlined),
                 title: Text(
-                  l10n.isArabic ? 'الخصوصية والمعلومات القانونية' : 'Privacy & legal',
+                  l10n.isArabic
+                      ? 'الخصوصية والمعلومات القانونية'
+                      : 'Privacy & legal',
                 ),
                 subtitle: Text(
                   l10n.isArabic
