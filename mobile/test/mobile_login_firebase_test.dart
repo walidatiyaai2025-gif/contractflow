@@ -11,7 +11,7 @@ import 'package:safecontracts_mobile/core/config/app_environment.dart';
 import 'fake_api_transport.dart';
 
 void main() {
-  testWidgets('first launch shows login then opens authenticated app', (
+  testWidgets('first launch shows company welcome then authenticates', (
     tester,
   ) async {
     final environment = AppEnvironment.fromValues(
@@ -99,6 +99,14 @@ void main() {
         tokenStore: tokenStore,
       ),
     );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alkenzy Advertising Agency'), findsWidgets);
+    expect(find.text('Advertising built on experience'), findsOneWidget);
+    expect(find.text('Username'), findsNothing);
+
+    await tester.ensureVisible(find.byKey(const Key('companyWelcomeSignIn')));
+    await tester.tap(find.byKey(const Key('companyWelcomeSignIn')));
     await tester.pumpAndSettle();
 
     expect(find.text('Username'), findsOneWidget);
