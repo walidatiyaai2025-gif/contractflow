@@ -9,7 +9,13 @@ ALKENZY_APP_ASSET="$ROOT/mobile/assets/brand/alkenzy_adv.png"
 ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.png"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
 ADMOB_TEST_APP_ID="ca-app-pub-3940256099942544~3347511713"
-ADMOB_APP_ID="${SC_ADMOB_APP_ID:-$ADMOB_TEST_APP_ID}"
+ADMOB_PRODUCTION_APP_ID="ca-app-pub-3218037275900725~7401372044"
+
+if [[ "${SC_REQUIRE_PRODUCTION_ADMOB:-0}" == "1" ]]; then
+  ADMOB_APP_ID="${SC_ADMOB_APP_ID:-$ADMOB_PRODUCTION_APP_ID}"
+else
+  ADMOB_APP_ID="${SC_ADMOB_APP_ID:-$ADMOB_TEST_APP_ID}"
+fi
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
@@ -29,9 +35,9 @@ import sys
 
 app_id, test_id, require_production = sys.argv[1:]
 if not re.fullmatch(r"ca-app-pub-\d{16}~\d{10}", app_id):
-    raise SystemExit("FAIL: SC_ADMOB_APP_ID must use ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY format")
+    raise SystemExit("FAIL: AdMob App ID must use ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY format")
 if require_production == "1" and app_id == test_id:
-    raise SystemExit("FAIL: Google Play build requires a production SC_ADMOB_APP_ID")
+    raise SystemExit("FAIL: Google Play build requires a production AdMob App ID")
 PY
 
 cmp -s "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" || {
