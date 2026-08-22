@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/features/welcome/company_welcome_screen.dart';
 
 void main() {
-  testWidgets('company welcome renders core Alkenzy content and opens sign in', (
+  testWidgets('company welcome renders core Alkenzy content and opens sign in',
+      (
     tester,
   ) async {
     var signInRequested = false;
