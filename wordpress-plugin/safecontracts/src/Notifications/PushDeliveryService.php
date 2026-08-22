@@ -29,9 +29,12 @@ final class PushDeliveryService
      * } $plan
      * @return array{attempted:int,sent:int,failed:int,retryable:bool}
      */
-    public function deliver(array $plan, int $attemptNo = 0): array
+    public function deliver(array $plan, int $occurrenceAttemptNo = 0, int $transportAttemptNo = 0): array
     {
-        if ($attemptNo < 0 || $attemptNo > self::MAX_TRANSPORT_RETRIES) {
+        if ($occurrenceAttemptNo < 0 || $occurrenceAttemptNo > 100) {
+            throw new InvalidArgumentException('Notification occurrence attempt is invalid.');
+        }
+        if ($transportAttemptNo < 0 || $transportAttemptNo > self::MAX_TRANSPORT_RETRIES) {
             throw new InvalidArgumentException('Notification transport attempt is outside the retry policy.');
         }
         $ruleId = (int) ($plan['rule_id'] ?? 0);
@@ -92,7 +95,7 @@ final class PushDeliveryService
                 $device['id'],
                 $templateCode,
                 $scheduledFor,
-                $attemptNo,
+                $occurrenceAttemptNo,
                 $status,
                 isset($result['status_code']) ? (int) $result['status_code'] : null,
                 $errorCode,
@@ -105,7 +108,7 @@ final class PushDeliveryService
                 $device['user_id'],
                 $device['id'],
                 $status,
-                $attemptNo
+                $occurrenceAttemptNo
             );
         }
 
@@ -113,7 +116,7 @@ final class PushDeliveryService
             'attempted' => count($deviceRows),
             'sent' => $sent,
             'failed' => $failed,
-            'retryable' => $retryableFailures > 0 && $this->canRetry($attemptNo),
+            'retryable' => $retryableFailures > 0 && $this->canRetry($transportAttemptNo),
         ];
     }
 
