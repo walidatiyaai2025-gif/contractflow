@@ -26,7 +26,7 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Require production signing material
+      - name: Require production signing and advertising material
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
@@ -34,11 +34,12 @@ jobs:
           KEY_ALIAS: ${{ secrets.SC_ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.SC_ANDROID_KEY_PASSWORD }}
           CERT_SHA256: ${{ secrets.SC_ANDROID_CERT_SHA256 }}
+          ADMOB_APP_ID: ${{ secrets.SC_ADMOB_APP_ID }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_SHA256; do
+          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_SHA256 ADMOB_APP_ID; do
             if [[ -z "${!name:-}" ]]; then
-              echo "FAIL: production signing secret $name is missing" >&2
+              echo "FAIL: production release input $name is missing" >&2
               exit 1
             fi
           done
@@ -64,6 +65,8 @@ jobs:
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
+          SC_ADMOB_APP_ID: ${{ secrets.SC_ADMOB_APP_ID }}
+          SC_REQUIRE_PRODUCTION_ADMOB: "1"
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/safecontracts-signing"
