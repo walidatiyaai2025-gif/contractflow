@@ -23,18 +23,13 @@ final class Migration0020NotificationRecipientRepair implements ProductionMigrat
 
     public function preflight(object $wpdb): void
     {
-        $columns = $this->columns($wpdb);
-        foreach ([
-            'id',
-            'recipient_roles_json',
-            'recipient_user_ids_json',
-            'escalation_roles_json',
-            'target_assigned_accountant',
-            'is_active',
-        ] as $required) {
-            if (! isset($columns[$required])) {
-                throw new RuntimeException('SafeContracts notification rules schema is missing required column: ' . $required);
-            }
+        $table = $wpdb->prefix . 'safecontracts_notification_rules';
+        $rows = $wpdb->get_results("SELECT id FROM {$table} ORDER BY id ASC LIMIT 1", ARRAY_A);
+        if (! is_array($rows)) {
+            throw new RuntimeException('SafeContracts notification rules table is unavailable for recipient repair preflight.');
+        }
+        if (property_exists($wpdb, 'last_error') && trim((string) $wpdb->last_error) !== '') {
+            throw new RuntimeException('SafeContracts notification rules preflight failed: ' . trim((string) $wpdb->last_error));
         }
     }
 
@@ -158,28 +153,6 @@ final class Migration0020NotificationRecipientRepair implements ProductionMigrat
                 throw new RuntimeException('SafeContracts could not restore notification rule #' . $id . ' during rollback.');
             }
         }
-    }
-
-    /** @return array<string,array<string,mixed>> */
-    private function columns(object $wpdb): array
-    {
-        $table = $wpdb->prefix . 'safecontracts_notification_rules';
-        $rows = $wpdb->get_results("SHOW COLUMNS FROM {$table}", ARRAY_A);
-        if (! is_array($rows) || $rows === []) {
-            throw new RuntimeException('SafeContracts notification rules table is unavailable for migration preflight.');
-        }
-
-        $columns = [];
-        foreach ($rows as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-            $field = trim((string) ($row['Field'] ?? $row['field'] ?? ''));
-            if ($field !== '') {
-                $columns[$field] = $row;
-            }
-        }
-        return $columns;
     }
 
     /** @return list<mixed> */
