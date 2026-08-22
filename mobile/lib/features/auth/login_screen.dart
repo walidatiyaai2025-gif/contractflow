@@ -12,12 +12,14 @@ final class SafeContractsLoginScreen extends StatefulWidget {
     required this.onAuthenticated,
     this.languageCode = 'en',
     this.onLanguageChanged,
+    this.onBack,
     super.key,
   });
 
   final MobileLoginController controller;
   final String languageCode;
   final ValueChanged<String>? onLanguageChanged;
+  final VoidCallback? onBack;
   final Future<void> Function() onAuthenticated;
 
   @override
@@ -97,30 +99,38 @@ final class _SafeContractsLoginScreenState
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: SegmentedButton<String>(
-                            segments: <ButtonSegment<String>>[
-                              ButtonSegment<String>(
-                                value: 'en',
-                                label: Text(l10n.t('English')),
+                        Row(
+                          children: [
+                            if (widget.onBack != null)
+                              IconButton.filledTonal(
+                                onPressed: submitting ? null : widget.onBack,
+                                tooltip: l10n.t('Previous'),
+                                icon: const Icon(Icons.arrow_back_rounded),
                               ),
-                              ButtonSegment<String>(
-                                value: 'ar',
-                                label: Text(l10n.t('Arabic')),
+                            const Spacer(),
+                            SegmentedButton<String>(
+                              segments: <ButtonSegment<String>>[
+                                ButtonSegment<String>(
+                                  value: 'en',
+                                  label: Text(l10n.t('English')),
+                                ),
+                                ButtonSegment<String>(
+                                  value: 'ar',
+                                  label: Text(l10n.t('Arabic')),
+                                ),
+                              ],
+                              selected: <String>{selectedLanguage},
+                              onSelectionChanged: submitting ||
+                                      widget.onLanguageChanged == null
+                                  ? null
+                                  : (selection) =>
+                                      widget.onLanguageChanged!(selection.first),
+                              showSelectedIcon: false,
+                              style: const ButtonStyle(
+                                visualDensity: VisualDensity.compact,
                               ),
-                            ],
-                            selected: <String>{selectedLanguage},
-                            onSelectionChanged: submitting ||
-                                    widget.onLanguageChanged == null
-                                ? null
-                                : (selection) =>
-                                    widget.onLanguageChanged!(selection.first),
-                            showSelectedIcon: false,
-                            style: const ButtonStyle(
-                              visualDensity: VisualDensity.compact,
                             ),
-                          ),
+                          ],
                         ),
                         const SizedBox(height: 22),
                         const SafeContractsBrandMark(
