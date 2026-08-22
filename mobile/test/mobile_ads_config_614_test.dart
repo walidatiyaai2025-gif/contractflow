@@ -15,7 +15,8 @@ void main() {
     expect(config.canRequestBanner, isFalse);
   });
 
-  test('AdMob test mode uses Google test inventory without production unit', () {
+  test('AdMob test mode uses Google test inventory without production unit',
+      () {
     final config = MobileAdvertisingConfig.fromData({
       'enabled': true,
       'test_mode': true,
