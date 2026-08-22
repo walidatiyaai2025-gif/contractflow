@@ -22,7 +22,7 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Require Google Play release material
+      - name: Require Google Play signing material
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
@@ -30,25 +30,14 @@ jobs:
           KEY_ALIAS: ${{ secrets.SC_ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.SC_ANDROID_KEY_PASSWORD }}
           CERT_SHA256: ${{ secrets.SC_ANDROID_CERT_SHA256 }}
-          ADMOB_APP_ID: ${{ secrets.SC_ADMOB_APP_ID }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_SHA256 ADMOB_APP_ID; do
+          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_SHA256; do
             if [[ -z "${!name:-}" ]]; then
-              echo "FAIL: production release input $name is missing" >&2
+              echo "FAIL: production signing input $name is missing" >&2
               exit 1
             fi
           done
-          python3 - <<'PY'
-          import os
-          import re
-          app_id = os.environ['ADMOB_APP_ID'].strip()
-          test_id = 'ca-app-pub-3940256099942544~3347511713'
-          if not re.fullmatch(r'ca-app-pub-\d{16}~\d{10}', app_id):
-              raise SystemExit('FAIL: SC_ADMOB_APP_ID has an invalid format')
-          if app_id == test_id:
-              raise SystemExit('FAIL: Google Play AAB must not use the Google sample AdMob App ID')
-          PY
 
       - name: Validate production API URL
         shell: bash
@@ -73,7 +62,6 @@ jobs:
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
-          SC_ADMOB_APP_ID: ${{ secrets.SC_ADMOB_APP_ID }}
           SC_REQUIRE_PRODUCTION_ADMOB: "1"
         run: |
           set -euo pipefail
@@ -120,7 +108,7 @@ jobs:
           grep -Fq 'targetSdk = maxOf(flutter.targetSdkVersion, 36)' mobile/android-release/app-build.gradle.kts
           cp "$AAB" Alkenzy-ADV-google-play.aab
           sha256sum Alkenzy-ADV-google-play.aab > Alkenzy-ADV-google-play.aab.sha256
-          printf 'source_commit=%s\npackage=com.safecontracts.safecontracts_mobile\ntarget_api=36\n' "$GITHUB_SHA" > ALKENZY-GOOGLE-PLAY-CANDIDATE.txt
+          printf 'source_commit=%s\npackage=com.safecontracts.safecontracts_mobile\ntarget_api=36\nadmob_app_id=ca-app-pub-3218037275900725~7401372044\n' "$GITHUB_SHA" > ALKENZY-GOOGLE-PLAY-CANDIDATE.txt
 
       - name: Upload Google Play candidate
         uses: actions/upload-artifact@v4
