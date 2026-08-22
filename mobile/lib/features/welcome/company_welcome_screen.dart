@@ -38,7 +38,8 @@ final class AlkenzyCompanyWelcomeScreen extends StatelessWidget {
           data: media.copyWith(textScaler: textScaler),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final horizontalPadding = constraints.maxWidth < 380 ? 16.0 : 22.0;
+              final horizontalPadding =
+                  constraints.maxWidth < 380 ? 16.0 : 22.0;
               return SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(
                   horizontalPadding,
@@ -63,7 +64,10 @@ final class AlkenzyCompanyWelcomeScreen extends StatelessWidget {
                         Text(
                           copy.title,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
                                 height: 1.14,
@@ -73,7 +77,10 @@ final class AlkenzyCompanyWelcomeScreen extends StatelessWidget {
                         Text(
                           copy.highlight,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
                                 color: _cyan,
                                 fontWeight: FontWeight.w900,
                                 height: 1.15,
@@ -83,10 +90,11 @@ final class AlkenzyCompanyWelcomeScreen extends StatelessWidget {
                         Text(
                           copy.summary,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.78),
-                                height: 1.65,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.78),
+                                    height: 1.65,
+                                  ),
                         ),
                         const SizedBox(height: 22),
                         _FeatureGrid(copy: copy),
@@ -161,9 +169,10 @@ final class AlkenzyCompanyWelcomeScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       copy.aboutTitle,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                   ),
                 ],
@@ -171,7 +180,10 @@ final class AlkenzyCompanyWelcomeScreen extends StatelessWidget {
               const SizedBox(height: 18),
               Text(
                 copy.aboutBody,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.65),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyLarge
+                    ?.copyWith(height: 1.65),
               ),
               const SizedBox(height: 22),
               _ContactTile(
@@ -326,10 +338,11 @@ final class _BillboardHero extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       copy.agency,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                              ),
                     ),
                   ],
                 ),
@@ -439,10 +452,10 @@ final class _FeatureCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(context)
+                .textTheme
+                .titleSmall
+                ?.copyWith(color: Colors.white, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 4),
           Text(
@@ -516,7 +529,10 @@ final class _ContactTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
                 const SizedBox(height: 2),
                 SelectableText(value),
               ],
