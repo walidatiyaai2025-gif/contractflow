@@ -18,10 +18,11 @@ Issue: #614
 - Ads fail closed: the default is disabled; missing or malformed production provider settings do not request ads.
 - AdMob QA mode uses Google's Android test banner unit.
 - AppLovin QA requires a MAX test device configured with the device GAID; AppLovin does not provide one universal public banner test unit equivalent to Google's demo unit.
-- The AdMob **App ID** remains build-time configuration and is not stored in WordPress or committed to Git.
+- The production AdMob **App ID** is `ca-app-pub-3218037275900725~7401372044` and is treated as public Android application configuration, not a credential. Production builds inject it into AndroidManifest automatically.
+- Non-production bootstrap continues to use Google's public sample App ID unless explicitly overridden, preventing local/CI development from accidentally depending on the production application identity.
 - AppLovin uses the **SDK key** at runtime. Never store an AppLovin Management Key, API Key, or Ad Review Key in WordPress/mobile configuration.
-- `scripts/bootstrap_android.sh` injects `SC_ADMOB_APP_ID` into AndroidManifest and can reject Google's sample App ID for production builds.
-- `.github/workflows/build-google-play-aab.yml` creates a signed AAB candidate only when production signing and AdMob build inputs are present.
+- `scripts/bootstrap_android.sh` injects the correct AdMob App ID into AndroidManifest and rejects Google's sample App ID when a production build is required.
+- `.github/workflows/build-google-play-aab.yml` creates a signed AAB candidate when production signing inputs are present; a separate AdMob App ID secret is no longer required.
 - Built-in public store/compliance pages are served by the plugin:
   - `/alkenzy-adv/privacy/`
   - `/alkenzy-adv/account-deletion/`
@@ -30,16 +31,16 @@ Issue: #614
 
 ## AdMob setup
 
-1. Sign in to AdMob and create/confirm the Android app for package `com.safecontracts.safecontracts_mobile`.
-2. Copy the production AdMob App ID (`ca-app-pub-...~...`) into the GitHub `production` environment secret `SC_ADMOB_APP_ID`.
-3. Create a Banner ad unit and copy its Ad Unit ID (`ca-app-pub-.../...`).
-4. In WordPress open **Safe Contracts → Mobile Configuration → Advertising providers**.
-5. Select **Google AdMob**.
-6. Paste the Banner Ad Unit ID.
-7. Keep **Test / QA mode** enabled while testing. Google demo inventory is used in this mode.
-8. Configure **Privacy & messaging** in AdMob so UMP can present any required consent message.
-9. Complete AdMob identity/payment verification and blocking/content-rating controls before production monetization.
-10. After Play/AdMob verification, disable QA mode and enable mobile advertising.
+1. The Android AdMob app has been created and its App ID is already configured in the release build: `ca-app-pub-3218037275900725~7401372044`.
+2. In AdMob, create a **Banner** ad unit for Alkenzy ADV and copy its Ad Unit ID (`ca-app-pub-.../...`).
+3. In WordPress open **Safe Contracts → Mobile Configuration → Advertising providers**.
+4. Select **Google AdMob**.
+5. Paste the Banner Ad Unit ID.
+6. Keep **Test / QA mode** enabled while testing. Google demo inventory is used in this mode.
+7. Configure **Privacy & messaging** in AdMob so UMP can present any required consent message.
+8. Complete AdMob identity/payment verification and blocking/content-rating controls before production monetization.
+9. After Play/AdMob verification, disable QA mode and enable mobile advertising.
+10. After the application is published on Google Play, link the AdMob app to its Play Store listing from AdMob. This does not require changing the embedded App ID.
 
 ## AppLovin MAX setup / AdMob replacement
 
@@ -56,12 +57,15 @@ Do **not** paste AppLovin Management Key, API Key, or Ad Review Key into WordPre
 
 ## Required GitHub production secrets
 
-- `SC_ADMOB_APP_ID` — Android AdMob application ID in `ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY` format.
+Only signing material remains secret:
+
 - `SC_ANDROID_KEYSTORE_BASE64`
 - `SC_ANDROID_KEYSTORE_PASSWORD`
 - `SC_ANDROID_KEY_ALIAS`
 - `SC_ANDROID_KEY_PASSWORD`
 - `SC_ANDROID_CERT_SHA256`
+
+`SC_ADMOB_APP_ID` is no longer required. The AdMob App ID is a public identifier shipped inside the Android package and is configured in the repository release bootstrap. `SC_ADMOB_APP_ID` remains an optional build-time override for controlled migration/testing, but normal Alkenzy production builds do not need it.
 
 Do not commit any keystore or signing secret.
 
@@ -93,6 +97,6 @@ Repository code cannot truthfully complete these account-side declarations. Comp
 
 ## Build the AAB
 
-Run GitHub Actions workflow **Build Alkenzy ADV Google Play AAB** with the production API base URL. The workflow rejects incomplete signing, a missing/malformed AdMob App ID, Google's sample AdMob App ID, formatting/analyze/test failures, and a signing-certificate mismatch.
+Run GitHub Actions workflow **Build Alkenzy ADV Google Play AAB** with the production API base URL. The workflow rejects incomplete signing, formatting/analyze/test failures, a signing-certificate mismatch, and any production bootstrap that resolves to Google's sample AdMob App ID.
 
 The result is a short-lived `Alkenzy-ADV-google-play.aab` workflow artifact. Passing this build proves the repository/build candidate, not Play Console approval or production UAT.
