@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
@@ -50,6 +51,96 @@ final class _ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute<void>(
         builder: (context) => MobileUserGuideScreen(
           destinations: policy.destinations,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openPublicLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null ||
+        !(uri.scheme == 'https' || uri.scheme == 'http') ||
+        uri.host.isEmpty) {
+      return;
+    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.scL10n.isArabic
+                ? 'تعذر فتح الرابط. حاول مرة أخرى.'
+                : 'Unable to open this link. Try again.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showPrivacyAndLegal() async {
+    final l10n = context.scL10n;
+    final links = widget.config.storeLinks;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 12),
+          children: [
+            ListTile(
+              title: Text(l10n.isArabic
+                  ? 'الخصوصية والمعلومات القانونية'
+                  : 'Privacy & legal'),
+              subtitle: Text(
+                l10n.isArabic
+                    ? 'روابط Alkenzy ADV الرسمية المنشورة من خادم النظام.'
+                    : 'Official Alkenzy ADV links published by the service.',
+              ),
+            ),
+            if (links.privacyPolicy.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.privacy_tip_outlined),
+                title:
+                    Text(l10n.isArabic ? 'سياسة الخصوصية' : 'Privacy policy'),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_openPublicLink(links.privacyPolicy));
+                },
+              ),
+            if (links.accountDeletion.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.person_remove_outlined),
+                title:
+                    Text(l10n.isArabic ? 'طلب حذف الحساب' : 'Account deletion'),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_openPublicLink(links.accountDeletion));
+                },
+              ),
+            if (links.support.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.support_agent_rounded),
+                title: Text(l10n.isArabic ? 'الدعم الفني' : 'Support'),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_openPublicLink(links.support));
+                },
+              ),
+            if (links.terms.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.description_outlined),
+                title: Text(l10n.isArabic ? 'شروط الاستخدام' : 'Terms of use'),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_openPublicLink(links.terms));
+                },
+              ),
+          ],
         ),
       ),
     );
@@ -105,6 +196,27 @@ final class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
+        if (widget.config.storeLinks.hasAny)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: Card(
+              child: ListTile(
+                leading: const Icon(Icons.shield_outlined),
+                title: Text(
+                  l10n.isArabic
+                      ? 'الخصوصية والمعلومات القانونية'
+                      : 'Privacy & legal',
+                ),
+                subtitle: Text(
+                  l10n.isArabic
+                      ? 'سياسة الخصوصية، حذف الحساب، الدعم وشروط الاستخدام.'
+                      : 'Privacy policy, account deletion, support and terms.',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => unawaited(_showPrivacyAndLegal()),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
           child: Card(

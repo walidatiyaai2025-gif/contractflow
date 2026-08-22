@@ -1,4 +1,4 @@
-name: Publish Safe Contracts Mobile Latest
+name: Build Alkenzy ADV Google Play AAB
 
 on:
   workflow_dispatch:
@@ -7,17 +7,12 @@ on:
         description: "Production Safe Contracts API base URL ending in /wp-json/safecontracts/v1/"
         required: true
         type: string
-      release_notes:
-        description: "Optional release note"
-        required: false
-        default: "Safe Contracts Android production update"
-        type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  publish-mobile-latest:
+  google-play-aab:
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -26,7 +21,8 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Require production signing material
+
+      - name: Require Google Play signing material
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
@@ -38,10 +34,11 @@ jobs:
           set -euo pipefail
           for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_SHA256; do
             if [[ -z "${!name:-}" ]]; then
-              echo "FAIL: production signing secret $name is missing" >&2
+              echo "FAIL: production signing input $name is missing" >&2
               exit 1
             fi
           done
+
       - name: Validate production API URL
         shell: bash
         env:
@@ -60,7 +57,8 @@ jobs:
           if not parsed.path.rstrip('/').endswith('/wp-json/safecontracts/v1'):
               raise SystemExit('FAIL: production API URL must target /wp-json/safecontracts/v1/')
           PY
-      - name: Bootstrap Android and production signing
+
+      - name: Bootstrap Android release scaffold
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
@@ -71,7 +69,8 @@ jobs:
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/safecontracts-signing/release.jks"
           test -s "$RUNNER_TEMP/safecontracts-signing/release.jks"
           ./scripts/bootstrap_android.sh
-      - name: Build production-signed APK
+
+      - name: Quality gate and build production-signed AAB
         working-directory: mobile
         shell: bash
         env:
@@ -83,47 +82,41 @@ jobs:
         run: |
           set -euo pipefail
           flutter pub get
+          dart format --output=none --set-exit-if-changed lib test
           flutter analyze
           flutter test
-          flutter build apk --release \
+          flutter build appbundle --release \
             --dart-define=SC_ENV=production \
             --dart-define=SC_API_BASE_URL="$API_BASE_URL"
-      - name: Verify signing certificate and package
+
+      - name: Verify AAB signer and Play target contract
         shell: bash
         env:
           EXPECTED_CERT_SHA256: ${{ secrets.SC_ANDROID_CERT_SHA256 }}
         run: |
           set -euo pipefail
-          APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
-          test -s "$APK"
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
-          test -x "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/apksigner.txt"
-          ACTUAL="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apksigner.txt" | head -1 | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
+          AAB="mobile/build/app/outputs/bundle/release/app-release.aab"
+          test -s "$AAB"
+          keytool -printcert -jarfile "$AAB" > "$RUNNER_TEMP/aab-cert.txt"
+          ACTUAL="$(sed -n 's/^[[:space:]]*SHA256: //p' "$RUNNER_TEMP/aab-cert.txt" | head -1 | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
           EXPECTED="$(printf '%s' "$EXPECTED_CERT_SHA256" | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
           if [[ -z "$ACTUAL" || "$ACTUAL" != "$EXPECTED" ]]; then
-            echo "FAIL: production APK signing certificate does not match SC_ANDROID_CERT_SHA256" >&2
+            echo "FAIL: Google Play AAB signer does not match SC_ANDROID_CERT_SHA256" >&2
+            cat "$RUNNER_TEMP/aab-cert.txt"
             exit 1
           fi
-          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
-          BADGING="$($AAPT dump badging "$APK")"
-          grep -Fq "package: name='com.safecontracts.safecontracts_mobile'" <<<"$BADGING"
-          cp "$APK" SafeContracts-Mobile.apk
-          sha256sum SafeContracts-Mobile.apk > SafeContracts-Mobile.apk.sha256
-          printf 'source_commit=%s\napi_base_url=%s\nsigning_cert_sha256=%s\nadmob_app_id=ca-app-pub-3218037275900725~7401372044\n' "$GITHUB_SHA" "${{ inputs.api_base_url }}" "$EXPECTED" > MOBILE-RELEASE.txt
-      - name: Publish stable mobile-latest GitHub Release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_NOTES: ${{ inputs.release_notes }}
-        run: |
-          set -euo pipefail
-          gh release delete mobile-latest --yes --cleanup-tag >/dev/null 2>&1 || true
-          gh release create mobile-latest \
-            SafeContracts-Mobile.apk \
-            SafeContracts-Mobile.apk.sha256 \
-            MOBILE-RELEASE.txt \
-            --target "$GITHUB_SHA" \
-            --title "Safe Contracts Mobile Latest" \
-            --notes "$RELEASE_NOTES\n\nSource commit: $GITHUB_SHA"
-          gh release view mobile-latest --json url,tagName,assets
+          grep -Fq 'targetSdk = maxOf(flutter.targetSdkVersion, 36)' mobile/android-release/app-build.gradle.kts
+          cp "$AAB" Alkenzy-ADV-google-play.aab
+          sha256sum Alkenzy-ADV-google-play.aab > Alkenzy-ADV-google-play.aab.sha256
+          printf 'source_commit=%s\npackage=com.safecontracts.safecontracts_mobile\ntarget_api=36\nadmob_app_id=ca-app-pub-3218037275900725~7401372044\n' "$GITHUB_SHA" > ALKENZY-GOOGLE-PLAY-CANDIDATE.txt
+
+      - name: Upload Google Play candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-adv-google-play-aab-${{ github.sha }}
+          path: |
+            Alkenzy-ADV-google-play.aab
+            Alkenzy-ADV-google-play.aab.sha256
+            ALKENZY-GOOGLE-PLAY-CANDIDATE.txt
+          if-no-files-found: error
+          retention-days: 14

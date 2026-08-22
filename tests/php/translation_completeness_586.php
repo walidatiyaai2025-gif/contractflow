@@ -9,6 +9,7 @@ use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\CompleteArabicDefaults;
 use SafeContracts\Translations\ControlledInputArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
+use SafeContracts\Translations\MobileAdvertisingArabicDefaults;
 use SafeContracts\Translations\NavigationArabicDefaults;
 use SafeContracts\Translations\ProductionUxArabicDefaults;
 use SafeContracts\Translations\RuntimeLabels;
@@ -44,6 +45,9 @@ foreach ($catalog as $source => $row) {
     }
     if ($arabic === $source) {
         $arabic = ControlledInputArabicDefaults::default($source);
+    }
+    if ($arabic === $source) {
+        $arabic = MobileAdvertisingArabicDefaults::default($source);
     }
     if ($arabic === $source) {
         $arabic = CompleteArabicDefaults::default($source);
