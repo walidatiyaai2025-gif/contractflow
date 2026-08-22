@@ -1,8 +1,9 @@
 import 'dart:async';
 
+import 'package:applovin_max/applovin_max.dart' as max;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart' as gma;
 
 import 'mobile_ads_config.dart';
 
@@ -12,96 +13,166 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   static final SafeContractsMobileAds instance = SafeContractsMobileAds._();
 
   MobileAdvertisingConfig _config = const MobileAdvertisingConfig.defaults();
-  BannerAd? _banner;
-  bool _bannerLoaded = false;
+  gma.BannerAd? _adMobBanner;
+  bool _adMobBannerLoaded = false;
   bool _consentRequested = false;
   bool _privacyOptionsRequired = false;
-  bool _sdkInitialized = false;
+  bool _adMobSdkInitialized = false;
+  bool _appLovinSdkInitialized = false;
+  String _appLovinInitializedKey = '';
+  bool _appLovinBannerActive = false;
   int _generation = 0;
 
-  BannerAd? get banner => _bannerLoaded ? _banner : null;
-  bool get privacyOptionsRequired => _config.enabled && _privacyOptionsRequired;
+  MobileAdProvider get provider => _config.provider;
+  gma.BannerAd? get adMobBanner =>
+      _config.provider == MobileAdProvider.admob && _adMobBannerLoaded
+          ? _adMobBanner
+          : null;
+  bool get appLovinBannerActive =>
+      _config.provider == MobileAdProvider.applovin &&
+      _appLovinSdkInitialized &&
+      _appLovinBannerActive &&
+      _config.canRequestBanner;
+  String get appLovinBannerAdUnitId => _config.appLovinBannerAdUnitId;
+  bool get privacyOptionsRequired =>
+      _config.provider == MobileAdProvider.admob &&
+      _config.enabled &&
+      _privacyOptionsRequired;
 
   Future<void> configure(MobileAdvertisingConfig config) async {
     _generation++;
     final generation = _generation;
     _config = config;
-    _disposeBanner();
+    _disposeAdMobBanner();
+    _appLovinBannerActive = false;
     notifyListeners();
 
     if (!config.canRequestBanner || kIsWeb) {
       return;
     }
 
-    final canRequestAds = await _ensureConsent();
+    switch (config.provider) {
+      case MobileAdProvider.admob:
+        await _configureAdMob(config, generation);
+      case MobileAdProvider.applovin:
+        await _configureAppLovin(config, generation);
+    }
+  }
+
+  Future<void> _configureAdMob(
+    MobileAdvertisingConfig config,
+    int generation,
+  ) async {
+    final canRequestAds = await _ensureGoogleConsent();
     if (generation != _generation ||
         !canRequestAds ||
-        !_config.canRequestBanner) {
+        !_config.canRequestBanner ||
+        _config.provider != MobileAdProvider.admob) {
       return;
     }
 
-    if (!_sdkInitialized) {
-      await MobileAds.instance.initialize();
-      _sdkInitialized = true;
+    if (!_adMobSdkInitialized) {
+      await gma.MobileAds.instance.initialize();
+      _adMobSdkInitialized = true;
     }
-    if (generation != _generation || !_config.canRequestBanner) {
+    if (generation != _generation ||
+        !_config.canRequestBanner ||
+        _config.provider != MobileAdProvider.admob) {
       return;
     }
 
-    final adUnitId = _androidBannerUnitId(_config);
+    final adUnitId = _androidAdMobBannerUnitId(config);
     if (adUnitId.isEmpty) {
       return;
     }
 
-    final ad = BannerAd(
+    final ad = gma.BannerAd(
       adUnitId: adUnitId,
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
+      request: const gma.AdRequest(),
+      size: gma.AdSize.banner,
+      listener: gma.BannerAdListener(
         onAdLoaded: (loadedAd) {
-          if (generation != _generation || loadedAd != _banner) {
+          if (generation != _generation || loadedAd != _adMobBanner) {
             loadedAd.dispose();
             return;
           }
-          _bannerLoaded = true;
+          _adMobBannerLoaded = true;
           notifyListeners();
         },
         onAdFailedToLoad: (failedAd, error) {
           failedAd.dispose();
-          if (generation != _generation || failedAd != _banner) {
+          if (generation != _generation || failedAd != _adMobBanner) {
             return;
           }
-          _banner = null;
-          _bannerLoaded = false;
+          _adMobBanner = null;
+          _adMobBannerLoaded = false;
           notifyListeners();
         },
       ),
     );
-    _banner = ad;
+    _adMobBanner = ad;
     unawaited(ad.load());
+  }
+
+  Future<void> _configureAppLovin(
+    MobileAdvertisingConfig config,
+    int generation,
+  ) async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+
+    max.AppLovinMAX.setVerboseLogging(config.testMode);
+    final hasPrivacyUrl = config.privacyPolicyUrl.isNotEmpty;
+    max.AppLovinMAX.setTermsAndPrivacyPolicyFlowEnabled(hasPrivacyUrl);
+    if (hasPrivacyUrl) {
+      max.AppLovinMAX.setPrivacyPolicyUrl(config.privacyPolicyUrl);
+    }
+    if (config.termsUrl.isNotEmpty) {
+      max.AppLovinMAX.setTermsOfServiceUrl(config.termsUrl);
+    }
+
+    if (!_appLovinSdkInitialized ||
+        _appLovinInitializedKey != config.appLovinSdkKey) {
+      final result = await max.AppLovinMAX.initialize(config.appLovinSdkKey);
+      if (generation != _generation || result == null) {
+        return;
+      }
+      _appLovinSdkInitialized = true;
+      _appLovinInitializedKey = config.appLovinSdkKey;
+    }
+
+    if (generation != _generation ||
+        _config.provider != MobileAdProvider.applovin ||
+        !_config.canRequestBanner) {
+      return;
+    }
+    _appLovinBannerActive = true;
+    notifyListeners();
   }
 
   void disable() {
     _generation++;
     _config = const MobileAdvertisingConfig.defaults();
-    _disposeBanner();
+    _disposeAdMobBanner();
+    _appLovinBannerActive = false;
     _privacyOptionsRequired = false;
     notifyListeners();
   }
 
   Future<void> showPrivacyOptions() async {
     if (!privacyOptionsRequired) return;
-    await ConsentForm.showPrivacyOptionsForm((formError) {});
+    await gma.ConsentForm.showPrivacyOptionsForm((formError) {});
     await _refreshPrivacyOptionsRequirement();
     notifyListeners();
   }
 
-  Future<bool> _ensureConsent() async {
+  Future<bool> _ensureGoogleConsent() async {
     if (!_consentRequested) {
       _consentRequested = true;
       final completer = Completer<void>();
-      ConsentInformation.instance.requestConsentInfoUpdate(
-        ConsentRequestParameters(),
+      gma.ConsentInformation.instance.requestConsentInfoUpdate(
+        gma.ConsentRequestParameters(),
         () {
           if (!completer.isCompleted) completer.complete();
         },
@@ -110,31 +181,31 @@ final class SafeContractsMobileAds extends ChangeNotifier {
         },
       );
       await completer.future;
-      await ConsentForm.loadAndShowConsentFormIfRequired((formError) {});
+      await gma.ConsentForm.loadAndShowConsentFormIfRequired((formError) {});
     }
 
     await _refreshPrivacyOptionsRequirement();
-    return ConsentInformation.instance.canRequestAds();
+    return gma.ConsentInformation.instance.canRequestAds();
   }
 
   Future<void> _refreshPrivacyOptionsRequirement() async {
-    final requirement =
-        await ConsentInformation.instance.getPrivacyOptionsRequirementStatus();
+    final requirement = await gma.ConsentInformation.instance
+        .getPrivacyOptionsRequirementStatus();
     _privacyOptionsRequired =
-        requirement == PrivacyOptionsRequirementStatus.required;
+        requirement == gma.PrivacyOptionsRequirementStatus.required;
   }
 
-  String _androidBannerUnitId(MobileAdvertisingConfig config) {
+  String _androidAdMobBannerUnitId(MobileAdvertisingConfig config) {
     if (defaultTargetPlatform != TargetPlatform.android) {
       return '';
     }
-    return config.effectiveAndroidBannerAdUnitId;
+    return config.effectiveAndroidAdMobBannerAdUnitId;
   }
 
-  void _disposeBanner() {
-    _banner?.dispose();
-    _banner = null;
-    _bannerLoaded = false;
+  void _disposeAdMobBanner() {
+    _adMobBanner?.dispose();
+    _adMobBanner = null;
+    _adMobBannerLoaded = false;
   }
 }
 
@@ -155,9 +226,10 @@ final class SafeContractsAdsHost extends StatelessWidget {
       animation: ads,
       child: child,
       builder: (context, child) {
-        final banner = ads.banner;
+        final adMobBanner = ads.adMobBanner;
+        final showAppLovin = ads.appLovinBannerActive;
         final showPrivacy = ads.privacyOptionsRequired;
-        if (banner == null && !showPrivacy) {
+        if (adMobBanner == null && !showAppLovin && !showPrivacy) {
           return child ?? const SizedBox.shrink();
         }
 
@@ -166,11 +238,34 @@ final class SafeContractsAdsHost extends StatelessWidget {
           child: Column(
             children: [
               Expanded(child: child ?? const SizedBox.shrink()),
-              if (banner != null)
+              if (adMobBanner != null)
                 SizedBox(
-                  width: banner.size.width.toDouble(),
-                  height: banner.size.height.toDouble(),
-                  child: AdWidget(ad: banner),
+                  width: adMobBanner.size.width.toDouble(),
+                  height: adMobBanner.size.height.toDouble(),
+                  child: gma.AdWidget(ad: adMobBanner),
+                ),
+              if (showAppLovin)
+                Center(
+                  child: SizedBox(
+                    width: 320,
+                    height: 50,
+                    child: max.MaxAdView(
+                      key: ValueKey(ads.appLovinBannerAdUnitId),
+                      adUnitId: ads.appLovinBannerAdUnitId,
+                      adFormat: max.AdFormat.banner,
+                      width: 320,
+                      height: 50,
+                      isAdaptiveBannerEnabled: false,
+                      listener: max.AdViewAdListener(
+                        onAdLoadedCallback: (ad) {},
+                        onAdLoadFailedCallback: (adUnitId, error) {},
+                        onAdClickedCallback: (ad) {},
+                        onAdExpandedCallback: (ad) {},
+                        onAdCollapsedCallback: (ad) {},
+                        onAdRevenuePaidCallback: (ad) {},
+                      ),
+                    ),
+                  ),
                 ),
               if (showPrivacy)
                 GestureDetector(
