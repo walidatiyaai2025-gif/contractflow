@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Contracts;
 
+use InvalidArgumentException;
 use RuntimeException;
 use SafeContracts\Payments\CurrencyCode;
 use SafeContracts\Payments\FinancialDirection;
@@ -83,7 +84,7 @@ final class ContractRepository
         ];
     }
 
-    public function create(string $contractNumber, int $customerId, ?int $accountantUserId, string $notes, int $actorId): int
+    public function create(string $contractNumber, int $customerId, ?int $accountantUserId, string $notes, int $actorId, string $baseValue): int
     {
         return $this->createForCounterparty(
             $contractNumber,
@@ -93,7 +94,8 @@ final class ContractRepository
             CurrencyCode::fromInputOrSettings(null),
             $accountantUserId,
             $notes,
-            $actorId
+            $actorId,
+            $baseValue
         );
     }
 
@@ -115,6 +117,9 @@ final class ContractRepository
         $financialDirection = FinancialDirection::normalize($financialDirection);
         $currencyCode = CurrencyCode::normalize($currencyCode);
         $baseValue = ContractMoney::normalizeNonNegative($baseValue);
+        if ($baseValue === '0.0000') {
+            throw new InvalidArgumentException('Contract base value must be greater than zero.');
+        }
         $customerId = $counterpartyType === Counterparty::CUSTOMER ? $counterpartyId : null;
         $customerSql = $customerId === null ? 'NULL' : '%d';
         $accountantSql = $accountantUserId === null ? 'NULL' : '%d';
@@ -132,7 +137,7 @@ final class ContractRepository
         $args[] = $counterpartyId;
         $args[] = $financialDirection;
         $args[] = $currencyCode;
-        $args[] = ContractStatus::DRAFT;
+        $args[] = ContractStatus::ACTIVE;
         $args[] = $baseValue;
         $args[] = $notes;
         $args[] = $actorId;
