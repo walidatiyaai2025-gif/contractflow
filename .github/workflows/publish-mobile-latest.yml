@@ -1,16 +1,17 @@
-name: Publish Safe Contracts Mobile Latest
+name: Publish Alkenzy ADV Mobile Latest
 
 on:
   workflow_dispatch:
     inputs:
       api_base_url:
-        description: "Production Safe Contracts API base URL ending in /wp-json/safecontracts/v1/"
+        description: "Alkenzy ADV production SafeContracts API"
         required: true
+        default: "https://sys.alkenzy.com/wp-json/safecontracts/v1/"
         type: string
       release_notes:
         description: "Optional release note"
         required: false
-        default: "Safe Contracts Android production update"
+        default: "Alkenzy ADV 0.3.2 production update"
         type: string
 
 permissions:
@@ -42,7 +43,7 @@ jobs:
               exit 1
             fi
           done
-      - name: Validate production API URL
+      - name: Validate Alkenzy production API URL
         shell: bash
         env:
           API_BASE_URL: ${{ inputs.api_base_url }}
@@ -53,13 +54,18 @@ jobs:
           from urllib.parse import urlparse
           url = os.environ['API_BASE_URL'].strip()
           parsed = urlparse(url)
-          if parsed.scheme != 'https' or not parsed.netloc:
-              raise SystemExit('FAIL: production API URL must use HTTPS')
+          expected = 'https://sys.alkenzy.com/wp-json/safecontracts/v1/'
+          if url != expected:
+              raise SystemExit(f'FAIL: Alkenzy ADV 0.3.2 must target exactly {expected}')
+          if parsed.scheme != 'https' or parsed.hostname != 'sys.alkenzy.com':
+              raise SystemExit('FAIL: production API host must be sys.alkenzy.com over HTTPS')
           if parsed.username or parsed.password or parsed.query or parsed.fragment:
               raise SystemExit('FAIL: production API URL must not contain credentials/query/fragment')
-          if not parsed.path.rstrip('/').endswith('/wp-json/safecontracts/v1'):
-              raise SystemExit('FAIL: production API URL must target /wp-json/safecontracts/v1/')
           PY
+      - name: Verify sys.alkenzy.com before signing
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url }}
+        run: python3 scripts/verify_production_health.py "$API_BASE_URL"
       - name: Bootstrap Android and production signing
         shell: bash
         env:
@@ -70,7 +76,7 @@ jobs:
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/safecontracts-signing/release.jks"
           test -s "$RUNNER_TEMP/safecontracts-signing/release.jks"
           ./scripts/bootstrap_android.sh
-      - name: Build production-signed APK
+      - name: Build production-signed Alkenzy ADV 0.3.2 APK
         working-directory: mobile
         shell: bash
         env:
@@ -87,10 +93,11 @@ jobs:
           flutter build apk --release \
             --dart-define=SC_ENV=production \
             --dart-define=SC_API_BASE_URL="$API_BASE_URL"
-      - name: Verify signing certificate and package
+      - name: Verify signing certificate, package and embedded API host
         shell: bash
         env:
           EXPECTED_CERT_SHA256: ${{ secrets.SC_ANDROID_CERT_SHA256 }}
+          API_BASE_URL: ${{ inputs.api_base_url }}
         run: |
           set -euo pipefail
           APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
@@ -107,10 +114,21 @@ jobs:
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
           BADGING="$($AAPT dump badging "$APK")"
           grep -Fq "package: name='com.safecontracts.safecontracts_mobile'" <<<"$BADGING"
-          cp "$APK" SafeContracts-Mobile.apk
-          sha256sum SafeContracts-Mobile.apk > SafeContracts-Mobile.apk.sha256
-          printf 'source_commit=%s\napi_base_url=%s\nsigning_cert_sha256=%s\n' "$GITHUB_SHA" "${{ inputs.api_base_url }}" "$EXPECTED" > MOBILE-RELEASE.txt
-      - name: Publish stable mobile-latest GitHub Release
+
+          LIBAPP="$(unzip -Z1 "$APK" | grep -E '^lib/[^/]+/libapp\.so$' | head -n 1)"
+          test -n "$LIBAPP"
+          unzip -p "$APK" "$LIBAPP" > "$RUNNER_TEMP/libapp.so"
+          strings "$RUNNER_TEMP/libapp.so" > "$RUNNER_TEMP/libapp.strings"
+          grep -Fq "sys.alkenzy.com" "$RUNNER_TEMP/libapp.strings"
+          if grep -Fq "cms.50sols.com" "$RUNNER_TEMP/libapp.strings"; then
+            echo "FAIL: production APK contains retired cms.50sols.com host" >&2
+            exit 1
+          fi
+
+          cp "$APK" Alkenzy-ADV-0.3.2-sys.alkenzy.com.apk
+          sha256sum Alkenzy-ADV-0.3.2-sys.alkenzy.com.apk > Alkenzy-ADV-0.3.2-sys.alkenzy.com.apk.sha256
+          printf 'version=0.3.2+6\nsource_commit=%s\napi_base_url=%s\nsigning_cert_sha256=%s\n' "$GITHUB_SHA" "$API_BASE_URL" "$EXPECTED" > MOBILE-RELEASE.txt
+      - name: Publish stable Alkenzy ADV mobile-latest GitHub Release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -119,10 +137,10 @@ jobs:
           set -euo pipefail
           gh release delete mobile-latest --yes --cleanup-tag >/dev/null 2>&1 || true
           gh release create mobile-latest \
-            SafeContracts-Mobile.apk \
-            SafeContracts-Mobile.apk.sha256 \
+            Alkenzy-ADV-0.3.2-sys.alkenzy.com.apk \
+            Alkenzy-ADV-0.3.2-sys.alkenzy.com.apk.sha256 \
             MOBILE-RELEASE.txt \
             --target "$GITHUB_SHA" \
-            --title "Safe Contracts Mobile Latest" \
-            --notes "$RELEASE_NOTES\n\nSource commit: $GITHUB_SHA"
+            --title "Alkenzy ADV Mobile 0.3.2" \
+            --notes "$RELEASE_NOTES\n\nSource commit: $GITHUB_SHA\nAPI: https://sys.alkenzy.com/wp-json/safecontracts/v1/"
           gh release view mobile-latest --json url,tagName,assets
