@@ -28,6 +28,34 @@ final class EntityAttachmentRepository
         return array_map([$this, 'normalize'], $rows);
     }
 
+    /** @param list<int> $entityIds @return array<int,list<array{id:int,entity_type:string,entity_id:int,media_id:int,label:string,display_order:int,created_by:?int,created_at:string}>> */
+    public function allForMany(string $entityType, array $entityIds): array
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $ids = array_values(array_unique(array_filter(array_map('intval', $entityIds), static fn (int $id): bool => $id > 0)));
+        if ($ids === []) {
+            return [];
+        }
+        $table = $wpdb->prefix . 'safecontracts_entity_attachments';
+        $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+        $sql = $wpdb->prepare(
+            "SELECT id, entity_type, entity_id, media_id, label, display_order, created_by, created_at
+             FROM {$table}
+             WHERE entity_type = %s AND entity_id IN ({$placeholders})
+             ORDER BY entity_id ASC, display_order ASC, id ASC",
+            $entityType,
+            ...$ids
+        );
+        $rows = $wpdb->get_results($sql, ARRAY_A);
+        $grouped = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            $normalized = $this->normalize($row);
+            $grouped[$normalized['entity_id']][] = $normalized;
+        }
+        return $grouped;
+    }
+
     public function attach(string $entityType, int $entityId, int $mediaId, string $label, int $displayOrder, int $actorId): void
     {
         global $wpdb;
