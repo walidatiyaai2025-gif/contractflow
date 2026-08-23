@@ -1,7 +1,8 @@
 import '../../core/api/api_client.dart';
 
 final class MonthlyDashboardMoney {
-  const MonthlyDashboardMoney({required this.currencyCode, required this.units});
+  const MonthlyDashboardMoney(
+      {required this.currencyCode, required this.units});
 
   final String currencyCode;
   final BigInt units;
@@ -22,7 +23,8 @@ final class MonthlyDashboardMoney {
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
       (_) => ',',
     );
-    final fraction = absolute.substring(absolute.length - 4, absolute.length - 2);
+    final fraction =
+        absolute.substring(absolute.length - 4, absolute.length - 2);
     final sign = negative ? '− ' : '';
     return '$sign${currencyCode == '—' ? '' : '$currencyCode '}$whole.$fraction';
   }
@@ -101,8 +103,8 @@ final class MonthlyDashboardRepository {
       if (type == 'customer') customerContracts++;
       if (type == 'supplier') supplierContracts++;
       final currency = _currency(row['currency_code']);
-      baseByCurrency[currency] =
-          (baseByCurrency[currency] ?? BigInt.zero) + _moneyUnits(row['base_value']);
+      baseByCurrency[currency] = (baseByCurrency[currency] ?? BigInt.zero) +
+          _moneyUnits(row['base_value']);
     }
 
     final receivable = _DirectionAccumulator();
@@ -183,7 +185,8 @@ final class MonthlyDashboardRepository {
         ? _text(row['start_date'])
         : _text(row['created_at']);
     if (raw.length < 7) return false;
-    final expected = '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}';
+    final expected =
+        '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}';
     return raw.startsWith(expected);
   }
 }
