@@ -45,7 +45,7 @@ sc_p8v18_assert(isset($GLOBALS['sc_test_routes'][Router::NAMESPACE . '/me']) && 
 
 $publicRoutes = [
     Router::NAMESPACE . '/health' => '__return_true',
-    Router::NAMESPACE . '/mobile-landing' => '__return_true',
+    Router::NAMESPACE . '/mobile-landing' => [MobileLandingController::class, 'allowPublic'],
     Router::NAMESPACE . '/auth/login' => [AuthController::class, 'allowLogin'],
 ];
 
