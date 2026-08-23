@@ -47,6 +47,7 @@ $viewAllId = $service->create([
     'counterparty_type' => 'supplier',
     'counterparty_id' => 3101,
     'currency_code' => 'KWD',
+    'base_value' => '100.00',
 ]);
 sc_600_assert($viewAllId === 6101, 'VIEW_ALL user can save the supplier contract exposed by the UI');
 $viewAllSql = (string) end($GLOBALS['sc_test_queries']);
@@ -65,6 +66,7 @@ $referenceManagerId = $service->create([
     'counterparty_type' => 'supplier',
     'counterparty_id' => 3102,
     'currency_code' => 'EGP',
+    'base_value' => '200.00',
 ]);
 sc_600_assert($referenceManagerId === 6102, 'reference-data manager can save a visible supplier contract');
 $referenceSql = (string) end($GLOBALS['sc_test_queries']);
@@ -82,6 +84,7 @@ sc_600_expect_domain(
         'counterparty_type' => 'supplier',
         'counterparty_id' => 3103,
         'currency_code' => 'KWD',
+        'base_value' => '300.00',
     ]),
     'supplier contract still fails closed without supplier-read permission'
 );
@@ -124,6 +127,7 @@ try {
         'counterparty_type' => 'supplier',
         'counterparty_id' => 0,
         'currency_code' => 'KWD',
+        'base_value' => '100.00',
     ]);
     sc_600_assert(false, 'invalid supplier ID must fail for runtime stage regression');
 } catch (Throwable $error) {
