@@ -86,9 +86,11 @@ foreach (['c.is_archived = 0', 'p.is_archived = 0', 'cl.is_archived = 0'] as $ma
 }
 sc_400_assert(str_contains($followups, 'p.is_archived = 0'), '#400 follow-up queue excludes archived payments');
 
-// Dashboard currency comes from SafeContracts settings; amounts remain values, not recalculated currency conversions.
-foreach (['GeneralSettings', 'currency_symbol', 'currency_code', 'safecontracts-currency-badge', 'self::money'] as $marker) {
-    sc_400_assert(str_contains($dashboard, $marker), '#400 dashboard currency marker exists: ' . $marker);
+// Dashboard money is now multi-currency authoritative: each record keeps its
+// currency and totals are grouped by currency instead of manufacturing a
+// tenant-wide cross-currency number. Amounts are never FX-recalculated.
+foreach (['currency_code', 'Accounting totals by currency', 'safecontracts-accounting-currency', 'ContractMoney::add', 'self::money'] as $marker) {
+    sc_400_assert(str_contains($dashboard, $marker), '#400 dashboard multi-currency marker exists: ' . $marker);
 }
 sc_400_assert(! str_contains($dashboard, 'exchange_rate') && ! str_contains($dashboard, 'currency_convert'), '#400 dashboard never recalculates authoritative amounts');
 
