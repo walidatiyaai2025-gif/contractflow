@@ -167,7 +167,7 @@ def validate_ci_contract() -> int:
         "python3 scripts/release_readiness.py --check",
         "python3 scripts/p10_validation_027_031.py --check",
         "release-candidates:",
-        "SC_PRODUCTION_API_BASE_URL: https://cms.50sols.com/wp-json/safecontracts/v1/",
+        "SC_PRODUCTION_API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/",
         "python3 scripts/verify_production_health.py",
         "python3 scripts/package_plugin.py build",
         "python3 scripts/package_plugin.py check",
@@ -178,7 +178,7 @@ def validate_ci_contract() -> int:
         "AAPT=",
         '"$AAPT" dump permissions "$APK"',
         "android.permission.INTERNET",
-        "safecontracts-release-candidates",
+        "alkenzy-adv-0.3.2-release-candidates",
     )
     missing = [command for command in required_commands if command not in workflow]
     if missing:
