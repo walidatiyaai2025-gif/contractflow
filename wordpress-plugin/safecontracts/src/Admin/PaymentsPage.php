@@ -41,9 +41,10 @@ final class PaymentsPage
         try {
             $uploadedMediaIds = MultipleAttachmentUploader::upload();
             if ($paymentId === 0) {
+                // Sequence is an internal contract ordering concern. The server
+                // allocates it atomically enough for normal concurrent admin use.
                 $paymentId = $service->create([
                     'contract_id' => $contractId,
-                    'sequence_no' => (int) ($_POST['sequence_no'] ?? 0),
                     'reference' => sanitize_text_field((string) ($_POST['reference'] ?? '')),
                     'due_date' => (string) ($_POST['due_date'] ?? ''),
                     'expected_payment_date' => (string) ($_POST['expected_payment_date'] ?? ''),
@@ -107,6 +108,8 @@ final class PaymentsPage
         $read = new AdminReadRepository();
         $filters = DashboardFilters::normalize($_GET);
         $payments = $read->payments($filters);
+        $receivablePayments = self::paymentsForDirection($payments, FinancialDirection::RECEIVABLE);
+        $payablePayments = self::paymentsForDirection($payments, FinancialDirection::PAYABLE);
         $contracts = $read->contractOptions(0);
         $selected = null;
         $selectedAttachments = [];
@@ -158,8 +161,14 @@ final class PaymentsPage
             && empty($selected['contract_is_archived'])
             && current_user_can(Capabilities::MANAGE_PAYMENTS);
         ?>
-        <div class="wrap safecontracts-settings" dir="auto">
-            <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Financial obligations', 'safecontracts'); ?></p><h1><?php echo esc_html__('Payments', 'safecontracts'); ?></h1></div></div>
+        <div class="wrap safecontracts-settings safecontracts-payments-page" dir="auto">
+            <div class="safecontracts-section-heading">
+                <div>
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Financial obligations', 'safecontracts'); ?></p>
+                    <h1><?php echo esc_html__('Payments', 'safecontracts'); ?></h1>
+                    <p class="description"><?php echo esc_html__('Green payments are receivables we expect to collect. Red payments are payables we must pay. Direction and currency always come from the contract.', 'safecontracts'); ?></p>
+                </div>
+            </div>
             <?php if (! empty($filters['date_range_error'])) : ?><div class="notice notice-error inline"><p><?php echo esc_html__('Invalid period. Use valid YYYY-MM-DD dates and make sure the end date is not earlier than the start date.', 'safecontracts'); ?></p></div><?php endif; ?>
             <form class="safecontracts-filter-bar safecontracts-period-filter" method="get">
                 <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
@@ -179,12 +188,13 @@ final class PaymentsPage
             <?php if ($status === 'attachments_added' || $status === 'attachment_removed') : ?><div class="notice notice-success inline"><p><?php echo esc_html__('Payment attachments were updated.', 'safecontracts'); ?></p></div><?php endif; ?>
 
             <?php if ($selectedContract !== null) : ?>
-                <section class="safecontracts-admin-card">
+                <?php $summaryDirection = (string) ($selectedContract['financial_direction'] ?? '') === FinancialDirection::PAYABLE ? 'payable' : 'receivable'; ?>
+                <section class="safecontracts-admin-card safecontracts-contract-summary safecontracts-contract-summary--<?php echo esc_attr($summaryDirection); ?>">
                     <h2><?php echo esc_html__('Contract summary', 'safecontracts'); ?></h2>
                     <dl class="safecontracts-detail-list">
                         <div><dt><?php echo esc_html__('Contract', 'safecontracts'); ?></dt><dd><?php echo esc_html((string) $selectedContract['contract_number']); ?></dd></div>
                         <div><dt><?php echo esc_html__('Counterparty', 'safecontracts'); ?></dt><dd><?php echo esc_html((string) ($selectedContract['counterparty_name'] ?? '')); ?></dd></div>
-                        <div><dt><?php echo esc_html__('Obligation type', 'safecontracts'); ?></dt><dd><?php echo esc_html(self::directionActionLabel((string) ($selectedContract['financial_direction'] ?? ''))); ?></dd></div>
+                        <div><dt><?php echo esc_html__('Obligation type', 'safecontracts'); ?></dt><dd><span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr($summaryDirection); ?>"><?php echo esc_html(self::directionActionLabel((string) ($selectedContract['financial_direction'] ?? ''))); ?></span></dd></div>
                         <div><dt><?php echo esc_html__('Status', 'safecontracts'); ?></dt><dd><?php echo esc_html(self::statusLabel((string) $selectedContract['status'])); ?></dd></div>
                         <div><dt><?php echo esc_html__('Base value', 'safecontracts'); ?></dt><dd><?php echo esc_html(self::money((string) ($selectedContract['base_value'] ?? '0'), (string) ($selectedContract['currency_code'] ?? ''))); ?></dd></div>
                         <div><dt><?php echo esc_html__('Net value', 'safecontracts'); ?></dt><dd><?php echo esc_html(self::money((string) ($contractNetValue ?? $selectedContract['base_value'] ?? '0'), (string) ($selectedContract['currency_code'] ?? ''))); ?></dd></div>
@@ -196,37 +206,14 @@ final class PaymentsPage
             <?php endif; ?>
 
             <div class="safecontracts-split-layout">
-                <section class="safecontracts-admin-card safecontracts-table-card">
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Due date', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Reference', 'safecontracts'); ?></th><th><?php echo esc_html__('Obligation type', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Remaining', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
-                    <?php foreach ($payments as $payment) : ?>
-                        <?php $rowTerminal = (string) $payment['status'] === PaymentStatus::PAID || ContractMoney::compare((string) $payment['remaining_amount'], '0.0000') === 0 || ! empty($payment['contract_is_archived']); ?>
-                        <tr>
-                            <td><?php echo esc_html((string) $payment['due_date']); ?></td>
-                            <td><?php echo esc_html((string) $payment['contract_number']); ?><br><small><?php echo esc_html((string) ($payment['counterparty_name'] ?? '')); ?></small></td>
-                            <td><a href="<?php echo esc_url(self::paymentUrl((int) $payment['id'], $filters, false)); ?>"><?php echo esc_html((string) ($payment['reference'] ?: '#' . $payment['sequence_no'])); ?></a></td>
-                            <td><?php echo esc_html(self::directionActionLabel((string) ($payment['financial_direction'] ?? ''))); ?></td>
-                            <td><?php echo esc_html(self::statusLabel((string) $payment['status'])); ?></td>
-                            <td><?php echo esc_html(self::money((string) $payment['remaining_amount'], (string) ($payment['currency_code'] ?? ''))); ?></td>
-                            <td>
-                                <div class="safecontracts-dashboard-table-actions">
-                                    <a class="button button-small" href="<?php echo esc_url(self::paymentUrl((int) $payment['id'], $filters, false)); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a>
-                                    <?php if (current_user_can(Capabilities::MANAGE_PAYMENTS) && ! $rowTerminal) : ?><a class="button button-small" href="<?php echo esc_url(self::paymentUrl((int) $payment['id'], $filters, true)); ?>"><?php echo esc_html__('Edit payment', 'safecontracts'); ?></a><?php endif; ?>
-                                    <?php if (current_user_can(Capabilities::MANAGE_PAYMENTS)) : ?>
-                                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this scheduled payment? Payments with collection history are protected and must have their collections reversed first.', 'safecontracts'); ?>">
-                                            <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
-                                            <input type="hidden" name="payment_id" value="<?php echo esc_attr((string) $payment['id']); ?>">
-                                            <?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $payment['id']); ?>
-                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
-                                        </form>
-                                    <?php endif; ?>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody></table>
-                </section>
+                <div class="safecontracts-payment-lanes">
+                    <?php self::renderPaymentTable($receivablePayments, $filters, FinancialDirection::RECEIVABLE); ?>
+                    <?php self::renderPaymentTable($payablePayments, $filters, FinancialDirection::PAYABLE); ?>
+                </div>
+
                 <?php if (current_user_can(Capabilities::MANAGE_PAYMENTS)) : ?>
-                <section class="safecontracts-admin-card">
+                <?php $editorDirection = $selected !== null ? (string) ($selected['financial_direction'] ?? '') : (string) ($selectedContract['financial_direction'] ?? ''); $editorClass = $editorDirection === FinancialDirection::PAYABLE ? 'payable' : 'receivable'; ?>
+                <section class="safecontracts-admin-card safecontracts-payment-editor safecontracts-payment-editor--<?php echo esc_attr($editorClass); ?>">
                     <h2><?php echo $selected ? ($editMode ? esc_html__('Edit payment', 'safecontracts') : esc_html__('Payment details', 'safecontracts')) : esc_html__('Schedule payment', 'safecontracts'); ?></h2>
                     <?php if ($selected) : ?>
                         <dl class="safecontracts-detail-list">
@@ -249,18 +236,17 @@ final class PaymentsPage
                             <?php else : ?>
                                 <p><label><?php echo esc_html__('Contract', 'safecontracts'); ?><select class="widefat" name="contract_id" required><option value=""><?php echo esc_html__('Select a contract', 'safecontracts'); ?></option><?php foreach ($contracts as $contract) : $direction = (string) ($contract['counterparty_type'] ?? '') === 'supplier' ? FinancialDirection::PAYABLE : FinancialDirection::RECEIVABLE; ?><option value="<?php echo esc_attr((string) $contract['id']); ?>"><?php echo esc_html((string) $contract['contract_number'] . ' · ' . (string) ($contract['counterparty_name'] ?? '') . ' · ' . self::directionActionLabel($direction)); ?></option><?php endforeach; ?></select></label></p>
                             <?php endif; ?>
-                            <p><label><?php echo esc_html__('Sequence', 'safecontracts'); ?><input class="widefat" type="number" min="1" name="sequence_no" required></label></p>
-                            <p><label><?php echo esc_html__('Payment reference', 'safecontracts'); ?><input class="widefat" name="reference" maxlength="100"></label></p>
+                            <p><label><?php echo esc_html__('Payment description', 'safecontracts'); ?><input class="widefat" name="reference" maxlength="100"></label></p>
                             <p><label><?php echo esc_html__('Obligation amount', 'safecontracts'); ?><input class="widefat" type="number" min="0.01" step="0.01" name="original_amount" inputmode="decimal" required></label></p>
                         <?php else : ?>
                             <input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $selected['contract_id']); ?>">
-                            <p><label><?php echo esc_html__('Payment reference', 'safecontracts'); ?><input class="widefat" name="reference" maxlength="100" value="<?php echo esc_attr((string) ($selected['reference'] ?? '')); ?>"></label></p>
+                            <p><label><?php echo esc_html__('Payment description', 'safecontracts'); ?><input class="widefat" name="reference" maxlength="100" value="<?php echo esc_attr((string) ($selected['reference'] ?? '')); ?>"></label></p>
                             <?php if (ContractMoney::compare((string) $selected['paid_amount'], '0.0000') === 0) : ?>
                                 <p><label><?php echo esc_html(self::amountLabel((string) ($selected['financial_direction'] ?? ''))); ?><input class="widefat" type="number" min="0.01" step="0.01" name="original_amount" inputmode="decimal" required value="<?php echo esc_attr((string) $selected['original_amount']); ?>"></label></p>
                             <?php else : ?>
                                 <input type="hidden" name="original_amount" value="<?php echo esc_attr((string) $selected['original_amount']); ?>">
                                 <p><strong><?php echo esc_html(self::amountLabel((string) ($selected['financial_direction'] ?? '')) . ':'); ?></strong> <?php echo esc_html(self::money((string) $selected['original_amount'], (string) ($selected['currency_code'] ?? ''))); ?></p>
-                                <p class="description"><?php echo esc_html__('Payment amount is locked after settlement activity. Dates and reference may still be changed.', 'safecontracts'); ?></p>
+                                <p class="description"><?php echo esc_html__('Payment amount is locked after settlement activity. Dates and description may still be changed.', 'safecontracts'); ?></p>
                             <?php endif; ?>
                         <?php endif; ?>
                         <p class="safecontracts-field-row"><label><?php echo esc_html__('Due date', 'safecontracts'); ?><input type="date" name="due_date" required value="<?php echo esc_attr((string) ($selected['due_date'] ?? '')); ?>"></label><label><?php echo esc_html__('Expected payment date', 'safecontracts'); ?><input type="date" name="expected_payment_date" value="<?php echo esc_attr((string) ($selected['expected_payment_date'] ?? '')); ?>"></label></p>
@@ -280,6 +266,59 @@ final class PaymentsPage
                 <?php endif; ?>
             </div>
         </div>
+        <?php
+    }
+
+    /** @param list<array<string,mixed>> $payments @return list<array<string,mixed>> */
+    private static function paymentsForDirection(array $payments, string $direction): array
+    {
+        return array_values(array_filter(
+            $payments,
+            static fn (array $payment): bool => (string) ($payment['financial_direction'] ?? '') === $direction
+        ));
+    }
+
+    /** @param list<array<string,mixed>> $payments @param array<string,mixed> $filters */
+    private static function renderPaymentTable(array $payments, array $filters, string $direction): void
+    {
+        $receivable = $direction === FinancialDirection::RECEIVABLE;
+        $class = $receivable ? 'receivable' : 'payable';
+        $title = $receivable ? __('Receivable payments · we will receive', 'safecontracts') : __('Payable payments · we will pay', 'safecontracts');
+        $empty = $receivable ? __('No receivable payments match the current filters.', 'safecontracts') : __('No payable payments match the current filters.', 'safecontracts');
+        ?>
+        <section class="safecontracts-admin-card safecontracts-table-card safecontracts-payment-panel safecontracts-payment-panel--<?php echo esc_attr($class); ?>">
+            <div class="safecontracts-payment-panel__heading"><h2><?php echo esc_html($title); ?></h2><span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr($class); ?>"><?php echo esc_html($receivable ? __('Money coming in', 'safecontracts') : __('Money going out', 'safecontracts')); ?></span></div>
+            <?php if ($payments === []) : ?><p><?php echo esc_html($empty); ?></p><?php else : ?>
+            <table class="widefat striped"><thead><tr>
+                <th><?php echo esc_html__('Due date', 'safecontracts'); ?></th>
+                <th><?php echo esc_html__('Contract', 'safecontracts'); ?></th>
+                <th><?php echo esc_html__('Description', 'safecontracts'); ?></th>
+                <th><?php echo esc_html__('Status', 'safecontracts'); ?></th>
+                <th><?php echo esc_html__('Remaining', 'safecontracts'); ?></th>
+                <th><?php echo esc_html__('Actions', 'safecontracts'); ?></th>
+            </tr></thead><tbody>
+            <?php foreach ($payments as $payment) : ?>
+                <?php $rowTerminal = (string) $payment['status'] === PaymentStatus::PAID || ContractMoney::compare((string) $payment['remaining_amount'], '0.0000') === 0 || ! empty($payment['contract_is_archived']); ?>
+                <tr>
+                    <td><?php echo esc_html((string) $payment['due_date']); ?></td>
+                    <td><?php echo esc_html((string) $payment['contract_number']); ?><br><small><?php echo esc_html((string) ($payment['counterparty_name'] ?? '')); ?></small></td>
+                    <td><a href="<?php echo esc_url(self::paymentUrl((int) $payment['id'], $filters, false)); ?>"><?php echo esc_html(trim((string) ($payment['reference'] ?? '')) !== '' ? (string) $payment['reference'] : '—'); ?></a></td>
+                    <td><?php echo esc_html(self::statusLabel((string) $payment['status'])); ?></td>
+                    <td><?php echo esc_html(self::money((string) $payment['remaining_amount'], (string) ($payment['currency_code'] ?? ''))); ?></td>
+                    <td><div class="safecontracts-dashboard-table-actions">
+                        <a class="button button-small" href="<?php echo esc_url(self::paymentUrl((int) $payment['id'], $filters, false)); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a>
+                        <?php if (current_user_can(Capabilities::MANAGE_PAYMENTS) && ! $rowTerminal) : ?><a class="button button-small" href="<?php echo esc_url(self::paymentUrl((int) $payment['id'], $filters, true)); ?>"><?php echo esc_html__('Edit payment', 'safecontracts'); ?></a><?php endif; ?>
+                        <?php if (current_user_can(Capabilities::MANAGE_PAYMENTS)) : ?>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this scheduled payment? Payments with collection history are protected and must have their collections reversed first.', 'safecontracts'); ?>">
+                                <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><input type="hidden" name="payment_id" value="<?php echo esc_attr((string) $payment['id']); ?>"><?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $payment['id']); ?><button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
+                            </form>
+                        <?php endif; ?>
+                    </div></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody></table>
+            <?php endif; ?>
+        </section>
         <?php
     }
 
@@ -318,21 +357,20 @@ final class PaymentsPage
 
     private static function directionActionLabel(string $direction): string
     {
-        return $direction === FinancialDirection::PAYABLE
-            ? __('Accounts Payable · we will pay it', 'safecontracts')
-            : __('Accounts Receivable · will be paid to us', 'safecontracts');
+        return $direction === FinancialDirection::PAYABLE ? __('Accounts Payable · we will pay it', 'safecontracts') : __('Accounts Receivable · will be paid to us', 'safecontracts');
     }
 
     private static function amountLabel(string $direction): string
     {
-        return $direction === FinancialDirection::PAYABLE
-            ? __('Payable amount', 'safecontracts')
-            : __('Receivable amount', 'safecontracts');
+        return $direction === FinancialDirection::PAYABLE ? __('Payable amount', 'safecontracts') : __('Receivable amount', 'safecontracts');
     }
 
     private static function money(string $amount, string $currency): string
     {
-        $formatted = number_format((float) $amount, 2, '.', ',');
+        $normalized = ContractMoney::normalizeNonNegative($amount);
+        [$whole, $fraction] = array_pad(explode('.', $normalized, 2), 2, '0000');
+        $whole = preg_replace('/\B(?=(\d{3})+(?!\d))/', ',', $whole) ?? $whole;
+        $formatted = $whole . '.' . substr(str_pad($fraction, 2, '0'), 0, 2);
         $currency = trim($currency);
         return $currency === '' ? $formatted : $currency . ' ' . $formatted;
     }
