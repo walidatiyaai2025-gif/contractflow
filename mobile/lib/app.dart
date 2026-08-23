@@ -137,9 +137,8 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
       borderRadius: BorderRadius.circular(16),
       borderSide: const BorderSide(color: SafeContractsVisual.outline),
     );
-    final textTheme = isArabic
-        ? GoogleFonts.cairoTextTheme()
-        : GoogleFonts.interTextTheme();
+    final textTheme =
+        isArabic ? GoogleFonts.cairoTextTheme() : GoogleFonts.interTextTheme();
 
     final theme = ThemeData(
       colorScheme: scheme,
@@ -478,7 +477,8 @@ final class _BootstrapView extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         '${l10n.t('Environment')}: ${environment.name.name}',
-                        style: const TextStyle(color: SafeContractsVisual.muted),
+                        style:
+                            const TextStyle(color: SafeContractsVisual.muted),
                       ),
                       const SizedBox(height: 18),
                       if (controller.state == MobileBootstrapState.idle ||
