@@ -7,6 +7,7 @@ namespace SafeContracts\Admin;
 use SafeContracts\Contracts\ContractMoney;
 use SafeContracts\Payments\FinancialDirection;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\TranslationCatalog;
 
 final class DashboardV2Page
 {
@@ -39,10 +40,11 @@ final class DashboardV2Page
         <section class="safecontracts-dashboard-v2">
             <div class="safecontracts-dashboard-v2__heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Operational overview', 'safecontracts'); ?></p><h2><?php echo esc_html__('Dashboard', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html__('Receivables and payables are kept in separate accounting lanes. Green means money we expect to receive; red means money we must pay.', 'safecontracts'); ?></p></div></div>
 
-            <div class="safecontracts-dashboard-v2__kpis">
+            <div class="safecontracts-dashboard-v2__kpis safecontracts-dashboard-v2__kpis--accounting">
                 <?php self::kpi(__('Contracts', 'safecontracts'), (string) count($contracts), __('All contracts', 'safecontracts'), self::contractsUrl(), 'neutral'); ?>
-                <?php self::kpi(__('Receivable contracts', 'safecontracts'), (string) $receivableCount, __('Money customers will pay us', 'safecontracts'), self::contractsUrl('customer'), 'receivable'); ?>
-                <?php self::kpi(__('Payable contracts', 'safecontracts'), '− ' . $payableCount, __('Money we will pay suppliers', 'safecontracts'), self::contractsUrl('supplier'), 'payable'); ?>
+                <?php self::directionKpi(FinancialDirection::RECEIVABLE, $receivableCount, $rows); ?>
+                <?php self::directionKpi(FinancialDirection::PAYABLE, $payableCount, $rows); ?>
+                <?php self::generalAccountKpi($rows); ?>
             </div>
 
             <?php if (! empty($filters['date_range_error'])) : ?><div class="notice notice-error inline"><p><?php echo esc_html__('Invalid period. Use valid dates and make sure the end date is not earlier than the start date.', 'safecontracts'); ?></p></div><?php endif; ?>
@@ -67,6 +69,44 @@ final class DashboardV2Page
         ?><a class="safecontracts-dashboard-v2__kpi safecontracts-dashboard-v2__kpi--<?php echo esc_attr($class); ?>" href="<?php echo esc_url($url); ?>"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html($value); ?></strong><small><?php echo esc_html($detail); ?></small></a><?php
     }
 
+    /** @param array<string,array<string,array{contracts:int,base:string,scheduled:string,settled:string,outstanding:string}>> $rows */
+    private static function directionKpi(string $direction, int $count, array $rows): void
+    {
+        $receivable = $direction === FinancialDirection::RECEIVABLE;
+        $class = $receivable ? 'receivable' : 'payable';
+        $label = $receivable ? __('Receivable contracts', 'safecontracts') : __('Payable contracts', 'safecontracts');
+        $detail = $receivable ? __('Money customers will pay us', 'safecontracts') : __('Money we will pay suppliers', 'safecontracts');
+        $type = $receivable ? 'customer' : 'supplier';
+        ?>
+        <a class="safecontracts-dashboard-v2__kpi safecontracts-dashboard-v2__kpi--<?php echo esc_attr($class); ?>" href="<?php echo esc_url(self::contractsUrl($type)); ?>">
+            <span><?php echo esc_html($label); ?></span>
+            <strong><?php echo esc_html($receivable ? (string) $count : '− ' . $count); ?></strong>
+            <div class="safecontracts-dashboard-v2__kpi-money-list">
+                <?php foreach ($rows as $currency => $directions) : $row = $directions[$direction] ?? null; if ($row === null || $row['contracts'] === 0) { continue; } ?><small><?php echo esc_html(self::directionMoney($row['base'], $currency, $direction)); ?></small><?php endforeach; ?>
+            </div>
+            <small><?php echo esc_html($detail); ?></small>
+        </a>
+        <?php
+    }
+
+    /** @param array<string,array<string,array{contracts:int,base:string,scheduled:string,settled:string,outstanding:string}>> $rows */
+    private static function generalAccountKpi(array $rows): void
+    {
+        ?>
+        <article class="safecontracts-dashboard-v2__kpi safecontracts-dashboard-v2__kpi--general-account">
+            <span><?php echo esc_html(self::label('General account', 'الحساب العام')); ?></span>
+            <div class="safecontracts-dashboard-v2__general-values">
+                <?php if ($rows === []) : ?><strong>0.00</strong><?php endif; ?>
+                <?php foreach ($rows as $currency => $directions) : ?>
+                    <?php $zero = ['contracts' => 0, 'base' => '0.0000', 'scheduled' => '0.0000', 'settled' => '0.0000', 'outstanding' => '0.0000']; $r = $directions[FinancialDirection::RECEIVABLE] ?? $zero; $p = $directions[FinancialDirection::PAYABLE] ?? $zero; $net = ContractMoney::difference($r['outstanding'], $p['outstanding']); $class = str_starts_with($net, '-') ? 'payable' : (ContractMoney::compare($net, '0.0000') > 0 ? 'receivable' : 'neutral'); ?>
+                    <strong class="safecontracts-dashboard-v2__net--<?php echo esc_attr($class); ?>"><?php echo esc_html(self::signedMoney($net, $currency)); ?></strong>
+                <?php endforeach; ?>
+            </div>
+            <small><?php echo esc_html(self::label('Receivables still due to us minus payables still due from us. Settlements update this balance automatically.', 'المستحق لنا المتبقي ناقص المستحق علينا المتبقي، ويتغير تلقائياً مع كل تحصيل أو سداد.')); ?></small>
+        </article>
+        <?php
+    }
+
     /** @param list<array<string,mixed>> $contracts @param list<array<string,mixed>> $payments @return array<string,array<string,array{contracts:int,base:string,scheduled:string,settled:string,outstanding:string}>> */
     private static function totals(array $contracts, array $payments): array
     {
@@ -85,6 +125,9 @@ final class DashboardV2Page
             $currency = self::currency((string) ($row['currency_code'] ?? ''));
             self::bucket($rows, $currency, $direction);
             $rows[$currency][$direction]['scheduled'] = self::add($rows[$currency][$direction]['scheduled'], (string) ($row['original_amount'] ?? '0'));
+            // paid_amount is the reconciled active settlement-ledger total. It is
+            // recalculated after a settlement deletion/reversal, so the dashboard
+            // always follows the authoritative collection/payment ledger.
             $rows[$currency][$direction]['settled'] = self::add($rows[$currency][$direction]['settled'], (string) ($row['paid_amount'] ?? '0'));
             $rows[$currency][$direction]['outstanding'] = self::add($rows[$currency][$direction]['outstanding'], (string) ($row['remaining_amount'] ?? '0'));
         }
@@ -117,7 +160,7 @@ final class DashboardV2Page
         $zero = ['contracts' => 0, 'base' => '0.0000', 'scheduled' => '0.0000', 'settled' => '0.0000', 'outstanding' => '0.0000'];
         $r = $directions[FinancialDirection::RECEIVABLE] ?? $zero;
         $p = $directions[FinancialDirection::PAYABLE] ?? $zero;
-        ?><article class="safecontracts-dashboard-v2__net-card"><h4><?php echo esc_html($currency); ?></h4><?php self::netLine(__('Base contract total', 'safecontracts'), $r['base'], $p['base'], $currency); ?><?php self::netLine(__('Scheduled total', 'safecontracts'), $r['scheduled'], $p['scheduled'], $currency); ?><?php self::netLine(__('Outstanding', 'safecontracts'), $r['outstanding'], $p['outstanding'], $currency); ?></article><?php
+        ?><article class="safecontracts-dashboard-v2__net-card"><h4><?php echo esc_html($currency); ?></h4><?php self::netLine(__('Base contract total', 'safecontracts'), $r['base'], $p['base'], $currency); ?><?php self::netLine(__('Scheduled total', 'safecontracts'), $r['scheduled'], $p['scheduled'], $currency); ?><?php self::netLine(self::label('Settlements', 'التحصيلات والسداد'), $r['settled'], $p['settled'], $currency); ?><?php self::netLine(self::label('General account', 'الحساب العام'), $r['outstanding'], $p['outstanding'], $currency); ?></article><?php
     }
 
     private static function netLine(string $label, string $receivable, string $payable, string $currency): void
@@ -164,5 +207,10 @@ final class DashboardV2Page
     {
         $currency = strtoupper(trim($currency));
         return $currency === '' ? '—' : $currency;
+    }
+
+    private static function label(string $english, string $arabic): string
+    {
+        return TranslationCatalog::currentLanguage() === 'ar' ? $arabic : $english;
     }
 }
