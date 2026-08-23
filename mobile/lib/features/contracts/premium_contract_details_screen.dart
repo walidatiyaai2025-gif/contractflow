@@ -451,13 +451,17 @@ final class _SummaryTab extends StatelessWidget {
                         children: [
                           Text(
                             row.label,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: SafeContractsVisual.muted,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: SafeContractsVisual.muted,
+                                    ),
                           ),
                           Text(
                             row.value,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
                                   fontWeight: FontWeight.w800,
                                 ),
                           ),
@@ -486,7 +490,11 @@ final class _PaymentsTab extends StatelessWidget {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
-        children: [Text(ar ? 'لا توجد دفعات لهذا العقد.' : 'No payments for this contract.')],
+        children: [
+          Text(ar
+              ? 'لا توجد دفعات لهذا العقد.'
+              : 'No payments for this contract.')
+        ],
       );
     }
     return ListView.separated(
@@ -507,7 +515,9 @@ final class _PaymentsTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      ar ? 'دفعة ${payment.sequenceNo}' : 'Payment ${payment.sequenceNo}',
+                      ar
+                          ? 'دفعة ${payment.sequenceNo}'
+                          : 'Payment ${payment.sequenceNo}',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w900,
                           ),
@@ -683,7 +693,8 @@ final class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Material(
       color: SafeContractsVisual.background,
       child: tabBar,
