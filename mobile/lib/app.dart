@@ -19,8 +19,8 @@ import 'features/notifications/push_registration.dart';
 import 'features/session/session_controller.dart';
 import 'features/ui/mobile_layout.dart';
 import 'features/ui/safecontracts_design.dart';
-import 'features/welcome/company_welcome_screen.dart';
 import 'features/welcome/mobile_landing.dart';
+import 'features/welcome/premium_landing_screen.dart';
 
 class SafeContractsApp extends StatefulWidget {
   const SafeContractsApp({
@@ -462,7 +462,7 @@ final class _BootstrapViewState extends State<_BootstrapView> {
         if (widget.controller.sessionController?.state ==
             SessionState.unauthenticated) {
           if (!_showLogin) {
-            return AlkenzyCompanyWelcomeScreen(
+            return PremiumLandingScreen(
               controller: widget.landingController,
               languageCode: widget.languageCode,
               onLanguageChanged: widget.onLanguageChanged,
