@@ -98,7 +98,7 @@ final class DashboardV2Page
             <div class="safecontracts-dashboard-v2__general-values">
                 <?php if ($rows === []) : ?><strong>0.00</strong><?php endif; ?>
                 <?php foreach ($rows as $currency => $directions) : ?>
-                    <?php $zero = ['contracts' => 0, 'base' => '0.0000', 'scheduled' => '0.0000', 'settled' => '0.0000', 'outstanding' => '0.0000']; $r = $directions[FinancialDirection::RECEIVABLE] ?? $zero; $p = $directions[FinancialDirection::PAYABLE] ?? $zero; $net = ContractMoney::difference($r['outstanding'], $p['outstanding']); $class = str_starts_with($net, '-') ? 'payable' : (ContractMoney::compare($net, '0.0000') > 0 ? 'receivable' : 'neutral'); ?>
+                    <?php $zero = ['contracts' => 0, 'base' => '0.0000', 'scheduled' => '0.0000', 'settled' => '0.0000', 'outstanding' => '0.0000']; $r = $directions[FinancialDirection::RECEIVABLE] ?? $zero; $p = $directions[FinancialDirection::PAYABLE] ?? $zero; $net = ContractMoney::difference($r['outstanding'], $p['outstanding']); $class = str_starts_with($net, '-') ? 'payable' : ($net !== '0.0000' ? 'receivable' : 'neutral'); ?>
                     <strong class="safecontracts-dashboard-v2__net--<?php echo esc_attr($class); ?>"><?php echo esc_html(self::signedMoney($net, $currency)); ?></strong>
                 <?php endforeach; ?>
             </div>
@@ -125,9 +125,6 @@ final class DashboardV2Page
             $currency = self::currency((string) ($row['currency_code'] ?? ''));
             self::bucket($rows, $currency, $direction);
             $rows[$currency][$direction]['scheduled'] = self::add($rows[$currency][$direction]['scheduled'], (string) ($row['original_amount'] ?? '0'));
-            // paid_amount is the reconciled active settlement-ledger total. It is
-            // recalculated after a settlement deletion/reversal, so the dashboard
-            // always follows the authoritative collection/payment ledger.
             $rows[$currency][$direction]['settled'] = self::add($rows[$currency][$direction]['settled'], (string) ($row['paid_amount'] ?? '0'));
             $rows[$currency][$direction]['outstanding'] = self::add($rows[$currency][$direction]['outstanding'], (string) ($row['remaining_amount'] ?? '0'));
         }
@@ -166,7 +163,7 @@ final class DashboardV2Page
     private static function netLine(string $label, string $receivable, string $payable, string $currency): void
     {
         $net = ContractMoney::difference($receivable, $payable);
-        $class = str_starts_with($net, '-') ? 'payable' : (ContractMoney::compare($net, '0.0000') > 0 ? 'receivable' : 'neutral');
+        $class = str_starts_with($net, '-') ? 'payable' : ($net !== '0.0000' ? 'receivable' : 'neutral');
         ?><div class="safecontracts-dashboard-v2__net-line"><span><?php echo esc_html($label); ?></span><small class="safecontracts-financial-amount--receivable"><?php echo esc_html(self::directionMoney($receivable, $currency, FinancialDirection::RECEIVABLE)); ?></small><small class="safecontracts-financial-amount--payable"><?php echo esc_html(self::directionMoney($payable, $currency, FinancialDirection::PAYABLE)); ?></small><strong class="safecontracts-dashboard-v2__net--<?php echo esc_attr($class); ?>"><?php echo esc_html__('Net value', 'safecontracts') . ': ' . esc_html(self::signedMoney($net, $currency)); ?></strong></div><?php
     }
 
