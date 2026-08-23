@@ -93,6 +93,16 @@ final class FeatureArabicDefaults
         'Email notification' => 'إشعار بالبريد الإلكتروني',
         'In-app / push notification' => 'إشعار داخل التطبيق / دفع',
         'No notification rules are configured yet.' => 'لا توجد قواعد إشعارات مهيأة حتى الآن.',
+        'Add contract' => 'إضافة عقد',
+        'Add supplier' => 'إضافة مورد',
+        'All months' => 'كل الشهور',
+        'All visible contract types in the selected period.' => 'كل أنواع العقود الظاهرة ضمن الفترة المحددة.',
+        'Cash flow' => 'التدفق المالي',
+        'Contract portfolio' => 'محفظة العقود',
+        'Expected inflows and outflows from the current finance scope.' => 'التدفقات الداخلة والخارجة المتوقعة ضمن نطاق المالية الحالي.',
+        'Month' => 'الشهر',
+        'Quick add' => 'إضافة سريعة',
+        'Unable to load contract media.' => 'تعذر تحميل وسائط العقد.',
     ];
 
     public static function register(): void
