@@ -135,11 +135,10 @@ sc_626_expect_domain(
 $paymentRepository = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Payments/PaymentRepository.php');
 $collectionRepository = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Collections/CollectionRepository.php');
 $arabic = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Translations/FeatureArabicDefaults.php');
-$plugin = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php');
 
 sc_626_assert(str_contains($paymentRepository, 'scheduled_total') && str_contains($paymentRepository, 'c.base_value'), 'payment repository reads contract value and aggregate scheduled value in the same production context query');
 sc_626_assert(str_contains($collectionRepository, 'contract_settled_total') && str_contains($collectionRepository, 'FOR UPDATE'), 'settlement repository carries contract-wide settled value through the locked payment context');
 sc_626_assert(str_contains($arabic, 'إجمالي الدفعات المجدولة يتجاوز قيمة العقد') && str_contains($arabic, 'لا يمكن أن يتجاوز المتبقي في الدفعة أو قيمة العقد'), 'Arabic admin validation explains the contract and payment limits clearly');
-sc_626_assert(str_contains($plugin, 'Version: 0.2.3'), 'plugin version identifies the contract-capacity guard release');
+sc_626_assert(defined('SAFECONTRACTS_VERSION') && version_compare((string) SAFECONTRACTS_VERSION, '0.2.3', '>='), 'plugin version remains at or above the contract-capacity guard release');
 
 echo "SafeContracts contract value capacity guard regression passed ({$tests} assertions).\n";
