@@ -60,8 +60,8 @@ final class EntityAttachmentService
 
         $attachments = $this->repository->allFor($entityType, $entityId);
         if ($entityType === self::COLLECTION) {
-            $first = $attachments[0]['media_id'] ?? null;
-            $this->repository->setLegacyCollectionProof($entityId, is_int($first) && $first > 0 ? $first : null);
+            $first = (int) ($attachments[0]['media_id'] ?? 0);
+            $this->repository->setLegacyCollectionProof($entityId, $first > 0 ? $first : null);
         }
         return $attachments;
     }
@@ -86,8 +86,8 @@ final class EntityAttachmentService
             $this->repository->detachLegacyContractAttachment($entityId, $mediaId);
         } elseif ($entityType === self::COLLECTION) {
             $remaining = $this->repository->allFor($entityType, $entityId);
-            $first = $remaining[0]['media_id'] ?? null;
-            $this->repository->setLegacyCollectionProof($entityId, is_int($first) && $first > 0 ? $first : null);
+            $first = (int) ($remaining[0]['media_id'] ?? 0);
+            $this->repository->setLegacyCollectionProof($entityId, $first > 0 ? $first : null);
         }
         do_action('safecontracts_entity_attachment_removed', $entityType, $entityId, $mediaId, get_current_user_id());
     }
