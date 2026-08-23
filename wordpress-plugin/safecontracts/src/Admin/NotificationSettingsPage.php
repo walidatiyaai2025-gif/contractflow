@@ -48,6 +48,8 @@ final class NotificationSettingsPage
                 'recipient_roles' => $recipientRoles,
                 'escalation_roles' => $escalationRoles,
                 'target_assigned_accountant' => isset($_POST['target_assigned_accountant']),
+                'push_enabled' => isset($_POST['push_enabled']),
+                'email_enabled' => isset($_POST['email_enabled']),
                 'template_code' => sanitize_key(Input::string($_POST['template_code'] ?? '', 'Notification template code')),
                 'is_active' => isset($_POST['is_active']),
             ]);
@@ -125,35 +127,31 @@ final class NotificationSettingsPage
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Notification configuration', 'safecontracts'); ?></p><h1><?php echo esc_html__('Notification Settings', 'safecontracts'); ?></h1></div></div>
             <div class="safecontracts-split-layout">
+                <?php if ($rules !== []) : ?>
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <h2><?php echo esc_html__('Rules', 'safecontracts'); ?></h2>
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Trigger', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Trigger', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('Channels', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($rules as $rule) : ?>
+                        <?php $channels = array_values(array_filter([! empty($rule['push_enabled']) ? 'Push' : '', ! empty($rule['email_enabled']) ? 'Email' : ''])); ?>
                         <tr>
                             <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'rule' => $rule['code']], admin_url('admin.php'))); ?>"><code><?php echo esc_html((string) $rule['code']); ?></code></a><br><?php echo esc_html((string) $rule['name']); ?></td>
                             <td><?php echo esc_html(self::triggerLabel((string) $rule['trigger_type'])); ?></td>
                             <td><?php echo esc_html((string) $rule['template_code']); ?></td>
+                            <td><?php echo esc_html($channels !== [] ? implode(' + ', $channels) : __('None', 'safecontracts')); ?></td>
                             <td><?php echo ! empty($rule['is_active']) ? esc_html__('Active', 'safecontracts') : esc_html__('Disabled', 'safecontracts'); ?></td>
                             <td>
                                 <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'rule' => $rule['code']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Edit', 'safecontracts'); ?></a>
-                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin:0 4px;">
-                                    <input type="hidden" name="action" value="<?php echo esc_attr(self::TOGGLE_ACTION); ?>">
-                                    <input type="hidden" name="code" value="<?php echo esc_attr((string) $rule['code']); ?>">
-                                    <?php wp_nonce_field(self::TOGGLE_ACTION); ?>
-                                    <button class="button button-small" type="submit"><?php echo ! empty($rule['is_active']) ? esc_html__('Deactivate', 'safecontracts') : esc_html__('Activate', 'safecontracts'); ?></button>
-                                </form>
-                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin:0;" onsubmit="return confirm('Delete this notification rule and all of its scheduled occurrences? Delivery history already sent by the transport is not erased.');">
-                                    <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
-                                    <input type="hidden" name="code" value="<?php echo esc_attr((string) $rule['code']); ?>">
-                                    <?php wp_nonce_field(self::DELETE_ACTION); ?>
-                                    <button class="button button-small" type="submit" style="color:#b32d2e;border-color:#b32d2e;"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
-                                </form>
+                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin:0 4px;"><input type="hidden" name="action" value="<?php echo esc_attr(self::TOGGLE_ACTION); ?>"><input type="hidden" name="code" value="<?php echo esc_attr((string) $rule['code']); ?>"><?php wp_nonce_field(self::TOGGLE_ACTION); ?><button class="button button-small" type="submit"><?php echo ! empty($rule['is_active']) ? esc_html__('Deactivate', 'safecontracts') : esc_html__('Activate', 'safecontracts'); ?></button></form>
+                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin:0;" onsubmit="return confirm('Delete this notification rule and all of its scheduled occurrences? Delivery history already sent by the transport is not erased.');"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><input type="hidden" name="code" value="<?php echo esc_attr((string) $rule['code']); ?>"><?php wp_nonce_field(self::DELETE_ACTION); ?><button class="button button-small" type="submit" style="color:#b32d2e;border-color:#b32d2e;"><?php echo esc_html__('Delete', 'safecontracts'); ?></button></form>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody></table>
                     <p class="description"><?php echo esc_html__('Editing a rule rebuilds its future schedule. Deactivating or deleting a rule clears all scheduled occurrences for that rule. In-flight sends must finish before the change is accepted.', 'safecontracts'); ?></p>
                 </section>
+                <?php else : ?>
+                    <p><?php echo esc_html__('No notification rules are configured yet.', 'safecontracts'); ?></p>
+                <?php endif; ?>
                 <section class="safecontracts-admin-card safecontracts-settings-card">
                     <h2><?php echo $selected ? esc_html__('Edit rule', 'safecontracts') : esc_html__('Add rule', 'safecontracts'); ?></h2>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -165,6 +163,7 @@ final class NotificationSettingsPage
                         <div class="safecontracts-field-row"><label><?php echo esc_html__('Days before', 'safecontracts'); ?><input type="number" min="0" max="365" name="days_before" value="<?php echo esc_attr((string) ($selected['days_before'] ?? 10)); ?>"></label><label><?php echo esc_html__('Days after', 'safecontracts'); ?><input type="number" min="0" max="365" name="days_after" value="<?php echo esc_attr((string) ($selected['days_after'] ?? 0)); ?>"></label></div>
                         <div class="safecontracts-field-row"><label><?php echo esc_html__('Repeat interval days', 'safecontracts'); ?><input type="number" min="0" max="365" name="repeat_interval_days" value="<?php echo esc_attr((string) ($selected['repeat_interval_days'] ?? 0)); ?>"></label><label><?php echo esc_html__('Max repeats', 'safecontracts'); ?><input type="number" min="0" max="50" name="max_repeats" value="<?php echo esc_attr((string) ($selected['max_repeats'] ?? 0)); ?>"></label></div>
                         <fieldset><legend><?php echo esc_html__('Recipients', 'safecontracts'); ?></legend><?php foreach ($roles as $slug => $label) : ?><label class="safecontracts-check-row"><input type="checkbox" name="recipient_roles[]" value="<?php echo esc_attr($slug); ?>" <?php checked(in_array($slug, $selectedRecipients, true)); ?>><?php echo esc_html($label); ?></label><?php endforeach; ?><label class="safecontracts-check-row"><input type="checkbox" name="target_assigned_accountant" value="1" <?php checked(! empty($selected['target_assigned_accountant'])); ?>><?php echo esc_html__('Assigned Accountant', 'safecontracts'); ?></label></fieldset>
+                        <fieldset><legend><?php echo esc_html__('Delivery channels', 'safecontracts'); ?></legend><label class="safecontracts-check-row"><input type="checkbox" name="push_enabled" value="1" <?php checked($selected === null || ! empty($selected['push_enabled'])); ?>><?php echo esc_html__('In-app / push notification', 'safecontracts'); ?></label><label class="safecontracts-check-row"><input type="checkbox" name="email_enabled" value="1" <?php checked(! empty($selected['email_enabled'])); ?>><?php echo esc_html__('Email notification', 'safecontracts'); ?></label></fieldset>
                         <fieldset><legend><?php echo esc_html__('Escalation roles', 'safecontracts'); ?></legend><?php foreach ($roles as $slug => $label) : ?><label class="safecontracts-check-row"><input type="checkbox" name="escalation_roles[]" value="<?php echo esc_attr($slug); ?>" <?php checked(in_array($slug, $selectedEscalations, true)); ?>><?php echo esc_html($label); ?></label><?php endforeach; ?></fieldset>
                         <p><label><?php echo esc_html__('Template', 'safecontracts'); ?><select class="widefat" name="template_code" required><?php foreach ($templates as $template) : ?><option value="<?php echo esc_attr((string) $template['code']); ?>" <?php selected((string) ($selected['template_code'] ?? ''), (string) $template['code']); ?>><?php echo esc_html((string) $template['code']); ?></option><?php endforeach; ?></select></label></p>
                         <p><label><input type="checkbox" name="is_active" value="1" <?php checked($selected === null || ! empty($selected['is_active'])); ?>><?php echo esc_html__('Active', 'safecontracts'); ?></label></p>

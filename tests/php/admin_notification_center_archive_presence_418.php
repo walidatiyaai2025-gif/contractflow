@@ -64,17 +64,24 @@ $assertContains("public const PAYMENT = 'payment'", $suppression, 'payment suppr
 $assertContains('isSuppressed($paymentId, $contractId)', $engine, 'notification engine must enforce administrative suppressions');
 
 $center = $read('wordpress-plugin/safecontracts/src/Admin/NotificationCenterPage.php');
-foreach (['Notification Center', 'Send to one user', 'Email delivery', 'Specific users', 'Stop notifications for a contract or payment', 'Message templates', 'Notification icon'] as $uiContract) {
-    $assertContains($uiContract, $center, 'notification center must expose ' . $uiContract);
+foreach (['Notification Center', 'Notification inbox', 'read_state', 'Mark all as read', 'Notification Settings', 'Email Settings'] as $uiContract) {
+    $assertContains($uiContract, $center, 'notification inbox must expose ' . $uiContract);
 }
-foreach (['check_admin_referer(self::SAVE_RULE_ACTION)', 'check_admin_referer(self::SAVE_TEMPLATE_ACTION)', 'check_admin_referer(self::DIRECT_SEND_ACTION)', 'check_admin_referer(self::SUPPRESSION_ACTION)'] as $nonceContract) {
-    $assertContains($nonceContract, $center, 'notification center write must be nonce protected');
+foreach (['check_admin_referer(self::SAVE_RULE_ACTION)', 'check_admin_referer(self::SAVE_TEMPLATE_ACTION)', 'check_admin_referer(self::DIRECT_SEND_ACTION)', 'check_admin_referer(self::SUPPRESSION_ACTION)', 'check_admin_referer(self::READ_ACTION)'] as $nonceContract) {
+    $assertContains($nonceContract, $center, 'notification-center write must be nonce protected');
 }
 $assertContains('Capabilities::MANAGE_NOTIFICATIONS', $center, 'notification center must be permission gated');
+$assertNotContains('name="from_address"', $center, 'notification center must not render sender email settings');
+$assertNotContains('name="from_name"', $center, 'notification center must not render sender name settings');
+
+$emailSettingsPage = $read('wordpress-plugin/safecontracts/src/Admin/EmailSettingsPage.php');
+foreach (['Email Settings', 'from_address', 'from_name', 'Enable email notifications'] as $emailUiContract) {
+    $assertContains($emailUiContract, $emailSettingsPage, 'standalone Email Settings page must expose ' . $emailUiContract);
+}
 
 $smtpControl = $read('wordpress-plugin/safecontracts/src/Admin/DirectSmtpSettingsControl.php');
-foreach (['Direct SMTP connection', 'SMTP host', 'SMTP port', 'SMTP username', 'SMTP password', 'Save Direct SMTP Settings', 'check_admin_referer(self::ACTION)', 'Capabilities::MANAGE_NOTIFICATIONS'] as $smtpUiContract) {
-    $assertContains($smtpUiContract, $smtpControl, 'notification center direct SMTP control must expose ' . $smtpUiContract);
+foreach (['Direct SMTP connection', 'SMTP host', 'SMTP port', 'SMTP username', 'SMTP password', 'Save Direct SMTP Settings', 'check_admin_referer(self::ACTION)', 'Capabilities::MANAGE_NOTIFICATIONS', 'EmailSettingsPage::SLUG'] as $smtpUiContract) {
+    $assertContains($smtpUiContract, $smtpControl, 'standalone email settings SMTP control must expose ' . $smtpUiContract);
 }
 
 $roles = $read('wordpress-plugin/safecontracts/src/Admin/UsersRolesPage.php');
@@ -103,12 +110,13 @@ $assertContains('Active on dashboard', $activeUsers, 'active-users page must dis
 $assertNotContains('token_hash', $activeUsers, 'active-users page must not expose token material');
 
 $summaries = $read('wordpress-plugin/safecontracts/src/Admin/AdminPageSummaryInjector.php');
-$assertContains('CustomersPage::SLUG', $summaries, 'customer page must have summary cards');
-$assertContains('ContractsPage::SLUG', $summaries, 'contract page must have summary cards');
-$assertContains('PaymentsPage::SLUG', $summaries, 'payment page must have summary cards');
-$assertContains('CollectionsPage::SLUG', $summaries, 'collection page must have summary cards');
-$assertContains('ReportsPage::SLUG', $summaries, 'reports page must have summary cards');
-$assertContains('NotificationsPage::SLUG', $summaries, 'notifications page must have summary cards');
+$assertContains('CustomersPage::SLUG', $summaries, 'customer page must retain summary cards');
+$assertContains('PaymentsPage::SLUG', $summaries, 'payment page must retain summary cards');
+$assertContains('CollectionsPage::SLUG', $summaries, 'collection page must retain summary cards');
+$assertContains('ReportsPage::SLUG', $summaries, 'reports page must retain summary cards');
+$assertContains('NotificationsPage::SLUG', $summaries, 'notifications page must retain summary cards');
+$assertContains('ContractsPage::SLUG', $summaries, 'contract page must be explicitly recognized by the summary injector');
+$assertNotContains('if ($page === ContractsPage::SLUG)', $summaries, 'contract page must not create its own top summary card set');
 
 $fcm = $read('wordpress-plugin/safecontracts/src/Notifications/FirebasePushTransport.php');
 $bootstrap = $read('scripts/bootstrap_android.sh');
@@ -125,9 +133,12 @@ $assertContains('MobileNotificationPresenter.start()', $main, 'foreground notifi
 $assertContains('default_notification_channel_id', $bootstrap, 'release Android manifest must declare the default FCM channel');
 
 $plugin = $read('wordpress-plugin/safecontracts/src/Plugin.php');
+$bootstrapPlugin = $read('wordpress-plugin/safecontracts/safecontracts.php');
 foreach (['NotificationCenterPage::class', 'ArchivePage::class', 'ActiveUsersPage::class', 'AdminPageSummaryInjector::register()', 'PresenceService::register()', 'NotificationCenterArabicDefaults::register()', 'NotificationCenterAuditRecorder::register()'] as $wire) {
     $assertContains($wire, $plugin, 'plugin must wire ' . $wire);
 }
+$assertContains('EmailSettingsPage::register()', $bootstrapPlugin, 'plugin bootstrap must wire standalone Email Settings');
+$assertContains('NotificationCenterPage::registerInboxActions()', $bootstrapPlugin, 'plugin bootstrap must wire notification inbox read actions');
 
 $criticalAudit = $read('wordpress-plugin/safecontracts/src/Audit/AuditRecorder.php');
 $newAudit = $read('wordpress-plugin/safecontracts/src/Audit/NotificationCenterAuditRecorder.php');

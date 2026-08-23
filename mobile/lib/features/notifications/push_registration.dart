@@ -97,100 +97,132 @@ final class MobilePushRegistration {
 
   StreamSubscription<String>? _refreshSubscription;
   String? _registeredToken;
+  Future<void>? _startInFlight;
+  Future<void> _registrationQueue = Future<void>.value();
   bool _started = false;
+  bool _permissionRequested = false;
   bool _disposed = false;
 
   Future<void> start() async {
-    if (_disposed) {
+    if (_disposed || status.value.backendRegistered) {
       return;
     }
+    final existing = _startInFlight;
+    if (existing != null) {
+      await existing;
+      return;
+    }
+
+    final operation = _startInternal();
+    _startInFlight = operation;
+    try {
+      await operation;
+    } finally {
+      if (identical(_startInFlight, operation)) {
+        _startInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _startInternal() async {
+    if (_disposed) return;
     if (!_started) {
       _started = true;
       _refreshSubscription = _messaging.onTokenRefresh.listen(
-        (token) => unawaited(_registerTokenWithRetry(token)),
+        (token) => unawaited(_enqueueRegistration(
+          () => _registerTokenWithRetry(token),
+        )),
         onError: (_) => _setError('fcm_token_refresh_failed'),
       );
     }
 
-    try {
-      final permission = await _messaging.requestPermission();
-      _setStatus(
-        permission: permission,
-        tokenAcquired: status.value.tokenAcquired,
-        backendState: status.value.backendState,
-        errorCode: status.value.errorCode,
-      );
-    } on Object {
-      // Permission prompting is independent from FCM installation registration.
-      // Keep trying to register the device so the profile can diagnose state.
-      _setStatus(
-        permission: MobilePushPermissionState.unknown,
-        tokenAcquired: status.value.tokenAcquired,
-        backendState: status.value.backendState,
-        errorCode: 'notification_permission_unavailable',
-      );
+    if (!_permissionRequested) {
+      _permissionRequested = true;
+      try {
+        final permission = await _messaging.requestPermission();
+        _setStatus(
+          permission: permission,
+          tokenAcquired: status.value.tokenAcquired,
+          backendState: status.value.backendState,
+          errorCode: status.value.errorCode,
+        );
+      } on Object {
+        _setStatus(
+          permission: MobilePushPermissionState.unknown,
+          tokenAcquired: status.value.tokenAcquired,
+          backendState: status.value.backendState,
+          errorCode: 'notification_permission_unavailable',
+        );
+      }
     }
 
-    await _acquireAndRegisterWithRetry();
+    if (!status.value.backendRegistered) {
+      await _enqueueRegistration(_acquireAndRegisterWithRetry);
+    }
   }
 
   Future<void> retryNow() async {
-    if (_disposed) {
-      return;
-    }
+    if (_disposed) return;
     if (!_started) {
       await start();
       return;
     }
-    await _acquireAndRegisterWithRetry();
+    await _enqueueRegistration(_acquireAndRegisterWithRetry);
   }
 
   Future<void> refreshTokenAndRetry() async {
-    if (_disposed) {
-      return;
-    }
+    if (_disposed) return;
     if (!_started) {
       await start();
-      if (_disposed) {
+      if (_disposed) return;
+    }
+
+    await _enqueueRegistration(() async {
+      final previousToken = _registeredToken;
+      if (previousToken != null) {
+        try {
+          await client.post(
+            'devices/revoke',
+            body: <String, Object?>{'token': previousToken},
+          );
+        } on Object {
+          // Server cleanup is best-effort; Firebase token rotation must continue.
+        }
+      }
+
+      try {
+        await _messaging.deleteToken();
+      } on Object {
+        _setStatus(
+          permission: status.value.permission,
+          tokenAcquired: status.value.tokenAcquired,
+          backendState: MobilePushBackendState.error,
+          errorCode: 'fcm_token_reset_failed',
+        );
         return;
       }
-    }
 
-    final previousToken = _registeredToken;
-    if (previousToken != null) {
-      try {
-        await client.post(
-          'devices/revoke',
-          body: <String, Object?>{'token': previousToken},
-        );
-      } on Object {
-        // Server cleanup is best-effort; Firebase token rotation must continue.
-      }
-    }
-
-    try {
-      await _messaging.deleteToken();
-    } on Object {
+      _registeredToken = null;
       _setStatus(
         permission: status.value.permission,
-        tokenAcquired: status.value.tokenAcquired,
-        backendState: MobilePushBackendState.error,
-        errorCode: 'fcm_token_reset_failed',
+        tokenAcquired: false,
+        backendState: MobilePushBackendState.registering,
+        errorCode: null,
       );
-      return;
-    }
+      await _acquireAndRegisterWithRetry();
+    });
+  }
 
-    _registeredToken = null;
-    _setStatus(
-      permission: status.value.permission,
-      tokenAcquired: false,
-      backendState: MobilePushBackendState.registering,
-      errorCode: null,
-    );
-    await _acquireAndRegisterWithRetry();
+  Future<void> _enqueueRegistration(Future<void> Function() action) {
+    final next = _registrationQueue.then((_) async {
+      if (!_disposed) await action();
+    });
+    _registrationQueue = next.catchError((Object _) {});
+    return next;
   }
 
   Future<void> _acquireAndRegisterWithRetry() async {
+    if (_disposed) return;
     _setStatus(
       permission: status.value.permission,
       tokenAcquired: status.value.tokenAcquired,
@@ -199,6 +231,7 @@ final class MobilePushRegistration {
     );
 
     for (var attempt = 0; attempt <= _retrySchedule.length; attempt++) {
+      if (_disposed) return;
       try {
         final token = (await _messaging.getToken())?.trim();
         if (token == null || token.isEmpty || token.length > 4096) {
@@ -211,9 +244,7 @@ final class MobilePushRegistration {
             errorCode: null,
           );
           final registered = await _registerToken(token);
-          if (registered) {
-            return;
-          }
+          if (registered) return;
           final current = status.value;
           if (current.errorCode == 'device_registration_401' ||
               current.errorCode == 'device_registration_403') {
@@ -239,9 +270,8 @@ final class MobilePushRegistration {
 
   Future<void> _registerTokenWithRetry(String token) async {
     final normalized = token.trim();
-    if (_disposed || normalized.isEmpty || normalized.length > 4096) {
-      return;
-    }
+    if (_disposed || normalized.isEmpty || normalized.length > 4096) return;
+
     _setStatus(
       permission: status.value.permission,
       tokenAcquired: true,
@@ -249,9 +279,8 @@ final class MobilePushRegistration {
       errorCode: null,
     );
     for (var attempt = 0; attempt <= _retrySchedule.length; attempt++) {
-      if (await _registerToken(normalized)) {
-        return;
-      }
+      if (_disposed) return;
+      if (await _registerToken(normalized)) return;
       final current = status.value;
       if (current.errorCode == 'device_registration_401' ||
           current.errorCode == 'device_registration_403') {
@@ -306,9 +335,7 @@ final class MobilePushRegistration {
     required MobilePushBackendState backendState,
     required String? errorCode,
   }) {
-    if (_disposed) {
-      return;
-    }
+    if (_disposed) return;
     status.value = MobilePushRegistrationSnapshot(
       permission: permission,
       tokenAcquired: tokenAcquired,
@@ -323,6 +350,10 @@ final class MobilePushRegistration {
     final token = _registeredToken;
     _registeredToken = null;
     _started = false;
+    _permissionRequested = false;
+    _startInFlight = null;
+    await _registrationQueue.catchError((Object _) {});
+
     if (token != null) {
       try {
         await client.post(
@@ -330,7 +361,7 @@ final class MobilePushRegistration {
           body: <String, Object?>{'token': token},
         );
       } on Object {
-        // Logout must continue even when the backend cannot revoke immediately.
+        // Logout must continue even when backend revocation is unavailable.
       }
     }
     try {
@@ -347,12 +378,11 @@ final class MobilePushRegistration {
   }
 
   Future<void> dispose() async {
-    if (_disposed) {
-      return;
-    }
+    if (_disposed) return;
     _disposed = true;
     await _refreshSubscription?.cancel();
     _refreshSubscription = null;
+    await _registrationQueue.catchError((Object _) {});
     status.dispose();
   }
 }

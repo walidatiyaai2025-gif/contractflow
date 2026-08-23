@@ -90,6 +90,9 @@ final class FeatureArabicDefaults
         'No receivable payments match the current filters.' => 'لا توجد دفعات مستحقة لنا تطابق الفلاتر الحالية.',
         'No payable payments match the current filters.' => 'لا توجد دفعات مستحقة علينا تطابق الفلاتر الحالية.',
         'Green payments are receivables we expect to collect. Red payments are payables we must pay. Direction and currency always come from the contract.' => 'الدفعات الخضراء مبالغ مستحقة لنا سنقوم بتحصيلها، والدفعات الحمراء مبالغ مستحقة علينا سنقوم بسدادها. الاتجاه والعملة دائماً من بيانات العقد.',
+        'Email notification' => 'إشعار بالبريد الإلكتروني',
+        'In-app / push notification' => 'إشعار داخل التطبيق / دفع',
+        'No notification rules are configured yet.' => 'لا توجد قواعد إشعارات مهيأة حتى الآن.',
     ];
 
     public static function register(): void

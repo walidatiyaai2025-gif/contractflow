@@ -3,7 +3,7 @@
  * Plugin Name: Safe Contracts
  * Plugin URI: https://github.com/walidatiyaai2025-gif/contractflow
  * Description: Contract receivables tracking backend and administration foundation for Safe Contracts.
- * Version: 0.3.0
+ * Version: 0.3.2
  * Requires at least: 6.5
  * Requires PHP: 8.1
  * Author: Safe Contracts Team
@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('SAFECONTRACTS_VERSION', '0.3.0');
+define('SAFECONTRACTS_VERSION', '0.3.2');
 define('SAFECONTRACTS_FILE', __FILE__);
 define('SAFECONTRACTS_DIR', plugin_dir_path(__FILE__));
 // Canonical path alias used by translation source discovery. Keep it equal to
@@ -25,6 +25,11 @@ define('SAFECONTRACTS_URL', plugin_dir_url(__FILE__));
 require_once SAFECONTRACTS_DIR . 'src/Support/Autoloader.php';
 
 \SafeContracts\Support\Autoloader::register();
+// Namespace-level legacy money helpers are functions, not classes, so they
+// cannot be loaded through the PSR-style autoloader. Load them explicitly so
+// every older Admin number_format(..., 2) presentation follows the centralized
+// no-redundant-decimals rule without changing DECIMAL storage or arithmetic.
+require_once SAFECONTRACTS_DIR . 'src/Admin/MoneyPresentationFunctions.php';
 \SafeContracts\Translations\CompleteArabicDefaults::register();
 \SafeContracts\Translations\FeatureArabicDefaults::register();
 \SafeContracts\Translations\ArabicRuntimeSafety::register();
@@ -44,4 +49,8 @@ add_filter('gettext', static function (string $translation, string $text, string
 
 add_action('plugins_loaded', static function (): void {
     \SafeContracts\Plugin::instance()->boot();
+    // Email delivery configuration is intentionally a dedicated admin page,
+    // separate from the operational Notification Center.
+    \SafeContracts\Admin\EmailSettingsPage::register();
+    \SafeContracts\Admin\NotificationCenterPage::registerInboxActions();
 });
