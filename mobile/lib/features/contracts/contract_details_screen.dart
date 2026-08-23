@@ -60,11 +60,7 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
         return Scaffold(
           backgroundColor: SafeContractsVisual.background,
           appBar: AppBar(
-            title: Text(
-              ready
-                  ? context.scL10n.t('Contract details')
-                  : context.scL10n.t('Contract details'),
-            ),
+            title: Text(context.scL10n.t('Contract details')),
             actions: [
               if (ready && widget.onEditContract != null)
                 IconButton(
@@ -80,7 +76,9 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
                 ),
             ],
           ),
-          body: SafeContractsBackdrop(child: SafeArea(child: _body(context))),
+          body: SafeContractsBackdrop(
+            child: SafeArea(child: _body(context)),
+          ),
         );
       },
     );
@@ -93,6 +91,7 @@ final class _ContractDetailsScreenState extends State<ContractDetailsScreen> {
         controller.detailState == ContractDetailLoadState.idle) {
       return const Center(child: CircularProgressIndicator());
     }
+
     if (controller.detailState == ContractDetailLoadState.ready &&
         controller.selectedContract != null) {
       return _ReadyContractDetails(
@@ -177,182 +176,198 @@ final class _ReadyContractDetails extends StatelessWidget {
         ? SafeContractsVisual.red
         : SafeContractsVisual.green;
 
-    return ListView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 28),
-      children: [
-        _ContractHero(
-          contract: contract,
-          typeLabel: typeLabel,
-          directionLabel: directionLabel,
-          directionAccent: directionAccent,
-          isArabic: ar,
-        ),
-        const SizedBox(height: 14),
-        _ContractTabs(isArabic: ar),
-        const SizedBox(height: 18),
-        SafeContractsSectionTitle(
-          title: ar ? 'ملخص العقد' : 'Contract Summary',
-          subtitle: ar
-              ? 'بيانات العقد الأساسية والجهة المتعاقدة'
-              : 'Core contract and counterparty information',
-        ),
-        const SizedBox(height: 12),
-        SafeContractsSurface(
-          child: Column(
-            children: [
-              _PremiumRow(
-                icon: contract.isSupplier
-                    ? Icons.local_shipping_outlined
-                    : Icons.business_outlined,
-                label: ar ? 'جهة التعاقد' : 'Counterparty',
-                value: contract.displayCounterparty,
-              ),
-              const _RowDivider(),
-              _PremiumRow(
-                icon: Icons.badge_outlined,
-                label: ar ? 'النوع' : 'Type',
-                value: typeLabel,
-              ),
-              const _RowDivider(),
-              _PremiumRow(
-                icon: Icons.swap_horiz_rounded,
-                label: ar ? 'الاتجاه المالي' : 'Financial direction',
-                value: directionLabel,
-                valueColor: directionAccent,
-              ),
-              const _RowDivider(),
-              _PremiumRow(
-                icon: Icons.currency_exchange_rounded,
-                label: ar ? 'العملة' : 'Currency',
-                value: contract.currencyCode,
-              ),
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _ContractHero(
+            contract: contract,
+            typeLabel: typeLabel,
+            directionLabel: directionLabel,
+            directionAccent: directionAccent,
+            isArabic: ar,
           ),
-        ),
-        const SizedBox(height: 18),
-        SafeContractsSectionTitle(
-          title: ar ? 'البيانات المالية والزمنية' : 'Financial & Timeline',
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final cards = <Widget>[
-              _InfoCard(
-                icon: Icons.account_balance_wallet_outlined,
-                label: ar ? 'قيمة العقد' : 'Contract value',
-                value: contract.baseValue == null
-                    ? '—'
-                    : '${_displayMoney(contract.baseValue)} ${contract.currencyCode}',
-                accent: SafeContractsVisual.roseGold,
-              ),
-              _InfoCard(
-                icon: Icons.calendar_today_outlined,
-                label: ar ? 'تاريخ البداية' : 'Start date',
-                value: contract.startDate ?? '—',
-                accent: SafeContractsVisual.navy,
-              ),
-              _InfoCard(
-                icon: Icons.event_available_outlined,
-                label: ar ? 'تاريخ النهاية' : 'End date',
-                value: contract.endDate ?? '—',
-                accent: SafeContractsVisual.green,
-              ),
-              _InfoCard(
-                icon: Icons.assignment_ind_outlined,
-                label: ar ? 'المحاسب المسؤول' : 'Assigned accountant',
-                value: contract.accountantUserId?.toString() ?? '—',
-                accent: SafeContractsVisual.amber,
-              ),
-            ];
-            if (constraints.maxWidth >= 620) {
-              return GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 2.3,
-                children: cards,
-              );
-            }
-            return Column(
-              children: cards
-                  .map(
-                    (card) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: card,
-                    ),
-                  )
-                  .toList(growable: false),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(13),
-          decoration: BoxDecoration(
-            color: SafeContractsVisual.navySoft.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: SafeContractsVisual.outline),
+          const SizedBox(height: 12),
+          _PrimaryContractAction(
+            contractId: contract.id,
+            canEdit: canEdit,
+            onEditContract: onEditContract,
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.verified_user_outlined,
-                color: SafeContractsVisual.navy,
-                size: 20,
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Text(
-                  ar
-                      ? 'القيمة والاتجاه المالي والأرصدة تظل معتمدة من السيرفر. التطبيق لا يعيد حساب AP أو AR محليًا.'
-                      : 'Value, direction and balances remain server-authoritative. Mobile does not recalculate AP or AR locally.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SafeContractsVisual.navyDeep,
-                        height: 1.5,
-                      ),
-                ),
-              ),
-            ],
+          const SizedBox(height: 14),
+          _ContractTabs(isArabic: ar),
+          const SizedBox(height: 18),
+          SafeContractsSectionTitle(
+            title: ar ? 'ملخص العقد' : 'Contract Summary',
+            subtitle: ar
+                ? 'بيانات العقد الأساسية والمالية'
+                : 'Core contract and financial information',
           ),
-        ),
-        const SizedBox(height: 18),
-        if (onEditContract != null)
-          FilledButton.icon(
-            onPressed: () => onEditContract!(contract.id),
-            icon: Icon(
-              canEdit ? Icons.edit_outlined : Icons.assignment_ind_outlined,
-            ),
-            label: Text(
-              canEdit
-                  ? l10n.t('Edit contract')
-                  : l10n.t('Responsible accountant'),
-            ),
-          )
-        else
+          const SizedBox(height: 12),
           SafeContractsSurface(
-            elevated: false,
+            child: Column(
+              children: [
+                _PremiumRow(
+                  icon: Icons.swap_horiz_rounded,
+                  label: ar ? 'الاتجاه المالي' : 'Financial direction',
+                  value: directionLabel,
+                  valueColor: directionAccent,
+                ),
+                const _RowDivider(),
+                _PremiumRow(
+                  icon: Icons.currency_exchange_rounded,
+                  label: ar ? 'العملة' : 'Currency',
+                  value: contract.currencyCode,
+                ),
+                const _RowDivider(),
+                _PremiumRow(
+                  icon: Icons.calendar_today_outlined,
+                  label: ar ? 'بداية العقد' : 'Start date',
+                  value: contract.startDate ?? '—',
+                ),
+                const _RowDivider(),
+                _PremiumRow(
+                  icon: Icons.event_available_outlined,
+                  label: ar ? 'نهاية العقد' : 'End date',
+                  value: contract.endDate ?? '—',
+                ),
+                const _RowDivider(),
+                _PremiumRow(
+                  icon: Icons.assignment_ind_outlined,
+                  label: ar ? 'المحاسب المسؤول' : 'Assigned accountant',
+                  value: contract.accountantUserId?.toString() ?? '—',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cards = <Widget>[
+                _InfoCard(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: ar ? 'قيمة العقد' : 'Contract value',
+                  value: contract.baseValue == null
+                      ? '—'
+                      : '${_displayMoney(contract.baseValue)} ${contract.currencyCode}',
+                  accent: SafeContractsVisual.roseGold,
+                ),
+                _InfoCard(
+                  icon: contract.isSupplier
+                      ? Icons.local_shipping_outlined
+                      : Icons.business_outlined,
+                  label: ar ? 'نوع الجهة' : 'Counterparty type',
+                  value: typeLabel,
+                  accent: SafeContractsVisual.navy,
+                ),
+              ];
+              if (constraints.maxWidth >= 620) {
+                return GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 2.3,
+                  children: cards,
+                );
+              }
+              return Column(
+                children: cards
+                    .map(
+                      (card) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: card,
+                      ),
+                    )
+                    .toList(growable: false),
+              );
+            },
+          ),
+          Container(
             padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              color: SafeContractsVisual.navySoft.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: SafeContractsVisual.outline),
+            ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(
-                  Icons.lock_outline_rounded,
-                  color: SafeContractsVisual.muted,
+                  Icons.verified_user_outlined,
+                  color: SafeContractsVisual.navy,
+                  size: 20,
                 ),
                 const SizedBox(width: 9),
                 Expanded(
                   child: Text(
-                    l10n.t(
-                        'This contract is read-only for the current session.'),
-                    style: Theme.of(context).textTheme.bodySmall,
+                    ar
+                        ? 'القيمة والاتجاه المالي والأرصدة تظل معتمدة من السيرفر. التطبيق لا يعيد حساب AP أو AR محليًا.'
+                        : 'Value, direction and balances remain server-authoritative. Mobile does not recalculate AP or AR locally.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SafeContractsVisual.navyDeep,
+                          height: 1.5,
+                        ),
                   ),
                 ),
               ],
             ),
           ),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+final class _PrimaryContractAction extends StatelessWidget {
+  const _PrimaryContractAction({
+    required this.contractId,
+    required this.canEdit,
+    required this.onEditContract,
+  });
+
+  final int contractId;
+  final bool canEdit;
+  final ValueChanged<int>? onEditContract;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    if (onEditContract == null) {
+      return SafeContractsSurface(
+        elevated: false,
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.lock_outline_rounded,
+              color: SafeContractsVisual.muted,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                l10n.t(
+                  'This contract is read-only for the current session.',
+                ),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return FilledButton.icon(
+      onPressed: () => onEditContract!(contractId),
+      icon: Icon(
+        canEdit ? Icons.edit_outlined : Icons.assignment_ind_outlined,
+      ),
+      label: Text(
+        canEdit
+            ? l10n.t('Edit contract')
+            : l10n.t('Responsible accountant'),
+      ),
     );
   }
 }
@@ -375,9 +390,7 @@ final class _ContractHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = safeContractsStatusColor(contract.status);
-    final amount = contract.baseValue == null
-        ? '—'
-        : '${_displayMoney(contract.baseValue)} ${contract.currencyCode}';
+    final amount = _displayMoney(contract.baseValue);
     return Container(
       decoration: BoxDecoration(
         gradient: SafeContractsVisual.premiumHeaderGradient,
@@ -485,9 +498,7 @@ final class _ContractHero extends StatelessWidget {
                       color: directionAccent,
                     ),
                     _HeroPill(
-                      label: isArabic
-                          ? context.scL10n.status(contract.status)
-                          : context.scL10n.status(contract.status),
+                      label: context.scL10n.status(contract.status),
                       icon: Icons.circle,
                       color: statusColor,
                     ),
@@ -520,20 +531,27 @@ final class _ContractHero extends StatelessWidget {
                                   ),
                             ),
                             const SizedBox(height: 3),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: AlignmentDirectional.centerStart,
-                              child: Text(
-                                amount,
+                            Text(
+                              amount,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                            ),
+                            if (contract.baseValue != null)
+                              Text(
+                                contract.currencyCode,
                                 style: Theme.of(context)
                                     .textTheme
-                                    .headlineSmall
+                                    .bodySmall
                                     ?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w900,
+                                      color: SafeContractsVisual.champagne,
+                                      fontWeight: FontWeight.w700,
                                     ),
                               ),
-                            ),
                           ],
                         ),
                       ),
