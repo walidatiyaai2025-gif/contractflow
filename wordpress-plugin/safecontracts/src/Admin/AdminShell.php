@@ -19,6 +19,8 @@ final class AdminShell
     public const FINANCIAL_STYLE_HANDLE = 'safecontracts-admin-financial-v3';
     public const CONTRACT_TREE_STYLE_HANDLE = 'safecontracts-contract-payment-tree';
     public const PREMIUM_STYLE_HANDLE = 'safecontracts-admin-premium';
+    public const DASHBOARD_V3_STYLE_HANDLE = 'safecontracts-admin-dashboard-v3';
+    public const DASHBOARD_V3_SCRIPT_HANDLE = 'safecontracts-admin-dashboard-v3';
 
     public static function register(): void
     {
@@ -48,12 +50,14 @@ final class AdminShell
         wp_enqueue_style(self::FINANCIAL_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-financial-v3.css', [self::UX_STYLE_HANDLE], SAFECONTRACTS_VERSION);
         wp_enqueue_style(self::CONTRACT_TREE_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/contract-payment-tree.css', [self::FINANCIAL_STYLE_HANDLE], SAFECONTRACTS_VERSION);
         wp_enqueue_style(self::PREMIUM_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-premium.css', [self::CONTRACT_TREE_STYLE_HANDLE], SAFECONTRACTS_VERSION);
+        wp_enqueue_style(self::DASHBOARD_V3_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-v3.css', [self::PREMIUM_STYLE_HANDLE], SAFECONTRACTS_VERSION);
+        wp_enqueue_script(self::DASHBOARD_V3_SCRIPT_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-v3.js', [], SAFECONTRACTS_VERSION, true);
 
         if (function_exists('wp_add_inline_style')) {
             wp_add_inline_style(
-                self::PREMIUM_STYLE_HANDLE,
+                self::DASHBOARD_V3_STYLE_HANDLE,
                 '.safecontracts-admin-shell__brand-image{width:58px;height:58px;object-fit:cover;border-radius:18px;display:block;box-shadow:0 10px 24px rgba(19,53,88,.18)}' .
-                '.safecontracts-summary-injector{margin:14px 20px 14px 0;max-width:1400px}.safecontracts-summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:18px 0 22px}.safecontracts-summary-card{background:#fff;border:1px solid #dfe6ee;border-radius:16px;padding:16px 18px;box-shadow:0 8px 24px rgba(19,53,88,.07);display:flex;flex-direction:column;gap:6px}.safecontracts-summary-card__label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#65758b}.safecontracts-summary-card__value{font-size:26px;line-height:1.1;color:#173b65}.safecontracts-summary-card__detail{color:#67788a}.safecontracts-settings select[multiple]{min-height:150px}' .
+                '.safecontracts-settings select[multiple]{min-height:150px}' .
                 '.safecontracts-navigation-group__title{font-size:18px;line-height:1.35}.safecontracts-navigation-group__card .button{align-self:flex-start;margin-top:auto}.safecontracts-navigation-group__cards{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}'
             );
         }
@@ -72,17 +76,9 @@ final class AdminShell
         }
         ?>
         <div class="wrap safecontracts-admin-shell" dir="auto">
-            <header class="safecontracts-admin-shell__hero">
-                <img class="safecontracts-admin-shell__brand-image" src="<?php echo Brand::iconDataUri(); // Trusted embedded brand constant. ?>" alt="" aria-hidden="true">
-                <div>
-                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Contract Operations', 'safecontracts'); ?></p>
-                    <h1><?php echo Brand::NAME; // Trusted constant. ?></h1>
-                    <p><?php echo esc_html__('Secure contract, receivable, collection, follow-up and notification operations from one workspace.', 'safecontracts'); ?></p>
-                </div>
-            </header>
             <main class="safecontracts-admin-shell__content safecontracts-admin-shell__content--dashboard">
                 <?php if (! AdminNavigationGroups::renderRequestedGroup()) : ?>
-                    <?php DashboardV2Page::renderContent(); ?>
+                    <?php DashboardV3Page::renderContent(); ?>
                 <?php endif; ?>
             </main>
         </div>
