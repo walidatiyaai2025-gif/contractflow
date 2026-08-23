@@ -118,7 +118,7 @@ sc_622_assert(str_contains($partialSql, "reference = 'AP-UPDATED'") && str_conta
 
 $paymentsPage = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Admin/PaymentsPage.php');
 sc_622_assert(str_contains($paymentsPage, "__('Contract filter', 'safecontracts')") && str_contains($paymentsPage, "name=\"contract_id\""), 'Payments admin exposes a contract filter above the grid');
-sc_622_assert(str_contains($paymentsPage, "__('Contract summary', 'safecontracts')") && str_contains($paymentsPage, "__('Outstanding total', 'safecontracts')"), 'Payments admin renders selected-contract summary cards');
+sc_622_assert(str_contains($paymentsPage, "self::label('Contract payment summary', 'ملخص دفعات العقد')") && str_contains($paymentsPage, "self::label('Remaining payment balance', 'المتبقي من الدفعات')"), 'Payments admin renders selected-contract payment-value summary cards');
 sc_622_assert(str_contains($paymentsPage, "__('Edit payment', 'safecontracts')"), 'Payments grid exposes an explicit edit action');
 sc_622_assert(str_contains($paymentsPage, "Accounts Payable · we will pay it") && str_contains($paymentsPage, "Accounts Receivable · will be paid to us"), 'payment UI distinguishes outgoing payable from incoming receivable');
 
