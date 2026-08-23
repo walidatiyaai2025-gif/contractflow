@@ -226,7 +226,7 @@ final class ContractRepository
         $table = $wpdb->prefix . 'safecontracts_contract_attachments';
         $sql = $wpdb->prepare("INSERT INTO {$table} (contract_id, media_id, label, created_by, created_at) VALUES (%d, %d, %s, %d, UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE label = VALUES(label)", $contractId, $mediaId, $label, $actorId);
         if ($wpdb->query($sql) === false) {
-            throw new RuntimeException('Unable to attach contract media.');
+            throw new RuntimeException('Unable to attach contract document.');
         }
         return (int) $wpdb->insert_id;
     }
@@ -236,13 +236,60 @@ final class ContractRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_contract_attachments';
-        $this->executeMutation($wpdb, $wpdb->prepare("DELETE FROM {$table} WHERE contract_id = %d AND media_id = %d", $contractId, $mediaId), 'Unable to detach contract media.');
+        $this->executeMutation($wpdb, $wpdb->prepare("DELETE FROM {$table} WHERE contract_id = %d AND media_id = %d", $contractId, $mediaId), 'Unable to detach contract document.');
+    }
+
+    public function assignCustomer(int $contractId, int $customerId, int $actorId): void
+    {
+        $this->assignCounterparty($contractId, Counterparty::CUSTOMER, $customerId, $actorId);
+    }
+
+    public function assignCounterparty(int $contractId, string $type, int $counterpartyId, int $actorId): void
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $table = $wpdb->prefix . 'safecontracts_contracts';
+        $type = Counterparty::normalize($type);
+        $direction = Counterparty::defaultFinancialDirection($type);
+        if ($type === Counterparty::CUSTOMER) {
+            $sql = $wpdb->prepare(
+                "UPDATE {$table} SET customer_id = %d, counterparty_type = %s, counterparty_id = %d, financial_direction = %s, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d",
+                $counterpartyId, $type, $counterpartyId, $direction, $actorId, $contractId
+            );
+        } else {
+            $sql = $wpdb->prepare(
+                "UPDATE {$table} SET customer_id = NULL, counterparty_type = %s, counterparty_id = %d, financial_direction = %s, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d",
+                $type, $counterpartyId, $direction, $actorId, $contractId
+            );
+        }
+        $this->executeMutation($wpdb, $sql, 'Unable to assign contract counterparty.');
+    }
+
+    public function assignAccountant(int $contractId, ?int $accountantUserId, int $actorId): void
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $table = $wpdb->prefix . 'safecontracts_contracts';
+        if ($accountantUserId === null) {
+            $sql = $wpdb->prepare("UPDATE {$table} SET accountant_user_id = NULL, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d", $actorId, $contractId);
+        } else {
+            $sql = $wpdb->prepare("UPDATE {$table} SET accountant_user_id = %d, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d", $accountantUserId, $actorId, $contractId);
+        }
+        $this->executeMutation($wpdb, $sql, 'Unable to assign contract accountant.');
+    }
+
+    public function updateStatus(int $contractId, string $status, int $actorId): void
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $table = $wpdb->prefix . 'safecontracts_contracts';
+        $this->executeMutation($wpdb, $wpdb->prepare("UPDATE {$table} SET status = %s, updated_by = %d, updated_at = UTC_TIMESTAMP() WHERE id = %d", $status, $actorId, $contractId), 'Unable to update contract status.');
     }
 
     private function assertWpdb(mixed $wpdb): void
     {
-        if (! is_object($wpdb) || ! method_exists($wpdb, 'prepare') || ! method_exists($wpdb, 'query') || ! method_exists($wpdb, 'get_results')) {
-            throw new RuntimeException('SafeContracts contract repository requires WordPress $wpdb.');
+        if (! is_object($wpdb)) {
+            throw new RuntimeException('SafeContracts contracts require WordPress $wpdb.');
         }
     }
 
