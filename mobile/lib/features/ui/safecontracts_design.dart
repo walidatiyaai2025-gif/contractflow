@@ -18,6 +18,7 @@ abstract final class SafeContractsVisual {
   static const roseGold = Color(0xFFC98A7B);
   static const roseGoldDark = Color(0xFFAE6C61);
   static const roseGoldSoft = Color(0xFFF1D8D0);
+  static const roseSoft = roseGoldSoft;
   static const champagne = Color(0xFFE8D1B2);
 
   static const green = Color(0xFF269363);
