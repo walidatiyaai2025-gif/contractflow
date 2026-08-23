@@ -31,9 +31,7 @@ final class PaymentRepository
         $row = $rows[0];
         return [
             'id' => (int) ($row['id'] ?? 0),
-            'accountant_user_id' => isset($row['accountant_user_id']) && $row['accountant_user_id'] !== null
-                ? (int) $row['accountant_user_id']
-                : null,
+            'accountant_user_id' => isset($row['accountant_user_id']) && $row['accountant_user_id'] !== null ? (int) $row['accountant_user_id'] : null,
             'is_archived' => (bool) ($row['is_archived'] ?? false),
             'counterparty_type' => (string) ($row['counterparty_type'] ?? ''),
             'counterparty_id' => (int) ($row['counterparty_id'] ?? 0),
@@ -47,7 +45,6 @@ final class PaymentRepository
     {
         global $wpdb;
         $this->assertWpdb($wpdb);
-
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $rows = $wpdb->get_results(
@@ -62,11 +59,9 @@ final class PaymentRepository
             ),
             ARRAY_A
         );
-
         if (! is_array($rows) || $rows === []) {
             return null;
         }
-
         $row = $rows[0];
         return [
             'id' => (int) ($row['id'] ?? 0),
@@ -76,17 +71,13 @@ final class PaymentRepository
             'sequence_no' => (int) ($row['sequence_no'] ?? 0),
             'reference' => isset($row['reference']) && $row['reference'] !== null ? (string) $row['reference'] : null,
             'due_date' => (string) ($row['due_date'] ?? ''),
-            'expected_payment_date' => isset($row['expected_payment_date']) && $row['expected_payment_date'] !== null
-                ? (string) $row['expected_payment_date']
-                : null,
+            'expected_payment_date' => isset($row['expected_payment_date']) && $row['expected_payment_date'] !== null ? (string) $row['expected_payment_date'] : null,
             'original_amount' => (string) ($row['original_amount'] ?? '0.0000'),
             'paid_amount' => (string) ($row['paid_amount'] ?? '0.0000'),
             'remaining_amount' => (string) ($row['remaining_amount'] ?? '0.0000'),
             'status' => (string) ($row['status'] ?? PaymentStatus::UPCOMING),
             'is_archived' => (bool) ($row['is_archived'] ?? false),
-            'accountant_user_id' => isset($row['accountant_user_id']) && $row['accountant_user_id'] !== null
-                ? (int) $row['accountant_user_id']
-                : null,
+            'accountant_user_id' => isset($row['accountant_user_id']) && $row['accountant_user_id'] !== null ? (int) $row['accountant_user_id'] : null,
             'contract_is_archived' => (bool) ($row['contract_is_archived'] ?? false),
             'counterparty_type' => (string) ($row['counterparty_type'] ?? ''),
             'counterparty_id' => (int) ($row['counterparty_id'] ?? 0),
@@ -98,7 +89,6 @@ final class PaymentRepository
     {
         global $wpdb;
         $this->assertWpdb($wpdb);
-
         $contractIds = array_values(array_unique(array_filter(
             array_map(static fn (mixed $id): int => (int) $id, $contractIds),
             static fn (int $id): bool => $id > 0
@@ -106,7 +96,6 @@ final class PaymentRepository
         if ($contractIds === []) {
             return [];
         }
-
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $idList = implode(',', $contractIds);
         $rows = $wpdb->get_results(
@@ -119,16 +108,73 @@ final class PaymentRepository
         if (! is_array($rows)) {
             return [];
         }
-
         $totals = [];
         foreach ($rows as $row) {
             $contractId = (int) ($row['contract_id'] ?? 0);
-            if ($contractId <= 0) {
-                continue;
+            if ($contractId > 0) {
+                $totals[$contractId] = (string) ($row['scheduled_total'] ?? '0.0000');
             }
-            $totals[$contractId] = (string) ($row['scheduled_total'] ?? '0.0000');
         }
         return $totals;
+    }
+
+    public function nextSequenceNo(int $contractId): int
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        if ($contractId <= 0) {
+            throw new RuntimeException('Payment contract ID must be positive.');
+        }
+        $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT COALESCE(MAX(sequence_no), 0) + 1 AS next_sequence
+                 FROM {$table} WHERE contract_id = %d",
+                $contractId
+            ),
+            ARRAY_A
+        );
+        $next = is_array($rows) && isset($rows[0]['next_sequence']) ? (int) $rows[0]['next_sequence'] : 1;
+        return max(1, $next);
+    }
+
+    /** @return array{id:int,sequence_no:int} */
+    public function createAutoSequenced(
+        int $contractId,
+        ?string $reference,
+        string $dueDate,
+        ?string $expectedPaymentDate,
+        string $amount,
+        int $actorId,
+        string $financialDirection,
+        string $currencyCode
+    ): array {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $sequenceNo = $this->nextSequenceNo($contractId);
+            try {
+                $id = $this->create(
+                    $contractId,
+                    $sequenceNo,
+                    $reference,
+                    $dueDate,
+                    $expectedPaymentDate,
+                    $amount,
+                    $actorId,
+                    $financialDirection,
+                    $currencyCode
+                );
+                return ['id' => $id, 'sequence_no' => $sequenceNo];
+            } catch (RuntimeException $error) {
+                $lastError = strtolower((string) ($wpdb->last_error ?? ''));
+                if (! str_contains($lastError, 'duplicate') || $attempt === 2) {
+                    throw $error;
+                }
+            }
+        }
+        throw new RuntimeException('Unable to allocate scheduled payment sequence.');
     }
 
     public function create(
@@ -155,13 +201,11 @@ final class PaymentRepository
         }
         $direction = FinancialDirection::normalize($financialDirection);
         $currency = CurrencyCode::normalize($currencyCode);
-
         $referenceSql = $reference === null ? 'NULL' : '%s';
         $expectedSql = $expectedPaymentDate === null ? 'NULL' : '%s';
         $query = "INSERT INTO {$table}
             (contract_id, financial_direction, currency_code, sequence_no, reference, due_date, expected_payment_date, original_amount, paid_amount, remaining_amount, status, created_by, updated_by, created_at, updated_at)
             VALUES (%d, %s, %s, %d, {$referenceSql}, %s, {$expectedSql}, %s, '0.0000', %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
-
         $args = [$contractId, $direction, $currency, $sequenceNo];
         if ($reference !== null) {
             $args[] = $reference;
@@ -175,12 +219,10 @@ final class PaymentRepository
         $args[] = PaymentStatus::UPCOMING;
         $args[] = $actorId;
         $args[] = $actorId;
-
         $sql = $wpdb->prepare($query, ...$args);
         if ($wpdb->query($sql) === false) {
             throw new RuntimeException('Unable to create scheduled payment.');
         }
-
         return (int) $wpdb->insert_id;
     }
 
@@ -190,8 +232,7 @@ final class PaymentRepository
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $sql = $wpdb->prepare(
-            "UPDATE {$table}
-             SET status = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
+            "UPDATE {$table} SET status = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
              WHERE id = %d AND is_archived = 0",
             $status,
             $actorId,
@@ -205,11 +246,9 @@ final class PaymentRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
-
         if ($expectedPaymentDate === null) {
             $sql = $wpdb->prepare(
-                "UPDATE {$table}
-                 SET due_date = %s, expected_payment_date = NULL, updated_by = %d, updated_at = UTC_TIMESTAMP()
+                "UPDATE {$table} SET due_date = %s, expected_payment_date = NULL, updated_by = %d, updated_at = UTC_TIMESTAMP()
                  WHERE id = %d AND is_archived = 0",
                 $dueDate,
                 $actorId,
@@ -217,8 +256,7 @@ final class PaymentRepository
             );
         } else {
             $sql = $wpdb->prepare(
-                "UPDATE {$table}
-                 SET due_date = %s, expected_payment_date = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
+                "UPDATE {$table} SET due_date = %s, expected_payment_date = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
                  WHERE id = %d AND is_archived = 0",
                 $dueDate,
                 $expectedPaymentDate,
@@ -226,7 +264,6 @@ final class PaymentRepository
                 $paymentId
             );
         }
-
         $this->executeMutation($wpdb, $sql, 'Unable to update payment dates.');
     }
 
@@ -263,11 +300,6 @@ final class PaymentRepository
         $this->executeMutation($wpdb, $wpdb->prepare($query, ...$args), 'Unable to update payment details.');
     }
 
-    /**
-     * Older repository unit fixtures may omit P11 columns entirely. Real DB
-     * rows selected by this repository always contain the columns; therefore
-     * present-but-empty/null values remain invalid and fail closed.
-     */
     private static function directionFromRow(array $row): string
     {
         if (! array_key_exists('financial_direction', $row)) {
