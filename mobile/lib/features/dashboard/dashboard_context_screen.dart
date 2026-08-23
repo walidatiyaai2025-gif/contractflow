@@ -113,7 +113,8 @@ final class _PremiumDashboardOverview extends StatelessWidget {
     final l10n = context.scL10n;
     final scheduled = double.tryParse(kpis.scheduledTotal) ?? 0;
     final collected = double.tryParse(kpis.collectedTotal) ?? 0;
-    final completion = scheduled <= 0 ? 0.0 : (collected / scheduled).clamp(0, 1);
+    final completion =
+        scheduled <= 0 ? 0.0 : (collected / scheduled).clamp(0, 1);
     final completionPercent = (completion * 100).round();
 
     return Column(
