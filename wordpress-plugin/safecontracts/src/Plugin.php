@@ -9,6 +9,7 @@ use SafeContracts\Admin\AdminFeedback;
 use SafeContracts\Admin\AdminPageSummaryInjector;
 use SafeContracts\Admin\AdminShell;
 use SafeContracts\Admin\ArchivePage;
+use SafeContracts\Admin\AttachmentAdminController;
 use SafeContracts\Admin\CollectionsPage;
 use SafeContracts\Admin\ContractsPage;
 use SafeContracts\Admin\CustomersPage;
@@ -159,6 +160,8 @@ final class Plugin
         add_action('admin_post_' . PaymentsPage::DELETE_ACTION, [PaymentsPage::class, 'handleDelete']);
         add_action('admin_post_' . CollectionsPage::SAVE_ACTION, [CollectionsPage::class, 'handleSave']);
         add_action('admin_post_' . CollectionsPage::DELETE_ACTION, [CollectionsPage::class, 'handleDelete']);
+        add_action('admin_post_' . AttachmentAdminController::UPLOAD_ACTION, [AttachmentAdminController::class, 'handleUpload']);
+        add_action('admin_post_' . AttachmentAdminController::DETACH_ACTION, [AttachmentAdminController::class, 'handleDetach']);
         add_action('admin_post_' . FollowUpsPage::SAVE_ACTION, [FollowUpsPage::class, 'handleSave']);
         add_action('admin_post_' . ReportsPage::EXPORT_ACTION, [ReportsPage::class, 'handleExport']);
         add_action('admin_post_' . ImportsPage::UPLOAD_ACTION, [ImportsPage::class, 'handleUpload']);
