@@ -39,7 +39,8 @@ final class _DashboardContextScreenState extends State<DashboardContextScreen> {
     final now = DateTime.now();
     _year = now.year;
     _month = now.month;
-    _monthlyRepository = MonthlyDashboardRepository(widget.controller.repository.client);
+    _monthlyRepository =
+        MonthlyDashboardRepository(widget.controller.repository.client);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(_applyMonth(refreshDashboard: true));
@@ -160,7 +161,8 @@ final class _DashboardContextScreenState extends State<DashboardContextScreen> {
     if (customerId == null) return null;
     final remembered = controller.selectedCustomerName?.trim();
     if (remembered != null && remembered.isNotEmpty) return remembered;
-    final customers = controller.overview?.customers ?? const <CustomerOption>[];
+    final customers =
+        controller.overview?.customers ?? const <CustomerOption>[];
     for (final customer in customers) {
       if (customer.id == customerId) return customer.name;
     }
@@ -203,7 +205,8 @@ final class _MonthSelector extends StatelessWidget {
       elevated: false,
       child: Row(
         children: [
-          const Icon(Icons.calendar_month_rounded, color: SafeContractsVisual.navy),
+          const Icon(Icons.calendar_month_rounded,
+              color: SafeContractsVisual.navy),
           const SizedBox(width: 10),
           Expanded(
             child: DropdownButtonFormField<int>(
@@ -213,10 +216,14 @@ final class _MonthSelector extends StatelessWidget {
                 isDense: true,
               ),
               items: [
-                for (var value = currentYear - 5; value <= currentYear + 2; value++)
+                for (var value = currentYear - 5;
+                    value <= currentYear + 2;
+                    value++)
                   DropdownMenuItem(value: value, child: Text('$value')),
               ],
-              onChanged: busy ? null : (value) => value == null ? null : onYearChanged(value),
+              onChanged: busy
+                  ? null
+                  : (value) => value == null ? null : onYearChanged(value),
             ),
           ),
           const SizedBox(width: 10),
@@ -234,7 +241,9 @@ final class _MonthSelector extends StatelessWidget {
                     child: Text(_monthName(value, ar)),
                   ),
               ],
-              onChanged: busy ? null : (value) => value == null ? null : onMonthChanged(value),
+              onChanged: busy
+                  ? null
+                  : (value) => value == null ? null : onMonthChanged(value),
             ),
           ),
         ],
@@ -291,7 +300,9 @@ final class _MonthlyCards extends StatelessWidget {
                 right: _CardValue(
                   label: ar ? 'متوقع الدفع' : 'Expected payment',
                   money: snapshot.receivable.outstanding,
-                  caption: ar ? 'إجمالي المتوقع تحصيله' : 'Expected receivable balance',
+                  caption: ar
+                      ? 'إجمالي المتوقع تحصيله'
+                      : 'Expected receivable balance',
                   valueColor: SafeContractsVisual.greenDeep,
                 ),
               ),
@@ -370,7 +381,10 @@ final class _SplitCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: accent.withValues(alpha: .55)),
         boxShadow: const [
-          BoxShadow(color: Color(0x175A4638), blurRadius: 16, offset: Offset(0, 6)),
+          BoxShadow(
+              color: Color(0x175A4638),
+              blurRadius: 16,
+              offset: Offset(0, 6)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -396,7 +410,8 @@ final class _SplitCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: _CardHalf(value: left)),
-                const VerticalDivider(width: 1, color: SafeContractsVisual.outline),
+                const VerticalDivider(
+                    width: 1, color: SafeContractsVisual.outline),
                 Expanded(child: _CardHalf(value: right)),
               ],
             ),
@@ -497,7 +512,10 @@ final class _GeneralAccountCard extends StatelessWidget {
         gradient: SafeContractsVisual.premiumHeaderGradient,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(color: Color(0x33092944), blurRadius: 20, offset: Offset(0, 8)),
+          BoxShadow(
+              color: Color(0x33092944),
+              blurRadius: 20,
+              offset: Offset(0, 8)),
         ],
       ),
       child: Column(
@@ -514,7 +532,10 @@ final class _GeneralAccountCard extends StatelessWidget {
           if (money.isEmpty)
             const Text(
               '0.00',
-              style: TextStyle(color: Color(0xFF55D59A), fontSize: 27, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                  color: Color(0xFF55D59A),
+                  fontSize: 27,
+                  fontWeight: FontWeight.w900),
             )
           else
             ...money.take(3).map(
@@ -536,7 +557,8 @@ final class _GeneralAccountCard extends StatelessWidget {
             caption,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: Colors.white.withValues(alpha: .70), fontSize: 10),
+            style: TextStyle(
+                color: Colors.white.withValues(alpha: .70), fontSize: 10),
           ),
         ],
       ),
@@ -575,7 +597,8 @@ final class _DirectionLane extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 3),
-          Text(subtitle, style: const TextStyle(color: SafeContractsVisual.muted)),
+          Text(subtitle,
+              style: const TextStyle(color: SafeContractsVisual.muted)),
           const SizedBox(height: 14),
           _LaneMetric(
             label: ar ? 'عدد الدفعات' : 'Payments',
@@ -589,7 +612,9 @@ final class _DirectionLane extends StatelessWidget {
             sign: positive ? '+' : '−',
           ),
           _LaneMoneyMetric(
-            label: ar ? (positive ? 'المحصل' : 'المسدد') : (positive ? 'Collected' : 'Paid'),
+            label: ar
+                ? (positive ? 'المحصل' : 'المسدد')
+                : (positive ? 'Collected' : 'Paid'),
             values: summary.settled,
             color: color,
             sign: positive ? '+' : '−',
@@ -607,7 +632,8 @@ final class _DirectionLane extends StatelessWidget {
 }
 
 final class _LaneMetric extends StatelessWidget {
-  const _LaneMetric({required this.label, required this.value, required this.color});
+  const _LaneMetric(
+      {required this.label, required this.value, required this.color});
 
   final String label;
   final String value;
@@ -618,8 +644,11 @@ final class _LaneMetric extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: const TextStyle(color: SafeContractsVisual.muted))),
-            Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w900)),
+            Expanded(
+                child: Text(label,
+                    style: const TextStyle(color: SafeContractsVisual.muted))),
+            Text(value,
+                style: TextStyle(color: color, fontWeight: FontWeight.w900)),
           ],
         ),
       );
@@ -644,16 +673,23 @@ final class _LaneMoneyMetric extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: Text(label, style: const TextStyle(color: SafeContractsVisual.muted))),
+            Expanded(
+                child: Text(label,
+                    style: const TextStyle(color: SafeContractsVisual.muted))),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: values.isEmpty
-                  ? <Widget>[Text('$sign 0.00', style: TextStyle(color: color, fontWeight: FontWeight.w900))]
+                  ? <Widget>[
+                      Text('$sign 0.00',
+                          style: TextStyle(
+                              color: color, fontWeight: FontWeight.w900))
+                    ]
                   : values
                       .map(
                         (item) => Text(
                           '$sign ${item.display.replaceFirst('− ', '')}',
-                          style: TextStyle(color: color, fontWeight: FontWeight.w900),
+                          style: TextStyle(
+                              color: color, fontWeight: FontWeight.w900),
                         ),
                       )
                       .toList(growable: false),
@@ -688,7 +724,8 @@ final class _EntityContextBanner extends StatelessWidget {
               color: SafeContractsVisual.roseGoldSoft,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.business_rounded, color: SafeContractsVisual.navy),
+            child: const Icon(Icons.business_rounded,
+                color: SafeContractsVisual.navy),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -768,7 +805,8 @@ final class _InlineWarning extends StatelessWidget {
           color: SafeContractsVisual.amberSoft,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(message, style: const TextStyle(color: SafeContractsVisual.ink)),
+        child: Text(message,
+            style: const TextStyle(color: SafeContractsVisual.ink)),
       );
 }
 
