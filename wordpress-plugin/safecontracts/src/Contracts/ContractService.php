@@ -28,6 +28,10 @@ final class ContractService
         $contractNumber = $this->normalizeContractNumber($input['contract_number'] ?? '');
         $customerId = (int) ($input['customer_id'] ?? 0);
         $notes = trim((string) ($input['notes'] ?? ''));
+        $baseValue = ContractMoney::normalizeNonNegative($input['base_value'] ?? '');
+        if ($baseValue === '0.0000') {
+            throw new InvalidArgumentException('Contract base value must be greater than zero.');
+        }
         if ($customerId <= 0 || ! $this->repository->customerIsActive($customerId)) {
             throw new InvalidArgumentException('Contract customer must be an active SafeContracts customer.');
         }
@@ -44,8 +48,9 @@ final class ContractService
         }
 
         $actorId = get_current_user_id();
-        $contractId = $this->repository->create($contractNumber, $customerId, $accountantUserId, $notes, $actorId);
+        $contractId = $this->repository->create($contractNumber, $customerId, $accountantUserId, $notes, $actorId, $baseValue);
         do_action('safecontracts_contract_created', $contractId, $actorId, $customerId, $accountantUserId);
+        do_action('safecontracts_contract_base_value_changed', $contractId, $baseValue, $actorId, '0.0000');
         return $contractId;
     }
 
@@ -80,6 +85,9 @@ final class ContractService
         $this->requireCapability(Capabilities::EDIT_CONTRACTS, 'You do not have permission to edit contract value.');
         $contract = $this->editableContract($contractId);
         $amount = ContractMoney::normalizeNonNegative($amount);
+        if ($amount === '0.0000') {
+            throw new InvalidArgumentException('Contract base value must be greater than zero.');
+        }
         $actorId = get_current_user_id();
         $this->repository->updateBaseValue($contractId, $amount, $actorId);
         do_action('safecontracts_contract_base_value_changed', $contractId, $amount, $actorId, $contract['base_value']);
