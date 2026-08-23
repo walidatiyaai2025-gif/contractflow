@@ -47,8 +47,8 @@ $plugin = (string) file_get_contents($root . '/safecontracts.php');
 
 alkenzy_fix_assert(str_contains($dashboard, 'AdminFinancialSettlementSummary') && str_contains($dashboard, "'settled_total'"), 'dashboard settled totals come from actual settlement aggregation');
 alkenzy_fix_assert(! str_contains($dashboard, "['paid_amount']") && ! str_contains($dashboard, "['remaining_amount']"), 'dashboard totals do not use scheduled-payment paid/remaining snapshots as actual settlements');
-alkenzy_fix_assert(str_contains($dashboard, "name=\"year\"") && str_contains($dashboard, 'AdminYearOptions::forCurrentUser'), 'dashboard exposes a dynamic year filter');
-alkenzy_fix_assert(str_contains($dashboard, "'financial_direction' =") || str_contains($dashboard, "['financial_direction'] ="), 'dashboard drill-down writes canonical financial direction');
+alkenzy_fix_assert(str_contains($dashboard, 'name="year"') && str_contains($dashboard, 'AdminYearOptions::forCurrentUser'), 'dashboard exposes a dynamic year filter');
+alkenzy_fix_assert(str_contains($dashboard, "['financial_direction'] ="), 'dashboard drill-down writes canonical financial direction');
 alkenzy_fix_assert(str_contains($dashboard, 'hasDirectionData') && str_contains($dashboard, '$rows !== []'), 'dashboard conditionally suppresses empty financial containers');
 
 alkenzy_fix_assert(str_contains($settlements, 'safecontracts_payment_collections'), 'actual settlement summary reads payment_collections ledger');
@@ -62,7 +62,7 @@ alkenzy_fix_assert(str_contains($contracts, 'MoneyFormatter::format'), 'contract
 alkenzy_fix_assert(str_contains($contracts, 'if ($contracts !== [])'), 'contracts table container is not rendered for an empty result set');
 alkenzy_fix_assert(str_contains($summaryInjector, 'ContractsPage::SLUG') && str_contains($summaryInjector, 'in_array($page'), 'contracts page is excluded from injected top summary cards');
 
-alkenzy_fix_assert(str_contains($schedule, "LEFT JOIN {$suppliers} su") || str_contains($schedule, 'LEFT JOIN {$suppliers} su'), 'notification scheduling joins suppliers');
+alkenzy_fix_assert(str_contains($schedule, 'LEFT JOIN {$suppliers} su'), 'notification scheduling joins suppliers');
 alkenzy_fix_assert(str_contains($schedule, "p.financial_direction IN ('receivable','payable')"), 'notification scheduling accepts both receivable and payable obligations');
 alkenzy_fix_assert(str_contains($schedule, 'counterparty_name') && str_contains($schedule, 'supplier_name'), 'payable notifications receive supplier counterparty context');
 alkenzy_fix_assert(str_contains($schedule, 'ON DUPLICATE KEY UPDATE'), 'notification schedule remains idempotent');
@@ -70,10 +70,8 @@ alkenzy_fix_assert(str_contains($engine, "'financial_direction' => \$direction")
 
 alkenzy_fix_assert(str_contains($center, 'NotificationInboxState') && str_contains($center, 'read_state') && str_contains($center, 'Mark all as read'), 'notification center is a read/unread inbox with filters and actions');
 alkenzy_fix_assert(! str_contains($center, 'name="from_address"') && ! str_contains($center, 'name="from_name"'), 'notification center no longer renders email settings fields');
-alkenzy_fix_assert(str_contains($emailPage, 'safecontracts-email-settings') && str_contains($emailPage, 'EmailSettings')->__toString() === false, 'standalone email settings source exists');
+alkenzy_fix_assert(str_contains($emailPage, "public const SLUG = 'safecontracts-email-settings'") && str_contains($emailPage, 'new EmailSettings()'), 'standalone email settings source exists');
 alkenzy_fix_assert(str_contains($plugin, 'EmailSettingsPage::register()'), 'standalone email settings page is registered at plugin boot');
-
-// Source-level guard for the dedicated page without relying on translated text.
-alkenzy_fix_assert(str_contains($emailPage, 'EmailSettingsPage') && str_contains($emailPage, 'from_address') && str_contains($emailPage, 'from_name'), 'sender settings are rendered only by dedicated Email Settings page');
+alkenzy_fix_assert(str_contains($emailPage, 'from_address') && str_contains($emailPage, 'from_name'), 'sender settings are rendered by dedicated Email Settings page');
 
 echo "ALKENZY ADV production finance fix regression passed ({$tests} assertions).\n";
