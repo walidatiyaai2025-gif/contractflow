@@ -131,6 +131,73 @@ final class PaymentService
         );
     }
 
+    /** @param array{reference?:mixed,due_date:mixed,expected_payment_date?:mixed,original_amount?:mixed} $input */
+    public function updateEditable(int $paymentId, array $input): void
+    {
+        $this->requireCapability(Capabilities::MANAGE_PAYMENTS, 'You do not have permission to manage payment details.');
+        $payment = $this->editablePayment($paymentId);
+        $reference = $this->normalizeReference($input['reference'] ?? $payment['reference']);
+        $due = $this->normalizeRequiredDate($input['due_date'] ?? null, 'due date');
+        $expected = $this->normalizeOptionalDate($input['expected_payment_date'] ?? null, 'expected payment date');
+        $original = ContractMoney::normalizeNonNegative($payment['original_amount']);
+        $paid = ContractMoney::normalizeNonNegative($payment['paid_amount']);
+        $amount = array_key_exists('original_amount', $input)
+            ? ContractMoney::normalizeNonNegative($input['original_amount'])
+            : $original;
+        if ($amount === '0.0000') {
+            throw new InvalidArgumentException('Payment original amount must be greater than zero.');
+        }
+        if (ContractMoney::compare($paid, '0.0000') > 0 && ContractMoney::compare($amount, $original) !== 0) {
+            throw new DomainException('Payment original amount cannot change after settlement activity exists.');
+        }
+        $remaining = ContractMoney::compare($paid, '0.0000') === 0
+            ? $amount
+            : ContractMoney::normalizeNonNegative($payment['remaining_amount']);
+        $actorId = get_current_user_id();
+
+        $this->repository->updateEditable(
+            $paymentId,
+            $reference,
+            $due,
+            $expected,
+            $amount,
+            $remaining,
+            $actorId
+        );
+
+        do_action(
+            'safecontracts_payment_details_changed',
+            $paymentId,
+            [
+                'reference' => $payment['reference'],
+                'due_date' => $payment['due_date'],
+                'expected_payment_date' => $payment['expected_payment_date'],
+                'original_amount' => $original,
+                'remaining_amount' => $payment['remaining_amount'],
+            ],
+            [
+                'reference' => $reference,
+                'due_date' => $due,
+                'expected_payment_date' => $expected,
+                'original_amount' => $amount,
+                'remaining_amount' => $remaining,
+            ],
+            $actorId
+        );
+
+        if ($payment['due_date'] !== $due || $payment['expected_payment_date'] !== $expected) {
+            do_action(
+                'safecontracts_payment_dates_changed',
+                $paymentId,
+                $payment['due_date'],
+                $due,
+                $payment['expected_payment_date'],
+                $expected,
+                $actorId
+            );
+        }
+    }
+
     /** Operational follow-up date only; it never changes contractual due classification. */
     public function effectiveDate(int $paymentId): string
     {
