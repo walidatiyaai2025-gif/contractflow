@@ -142,7 +142,7 @@ final class NotificationSettingsPage
                                     <?php wp_nonce_field(self::TOGGLE_ACTION); ?>
                                     <button class="button button-small" type="submit"><?php echo ! empty($rule['is_active']) ? esc_html__('Deactivate', 'safecontracts') : esc_html__('Activate', 'safecontracts'); ?></button>
                                 </form>
-                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin:0;" onsubmit="return confirm('<?php echo esc_js(__('Delete this notification rule and all of its scheduled occurrences? Delivery history already sent by the transport is not erased.', 'safecontracts')); ?>');">
+                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin:0;" onsubmit="return confirm('Delete this notification rule and all of its scheduled occurrences? Delivery history already sent by the transport is not erased.');">
                                     <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
                                     <input type="hidden" name="code" value="<?php echo esc_attr((string) $rule['code']); ?>">
                                     <?php wp_nonce_field(self::DELETE_ACTION); ?>
