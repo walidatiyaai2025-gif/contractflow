@@ -14,6 +14,7 @@ import '../customers/customers_screen.dart';
 import '../dashboard/dashboard_context_screen.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_models.dart';
+import '../dashboard/dashboard_two_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
 import '../finance/finance.dart';
@@ -123,6 +124,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     try {
       switch (_selected) {
         case MobileDestination.dashboard:
+        case MobileDestination.dashboardTwo:
           await widget.dashboardController.refreshSilently();
           shellSnapshotChanged = true;
           break;
@@ -386,6 +388,15 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               widget.policy.destinations.contains(MobileDestination.payments)
                   ? () => _selectDestination(MobileDestination.payments)
                   : null,
+        ),
+      MobileDestination.dashboardTwo => DashboardTwoScreen(
+          controller: widget.dashboardController,
+          currency: widget.config.currency,
+          onOpenPayments:
+              widget.policy.destinations.contains(MobileDestination.payments)
+                  ? () => _selectDestination(MobileDestination.payments)
+                  : null,
+          onOpenContract: _openContract,
         ),
       MobileDestination.customers => CustomersScreen(
           controller: widget.customersController,
@@ -862,8 +873,12 @@ final class _PlannedDestination extends StatelessWidget {
 }
 
 String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
+  if (destination == MobileDestination.dashboardTwo) {
+    return l10n.isArabic ? 'لوحة تحكم اتنين' : 'Dashboard Two';
+  }
   return l10n.t(switch (destination) {
     MobileDestination.dashboard => 'Dashboard',
+    MobileDestination.dashboardTwo => 'Dashboard Two',
     MobileDestination.customers => 'Customers',
     MobileDestination.suppliers => 'Suppliers',
     MobileDestination.contracts => 'Contracts',
@@ -880,6 +895,7 @@ String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
 IconData _icon(MobileDestination destination) {
   return switch (destination) {
     MobileDestination.dashboard => Icons.home_rounded,
+    MobileDestination.dashboardTwo => Icons.dashboard_customize_outlined,
     MobileDestination.customers => Icons.people_alt_outlined,
     MobileDestination.suppliers => Icons.local_shipping_outlined,
     MobileDestination.contracts => Icons.folder_copy_outlined,
