@@ -150,12 +150,226 @@
   color: #912018 !important;
 }
 
+/* The full dashboard is now the authoritative operational summary. Hide the
+ * older injected summary row only on the SafeContracts top-level dashboard. */
+.toplevel_page_safecontracts .safecontracts-summary-injector {
+  display: none;
+}
+
+.safecontracts-user-guide-footer {
+  box-sizing: border-box;
+  width: min(1180px, calc(100% - 48px));
+  margin: 26px 24px 12px auto;
+}
+
+.safecontracts-user-guide-footer .safecontracts-admin-card {
+  min-height: 0;
+  padding: 14px 18px;
+}
+
+.safecontracts-user-guide-footer summary {
+  cursor: pointer;
+}
+
+.safecontracts-direction-dashboard,
+.safecontracts-accounting-direction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas: "payable receivable";
+  gap: 18px;
+  margin: 20px 0;
+  direction: ltr;
+}
+
+.safecontracts-direction-column,
+.safecontracts-accounting-lane {
+  direction: ltr;
+}
+
+.safecontracts-direction-column--receivable,
+.safecontracts-accounting-lane--receivable {
+  grid-area: receivable;
+  border-top: 4px solid var(--safecontracts-green);
+  background: linear-gradient(180deg, #f5fff9 0, #fff 120px);
+}
+
+.safecontracts-direction-column--payable,
+.safecontracts-accounting-lane--payable {
+  grid-area: payable;
+  border-top: 4px solid var(--safecontracts-red);
+  background: linear-gradient(180deg, #fff7f6 0, #fff 120px);
+}
+
+.rtl .safecontracts-direction-column,
+.rtl .safecontracts-accounting-lane,
+[dir="rtl"] .safecontracts-direction-column,
+[dir="rtl"] .safecontracts-accounting-lane {
+  direction: rtl;
+}
+
+.safecontracts-direction-column__heading,
+.safecontracts-payment-panel__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.safecontracts-direction-column__heading h2,
+.safecontracts-payment-panel__heading h2 {
+  margin-bottom: 5px;
+}
+
+.safecontracts-direction-column__heading p {
+  margin: 0;
+}
+
+.safecontracts-contract-card-list {
+  display: grid;
+  gap: 12px;
+}
+
+.safecontracts-contract-card {
+  display: block;
+  padding: 15px;
+  border: 1px solid var(--safecontracts-border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--safecontracts-navy);
+  text-decoration: none;
+  box-shadow: 0 3px 10px rgba(11, 42, 63, 0.04);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.safecontracts-contract-card:hover,
+.safecontracts-contract-card:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(11, 42, 63, 0.09);
+}
+
+.safecontracts-contract-card--receivable:hover,
+.safecontracts-contract-card--receivable:focus {
+  border-color: var(--safecontracts-green);
+}
+
+.safecontracts-contract-card--payable:hover,
+.safecontracts-contract-card--payable:focus {
+  border-color: var(--safecontracts-red);
+}
+
+.safecontracts-contract-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.safecontracts-contract-card__party {
+  display: block;
+  margin: 7px 0 12px;
+  color: var(--safecontracts-muted);
+}
+
+.safecontracts-contract-card__metrics,
+.safecontracts-accounting-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.safecontracts-contract-card__metrics > span,
+.safecontracts-accounting-metric {
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(244, 247, 249, .9);
+}
+
+.safecontracts-contract-card__metrics small,
+.safecontracts-contract-card__metrics strong,
+.safecontracts-accounting-metric span,
+.safecontracts-accounting-metric strong {
+  display: block;
+}
+
+.safecontracts-contract-card__metrics strong,
+.safecontracts-accounting-metric strong {
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.safecontracts-accounting-summary {
+  margin: 28px 0;
+}
+
+.safecontracts-accounting-lane h3 {
+  margin-top: 0;
+}
+
+.safecontracts-accounting-currency + .safecontracts-accounting-currency {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--safecontracts-border);
+}
+
+.safecontracts-accounting-currency h4 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.safecontracts-payment-lanes {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.safecontracts-payment-panel {
+  min-width: 0;
+}
+
+.safecontracts-payment-panel--receivable,
+.safecontracts-contract-summary--receivable,
+.safecontracts-payment-editor--receivable {
+  border-top: 4px solid var(--safecontracts-green);
+}
+
+.safecontracts-payment-panel--payable,
+.safecontracts-contract-summary--payable,
+.safecontracts-payment-editor--payable {
+  border-top: 4px solid var(--safecontracts-red);
+}
+
+.safecontracts-payment-panel--receivable .safecontracts-payment-panel__heading h2 {
+  color: #067647;
+}
+
+.safecontracts-payment-panel--payable .safecontracts-payment-panel__heading h2 {
+  color: var(--safecontracts-red);
+}
+
+.safecontracts-payment-panel table {
+  table-layout: auto;
+}
+
 [dir="rtl"] .safecontracts-admin-shell,
 .rtl .safecontracts-admin-shell,
 [dir="rtl"] .safecontracts-settings,
 .rtl .safecontracts-settings {
   margin-right: 0;
   margin-left: 24px;
+}
+
+.rtl .safecontracts-user-guide-footer,
+[dir="rtl"] .safecontracts-user-guide-footer {
+  margin-right: 0;
+  margin-left: 24px;
+}
+
+@media (max-width: 1000px) {
+  .safecontracts-contract-card__metrics,
+  .safecontracts-accounting-card-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 782px) {
@@ -176,7 +390,27 @@
     border-radius: 14px;
   }
 
-  .safecontracts-admin-shell__content {
+  .safecontracts-admin-shell__content,
+  .safecontracts-direction-dashboard,
+  .safecontracts-accounting-direction-grid {
     grid-template-columns: 1fr;
+  }
+
+  .safecontracts-direction-dashboard,
+  .safecontracts-accounting-direction-grid {
+    grid-template-areas: "receivable" "payable";
+  }
+
+  .safecontracts-direction-column__heading,
+  .safecontracts-payment-panel__heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .safecontracts-user-guide-footer,
+  .rtl .safecontracts-user-guide-footer,
+  [dir="rtl"] .safecontracts-user-guide-footer {
+    width: auto;
+    margin: 20px 10px 10px;
   }
 }
