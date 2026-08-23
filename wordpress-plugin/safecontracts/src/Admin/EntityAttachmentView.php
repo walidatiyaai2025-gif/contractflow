@@ -45,9 +45,13 @@ final class EntityAttachmentView
     public static function renderUploadField(string $label = ''): void
     {
         $label = $label !== '' ? $label : __('Attachments', 'safecontracts');
+        $isContractField = $label === __('Contract files', 'safecontracts');
         ?>
         <p><label><?php echo esc_html($label); ?><input class="widefat" type="file" name="<?php echo esc_attr(MultipleAttachmentUploader::FIELD); ?>[]" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,.txt"></label></p>
         <p class="description"><?php echo esc_html(sprintf(__('Upload up to %d files at once. Supported: PDF, images, Word, Excel and text files.', 'safecontracts'), MultipleAttachmentUploader::MAX_FILES)); ?></p>
+        <?php if ($isContractField) : ?>
+            <p class="description safecontracts-contract-cover-help"><strong><?php echo esc_html__('Contract image:', 'safecontracts'); ?></strong> <?php echo esc_html__('Uploading an image is optional. The first contract image is used as the cover in the premium mobile contract page; when no image exists, the company logo is used automatically.', 'safecontracts'); ?></p>
+        <?php endif; ?>
         <?php
     }
 
