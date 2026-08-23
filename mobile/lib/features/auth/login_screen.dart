@@ -13,12 +13,14 @@ final class SafeContractsLoginScreen extends StatefulWidget {
     required this.onAuthenticated,
     this.languageCode = 'en',
     this.onLanguageChanged,
+    this.onBack,
     super.key,
   });
 
   final MobileLoginController controller;
   final String languageCode;
   final ValueChanged<String>? onLanguageChanged;
+  final VoidCallback? onBack;
   final Future<void> Function() onAuthenticated;
 
   @override
@@ -101,47 +103,62 @@ final class _SafeContractsLoginScreenState
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Align(
-                            alignment: AlignmentDirectional.centerEnd,
-                            child: SegmentedButton<String>(
-                              segments: <ButtonSegment<String>>[
-                                ButtonSegment<String>(
-                                  value: 'en',
-                                  label: Text(l10n.t('English')),
-                                ),
-                                ButtonSegment<String>(
-                                  value: 'ar',
-                                  label: Text(l10n.t('Arabic')),
-                                ),
-                              ],
-                              selected: <String>{selectedLanguage},
-                              onSelectionChanged:
-                                  submitting || widget.onLanguageChanged == null
-                                      ? null
-                                      : (selection) => widget
-                                          .onLanguageChanged!(selection.first),
-                              showSelectedIcon: false,
-                              style: ButtonStyle(
-                                foregroundColor:
-                                    WidgetStateProperty.resolveWith((states) {
-                                  return states.contains(WidgetState.selected)
-                                      ? SafeContractsVisual.navyDeep
-                                      : Colors.white;
-                                }),
-                                backgroundColor:
-                                    WidgetStateProperty.resolveWith((states) {
-                                  return states.contains(WidgetState.selected)
-                                      ? SafeContractsVisual.roseGoldSoft
-                                      : Colors.white.withValues(alpha: 0.08);
-                                }),
-                                side: WidgetStateProperty.all(
-                                  BorderSide(
-                                    color: Colors.white.withValues(alpha: 0.22),
+                          Row(
+                            children: [
+                              if (widget.onBack != null)
+                                IconButton(
+                                  tooltip: l10n.t('Back'),
+                                  onPressed: submitting ? null : widget.onBack,
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.08),
                                   ),
+                                  icon: const Icon(Icons.arrow_back_rounded),
                                 ),
-                                visualDensity: VisualDensity.compact,
+                              const Spacer(),
+                              SegmentedButton<String>(
+                                segments: <ButtonSegment<String>>[
+                                  ButtonSegment<String>(
+                                    value: 'en',
+                                    label: Text(l10n.t('English')),
+                                  ),
+                                  ButtonSegment<String>(
+                                    value: 'ar',
+                                    label: Text(l10n.t('Arabic')),
+                                  ),
+                                ],
+                                selected: <String>{selectedLanguage},
+                                onSelectionChanged:
+                                    submitting ||
+                                            widget.onLanguageChanged == null
+                                        ? null
+                                        : (selection) => widget
+                                            .onLanguageChanged!(selection.first),
+                                showSelectedIcon: false,
+                                style: ButtonStyle(
+                                  foregroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                    return states.contains(WidgetState.selected)
+                                        ? SafeContractsVisual.navyDeep
+                                        : Colors.white;
+                                  }),
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                    return states.contains(WidgetState.selected)
+                                        ? SafeContractsVisual.roseGoldSoft
+                                        : Colors.white.withValues(alpha: 0.08);
+                                  }),
+                                  side: WidgetStateProperty.all(
+                                    BorderSide(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.22),
+                                    ),
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                           const SizedBox(height: 24),
                           Align(
