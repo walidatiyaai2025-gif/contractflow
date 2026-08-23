@@ -22,6 +22,7 @@ final class AuditRecorder
         'safecontracts_contract_dates_changed',
         'safecontracts_payment_status_changed',
         'safecontracts_payment_dates_changed',
+        'safecontracts_payment_details_changed',
         'safecontracts_followup_recorded',
         'safecontracts_export_completed',
         'safecontracts_import_uploaded',
@@ -114,6 +115,12 @@ final class AuditRecorder
                 'payment', (int) ($args[0] ?? 0), 'payment_dates_changed', (int) ($args[5] ?? 0),
                 ['due_date' => $args[1] ?? null, 'expected_payment_date' => $args[3] ?? null],
                 ['due_date' => $args[2] ?? null, 'expected_payment_date' => $args[4] ?? null], null,
+            ],
+            'safecontracts_payment_details_changed' => [
+                'payment', (int) ($args[0] ?? 0), 'payment_details_changed', (int) ($args[3] ?? 0),
+                is_array($args[1] ?? null) ? $args[1] : null,
+                is_array($args[2] ?? null) ? $args[2] : null,
+                null,
             ],
             'safecontracts_followup_recorded' => [
                 'payment', (int) ($args[1] ?? 0), 'followup_recorded', (int) ($args[3] ?? 0), null,
