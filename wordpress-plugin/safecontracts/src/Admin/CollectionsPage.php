@@ -13,6 +13,7 @@ use SafeContracts\Payments\FinancialDirection;
 use SafeContracts\ReferenceData\PaymentMethodRepository;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Support\Input;
+use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
 final class CollectionsPage
@@ -122,7 +123,7 @@ final class CollectionsPage
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Cash application', 'safecontracts'); ?></p>
                     <h1><?php echo esc_html__('Collections', 'safecontracts'); ?></h1>
-                    <p class="description"><?php echo esc_html__('Green settlements are money received from customers. Red settlements are money paid to suppliers. The stored ledger amount remains positive; the accounting sign comes from the contract direction.', 'safecontracts'); ?></p>
+                    <p class="description"><?php echo esc_html(self::label('Green settlements are money received from customers. Red settlements are money paid to suppliers. The stored ledger amount remains positive; the accounting sign comes from the contract direction.', 'التسويات الخضراء مبالغ نستلمها من العملاء، والحمراء مبالغ نسددها للموردين. القيمة المخزنة تظل موجبة للحفاظ على سلامة الدفتر، وتحدد إشارة الحساب تلقائياً من اتجاه العقد.')); ?></p>
                 </div>
             </div>
             <?php AdminPeriodFilter::render(self::SLUG, $filters, $selectedPaymentId > 0 ? ['payment_id' => $selectedPaymentId] : []); ?>
@@ -137,7 +138,7 @@ final class CollectionsPage
 
             <?php if ($canManage) : ?>
             <section class="safecontracts-admin-card safecontracts-settlement-editor">
-                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Record collection', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html__('Choose the obligation only. Its customer/supplier, accounting direction and currency are read from the contract automatically.', 'safecontracts'); ?></p></div></div>
+                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Record collection', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html(self::label('Choose the obligation only. Its customer/supplier, accounting direction and currency are read from the contract automatically.', 'اختر الالتزام فقط؛ العميل أو المورد واتجاه الحساب والعملة يتم قراءتها تلقائياً من بيانات العقد.')); ?></p></div></div>
                 <form method="post" enctype="multipart/form-data" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>"><?php wp_nonce_field(self::SAVE_ACTION); ?>
                     <p><label><?php echo esc_html__('Payment', 'safecontracts'); ?><select class="widefat" name="payment_id" required><option value="0"><?php echo esc_html__('Select payment', 'safecontracts'); ?></option><?php foreach ($payments as $payment) : ?><?php $direction = (string) ($payment['financial_direction'] ?? '') === FinancialDirection::PAYABLE ? FinancialDirection::PAYABLE : FinancialDirection::RECEIVABLE; ?><option value="<?php echo esc_attr((string) $payment['id']); ?>" <?php selected($selectedPaymentId, (int) $payment['id']); ?>><?php echo esc_html(self::paymentOption($payment, $direction)); ?></option><?php endforeach; ?></select></label></p>
@@ -169,7 +170,7 @@ final class CollectionsPage
         ?>
         <section class="safecontracts-admin-card safecontracts-table-card safecontracts-settlement-panel safecontracts-settlement-panel--<?php echo esc_attr($class); ?>">
             <div class="safecontracts-payment-panel__heading"><div><h2><?php echo esc_html($title); ?></h2><p><?php echo esc_html($receivable ? __('Money coming in', 'safecontracts') : __('Money going out', 'safecontracts')); ?></p></div><span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr($class); ?>"><?php echo esc_html($receivable ? '+' : '−'); ?></span></div>
-            <?php if ($collections === []) : ?><p><?php echo esc_html__('No collection activity matches the current filters.', 'safecontracts'); ?></p><?php else : ?>
+            <?php if ($collections === []) : ?><p><?php echo esc_html(self::label('No collection activity matches the current filters.', 'لا توجد حركات تحصيل أو سداد مطابقة للفلاتر الحالية.')); ?></p><?php else : ?>
             <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Date', 'safecontracts'); ?></th><th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Method', 'safecontracts'); ?></th><th><?php echo esc_html__('Amount', 'safecontracts'); ?></th><th><?php echo esc_html__('Files', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
             <?php foreach ($collections as $collection) : ?>
                 <?php $collectionId = (int) ($collection['id'] ?? 0); $files = $attachmentsByCollection[$collectionId] ?? []; ?>
@@ -222,5 +223,10 @@ final class CollectionsPage
         $formatted = $whole . '.' . substr(str_pad($fraction, 2, '0'), 0, 2);
         $currency = strtoupper(trim($currency));
         return $currency === '' ? $formatted : $currency . ' ' . $formatted;
+    }
+
+    private static function label(string $english, string $arabic): string
+    {
+        return TranslationCatalog::currentLanguage() === 'ar' ? $arabic : $english;
     }
 }
