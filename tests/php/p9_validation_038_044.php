@@ -85,7 +85,10 @@ foreach ([
 ] as $marker) {
     sc_p9final_assert(str_contains($mobileMutation, $marker), 'SC-P9-041 expected-date boundary preserves guard: ' . $marker);
 }
-sc_p9final_assert(str_contains($paymentService, 'expected_payment_date is an operational promise/follow-up date only'), 'SC-P9-041 contractual due classification stays based on due_date');
+sc_p9final_assert(
+    str_contains($paymentService, "PaymentStatus::temporalForDueDate(\$payment['due_date'], \$today, \$dueSoonDays)"),
+    'SC-P9-041 contractual due classification stays based on due_date'
+);
 
 // SC-P9-042 — Collection entry — Validate.
 foreach ([

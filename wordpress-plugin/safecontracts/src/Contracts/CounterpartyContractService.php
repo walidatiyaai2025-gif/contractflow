@@ -26,6 +26,7 @@ final class CounterpartyContractService
      *   counterparty_type:mixed,
      *   counterparty_id:mixed,
      *   currency_code?:mixed,
+     *   base_value?:mixed,
      *   accountant_user_id?:mixed,
      *   notes?:mixed
      * } $input
@@ -70,6 +71,11 @@ final class CounterpartyContractService
         $contractNumber = $this->contractNumber($input['contract_number'] ?? '');
         RuntimeInspector::stage('contract.create.currency');
         $currencyCode = CurrencyCode::fromInputOrSettings($input['currency_code'] ?? null);
+        RuntimeInspector::stage('contract.create.base_value');
+        $baseValue = ContractMoney::normalizeNonNegative($input['base_value'] ?? '');
+        if ($baseValue === '0.0000') {
+            throw new InvalidArgumentException('Contract base value must be greater than zero.');
+        }
         $direction = Counterparty::defaultFinancialDirection($type);
         RuntimeInspector::stage('contract.create.accountant.normalize');
         $accountantUserId = $this->optionalUserId($input['accountant_user_id'] ?? null);
@@ -105,7 +111,8 @@ final class CounterpartyContractService
             $currencyCode,
             $accountantUserId,
             $notes,
-            $actorId
+            $actorId,
+            $baseValue
         );
         RuntimeInspector::stage('contract.create.events', ['contract_id' => $contractId]);
         $legacyCustomerId = $type === Counterparty::CUSTOMER ? $counterpartyId : null;
@@ -119,6 +126,7 @@ final class CounterpartyContractService
             $currencyCode,
             $actorId
         );
+        do_action('safecontracts_contract_base_value_changed', $contractId, $baseValue, $actorId, '0.0000');
         return $contractId;
     }
 

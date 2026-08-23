@@ -9,7 +9,9 @@ use SafeContracts\Admin\AdminFeedback;
 use SafeContracts\Admin\AdminPageSummaryInjector;
 use SafeContracts\Admin\AdminShell;
 use SafeContracts\Admin\ArchivePage;
+use SafeContracts\Admin\AttachmentAdminController;
 use SafeContracts\Admin\CollectionsPage;
+use SafeContracts\Admin\ContractPaymentTree;
 use SafeContracts\Admin\ContractsPage;
 use SafeContracts\Admin\CustomersPage;
 use SafeContracts\Admin\DashboardPage;
@@ -52,6 +54,7 @@ use SafeContracts\Presence\PresenceService;
 use SafeContracts\Rest\Router;
 use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\ControlledInputArabicDefaults;
+use SafeContracts\Translations\FeatureArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
 use SafeContracts\Translations\NotificationCenterArabicDefaults;
 use SafeContracts\Translations\NotificationScheduleArabicDefaults;
@@ -84,6 +87,7 @@ final class Plugin
 
         TranslationCatalog::register();
         AdminArabicDefaults::register();
+        FeatureArabicDefaults::register();
         ProductionUxArabicDefaults::register();
         MigrationRecoveryArabicDefaults::register();
         ControlledInputArabicDefaults::register();
@@ -91,10 +95,6 @@ final class Plugin
         NotificationCenterArabicDefaults::register();
         RuntimeLabels::register();
 
-        // Schema compatibility is established before business services, REST
-        // routes, schedulers or mutation handlers are exposed. A migration
-        // failure therefore leaves Alkenzy ADV in a recovery-only state instead
-        // of continuing against a partial or incompatible schema.
         try {
             (new Migrator())->maybeMigrate();
         } catch (Throwable) {
@@ -116,6 +116,7 @@ final class Plugin
         LoginBranding::register();
         NavigationCleanup::register();
         AdminPageSummaryInjector::register();
+        ContractPaymentTree::register();
         UserGuidePage::registerContextualHelp();
         NotificationEmailTestControl::register();
         RuntimeInspector::register();
@@ -163,6 +164,8 @@ final class Plugin
         add_action('admin_post_' . PaymentsPage::DELETE_ACTION, [PaymentsPage::class, 'handleDelete']);
         add_action('admin_post_' . CollectionsPage::SAVE_ACTION, [CollectionsPage::class, 'handleSave']);
         add_action('admin_post_' . CollectionsPage::DELETE_ACTION, [CollectionsPage::class, 'handleDelete']);
+        add_action('admin_post_' . AttachmentAdminController::UPLOAD_ACTION, [AttachmentAdminController::class, 'handleUpload']);
+        add_action('admin_post_' . AttachmentAdminController::DETACH_ACTION, [AttachmentAdminController::class, 'handleDetach']);
         add_action('admin_post_' . FollowUpsPage::SAVE_ACTION, [FollowUpsPage::class, 'handleSave']);
         add_action('admin_post_' . ReportsPage::EXPORT_ACTION, [ReportsPage::class, 'handleExport']);
         add_action('admin_post_' . ImportsPage::UPLOAD_ACTION, [ImportsPage::class, 'handleUpload']);
@@ -172,6 +175,8 @@ final class Plugin
         add_action('admin_post_' . PaymentMethodsPage::SAVE_ACTION, [PaymentMethodsPage::class, 'handleSave']);
         add_action('admin_post_' . PaymentMethodsPage::DELETE_ACTION, [PaymentMethodsPage::class, 'handleDelete']);
         add_action('admin_post_' . NotificationSettingsPage::SAVE_ACTION, [NotificationSettingsPage::class, 'handleSave']);
+        add_action('admin_post_' . NotificationSettingsPage::TOGGLE_ACTION, [NotificationSettingsPage::class, 'handleToggle']);
+        add_action('admin_post_' . NotificationSettingsPage::DELETE_ACTION, [NotificationSettingsPage::class, 'handleDelete']);
         add_action('admin_post_' . NotificationCenterPage::SAVE_RULE_ACTION, [NotificationCenterPage::class, 'handleSaveRule']);
         add_action('admin_post_' . NotificationCenterPage::SAVE_TEMPLATE_ACTION, [NotificationCenterPage::class, 'handleSaveTemplate']);
         add_action('admin_post_' . NotificationCenterPage::SAVE_EMAIL_ACTION, [NotificationCenterPage::class, 'handleSaveEmail']);

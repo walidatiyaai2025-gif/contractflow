@@ -134,7 +134,14 @@ try {
 }
 
 $migratorSource = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Database/Migrator.php');
-sc_customer_nullable_assert(str_contains($migratorSource, "LATEST_VERSION = '1.18.0'"), 'Migrator latest version advances to 1.18.0');
+$latestVersion = null;
+if (preg_match("/LATEST_VERSION\\s*=\\s*'([^']+)'/", $migratorSource, $matches) === 1) {
+    $latestVersion = $matches[1];
+}
+sc_customer_nullable_assert(
+    is_string($latestVersion) && version_compare($latestVersion, '1.18.0', '>='),
+    'Migrator latest version includes the guarded customer nullable 1.18.0 stage'
+);
 sc_customer_nullable_assert(str_contains($migratorSource, "'1.18.0' => Migration0019NullableLegacyCustomer::class"), 'Migrator registers the guarded migration');
 
 fwrite(STDOUT, "Supplier contract customer_id compatibility #605 passed ({$tests} assertions).\n");

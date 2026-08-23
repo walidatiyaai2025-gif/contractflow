@@ -43,6 +43,13 @@ final class AuditRecorder
                 self::record($hook, $args);
             }, 10, 12);
         }
+
+        // Payment-detail edits are an additive governed event. Keep the frozen
+        // P10 critical-event registry intact while still persisting full
+        // before/after evidence for this newer edit surface.
+        add_action('safecontracts_payment_details_changed', static function (mixed ...$args): void {
+            self::record('safecontracts_payment_details_changed', $args);
+        }, 10, 4);
     }
 
     /** @param list<mixed> $args */
@@ -114,6 +121,12 @@ final class AuditRecorder
                 'payment', (int) ($args[0] ?? 0), 'payment_dates_changed', (int) ($args[5] ?? 0),
                 ['due_date' => $args[1] ?? null, 'expected_payment_date' => $args[3] ?? null],
                 ['due_date' => $args[2] ?? null, 'expected_payment_date' => $args[4] ?? null], null,
+            ],
+            'safecontracts_payment_details_changed' => [
+                'payment', (int) ($args[0] ?? 0), 'payment_details_changed', (int) ($args[3] ?? 0),
+                is_array($args[1] ?? null) ? $args[1] : null,
+                is_array($args[2] ?? null) ? $args[2] : null,
+                null,
             ],
             'safecontracts_followup_recorded' => [
                 'payment', (int) ($args[1] ?? 0), 'followup_recorded', (int) ($args[3] ?? 0), null,

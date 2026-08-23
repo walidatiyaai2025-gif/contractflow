@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Notifications;
 
 use InvalidArgumentException;
+use Throwable;
 
 final class DirectNotificationService
 {
@@ -50,8 +51,31 @@ final class DirectNotificationService
                     'data' => ['rule_code' => 'manual_message', 'attempt_no' => 0, 'icon_key' => $iconKey],
                 ]);
                 $success = ! empty($delivery['success']);
+                $errorCode = isset($delivery['error_code']) ? strtolower(trim((string) $delivery['error_code'])) : null;
                 $success ? $result['push_sent']++ : $result['push_failed']++;
-                $this->deliveries->append(null, 0, $userId, (int) $device['id'], 'manual_message', $today, 0, $success ? 'sent' : 'failed', isset($delivery['status_code']) ? (int) $delivery['status_code'] : null, isset($delivery['error_code']) ? (string) $delivery['error_code'] : null, 'push');
+
+                if (! $success && $errorCode === 'firebase_token_not_found') {
+                    try {
+                        $this->tokens->deactivateOwnedById($userId, (int) $device['id']);
+                        do_action('safecontracts_notification_device_deactivated', $userId, (int) $device['id'], 'firebase_token_not_found');
+                    } catch (Throwable) {
+                        do_action('safecontracts_notification_device_deactivation_failed', $userId, (int) $device['id'], 'firebase_token_not_found');
+                    }
+                }
+
+                $this->deliveries->append(
+                    null,
+                    0,
+                    $userId,
+                    (int) $device['id'],
+                    'manual_message',
+                    $today,
+                    0,
+                    $success ? 'sent' : 'failed',
+                    isset($delivery['status_code']) ? (int) $delivery['status_code'] : null,
+                    $errorCode,
+                    'push'
+                );
             }
         }
 

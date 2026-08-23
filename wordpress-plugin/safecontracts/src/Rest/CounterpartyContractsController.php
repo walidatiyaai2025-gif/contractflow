@@ -62,9 +62,13 @@ final class CounterpartyContractsController
                 'counterparty_type',
                 'counterparty_id',
                 'currency_code',
+                'base_value',
                 'accountant_user_id',
                 'notes',
             ]);
+            if (! array_key_exists('base_value', $body)) {
+                throw new InvalidArgumentException('Contract base value is required.');
+            }
             $id = (new CounterpartyContractService())->create($body);
             return ApiResponse::ok(['id' => $id, 'created' => true]);
         });

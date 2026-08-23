@@ -98,8 +98,11 @@ final class CollectionService
 
             $newPaid = ContractMoney::add($ledgerCollected, $amount);
             if (ContractMoney::compare($newPaid, $originalAmount) > 0) {
+                // Keep the canonical P10 guard text stable for integrations and
+                // governance; the admin Arabic surface explains the limit in detail.
                 throw new DomainException('Collection amount exceeds the payment remaining balance.');
             }
+            $this->assertContractSettlementCapacity($payment, $amount);
             $newRemaining = ContractMoney::subtract($originalAmount, $newPaid);
             $newStatus = $newRemaining === '0.0000' ? PaymentStatus::PAID : PaymentStatus::PARTIALLY_PAID;
 
@@ -227,6 +230,26 @@ final class CollectionService
             'over_collected' => $overCollected,
             'is_balanced' => $amountsBalanced && $statusBalanced,
         ];
+    }
+
+    /** @param array<string,mixed> $payment */
+    private function assertContractSettlementCapacity(array $payment, string $amount): void
+    {
+        if (($payment['contract_base_value'] ?? null) === null || ($payment['contract_settled_total'] ?? null) === null) {
+            return;
+        }
+        $contractValue = ContractMoney::normalizeNonNegative((string) $payment['contract_base_value']);
+        $settled = ContractMoney::normalizeNonNegative((string) $payment['contract_settled_total']);
+        $projected = ContractMoney::add($settled, $amount);
+        if (ContractMoney::compare($projected, $contractValue) <= 0) {
+            return;
+        }
+        $available = ContractMoney::compare($settled, $contractValue) >= 0
+            ? '0.0000'
+            : ContractMoney::subtract($contractValue, $settled);
+        throw new DomainException(
+            "Total collections/payments cannot exceed the contract value. Contract value: {$contractValue}; already settled: {$settled}; maximum additional settlement: {$available}."
+        );
     }
 
     /** @return array<string,mixed> */

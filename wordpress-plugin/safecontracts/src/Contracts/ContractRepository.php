@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Contracts;
 
+use InvalidArgumentException;
 use RuntimeException;
 use SafeContracts\Payments\CurrencyCode;
 use SafeContracts\Payments\FinancialDirection;
@@ -83,7 +84,7 @@ final class ContractRepository
         ];
     }
 
-    public function create(string $contractNumber, int $customerId, ?int $accountantUserId, string $notes, int $actorId): int
+    public function create(string $contractNumber, int $customerId, ?int $accountantUserId, string $notes, int $actorId, string $baseValue): int
     {
         return $this->createForCounterparty(
             $contractNumber,
@@ -93,7 +94,8 @@ final class ContractRepository
             CurrencyCode::fromInputOrSettings(null),
             $accountantUserId,
             $notes,
-            $actorId
+            $actorId,
+            $baseValue
         );
     }
 
@@ -105,7 +107,8 @@ final class ContractRepository
         string $currencyCode,
         ?int $accountantUserId,
         string $notes,
-        int $actorId
+        int $actorId,
+        string $baseValue = '0.0000'
     ): int {
         global $wpdb;
         $this->assertWpdb($wpdb);
@@ -113,12 +116,16 @@ final class ContractRepository
         $counterpartyType = Counterparty::normalize($counterpartyType);
         $financialDirection = FinancialDirection::normalize($financialDirection);
         $currencyCode = CurrencyCode::normalize($currencyCode);
+        $baseValue = ContractMoney::normalizeNonNegative($baseValue);
+        if ($baseValue === '0.0000') {
+            throw new InvalidArgumentException('Contract base value must be greater than zero.');
+        }
         $customerId = $counterpartyType === Counterparty::CUSTOMER ? $counterpartyId : null;
         $customerSql = $customerId === null ? 'NULL' : '%d';
         $accountantSql = $accountantUserId === null ? 'NULL' : '%d';
         $query = "INSERT INTO {$table}
-            (contract_number, customer_id, accountant_user_id, counterparty_type, counterparty_id, financial_direction, currency_code, status, notes, created_by, updated_by, created_at, updated_at)
-            VALUES (%s, {$customerSql}, {$accountantSql}, %s, %d, %s, %s, %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
+            (contract_number, customer_id, accountant_user_id, counterparty_type, counterparty_id, financial_direction, currency_code, status, base_value, notes, created_by, updated_by, created_at, updated_at)
+            VALUES (%s, {$customerSql}, {$accountantSql}, %s, %d, %s, %s, %s, %s, %s, %d, %d, UTC_TIMESTAMP(), UTC_TIMESTAMP())";
         $args = [$contractNumber];
         if ($customerId !== null) {
             $args[] = $customerId;
@@ -130,7 +137,8 @@ final class ContractRepository
         $args[] = $counterpartyId;
         $args[] = $financialDirection;
         $args[] = $currencyCode;
-        $args[] = ContractStatus::DRAFT;
+        $args[] = ContractStatus::ACTIVE;
+        $args[] = $baseValue;
         $args[] = $notes;
         $args[] = $actorId;
         $args[] = $actorId;

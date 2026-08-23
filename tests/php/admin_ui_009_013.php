@@ -48,7 +48,7 @@ sc_p6ops_assert(str_contains($assignedCollectionQuery, 'c.accountant_user_id = 4
 
 $collectionSource = file_get_contents((string) (new ReflectionClass(CollectionsPage::class))->getFileName()) ?: '';
 sc_p6ops_assert(str_contains($collectionSource, 'CollectionService'), 'SC-P6-009 collection mutation delegates to CollectionService');
-sc_p6ops_assert(str_contains($collectionSource, 'PaymentMethodRepository') && str_contains($collectionSource, 'Proof media ID (optional)'), 'SC-P6-009 collection screen uses active method master data and optional proof');
+sc_p6ops_assert(str_contains($collectionSource, 'PaymentMethodRepository') && str_contains($collectionSource, 'Collection / receipt files'), 'SC-P6-009 collection screen uses active method master data and multi-file proof evidence');
 sc_p6ops_assert(! str_contains($collectionSource, '$wpdb'), 'SC-P6-009 collection page contains no presentation-layer SQL');
 
 // SC-P6-010 — follow-up screen delegates all state transitions to FollowUpService.
@@ -86,7 +86,7 @@ sc_p6ops_assert(str_contains($reportQueries, 'c.accountant_user_id = 42') && str
 sc_p6ops_assert(str_contains($reportQueries, 'p.due_date <') && str_contains($reportQueries, "p.status = 'overdue'"), 'SC-P6-012 reporting preserves contractual due-date and status filtering');
 $reportsSource = file_get_contents((string) (new ReflectionClass(ReportsPage::class))->getFileName()) ?: '';
 sc_p6ops_assert(str_contains($reportsSource, 'AdminReadRepository') && str_contains($reportsSource, 'server-side'), 'SC-P6-012 report screen keeps the scoped read-model/server-side reporting boundary as later export features are added');
-sc_p6ops_assert(! str_contains($reportsSource, '$wpdb'), 'SC-P6-012 report page contains no presentation-layer SQL');
+sc_p6ops_assert(! str_contains($reportsSource, '$wpdb'), 'SC-P6-012 report screen contains no direct SQL');
 
 // SC-P6-013 — users/roles remains WordPress-native but now supports controlled Safe Contracts role/capability administration.
 $usersSource = file_get_contents((string) (new ReflectionClass(UsersRolesPage::class))->getFileName()) ?: '';

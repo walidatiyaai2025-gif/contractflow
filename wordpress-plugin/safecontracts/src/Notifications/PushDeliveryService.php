@@ -29,9 +29,12 @@ final class PushDeliveryService
      * } $plan
      * @return array{attempted:int,sent:int,failed:int,retryable:bool}
      */
-    public function deliver(array $plan, int $attemptNo = 0): array
+    public function deliver(array $plan, int $occurrenceAttemptNo = 0, int $transportAttemptNo = 0): array
     {
-        if ($attemptNo < 0 || $attemptNo > self::MAX_TRANSPORT_RETRIES) {
+        if ($occurrenceAttemptNo < 0 || $occurrenceAttemptNo > 100) {
+            throw new InvalidArgumentException('Notification occurrence attempt is invalid.');
+        }
+        if ($transportAttemptNo < 0 || $transportAttemptNo > self::MAX_TRANSPORT_RETRIES) {
             throw new InvalidArgumentException('Notification transport attempt is outside the retry policy.');
         }
         $ruleId = (int) ($plan['rule_id'] ?? 0);
@@ -47,6 +50,7 @@ final class PushDeliveryService
 
         $sent = 0;
         $failed = 0;
+        $retryableFailures = 0;
         foreach ($deviceRows as $device) {
             $result = null;
             try {
@@ -56,8 +60,34 @@ final class PushDeliveryService
             }
 
             $success = (bool) ($result['success'] ?? false);
+            $errorCode = isset($result['error_code']) ? strtolower(trim((string) $result['error_code'])) : null;
             $status = $success ? 'sent' : 'failed';
-            $success ? $sent++ : $failed++;
+            if ($success) {
+                $sent++;
+            } else {
+                $failed++;
+                if ($errorCode === 'firebase_token_not_found') {
+                    try {
+                        $this->tokens->deactivateOwnedById((int) $device['user_id'], (int) $device['id']);
+                        do_action(
+                            'safecontracts_notification_device_deactivated',
+                            (int) $device['user_id'],
+                            (int) $device['id'],
+                            'firebase_token_not_found'
+                        );
+                    } catch (Throwable) {
+                        do_action(
+                            'safecontracts_notification_device_deactivation_failed',
+                            (int) $device['user_id'],
+                            (int) $device['id'],
+                            'firebase_token_not_found'
+                        );
+                    }
+                } else {
+                    $retryableFailures++;
+                }
+            }
+
             $this->deliveries->append(
                 $ruleId,
                 $paymentId,
@@ -65,10 +95,10 @@ final class PushDeliveryService
                 $device['id'],
                 $templateCode,
                 $scheduledFor,
-                $attemptNo,
+                $occurrenceAttemptNo,
                 $status,
                 isset($result['status_code']) ? (int) $result['status_code'] : null,
-                isset($result['error_code']) ? (string) $result['error_code'] : null,
+                $errorCode,
                 'push'
             );
             do_action(
@@ -78,7 +108,7 @@ final class PushDeliveryService
                 $device['user_id'],
                 $device['id'],
                 $status,
-                $attemptNo
+                $occurrenceAttemptNo
             );
         }
 
@@ -86,7 +116,7 @@ final class PushDeliveryService
             'attempted' => count($deviceRows),
             'sent' => $sent,
             'failed' => $failed,
-            'retryable' => $failed > 0 && $this->canRetry($attemptNo),
+            'retryable' => $retryableFailures > 0 && $this->canRetry($transportAttemptNo),
         ];
     }
 

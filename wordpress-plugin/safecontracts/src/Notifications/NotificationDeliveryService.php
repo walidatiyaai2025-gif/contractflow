@@ -18,7 +18,7 @@ final class NotificationDeliveryService
      * @param array<string,mixed> $plan
      * @return array{attempted:int,sent:int,failed:int,retryable:bool,channels:list<string>}
      */
-    public function deliver(array $plan, int $attemptNo = 0): array
+    public function deliver(array $plan, int $occurrenceAttemptNo = 0, int $transportAttemptNo = 0): array
     {
         $attempted = 0;
         $sent = 0;
@@ -27,7 +27,7 @@ final class NotificationDeliveryService
         $channels = [];
 
         if (! empty($plan['push_enabled'])) {
-            $result = $this->push->deliver($plan, $attemptNo);
+            $result = $this->push->deliver($plan, $occurrenceAttemptNo, $transportAttemptNo);
             $attempted += (int) ($result['attempted'] ?? 0);
             $sent += (int) ($result['sent'] ?? 0);
             $failed += (int) ($result['failed'] ?? 0);
@@ -36,7 +36,7 @@ final class NotificationDeliveryService
         }
 
         if (! empty($plan['email_enabled'])) {
-            $result = $this->email->deliver($plan, $attemptNo);
+            $result = $this->email->deliver($plan, $occurrenceAttemptNo);
             $attempted += (int) ($result['attempted'] ?? 0);
             $sent += (int) ($result['sent'] ?? 0);
             $failed += (int) ($result['failed'] ?? 0);

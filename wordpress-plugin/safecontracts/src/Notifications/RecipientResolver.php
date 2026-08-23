@@ -10,13 +10,15 @@ final class RecipientResolver
      * Resolve notification recipient user IDs entirely server-side.
      * Missing assigned Accountant never broadens to all Accountants.
      * Explicit user IDs are validated against existing WordPress users.
+     * Persisted legacy roles are mapped only through the fail-closed
+     * compatibility policy so stale production data cannot abort scheduling.
      *
      * @param array<string, mixed> $rule
      * @return list<int>
      */
     public function resolve(array $rule, ?int $assignedAccountantUserId): array
     {
-        $roles = NotificationRule::normalizeRecipientRoles($rule['recipient_roles'] ?? []);
+        $roles = NotificationRecipientRolePolicy::normalizeStoredRoles($rule['recipient_roles'] ?? []);
         $specificUsers = NotificationRule::normalizeRecipientUserIds($rule['recipient_user_ids'] ?? []);
         $targetAssigned = NotificationRule::normalizeBool($rule['target_assigned_accountant'] ?? false);
         $ids = [];

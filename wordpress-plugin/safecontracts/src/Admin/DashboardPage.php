@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Contracts\ContractArchiveService;
+use SafeContracts\Contracts\ContractMoney;
+use SafeContracts\Payments\FinancialDirection;
 use SafeContracts\Roles\Capabilities;
-use SafeContracts\Settings\GeneralSettings;
 use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
@@ -46,10 +47,7 @@ final class DashboardPage
             ?>
             <section class="safecontracts-dashboard" aria-labelledby="safecontracts-dashboard-title">
                 <div class="safecontracts-section-heading">
-                    <div>
-                        <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Operational overview', 'safecontracts'); ?></p>
-                        <h2 id="safecontracts-dashboard-title"><?php echo esc_html__('Dashboard', 'safecontracts'); ?></h2>
-                    </div>
+                    <div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Operational overview', 'safecontracts'); ?></p><h2 id="safecontracts-dashboard-title"><?php echo esc_html__('Dashboard', 'safecontracts'); ?></h2></div>
                 </div>
                 <section class="safecontracts-admin-card safecontracts-admin-card--security">
                     <h2><?php echo esc_html__('Server-side authorization', 'safecontracts'); ?></h2>
@@ -59,30 +57,32 @@ final class DashboardPage
             <?php
             return;
         }
+
         $filters = DashboardFilters::normalize($_GET);
         $read = new AdminReadRepository();
-        $kpis = $read->kpis($filters);
-        $settings = (new GeneralSettings())->read();
-        $currencyToken = trim((string) ($settings['currency_symbol'] ?? ''));
-        if ($currencyToken === '') {
-            $currencyToken = trim((string) ($settings['currency_code'] ?? ''));
-        }
-        $currencyLabel = trim(implode(' ', array_filter([
-            (string) ($settings['currency_symbol'] ?? ''),
-            (string) ($settings['currency_code'] ?? ''),
-        ], static fn (string $value): bool => trim($value) !== '')));
         $customers = $read->customerOptions();
         $contracts = $read->contractOptions($filters['customer_id']);
         $accountants = current_user_can(Capabilities::VIEW_ALL) ? AdminLookupOptions::accountants() : [];
-        $tableFilters = $filters;
-        if (! in_array($tableFilters['status'], ['draft', 'active', 'completed', 'cancelled'], true)) {
-            $tableFilters['status'] = '';
+
+        $contractFilters = $filters;
+        if (! in_array($contractFilters['status'], ['draft', 'active', 'completed', 'cancelled'], true)) {
+            $contractFilters['status'] = '';
         }
         $dashboardContracts = array_values(array_filter(
-            $read->contracts($tableFilters),
+            $read->contracts($contractFilters),
             static fn (array $contract): bool => empty($contract['is_archived'])
         ));
-        $dashboardContracts = array_slice($dashboardContracts, 0, 25);
+
+        $paymentFilters = $filters;
+        if (in_array($paymentFilters['status'], ['draft', 'active', 'completed', 'cancelled'], true)) {
+            $paymentFilters['status'] = '';
+        }
+        $dashboardPayments = $read->payments($paymentFilters);
+
+        $receivableContracts = self::contractsForDirection($dashboardContracts, FinancialDirection::RECEIVABLE);
+        $payableContracts = self::contractsForDirection($dashboardContracts, FinancialDirection::PAYABLE);
+        $paymentTotalsByContract = self::paymentTotalsByContract($dashboardPayments);
+        $accounting = self::accountingByDirectionAndCurrency($dashboardContracts, $dashboardPayments);
         $collectorAttachments = $read->collectorAttachments($filters, 12);
         ?>
         <section class="safecontracts-dashboard" aria-labelledby="safecontracts-dashboard-title">
@@ -90,124 +90,74 @@ final class DashboardPage
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Operational overview', 'safecontracts'); ?></p>
                     <h2 id="safecontracts-dashboard-title"><?php echo esc_html__('Dashboard', 'safecontracts'); ?></h2>
+                    <p class="description"><?php echo esc_html__('Receivables and payables are kept in separate accounting lanes. Green means money we expect to receive; red means money we must pay.', 'safecontracts'); ?></p>
                 </div>
-                <?php if ($currencyLabel !== '') : ?>
-                    <span class="safecontracts-currency-badge"><?php echo esc_html__('Currency', 'safecontracts'); ?>: <?php echo esc_html($currencyLabel); ?></span>
-                <?php endif; ?>
             </div>
 
             <?php if (! empty($filters['date_range_error'])) : ?>
                 <div class="notice notice-error inline"><p><?php echo esc_html__('Invalid period. Use valid dates and make sure the end date is not earlier than the start date.', 'safecontracts'); ?></p></div>
             <?php endif; ?>
+
             <form class="safecontracts-filter-bar" method="get">
                 <input type="hidden" name="page" value="<?php echo esc_attr(AdminShell::SLUG); ?>">
                 <label><?php echo esc_html__('Customer', 'safecontracts'); ?>
                     <select name="customer_id">
                         <option value="0"><?php echo esc_html__('All customers', 'safecontracts'); ?></option>
-                        <?php foreach ($customers as $customer) : ?>
-                            <option value="<?php echo esc_attr((string) $customer['id']); ?>" <?php selected($filters['customer_id'], $customer['id']); ?>><?php echo esc_html($customer['name']); ?></option>
-                        <?php endforeach; ?>
+                        <?php foreach ($customers as $customer) : ?><option value="<?php echo esc_attr((string) $customer['id']); ?>" <?php selected($filters['customer_id'], $customer['id']); ?>><?php echo esc_html($customer['name']); ?></option><?php endforeach; ?>
                     </select>
                 </label>
                 <label><?php echo esc_html__('Contract', 'safecontracts'); ?>
                     <select name="contract_id">
                         <option value="0"><?php echo esc_html__('All contracts', 'safecontracts'); ?></option>
-                        <?php foreach ($contracts as $contract) : ?>
-                            <option value="<?php echo esc_attr((string) $contract['id']); ?>" <?php selected($filters['contract_id'], $contract['id']); ?>><?php echo esc_html($contract['contract_number']); ?></option>
-                        <?php endforeach; ?>
+                        <?php foreach ($contracts as $contract) : ?><option value="<?php echo esc_attr((string) $contract['id']); ?>" <?php selected($filters['contract_id'], $contract['id']); ?>><?php echo esc_html($contract['contract_number']); ?></option><?php endforeach; ?>
                     </select>
                 </label>
                 <?php if (current_user_can(Capabilities::VIEW_ALL)) : ?>
                     <label><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?>
                         <select name="accountant_user_id">
                             <option value="0"><?php echo esc_html__('All responsible accountants', 'safecontracts'); ?></option>
-                            <?php foreach ($accountants as $accountant) : ?>
-                                <option value="<?php echo esc_attr((string) $accountant['id']); ?>" <?php selected((int) $filters['accountant_user_id'], $accountant['id']); ?>><?php echo esc_html($accountant['label']); ?></option>
-                            <?php endforeach; ?>
+                            <?php foreach ($accountants as $accountant) : ?><option value="<?php echo esc_attr((string) $accountant['id']); ?>" <?php selected((int) $filters['accountant_user_id'], $accountant['id']); ?>><?php echo esc_html($accountant['label']); ?></option><?php endforeach; ?>
                         </select>
                     </label>
                 <?php endif; ?>
                 <label><?php echo esc_html__('Status', 'safecontracts'); ?>
                     <select name="status">
                         <option value=""><?php echo esc_html__('Any status', 'safecontracts'); ?></option>
-                        <?php foreach (['active','draft','completed','cancelled','upcoming','due_soon','due','overdue','partially_paid','paid'] as $status) : ?>
-                            <option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(self::statusLabel($status)); ?></option>
-                        <?php endforeach; ?>
+                        <?php foreach (['active','draft','completed','cancelled','upcoming','due_soon','due','overdue','partially_paid','paid'] as $status) : ?><option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(self::statusLabel($status)); ?></option><?php endforeach; ?>
                     </select>
                 </label>
                 <?php AdminPeriodFilter::renderFields($filters); ?>
                 <button class="button button-primary" type="submit"><?php echo esc_html__('Apply filters', 'safecontracts'); ?></button>
             </form>
 
-            <div class="safecontracts-kpi-grid">
-                <?php self::kpi(__('Contracts', 'safecontracts'), (string) $kpis['contract_count']); ?>
-                <?php self::kpi(__('Scheduled', 'safecontracts'), self::money($kpis['scheduled_total'], $currencyToken)); ?>
-                <?php self::kpi(__('Remaining', 'safecontracts'), self::money($kpis['remaining_total'], $currencyToken)); ?>
-                <?php self::kpi(__('Overdue exposure', 'safecontracts'), self::money($kpis['overdue_exposure'], $currencyToken), true); ?>
-                <?php self::kpi(__('Collected', 'safecontracts'), self::money($kpis['collected_total'], $currencyToken)); ?>
+            <div class="safecontracts-direction-dashboard">
+                <?php self::renderContractLane(FinancialDirection::RECEIVABLE, $receivableContracts, $paymentTotalsByContract); ?>
+                <?php self::renderContractLane(FinancialDirection::PAYABLE, $payableContracts, $paymentTotalsByContract); ?>
             </div>
-            <p class="description"><?php echo esc_html__('Dashboard payment KPIs use contractual due dates for the selected period. Contract lists use start date (or creation date when start date is empty), and collector attachments use collection date.', 'safecontracts'); ?></p>
 
-            <section class="safecontracts-admin-card safecontracts-table-card safecontracts-dashboard-contracts" aria-labelledby="safecontracts-dashboard-contracts-title">
+            <section class="safecontracts-accounting-summary" aria-labelledby="safecontracts-accounting-summary-title">
                 <div class="safecontracts-section-heading">
                     <div>
-                        <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Quick management', 'safecontracts'); ?></p>
-                        <h2 id="safecontracts-dashboard-contracts-title"><?php echo esc_html__('Active contracts', 'safecontracts'); ?></h2>
+                        <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Accounting totals', 'safecontracts'); ?></p>
+                        <h2 id="safecontracts-accounting-summary-title"><?php echo esc_html__('Accounting totals by currency', 'safecontracts'); ?></h2>
+                        <p class="description"><?php echo esc_html__('Currencies are never added together. Each currency is calculated independently from active contracts and non-archived scheduled payments.', 'safecontracts'); ?></p>
                     </div>
                 </div>
-                <?php if ($dashboardContracts === []) : ?>
-                    <p><?php echo esc_html__('No active contracts match the current dashboard filters.', 'safecontracts'); ?></p>
-                <?php else : ?>
-                    <table class="widefat striped">
-                        <thead><tr>
-                            <th><?php echo esc_html__('Contract', 'safecontracts'); ?></th>
-                            <th><?php echo esc_html__('Customer', 'safecontracts'); ?></th>
-                            <th><?php echo esc_html__('Status', 'safecontracts'); ?></th>
-                            <th><?php echo esc_html__('Base value', 'safecontracts'); ?></th>
-                            <th><?php echo esc_html__('Actions', 'safecontracts'); ?></th>
-                        </tr></thead>
-                        <tbody>
-                        <?php foreach ($dashboardContracts as $contract) : ?>
-                            <tr>
-                                <td><?php echo esc_html((string) $contract['contract_number']); ?></td>
-                                <td><?php echo esc_html((string) $contract['customer_name']); ?></td>
-                                <td><?php echo esc_html(self::statusLabel((string) $contract['status'])); ?></td>
-                                <td><?php echo esc_html(self::money($contract['base_value'], $currencyToken)); ?></td>
-                                <td>
-                                    <div class="safecontracts-dashboard-table-actions">
-                                        <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => ContractsPage::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a>
-                                        <?php if (current_user_can(Capabilities::MANAGE_SYSTEM)) : ?>
-                                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Its financial, collection, history and audit records will be preserved.', 'safecontracts'); ?>">
-                                                <input type="hidden" name="action" value="<?php echo esc_attr(self::ARCHIVE_ACTION); ?>">
-                                                <input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contract['id']); ?>">
-                                                <?php wp_nonce_field(self::ARCHIVE_ACTION . '_' . (int) $contract['id']); ?>
-                                                <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
-                                            </form>
-                                        <?php endif; ?>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                    <p class="description"><?php echo esc_html__('Delete is a safe archive action: the contract disappears from this dashboard list, while financial, collection, history and audit records are preserved.', 'safecontracts'); ?></p>
-                <?php endif; ?>
+                <div class="safecontracts-accounting-direction-grid">
+                    <?php self::renderAccountingLane(FinancialDirection::RECEIVABLE, $accounting[FinancialDirection::RECEIVABLE]); ?>
+                    <?php self::renderAccountingLane(FinancialDirection::PAYABLE, $accounting[FinancialDirection::PAYABLE]); ?>
+                </div>
             </section>
 
             <section class="safecontracts-admin-card safecontracts-table-card" aria-labelledby="safecontracts-dashboard-collector-attachments-title">
                 <div class="safecontracts-section-heading">
-                    <div>
-                        <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Collection evidence', 'safecontracts'); ?></p>
-                        <h2 id="safecontracts-dashboard-collector-attachments-title"><?php echo esc_html__('Collector attachments', 'safecontracts'); ?></h2>
-                    </div>
+                    <div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Collection evidence', 'safecontracts'); ?></p><h2 id="safecontracts-dashboard-collector-attachments-title"><?php echo esc_html__('Collector attachments', 'safecontracts'); ?></h2></div>
                 </div>
                 <?php if ($collectorAttachments === []) : ?>
                     <p><?php echo esc_html__('No collector attachments match the current dashboard scope and period.', 'safecontracts'); ?></p>
                 <?php else : ?>
                     <div class="safecontracts-collector-proof-grid">
-                        <?php foreach ($collectorAttachments as $collection) : ?>
-                            <article class="safecontracts-admin-card"><?php CollectorAttachmentView::render($collection); ?></article>
-                        <?php endforeach; ?>
+                        <?php foreach ($collectorAttachments as $collection) : ?><article class="safecontracts-admin-card"><?php CollectorAttachmentView::render($collection); ?></article><?php endforeach; ?>
                     </div>
                 <?php endif; ?>
                 <p class="description"><?php echo esc_html__('Attachments are resolved through WordPress Media and inherit the same customer/contract/accountant scope as the collection ledger. Raw filesystem paths are never exposed.', 'safecontracts'); ?></p>
@@ -216,20 +166,204 @@ final class DashboardPage
         <?php
     }
 
-    private static function kpi(string $label, string $value, bool $alert = false): void
+    /** @param list<array<string,mixed>> $contracts @return list<array<string,mixed>> */
+    private static function contractsForDirection(array $contracts, string $direction): array
     {
-        ?><article class="safecontracts-kpi<?php echo $alert ? ' safecontracts-kpi--alert' : ''; ?>"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html($value); ?></strong></article><?php
+        return array_values(array_filter(
+            $contracts,
+            static fn (array $contract): bool => (string) ($contract['financial_direction'] ?? '') === $direction
+        ));
     }
 
-    private static function money(mixed $value, string $currencyToken = ''): string
+    /** @param list<array<string,mixed>> $payments @return array<int,array{scheduled:string,settled:string,outstanding:string}> */
+    private static function paymentTotalsByContract(array $payments): array
     {
-        $amount = number_format((float) $value, 2, '.', ',');
-        $currencyToken = trim($currencyToken);
-        if ($currencyToken === '') {
-            return $amount;
+        $totals = [];
+        foreach ($payments as $payment) {
+            $contractId = (int) ($payment['contract_id'] ?? 0);
+            if ($contractId <= 0) {
+                continue;
+            }
+            $totals[$contractId] ??= ['scheduled' => '0.0000', 'settled' => '0.0000', 'outstanding' => '0.0000'];
+            $totals[$contractId]['scheduled'] = self::addMoney($totals[$contractId]['scheduled'], (string) ($payment['original_amount'] ?? '0'));
+            $totals[$contractId]['settled'] = self::addMoney($totals[$contractId]['settled'], (string) ($payment['paid_amount'] ?? '0'));
+            $totals[$contractId]['outstanding'] = self::addMoney($totals[$contractId]['outstanding'], (string) ($payment['remaining_amount'] ?? '0'));
         }
-        $locale = function_exists('get_user_locale') ? strtolower((string) get_user_locale()) : 'en_us';
-        return str_starts_with($locale, 'ar') ? $amount . ' ' . $currencyToken : $currencyToken . ' ' . $amount;
+        return $totals;
+    }
+
+    /**
+     * @param list<array<string,mixed>> $contracts
+     * @param list<array<string,mixed>> $payments
+     * @return array<string,array<string,array{contract_count:int,contract_total:string,payment_count:int,scheduled:string,settlement_count:int,settled:string,outstanding:string}>>
+     */
+    private static function accountingByDirectionAndCurrency(array $contracts, array $payments): array
+    {
+        $result = [FinancialDirection::RECEIVABLE => [], FinancialDirection::PAYABLE => []];
+        foreach ($contracts as $contract) {
+            $direction = (string) ($contract['financial_direction'] ?? '');
+            if (! isset($result[$direction])) {
+                continue;
+            }
+            $currency = strtoupper(trim((string) ($contract['currency_code'] ?? '')));
+            $currency = $currency === '' ? '—' : $currency;
+            self::ensureAccountingBucket($result[$direction], $currency);
+            $result[$direction][$currency]['contract_count']++;
+            $result[$direction][$currency]['contract_total'] = self::addMoney($result[$direction][$currency]['contract_total'], (string) ($contract['base_value'] ?? '0'));
+        }
+        foreach ($payments as $payment) {
+            $direction = (string) ($payment['financial_direction'] ?? '');
+            if (! isset($result[$direction])) {
+                continue;
+            }
+            $currency = strtoupper(trim((string) ($payment['currency_code'] ?? '')));
+            $currency = $currency === '' ? '—' : $currency;
+            self::ensureAccountingBucket($result[$direction], $currency);
+            $result[$direction][$currency]['payment_count']++;
+            $result[$direction][$currency]['scheduled'] = self::addMoney($result[$direction][$currency]['scheduled'], (string) ($payment['original_amount'] ?? '0'));
+            $paid = ContractMoney::normalizeNonNegative((string) ($payment['paid_amount'] ?? '0'));
+            if (ContractMoney::compare($paid, '0.0000') > 0) {
+                $result[$direction][$currency]['settlement_count']++;
+            }
+            $result[$direction][$currency]['settled'] = ContractMoney::add($result[$direction][$currency]['settled'], $paid);
+            $result[$direction][$currency]['outstanding'] = self::addMoney($result[$direction][$currency]['outstanding'], (string) ($payment['remaining_amount'] ?? '0'));
+        }
+        foreach ($result as &$directionRows) {
+            ksort($directionRows);
+        }
+        unset($directionRows);
+        return $result;
+    }
+
+    /** @param array<string,array{contract_count:int,contract_total:string,payment_count:int,scheduled:string,settlement_count:int,settled:string,outstanding:string}> $rows */
+    private static function ensureAccountingBucket(array &$rows, string $currency): void
+    {
+        $rows[$currency] ??= [
+            'contract_count' => 0,
+            'contract_total' => '0.0000',
+            'payment_count' => 0,
+            'scheduled' => '0.0000',
+            'settlement_count' => 0,
+            'settled' => '0.0000',
+            'outstanding' => '0.0000',
+        ];
+    }
+
+    /** @param list<array<string,mixed>> $contracts @param array<int,array{scheduled:string,settled:string,outstanding:string}> $paymentTotals */
+    private static function renderContractLane(string $direction, array $contracts, array $paymentTotals): void
+    {
+        $receivable = $direction === FinancialDirection::RECEIVABLE;
+        $type = $receivable ? 'customer' : 'supplier';
+        $title = $receivable ? __('Receivable contracts', 'safecontracts') : __('Payable contracts', 'safecontracts');
+        $description = $receivable ? __('Money customers will pay us', 'safecontracts') : __('Money we will pay suppliers', 'safecontracts');
+        $class = $receivable ? 'receivable' : 'payable';
+        ?>
+        <section class="safecontracts-admin-card safecontracts-direction-column safecontracts-direction-column--<?php echo esc_attr($class); ?>">
+            <div class="safecontracts-direction-column__heading">
+                <div><h2><?php echo esc_html($title); ?></h2><p><?php echo esc_html($description); ?></p></div>
+                <a class="button safecontracts-payment-action--<?php echo esc_attr($class); ?>" href="<?php echo esc_url(self::contractsTypeUrl($type)); ?>"><?php echo esc_html__('View all', 'safecontracts'); ?></a>
+            </div>
+            <?php if ($contracts === []) : ?>
+                <p><?php echo esc_html__('No contracts in this direction match the current filters.', 'safecontracts'); ?></p>
+            <?php else : ?>
+                <div class="safecontracts-contract-card-list">
+                    <?php foreach (array_slice($contracts, 0, 25) as $contract) : ?>
+                        <?php $contractId = (int) ($contract['id'] ?? 0); $totals = $paymentTotals[$contractId] ?? ['scheduled' => '0.0000', 'settled' => '0.0000', 'outstanding' => '0.0000']; ?>
+                        <article class="safecontracts-contract-card-shell safecontracts-contract-card-shell--<?php echo esc_attr($class); ?>">
+                            <a class="safecontracts-contract-card safecontracts-contract-card--<?php echo esc_attr($class); ?>" href="<?php echo esc_url(self::contractUrl($contract)); ?>">
+                                <span class="safecontracts-contract-card__top"><strong><?php echo esc_html((string) ($contract['contract_number'] ?? '')); ?></strong><span><?php echo esc_html(self::statusLabel((string) ($contract['status'] ?? ''))); ?></span></span>
+                                <span class="safecontracts-contract-card__party"><?php echo esc_html((string) ($contract['counterparty_name'] ?? '')); ?></span>
+                                <span class="safecontracts-contract-card__metrics">
+                                    <span><small><?php echo esc_html__('Base value', 'safecontracts'); ?></small><strong><?php echo esc_html(self::money((string) ($contract['base_value'] ?? '0'), (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
+                                    <span><small><?php echo esc_html__('Scheduled total', 'safecontracts'); ?></small><strong><?php echo esc_html(self::money($totals['scheduled'], (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
+                                    <span><small><?php echo esc_html($receivable ? __('Collected', 'safecontracts') : __('Paid', 'safecontracts')); ?></small><strong><?php echo esc_html(self::money($totals['settled'], (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
+                                    <span><small><?php echo esc_html__('Outstanding', 'safecontracts'); ?></small><strong><?php echo esc_html(self::money($totals['outstanding'], (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
+                                </span>
+                            </a>
+                            <?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_SYSTEM)) : ?>
+                                <form class="safecontracts-contract-card-shell__actions" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Payments, collections, history and audit evidence will be preserved.', 'safecontracts'); ?>">
+                                    <input type="hidden" name="action" value="<?php echo esc_attr(self::ARCHIVE_ACTION); ?>">
+                                    <input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contractId); ?>">
+                                    <?php wp_nonce_field(self::ARCHIVE_ACTION . '_' . $contractId); ?>
+                                    <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
+                                </form>
+                            <?php endif; ?>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
+        <?php
+    }
+
+    /** @param array<string,array{contract_count:int,contract_total:string,payment_count:int,scheduled:string,settlement_count:int,settled:string,outstanding:string}> $rows */
+    private static function renderAccountingLane(string $direction, array $rows): void
+    {
+        $receivable = $direction === FinancialDirection::RECEIVABLE;
+        $class = $receivable ? 'receivable' : 'payable';
+        $title = $receivable ? __('Receivable totals', 'safecontracts') : __('Payable totals', 'safecontracts');
+        ?>
+        <section class="safecontracts-admin-card safecontracts-accounting-lane safecontracts-accounting-lane--<?php echo esc_attr($class); ?>">
+            <h3><?php echo esc_html($title); ?></h3>
+            <?php if ($rows === []) : ?><p><?php echo esc_html__('No accounting totals are available for this direction.', 'safecontracts'); ?></p><?php endif; ?>
+            <?php foreach ($rows as $currency => $row) : ?>
+                <div class="safecontracts-accounting-currency">
+                    <h4><?php echo esc_html($currency); ?></h4>
+                    <div class="safecontracts-accounting-card-grid">
+                        <?php self::summaryMetric(__('Contracts count', 'safecontracts'), (string) $row['contract_count']); ?>
+                        <?php self::summaryMetric(__('Base contract total', 'safecontracts'), self::money($row['contract_total'], $currency)); ?>
+                        <?php self::summaryMetric(__('Scheduled payments count', 'safecontracts'), (string) $row['payment_count']); ?>
+                        <?php self::summaryMetric(__('Scheduled total', 'safecontracts'), self::money($row['scheduled'], $currency)); ?>
+                        <?php self::summaryMetric($receivable ? __('Collections / settlements count', 'safecontracts') : __('Payments / settlements count', 'safecontracts'), (string) $row['settlement_count']); ?>
+                        <?php self::summaryMetric($receivable ? __('Collected from customers', 'safecontracts') : __('Paid to suppliers', 'safecontracts'), self::money($row['settled'], $currency)); ?>
+                        <?php self::summaryMetric(__('Outstanding', 'safecontracts'), self::money($row['outstanding'], $currency)); ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </section>
+        <?php
+    }
+
+    private static function summaryMetric(string $label, string $value): void
+    {
+        ?><article class="safecontracts-accounting-metric"><span><?php echo esc_html($label); ?></span><strong><?php echo esc_html($value); ?></strong></article><?php
+    }
+
+    /** @param array<string,mixed> $contract */
+    private static function contractUrl(array $contract): string
+    {
+        $type = (string) ($contract['counterparty_type'] ?? '') === 'supplier' ? 'supplier' : 'customer';
+        return add_query_arg([
+            'page' => ContractsPage::SLUG,
+            'counterparty_type' => $type,
+            'contract_id' => (int) ($contract['id'] ?? 0),
+        ], admin_url('admin.php'));
+    }
+
+    private static function contractsTypeUrl(string $type): string
+    {
+        return add_query_arg([
+            'page' => ContractsPage::SLUG,
+            'counterparty_type' => $type === 'supplier' ? 'supplier' : 'customer',
+        ], admin_url('admin.php'));
+    }
+
+    private static function addMoney(string $left, string $right): string
+    {
+        return ContractMoney::add(
+            ContractMoney::normalizeNonNegative($left),
+            ContractMoney::normalizeNonNegative($right)
+        );
+    }
+
+    private static function money(string $value, string $currency = ''): string
+    {
+        $normalized = ContractMoney::normalizeNonNegative($value);
+        [$whole, $fraction] = array_pad(explode('.', $normalized, 2), 2, '0000');
+        $whole = preg_replace('/\B(?=(\d{3})+(?!\d))/', ',', $whole) ?? $whole;
+        $formatted = $whole . '.' . substr(str_pad($fraction, 2, '0'), 0, 2);
+        $currency = trim($currency);
+        return $currency === '' || $currency === '—' ? $formatted : $currency . ' ' . $formatted;
     }
 
     private static function statusLabel(string $status): string

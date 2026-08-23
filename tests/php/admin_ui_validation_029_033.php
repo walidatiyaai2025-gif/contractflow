@@ -39,7 +39,7 @@ sc_p6v5_assert(str_contains($collectionSql, 'c.accountant_user_id = 42') && ! st
 $collectionSource = file_get_contents((string) (new ReflectionClass(CollectionsPage::class))->getFileName()) ?: '';
 sc_p6v5_assert(str_contains($collectionSource, 'Capabilities::MANAGE_COLLECTIONS') && str_contains($collectionSource, 'check_admin_referer'), 'SC-P6-029 collection writes require capability and nonce');
 sc_p6v5_assert(str_contains($collectionSource, 'CollectionService') && str_contains($collectionSource, 'PaymentMethodRepository'), 'SC-P6-029 collections delegate writes and payment-method authority to domain boundaries');
-sc_p6v5_assert(str_contains($collectionSource, 'Proof media ID (optional)') && str_contains($collectionSource, 'payment_method_id'), 'SC-P6-029 proof remains optional while payment method remains explicit');
+sc_p6v5_assert(str_contains($collectionSource, 'Collection / receipt files') && str_contains($collectionSource, 'payment_method_id'), 'SC-P6-029 multi-file proof remains optional while payment method remains explicit');
 sc_p6v5_assert(! str_contains($collectionSource, '$wpdb'), 'SC-P6-029 collection page contains no presentation-layer SQL');
 
 // SC-P6-030 — Follow-up screen: operational actions stay in FollowUpService and cannot rewrite due date.

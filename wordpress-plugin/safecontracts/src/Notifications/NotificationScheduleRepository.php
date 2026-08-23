@@ -194,6 +194,42 @@ final class NotificationScheduleRepository
         }
     }
 
+    public function hasProcessingForRule(int $ruleId): bool
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        if ($ruleId <= 0) {
+            return false;
+        }
+        $table = $wpdb->prefix . 'safecontracts_notification_schedule';
+        $count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table} WHERE rule_id = %d AND status = 'processing'",
+            $ruleId
+        ));
+        return (int) $count > 0;
+    }
+
+    public function deleteForRule(int $ruleId): int
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        if ($ruleId <= 0) {
+            return 0;
+        }
+        if ($this->hasProcessingForRule($ruleId)) {
+            throw new RuntimeException('Notification rule has an in-flight schedule dispatch. Retry after it finishes.');
+        }
+        $table = $wpdb->prefix . 'safecontracts_notification_schedule';
+        $deleted = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$table} WHERE rule_id = %d",
+            $ruleId
+        ));
+        if ($deleted === false) {
+            throw new RuntimeException('Unable to clear scheduled notifications for the rule.');
+        }
+        return (int) $deleted;
+    }
+
     /** @return list<string> */
     public static function statuses(): array
     {

@@ -8,6 +8,7 @@ require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontract
 use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\CompleteArabicDefaults;
 use SafeContracts\Translations\ControlledInputArabicDefaults;
+use SafeContracts\Translations\FeatureArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
 use SafeContracts\Translations\NavigationArabicDefaults;
 use SafeContracts\Translations\ProductionUxArabicDefaults;
@@ -47,6 +48,9 @@ foreach ($catalog as $source => $row) {
     }
     if ($arabic === $source) {
         $arabic = CompleteArabicDefaults::default($source);
+    }
+    if ($arabic === $source) {
+        $arabic = FeatureArabicDefaults::default($source);
     }
     if (trim($arabic) === '' || $arabic === $source) {
         $missing[] = $source;
