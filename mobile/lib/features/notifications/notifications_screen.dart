@@ -41,6 +41,7 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
       builder: (context, child) {
         final controller = widget.controller;
         final page = controller.currentPage;
+
         if (controller.state == NotificationsLoadState.loading && page == null) {
           return SafeContractsStateView(
             kind: MobileStateKind.loading,
@@ -66,17 +67,14 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
           );
         }
 
-        final unreadCount = page.notifications.where((notification) {
-          return !(notification.isRead || controller.isRead(notification.id));
-        }).length;
-        final readCount = page.notifications.length - unreadCount;
-        final urgent = _firstUnread(page.notifications, controller);
-        final visible = page.notifications.where((notification) {
-          final read = notification.isRead || controller.isRead(notification.id);
+        final unread = page.notifications.where((item) => !_isRead(item)).length;
+        final read = page.notifications.length - unread;
+        final urgent = _firstUnread(page.notifications);
+        final visible = page.notifications.where((item) {
           return switch (_filter) {
             _NotificationFilter.all => true,
-            _NotificationFilter.unread => !read,
-            _NotificationFilter.read => read,
+            _NotificationFilter.unread => !_isRead(item),
+            _NotificationFilter.read => _isRead(item),
           };
         }).toList(growable: false);
 
@@ -88,8 +86,8 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 28),
               children: [
-                _NotificationCenterHeading(
-                  unreadCount: unreadCount,
+                _PremiumNotificationHeader(
+                  unread: unread,
                   isArabic: l10n.isArabic,
                 ),
                 if (controller.state == NotificationsLoadState.loading) ...[
@@ -99,13 +97,13 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                 if (controller.state == NotificationsLoadState.error &&
                     controller.errorMessage != null) ...[
                   const SizedBox(height: 10),
-                  _InlineRefreshWarning(
+                  _RefreshWarning(
                     message: l10n.rawMessage(controller.errorMessage!),
                   ),
                 ],
                 if (urgent != null) ...[
                   const SizedBox(height: 14),
-                  _UrgentNotificationCard(
+                  _UrgentCard(
                     notification: urgent,
                     paymentLabel: l10n.paymentNumber(urgent.paymentId),
                     isArabic: l10n.isArabic,
@@ -113,14 +111,15 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                _NotificationsSummary(
+                _NotificationOverview(
                   total: page.notifications.length,
-                  unread: unreadCount,
-                  read: readCount,
+                  unread: unread,
+                  read: read,
                   isArabic: l10n.isArabic,
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: SafeContractsSectionTitle(
@@ -141,55 +140,46 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                _FilterBar(
+                _Filters(
                   selected: _filter,
-                  unreadCount: unreadCount,
-                  readCount: readCount,
+                  unread: unread,
+                  read: read,
                   isArabic: l10n.isArabic,
-                  onChanged: (filter) => setState(() => _filter = filter),
+                  onChanged: (value) => setState(() => _filter = value),
                 ),
                 const SizedBox(height: 12),
                 if (visible.isEmpty)
                   SafeContractsSurface(
                     elevated: false,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.notifications_none_rounded,
-                            size: 38,
-                            color: SafeContractsVisual.muted,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            l10n.isArabic
-                                ? 'لا توجد إشعارات ضمن هذا الفلتر.'
-                                : 'No notifications match this filter.',
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.notifications_none_rounded,
+                          size: 38,
+                          color: SafeContractsVisual.muted,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.isArabic
+                              ? 'لا توجد إشعارات ضمن هذا الفلتر.'
+                              : 'No notifications match this filter.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   )
                 else
                   ...visible.map(
-                    (notification) {
-                      final read = notification.isRead ||
-                          controller.isRead(notification.id);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _NotificationCard(
-                          notification: notification,
-                          paymentLabel:
-                              l10n.paymentNumber(notification.paymentId),
-                          read: read,
-                          isArabic: l10n.isArabic,
-                          onTap: () =>
-                              unawaited(_openNotification(notification)),
-                        ),
-                      );
-                    },
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _NotificationCard(
+                        notification: item,
+                        paymentLabel: l10n.paymentNumber(item.paymentId),
+                        read: _isRead(item),
+                        isArabic: l10n.isArabic,
+                        onTap: () => unawaited(_openNotification(item)),
+                      ),
+                    ),
                   ),
                 const SizedBox(height: 4),
                 _PagingControls(controller: controller),
@@ -201,40 +191,38 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Future<void> _openNotification(
-    SafeContractsNotification notification,
-  ) async {
+  bool _isRead(SafeContractsNotification item) =>
+      item.isRead || widget.controller.isRead(item.id);
+
+  SafeContractsNotification? _firstUnread(
+    List<SafeContractsNotification> notifications,
+  ) {
+    for (final item in notifications) {
+      if (!_isRead(item)) return item;
+    }
+    return null;
+  }
+
+  Future<void> _openNotification(SafeContractsNotification notification) async {
     final link = await widget.controller.openNotification(notification);
     if (!mounted || link == null) return;
     widget.onOpenDeepLink?.call(link);
   }
 }
 
-SafeContractsNotification? _firstUnread(
-  List<SafeContractsNotification> notifications,
-  NotificationsController controller,
-) {
-  for (final notification in notifications) {
-    if (!(notification.isRead || controller.isRead(notification.id))) {
-      return notification;
-    }
-  }
-  return null;
-}
-
-final class _NotificationCenterHeading extends StatelessWidget {
-  const _NotificationCenterHeading({
-    required this.unreadCount,
+final class _PremiumNotificationHeader extends StatelessWidget {
+  const _PremiumNotificationHeader({
+    required this.unread,
     required this.isArabic,
   });
 
-  final int unreadCount;
+  final int unread;
   final bool isArabic;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: SafeContractsVisual.premiumHeaderGradient,
         borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
@@ -261,7 +249,7 @@ final class _NotificationCenterHeading extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                       ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   isArabic
                       ? 'تنبيهات العقود والمدفوعات في مكان واحد'
@@ -274,11 +262,11 @@ final class _NotificationCenterHeading extends StatelessWidget {
             ),
           ),
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: unreadCount > 0
-                  ? SafeContractsVisual.red.withValues(alpha: 0.86)
+              color: unread > 0
+                  ? SafeContractsVisual.red.withValues(alpha: 0.9)
                   : Colors.white.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
@@ -289,10 +277,9 @@ final class _NotificationCenterHeading extends StatelessWidget {
                   child: Icon(
                     Icons.notifications_active_outlined,
                     color: Colors.white,
-                    size: 23,
                   ),
                 ),
-                if (unreadCount > 0)
+                if (unread > 0)
                   PositionedDirectional(
                     top: -4,
                     end: -4,
@@ -307,12 +294,12 @@ final class _NotificationCenterHeading extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '$unreadCount',
+                        '$unread',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: SafeContractsVisual.redDeep,
-                          fontWeight: FontWeight.w900,
                           fontSize: 11,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
@@ -326,8 +313,8 @@ final class _NotificationCenterHeading extends StatelessWidget {
   }
 }
 
-final class _UrgentNotificationCard extends StatelessWidget {
-  const _UrgentNotificationCard({
+final class _UrgentCard extends StatelessWidget {
+  const _UrgentCard({
     required this.notification,
     required this.paymentLabel,
     required this.isArabic,
@@ -385,7 +372,7 @@ final class _UrgentNotificationCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _displayTemplate(notification.templateCode),
+                      _template(notification.templateCode),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -404,7 +391,6 @@ final class _UrgentNotificationCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
               const Icon(
                 Icons.chevron_right_rounded,
                 color: SafeContractsVisual.muted,
@@ -417,8 +403,8 @@ final class _UrgentNotificationCard extends StatelessWidget {
   }
 }
 
-final class _NotificationsSummary extends StatelessWidget {
-  const _NotificationsSummary({
+final class _NotificationOverview extends StatelessWidget {
+  const _NotificationOverview({
     required this.total,
     required this.unread,
     required this.read,
@@ -462,7 +448,7 @@ final class _NotificationsSummary extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: _SummaryBar(
+                child: _OverviewBar(
                   value: unread,
                   factor: unreadFactor,
                   label: isArabic ? 'غير مقروء' : 'Unread',
@@ -471,7 +457,7 @@ final class _NotificationsSummary extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: _SummaryBar(
+                child: _OverviewBar(
                   value: read,
                   factor: readFactor,
                   label: isArabic ? 'تمت القراءة' : 'Read',
@@ -486,8 +472,8 @@ final class _NotificationsSummary extends StatelessWidget {
   }
 }
 
-final class _SummaryBar extends StatelessWidget {
-  const _SummaryBar({
+final class _OverviewBar extends StatelessWidget {
+  const _OverviewBar({
     required this.value,
     required this.factor,
     required this.label,
@@ -501,7 +487,7 @@ final class _SummaryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = 38 + (factor.clamp(0.0, 1.0) * 42);
+    final height = 38.0 + factor.clamp(0.0, 1.0).toDouble() * 42.0;
     return Column(
       children: [
         Text(
@@ -520,10 +506,7 @@ final class _SummaryBar extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                color.withValues(alpha: 0.72),
-                color,
-              ],
+              colors: [color.withValues(alpha: 0.72), color],
             ),
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(12),
@@ -544,18 +527,18 @@ final class _SummaryBar extends StatelessWidget {
   }
 }
 
-final class _FilterBar extends StatelessWidget {
-  const _FilterBar({
+final class _Filters extends StatelessWidget {
+  const _Filters({
     required this.selected,
-    required this.unreadCount,
-    required this.readCount,
+    required this.unread,
+    required this.read,
     required this.isArabic,
     required this.onChanged,
   });
 
   final _NotificationFilter selected;
-  final int unreadCount;
-  final int readCount;
+  final int unread;
+  final int read;
   final bool isArabic;
   final ValueChanged<_NotificationFilter> onChanged;
 
@@ -565,36 +548,37 @@ final class _FilterBar extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _filterChip(
-            value: _NotificationFilter.all,
-            label: isArabic ? 'الكل' : 'All',
-            icon: Icons.filter_list_rounded,
+          _chip(
+            _NotificationFilter.all,
+            isArabic ? 'الكل' : 'All',
+            Icons.filter_list_rounded,
+            SafeContractsVisual.navy,
           ),
           const SizedBox(width: 8),
-          _filterChip(
-            value: _NotificationFilter.unread,
-            label: isArabic ? 'جديد $unreadCount' : 'New $unreadCount',
-            icon: Icons.notifications_active_outlined,
-            accent: SafeContractsVisual.red,
+          _chip(
+            _NotificationFilter.unread,
+            isArabic ? 'جديد $unread' : 'New $unread',
+            Icons.notifications_active_outlined,
+            SafeContractsVisual.red,
           ),
           const SizedBox(width: 8),
-          _filterChip(
-            value: _NotificationFilter.read,
-            label: isArabic ? 'مقروء $readCount' : 'Read $readCount',
-            icon: Icons.done_all_rounded,
-            accent: SafeContractsVisual.green,
+          _chip(
+            _NotificationFilter.read,
+            isArabic ? 'مقروء $read' : 'Read $read',
+            Icons.done_all_rounded,
+            SafeContractsVisual.green,
           ),
         ],
       ),
     );
   }
 
-  Widget _filterChip({
-    required _NotificationFilter value,
-    required String label,
-    required IconData icon,
-    Color accent = SafeContractsVisual.navy,
-  }) {
+  Widget _chip(
+    _NotificationFilter value,
+    String label,
+    IconData icon,
+    Color accent,
+  ) {
     final active = selected == value;
     return FilterChip(
       selected: active,
@@ -638,7 +622,7 @@ final class _NotificationCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+          padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
             border: Border.all(
               color: read
@@ -675,7 +659,7 @@ final class _NotificationCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            _displayTemplate(notification.templateCode),
+                            _template(notification.templateCode),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context)
@@ -707,16 +691,16 @@ final class _NotificationCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 7),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
+                      spacing: 9,
+                      runSpacing: 5,
                       children: [
-                        _MetaText(
+                        _Meta(
                           icon: Icons.payments_outlined,
                           label: paymentLabel,
                         ),
-                        _MetaText(
+                        _Meta(
                           icon: Icons.schedule_outlined,
                           label: notification.scheduledFor,
                         ),
@@ -725,7 +709,6 @@ final class _NotificationCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 4),
               const Padding(
                 padding: EdgeInsets.only(top: 7),
                 child: Icon(
@@ -741,8 +724,8 @@ final class _NotificationCard extends StatelessWidget {
   }
 }
 
-final class _MetaText extends StatelessWidget {
-  const _MetaText({required this.icon, required this.label});
+final class _Meta extends StatelessWidget {
+  const _Meta({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -765,8 +748,8 @@ final class _MetaText extends StatelessWidget {
   }
 }
 
-final class _InlineRefreshWarning extends StatelessWidget {
-  const _InlineRefreshWarning({required this.message});
+final class _RefreshWarning extends StatelessWidget {
+  const _RefreshWarning({required this.message});
 
   final String message;
 
@@ -790,10 +773,7 @@ final class _InlineRefreshWarning extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            child: Text(message, style: Theme.of(context).textTheme.bodySmall),
           ),
         ],
       ),
@@ -853,13 +833,12 @@ final class _PagingControls extends StatelessWidget {
   }
 }
 
-String _displayTemplate(String code) {
-  final trimmed = code.trim();
-  if (trimmed.isEmpty) return 'Notification';
-  final words = trimmed
+String _template(String code) {
+  final value = code
+      .trim()
       .replaceAll(RegExp(r'[_\-]+'), ' ')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
-  if (words.isEmpty) return trimmed;
-  return words[0].toUpperCase() + words.substring(1);
+  if (value.isEmpty) return 'Notification';
+  return value[0].toUpperCase() + value.substring(1);
 }
