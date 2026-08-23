@@ -319,14 +319,12 @@ final class _OrderChip extends StatelessWidget {
       selectedColor: SafeContractsVisual.navySoft,
       showCheckmark: false,
       side: BorderSide(
-        color: selected
-            ? SafeContractsVisual.navy
-            : SafeContractsVisual.outline,
+        color:
+            selected ? SafeContractsVisual.navy : SafeContractsVisual.outline,
       ),
       labelStyle: TextStyle(
-        color: selected
-            ? SafeContractsVisual.navyDeep
-            : SafeContractsVisual.muted,
+        color:
+            selected ? SafeContractsVisual.navyDeep : SafeContractsVisual.muted,
         fontWeight: FontWeight.w800,
       ),
     );
@@ -567,8 +565,7 @@ final class _CustomerCard extends StatelessWidget {
                       <String>[
                         if (customer.internalCode != null)
                           customer.internalCode!,
-                        if (customer.contactName != null)
-                          customer.contactName!,
+                        if (customer.contactName != null) customer.contactName!,
                         if (customer.phone != null) customer.phone!,
                       ].join(' • '),
                       maxLines: 1,
@@ -708,9 +705,8 @@ final class _CustomerDetailPane extends StatelessWidget {
 
     final customer = controller.selectedCustomer;
     return SafeContractsSurface(
-      margin: showBack
-          ? const EdgeInsets.fromLTRB(14, 0, 14, 12)
-          : EdgeInsets.zero,
+      margin:
+          showBack ? const EdgeInsets.fromLTRB(14, 0, 14, 12) : EdgeInsets.zero,
       padding: EdgeInsets.zero,
       child: ListView(
         padding: const EdgeInsets.all(16),
@@ -770,10 +766,11 @@ final class _CustomerDetailPane extends StatelessWidget {
                       children: [
                         Text(
                           customer.name,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                         ),
                         const SizedBox(height: 3),
                         Text(
@@ -837,7 +834,8 @@ final class _CustomerDetailPane extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      l10n.t('Only server-authorized customer fields are shown.'),
+                      l10n.t(
+                          'Only server-authorized customer fields are shown.'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: SafeContractsVisual.navyDeep,
                           ),
