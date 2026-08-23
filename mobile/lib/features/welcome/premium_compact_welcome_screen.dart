@@ -94,7 +94,8 @@ final class _PremiumCompactWelcomeScreenState
                             icon: const Icon(Icons.login_rounded),
                             label: Text(
                               content.signInLabel.resolve(widget.languageCode),
-                              style: const TextStyle(fontWeight: FontWeight.w900),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w900),
                             ),
                           ),
                           SizedBox(height: compact ? 7 : 9),
@@ -113,8 +114,10 @@ final class _PremiumCompactWelcomeScreenState
                             ),
                             icon: const Icon(Icons.auto_awesome_outlined),
                             label: Text(
-                              content.learnMoreLabel.resolve(widget.languageCode),
-                              style: const TextStyle(fontWeight: FontWeight.w800),
+                              content.learnMoreLabel
+                                  .resolve(widget.languageCode),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800),
                             ),
                           ),
                           if (widget.controller.state ==
@@ -165,7 +168,8 @@ final class _PremiumCompactWelcomeScreenState
             const SizedBox(height: 16),
             Text(
               content.summary.resolve(widget.languageCode),
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.55),
+              style:
+                  Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.55),
             ),
             if (content.phones.isNotEmpty) ...[
               const SizedBox(height: 14),
@@ -346,7 +350,8 @@ final class _HeroCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(999),
@@ -385,7 +390,8 @@ final class _FinanceSculpture extends StatelessWidget {
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          for (final item in const <({double left, double height, double width})>[
+          for (final item
+              in const <({double left, double height, double width})>[
             (left: 12, height: 52, width: 34),
             (left: 60, height: 78, width: 34),
             (left: 108, height: 126, width: 36),
