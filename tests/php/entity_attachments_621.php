@@ -74,7 +74,7 @@ $GLOBALS['sc_test_titles'][902] = 'Appendix A.pdf';
 
 $GLOBALS['sc_test_result_queue'] = [[[
     'accountant_user_id' => '42', 'entity_is_archived' => '0', 'parent_is_archived' => '0',
-]], []];
+]], [], []];
 $service->attachMany(EntityAttachmentService::CONTRACT, 501, [901, 902, 902]);
 $writes = implode("\n", array_slice($GLOBALS['sc_test_queries'], -4));
 sc_att_assert(substr_count($writes, 'wp_safecontracts_entity_attachments') === 2, 'multi-file contract linking deduplicates media IDs');
@@ -82,7 +82,7 @@ sc_att_assert(str_contains($writes, 'wp_safecontracts_contract_attachments'), 'c
 
 $GLOBALS['sc_test_result_queue'] = [[[
     'accountant_user_id' => '42', 'entity_is_archived' => '0', 'parent_is_archived' => '0',
-]], [[
+]], [], [[
     'id' => '1', 'entity_type' => 'collection', 'entity_id' => '700', 'media_id' => '901', 'label' => 'Receipt', 'display_order' => '0', 'created_by' => '42', 'created_at' => '2026-08-23 10:00:00',
 ]]];
 $service->attachMany(EntityAttachmentService::COLLECTION, 700, [901]);
