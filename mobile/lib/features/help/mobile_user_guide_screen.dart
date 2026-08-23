@@ -199,6 +199,17 @@ _GuideEntry? _entryFor(MobileDestination destination) {
           'Open the related customer, contract or payment list when you need the source records.',
         ],
       ),
+    MobileDestination.dashboardTwo => const _GuideEntry(
+        destination: MobileDestination.dashboardTwo,
+        title: 'Dashboard Two',
+        icon: Icons.dashboard_customize_rounded,
+        purpose:
+            'Dashboard Two provides the premium executive view across customer and supplier contracts using the same authorized server data.',
+        steps: <String>[
+          'Review the all-contract total, contract mix and financial pulse for the current scope.',
+          'Open recent contract activity to use the premium contract details view with payments and attachments.',
+        ],
+      ),
     MobileDestination.customers => const _GuideEntry(
         destination: MobileDestination.customers,
         title: 'Customers',
