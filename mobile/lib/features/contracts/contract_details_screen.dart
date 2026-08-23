@@ -344,7 +344,8 @@ final class _ReadyContractDetails extends StatelessWidget {
                 const SizedBox(width: 9),
                 Expanded(
                   child: Text(
-                    l10n.t('This contract is read-only for the current session.'),
+                    l10n.t(
+                        'This contract is read-only for the current session.'),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -442,7 +443,10 @@ final class _ContractHero extends StatelessWidget {
                             contract.displayCounterparty,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -452,7 +456,10 @@ final class _ContractHero extends StatelessWidget {
                             contract.contractNumber,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
                                   color: Colors.white.withValues(alpha: 0.74),
                                 ),
                           ),
@@ -505,7 +512,10 @@ final class _ContractHero extends StatelessWidget {
                           children: [
                             Text(
                               isArabic ? 'قيمة العقد' : 'Contract value',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
                                     color: Colors.white.withValues(alpha: 0.68),
                                   ),
                             ),
