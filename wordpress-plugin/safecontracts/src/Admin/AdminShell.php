@@ -73,6 +73,7 @@ final class AdminShell
         }
         ?>
         <div class="wrap safecontracts-admin-shell" dir="auto">
+            <span class="screen-reader-text" aria-hidden="true"><?php echo esc_html__('Safe Contracts dashboard content', 'safecontracts'); ?></span>
             <main class="safecontracts-admin-shell__content safecontracts-admin-shell__content--dashboard">
                 <?php if (! AdminNavigationGroups::renderRequestedGroup()) : ?>
                     <?php DashboardV2Page::renderContent(); ?>
