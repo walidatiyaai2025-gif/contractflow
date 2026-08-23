@@ -511,7 +511,8 @@ final class _BootstrapViewState extends State<_BootstrapView> {
                             const TextStyle(color: SafeContractsVisual.muted),
                       ),
                       const SizedBox(height: 18),
-                      if (widget.controller.state == MobileBootstrapState.idle ||
+                      if (widget.controller.state ==
+                              MobileBootstrapState.idle ||
                           widget.controller.state ==
                               MobileBootstrapState.loading)
                         const CircularProgressIndicator()
