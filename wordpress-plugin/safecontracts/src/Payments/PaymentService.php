@@ -42,6 +42,7 @@ final class PaymentService
         if ($amount === '0.0000') {
             throw new InvalidArgumentException('Payment original amount must be greater than zero.');
         }
+        $this->assertCreateWithinContractValue($contract, $amount);
 
         $actorId = get_current_user_id();
         $sequenceNo = (int) ($input['sequence_no'] ?? 0);
@@ -148,6 +149,9 @@ final class PaymentService
         if (ContractMoney::compare($paid, '0.0000') > 0 && ContractMoney::compare($amount, $original) !== 0) {
             throw new DomainException('Payment original amount cannot change after settlement activity exists.');
         }
+        if (ContractMoney::compare($amount, $original) !== 0) {
+            $this->assertEditWithinContractValue($payment, $original, $amount);
+        }
         $remaining = ContractMoney::compare($paid, '0.0000') === 0 ? $amount : ContractMoney::normalizeNonNegative($payment['remaining_amount']);
         $actorId = get_current_user_id();
         $this->repository->updateEditable($paymentId, $reference, $due, $expected, $amount, $remaining, $actorId);
@@ -209,6 +213,49 @@ final class PaymentService
     public function isOverdue(int $paymentId, ?DateTimeImmutable $today = null): bool
     {
         return $this->temporalStatus($paymentId, $today) === PaymentStatus::OVERDUE;
+    }
+
+    /** @param array<string,mixed> $contract */
+    private function assertCreateWithinContractValue(array $contract, string $amount): void
+    {
+        if (($contract['base_value'] ?? null) === null || ($contract['scheduled_total'] ?? null) === null) {
+            return;
+        }
+        $contractValue = ContractMoney::normalizeNonNegative((string) $contract['base_value']);
+        $scheduled = ContractMoney::normalizeNonNegative((string) $contract['scheduled_total']);
+        $projected = ContractMoney::add($scheduled, $amount);
+        if (ContractMoney::compare($projected, $contractValue) <= 0) {
+            return;
+        }
+        $available = ContractMoney::compare($scheduled, $contractValue) >= 0
+            ? '0.0000'
+            : ContractMoney::subtract($contractValue, $scheduled);
+        throw new DomainException(
+            "Scheduled payments cannot exceed the contract value. Contract value: {$contractValue}; already scheduled: {$scheduled}; maximum additional amount: {$available}."
+        );
+    }
+
+    /** @param array<string,mixed> $payment */
+    private function assertEditWithinContractValue(array $payment, string $currentAmount, string $newAmount): void
+    {
+        if (($payment['contract_base_value'] ?? null) === null || ($payment['contract_scheduled_total'] ?? null) === null) {
+            return;
+        }
+        $contractValue = ContractMoney::normalizeNonNegative((string) $payment['contract_base_value']);
+        $scheduled = ContractMoney::normalizeNonNegative((string) $payment['contract_scheduled_total']);
+        $otherScheduled = ContractMoney::compare($scheduled, $currentAmount) >= 0
+            ? ContractMoney::subtract($scheduled, $currentAmount)
+            : '0.0000';
+        $projected = ContractMoney::add($otherScheduled, $newAmount);
+        if (ContractMoney::compare($projected, $contractValue) <= 0) {
+            return;
+        }
+        $available = ContractMoney::compare($otherScheduled, $contractValue) >= 0
+            ? '0.0000'
+            : ContractMoney::subtract($contractValue, $otherScheduled);
+        throw new DomainException(
+            "Scheduled payments cannot exceed the contract value. Contract value: {$contractValue}; other scheduled payments: {$otherScheduled}; maximum value for this payment: {$available}."
+        );
     }
 
     /** @return array<string,mixed> */
