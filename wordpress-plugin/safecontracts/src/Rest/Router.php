@@ -37,6 +37,7 @@ final class Router
 
         PaymentMethodsController::register();
         DataController::register();
+        ContractPresentationController::register();
         FinanceController::register();
         DashboardController::register();
         MobileConfigController::register();
