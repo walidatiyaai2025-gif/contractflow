@@ -139,6 +139,7 @@ $supplierContractId = (new CounterpartyContractService())->create([
     'counterparty_type' => 'supplier',
     'counterparty_id' => 3101,
     'currency_code' => 'KWD',
+    'base_value' => '500.00',
 ]);
 sc_p11_assert($supplierContractId === 4101, 'Supplier contract is created as a real contract counterparty');
 $supplierContractSql = (string) end($GLOBALS['sc_test_queries']);
@@ -153,6 +154,7 @@ $customerContractId = (new CounterpartyContractService())->create([
     'counterparty_type' => 'customer',
     'counterparty_id' => 2101,
     'currency_code' => 'USD',
+    'base_value' => '750.00',
 ]);
 sc_p11_assert($customerContractId === 4102, 'Customer contract remains supported by explicit counterparty model');
 $customerContractSql = (string) end($GLOBALS['sc_test_queries']);
