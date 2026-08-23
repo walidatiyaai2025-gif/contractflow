@@ -10,11 +10,13 @@ use SafeContracts\Contracts\ContractArchiveService;
 use SafeContracts\Contracts\ContractService;
 use SafeContracts\Contracts\ContractStatus;
 use SafeContracts\Counterparties\CounterpartyType;
+use SafeContracts\Payments\FinancialDirection;
 use SafeContracts\Payments\PaymentRepository;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Settings\GeneralSettings;
 use SafeContracts\Suppliers\SupplierService;
 use SafeContracts\Suppliers\SupplierStatus;
+use SafeContracts\Support\MoneyFormatter;
 use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
@@ -237,8 +239,8 @@ final class ContractsPage
                     <?php if (current_user_can(Capabilities::VIEW_PAYABLES) || current_user_can(Capabilities::VIEW_RECEIVABLES)) : ?><a class="button" href="<?php echo esc_url(add_query_arg(['page' => FinancePage::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Finance', 'safecontracts'); ?></a><?php endif; ?>
                 </div>
             </div>
-            <?php AdminPeriodFilter::render(self::SLUG, $filters, $selectedId > 0 ? ['contract_id' => $selectedId] : []); ?>
-            <p class="description"><?php echo esc_html__('Contract period filtering uses the contract start date, falling back to the record creation date when no start date exists.', 'safecontracts'); ?></p>
+            <?php self::renderFilters($filters, $selectedId); ?>
+            <p class="description"><?php echo esc_html(self::text('The year filter uses the complete calendar year and contract start date, falling back to record creation date when no start date exists.', 'فلتر السنة يستخدم السنة الميلادية كاملة وتاريخ بداية العقد، أو تاريخ إنشاء السجل إذا لم يوجد تاريخ بداية.')); ?></p>
             <?php if ($status === 'bulk_assigned') : ?>
                 <div class="notice notice-success inline"><p><?php echo esc_html(sprintf(__('Responsible accountant assigned to %1$d contract(s). %2$d contract(s) were skipped because they were no longer eligible.', 'safecontracts'), $bulkAssigned, $bulkSkipped)); ?></p></div>
             <?php elseif ($status === 'bulk_invalid') : ?>
@@ -265,6 +267,7 @@ final class ContractsPage
                 <?php endif; ?>
             <?php endif; ?>
             <div class="safecontracts-split-layout">
+                <?php if ($contracts !== []) : ?>
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th><th><?php echo esc_html__('Direction', 'safecontracts'); ?></th><th><?php echo esc_html__('Currency', 'safecontracts'); ?></th><th><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th><th><?php echo esc_html__('Scheduled total', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($contracts as $contract) : ?>
@@ -277,7 +280,7 @@ final class ContractsPage
                         $addPaymentUrl = add_query_arg(['page' => PaymentsPage::SLUG, 'contract_id' => $contractId], admin_url('admin.php'));
                         ?>
                         <tr>
-                            <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => $contractId], admin_url('admin.php'))); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><?php echo ! empty($contract['is_archived']) ? ' · ' . esc_html__('Archived', 'safecontracts') : ''; ?></td>
+                            <td><a href="<?php echo esc_url(self::contractUrl($contractId, $filters)); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><?php echo ! empty($contract['is_archived']) ? ' · ' . esc_html__('Archived', 'safecontracts') : ''; ?></td>
                             <td><strong><?php echo esc_html((string) ($contract['counterparty_name'] ?? '')); ?></strong><br><small><?php echo esc_html(self::counterpartyTypeLabel((string) ($contract['counterparty_type'] ?? ''))); ?></small></td>
                             <td><span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr($directionClass); ?>"><?php echo esc_html(self::directionLabel($direction)); ?></span></td>
                             <td><?php echo esc_html((string) ($contract['currency_code'] ?: '—')); ?></td>
@@ -285,11 +288,14 @@ final class ContractsPage
                             <td><?php echo esc_html(self::statusLabel((string) $contract['status'])); ?></td>
                             <td><?php echo esc_html(self::money($contract['base_value'], (string) ($contract['currency_code'] ?? ''))); ?></td>
                             <td><strong><?php echo esc_html(self::money($scheduledTotal, (string) ($contract['currency_code'] ?? ''))); ?></strong></td>
-                            <td><div class="safecontracts-dashboard-table-actions"><a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => $contractId], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_PAYMENTS)) : ?><a class="button button-small safecontracts-payment-action safecontracts-payment-action--<?php echo esc_attr($directionClass); ?>" href="<?php echo esc_url($addPaymentUrl); ?>"><?php echo esc_html__('Add payment', 'safecontracts'); ?></a><?php endif; ?><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_SYSTEM)) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Payments, collections, history and audit evidence will be preserved.', 'safecontracts'); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contractId); ?>"><?php wp_nonce_field(self::DELETE_ACTION . '_' . $contractId); ?><button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button></form><?php endif; ?></div></td>
+                            <td><div class="safecontracts-dashboard-table-actions"><a class="button button-small" href="<?php echo esc_url(self::contractUrl($contractId, $filters)); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_PAYMENTS)) : ?><a class="button button-small safecontracts-payment-action safecontracts-payment-action--<?php echo esc_attr($directionClass); ?>" href="<?php echo esc_url($addPaymentUrl); ?>"><?php echo esc_html__('Add payment', 'safecontracts'); ?></a><?php endif; ?><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_SYSTEM)) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Payments, collections, history and audit evidence will be preserved.', 'safecontracts'); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contractId); ?>"><?php wp_nonce_field(self::DELETE_ACTION . '_' . $contractId); ?><button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button></form><?php endif; ?></div></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody></table>
                 </section>
+                <?php else : ?>
+                    <p><?php echo esc_html(self::text('No contracts match the selected filters.', 'لا توجد عقود مطابقة للفلاتر المحددة.')); ?></p>
+                <?php endif; ?>
                 <?php if ((! $selected && current_user_can(Capabilities::CREATE_CONTRACTS)) || ($selected && (current_user_can(Capabilities::EDIT_CONTRACTS) || $canAssignContracts))) : ?>
                 <section class="safecontracts-admin-card safecontracts-contract-editor">
                     <h2><?php echo $selected ? esc_html__('Contract details', 'safecontracts') : esc_html__('Create contract', 'safecontracts'); ?></h2>
@@ -313,7 +319,7 @@ final class ContractsPage
                         <p class="description"><?php echo esc_html__('Customer automatically means Accounts Receivable. Supplier automatically means Accounts Payable. This direction is determined by the backend and cannot be overridden by the form.', 'safecontracts'); ?></p>
                         <?php if (current_user_can(Capabilities::EDIT_CONTRACTS) || ! $selected) : ?>
                             <p><label><?php echo esc_html__('Contract currency', 'safecontracts'); ?><select class="widefat" name="currency_code" required><option value=""><?php echo esc_html__('Select currency', 'safecontracts'); ?></option><?php foreach ($currencyChoices as $currencyChoice) : ?><option value="<?php echo esc_attr($currencyChoice); ?>" <?php selected(strtoupper($selectedCurrency), $currencyChoice); ?>><?php echo esc_html($currencyChoice); ?></option><?php endforeach; ?></select></label></p>
-                            <p><label><?php echo esc_html__('Base contract value', 'safecontracts'); ?><input class="widefat" type="number" min="0" step="0.01" inputmode="decimal" name="base_value" required value="<?php echo esc_attr((string) ($selected['base_value'] ?? '0.00')); ?>"></label></p>
+                            <p><label><?php echo esc_html__('Base contract value', 'safecontracts'); ?><input class="widefat" type="number" min="0" step="0.01" inputmode="decimal" name="base_value" required value="<?php echo esc_attr(self::moneyInput($selected['base_value'] ?? '0')); ?>"></label></p>
                             <p class="description"><?php echo esc_html__('The base value is the original contractual amount before additions, discounts or other financial adjustments.', 'safecontracts'); ?></p>
                             <p class="description"><?php echo esc_html__('Currency belongs to this contract and its financial obligations. Different currencies remain separate in finance totals and reports.', 'safecontracts'); ?></p>
                         <?php else : ?><input type="hidden" name="currency_code" value="<?php echo esc_attr((string) ($selected['currency_code'] ?? '')); ?>"><input type="hidden" name="base_value" value="<?php echo esc_attr((string) ($selected['base_value'] ?? '0')); ?>"><?php endif; ?>
@@ -347,6 +353,35 @@ final class ContractsPage
             </div>
         </div>
         <?php
+    }
+
+    /** @param array<string,mixed> $filters */
+    private static function renderFilters(array $filters, int $selectedId): void
+    {
+        $years = [];
+        try { $years = AdminYearOptions::forCurrentUser(); } catch (Throwable $error) { unset($error); }
+        $selectedYear = (int) ($filters['year'] ?? 0);
+        if ($selectedYear > 0 && ! in_array($selectedYear, $years, true)) { $years[] = $selectedYear; rsort($years, SORT_NUMERIC); }
+        $direction = (string) ($filters['financial_direction'] ?? '');
+        ?>
+        <form class="safecontracts-filter-bar safecontracts-contract-filters" method="get">
+            <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
+            <?php if ($selectedId > 0) : ?><input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $selectedId); ?>"><?php endif; ?>
+            <label><?php echo esc_html(self::text('Contract Type', 'نوع العقد')); ?><select name="financial_direction"><option value=""><?php echo esc_html(self::text('All contracts', 'كل العقود')); ?></option><option value="<?php echo esc_attr(FinancialDirection::RECEIVABLE); ?>" <?php selected($direction, FinancialDirection::RECEIVABLE); ?>><?php echo esc_html(self::text('Receivable · owed to us', 'مستحقة لنا')); ?></option><option value="<?php echo esc_attr(FinancialDirection::PAYABLE); ?>" <?php selected($direction, FinancialDirection::PAYABLE); ?>><?php echo esc_html(self::text('Payable · owed by us', 'مستحقة علينا')); ?></option></select></label>
+            <label><?php echo esc_html(self::text('Year', 'السنة')); ?><select name="year"><option value="0"><?php echo esc_html(self::text('All years', 'كل السنوات')); ?></option><?php foreach ($years as $year) : ?><option value="<?php echo esc_attr((string) $year); ?>" <?php selected($selectedYear, $year); ?>><?php echo esc_html((string) $year); ?></option><?php endforeach; ?></select></label>
+            <button class="button button-primary" type="submit"><?php echo esc_html(self::text('Apply filters', 'تطبيق الفلاتر')); ?></button>
+            <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html(self::text('Clear filters', 'مسح الفلاتر')); ?></a>
+        </form>
+        <?php
+    }
+
+    /** @param array<string,mixed> $filters */
+    private static function contractUrl(int $contractId, array $filters): string
+    {
+        $args = ['page' => self::SLUG, 'contract_id' => $contractId];
+        if (($filters['financial_direction'] ?? '') !== '') { $args['financial_direction'] = (string) $filters['financial_direction']; }
+        if (($filters['year'] ?? 0) > 0) { $args['year'] = (int) $filters['year']; }
+        return add_query_arg($args, admin_url('admin.php'));
     }
 
     /** @return list<array{id:int,label:string,default_currency:string}> */
@@ -435,8 +470,20 @@ final class ContractsPage
 
     private static function money(mixed $value, string $currency): string
     {
-        $amount = number_format((float) $value, 2, '.', ',');
-        $currency = trim($currency);
-        return $currency === '' ? $amount : $currency . ' ' . $amount;
+        return MoneyFormatter::format($value, $currency);
+    }
+
+    private static function moneyInput(mixed $value): string
+    {
+        $raw = trim((string) $value);
+        if ($raw === '' || ! preg_match('/^\d+(?:\.\d+)?$/', $raw)) { return '0'; }
+        [$whole, $fraction] = array_pad(explode('.', $raw, 2), 2, '');
+        $fraction = rtrim($fraction, '0');
+        return $fraction === '' ? $whole : $whole . '.' . $fraction;
+    }
+
+    private static function text(string $english, string $arabic): string
+    {
+        return TranslationCatalog::currentLanguage() === 'ar' ? $arabic : __($english, 'safecontracts');
     }
 }
