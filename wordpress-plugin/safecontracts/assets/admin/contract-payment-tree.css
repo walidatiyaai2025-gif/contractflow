@@ -1,0 +1,186 @@
+.safecontracts-contract-payment-tree-row > td {
+  padding: 0 10px 14px !important;
+  border-top: 0 !important;
+  background: #f8fafb;
+}
+
+.safecontracts-contract-payment-tree {
+  overflow: hidden;
+  border: 1px solid var(--safecontracts-border, #d9e2e8);
+  border-inline-start: 4px solid var(--safecontracts-green, #1f8f67);
+  border-radius: 0 0 12px 12px;
+  background: #fff;
+  box-shadow: inset 0 1px 0 rgba(11, 42, 63, .04);
+}
+
+.safecontracts-contract-payment-tree--payable {
+  border-inline-start-color: var(--safecontracts-red, #b42318);
+}
+
+.safecontracts-contract-payment-tree > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  background: #f8fbfc;
+  font-weight: 700;
+}
+
+.safecontracts-contract-payment-tree--receivable > summary {
+  background: linear-gradient(90deg, #ecfdf3, #fff 54%);
+}
+
+.safecontracts-contract-payment-tree--payable > summary {
+  background: linear-gradient(90deg, #fef3f2, #fff 54%);
+}
+
+.safecontracts-contract-payment-tree__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.safecontracts-contract-payment-tree__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.safecontracts-contract-payment-tree__metrics > span {
+  padding: 5px 9px;
+  border: 1px solid var(--safecontracts-border, #d9e2e8);
+  border-radius: 999px;
+  background: rgba(255,255,255,.92);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.safecontracts-contract-payment-tree--receivable .safecontracts-contract-payment-tree__metrics strong {
+  color: #067647;
+}
+
+.safecontracts-contract-payment-tree--payable .safecontracts-contract-payment-tree__metrics strong {
+  color: var(--safecontracts-red, #b42318);
+}
+
+.safecontracts-contract-payment-tree__body {
+  padding: 12px 14px 14px;
+}
+
+.safecontracts-contract-payment-tree__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 10px !important;
+}
+
+.safecontracts-contract-payment-tree__scroll {
+  overflow-x: auto;
+}
+
+.safecontracts-contract-payment-tree__table {
+  min-width: 980px;
+  margin: 0;
+}
+
+.safecontracts-contract-payment-tree__table th,
+.safecontracts-contract-payment-tree__table td {
+  vertical-align: middle;
+}
+
+.safecontracts-contract-payment-tree__table td:nth-child(4),
+.safecontracts-contract-payment-tree__table td:nth-child(5),
+.safecontracts-contract-payment-tree__table td:nth-child(6) {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.safecontracts-contract-payment-tree__status {
+  display: inline-flex;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eef3f6;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.safecontracts-contract-payment-tree__payment--overdue .safecontracts-contract-payment-tree__status {
+  background: #fff4e5;
+  color: #9a3412;
+}
+
+.safecontracts-contract-payment-tree__payment--paid .safecontracts-contract-payment-tree__status {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.safecontracts-contract-payment-tree__actions {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.safecontracts-contract-payment-tree__edit {
+  position: relative;
+}
+
+.safecontracts-contract-payment-tree__edit > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.safecontracts-contract-payment-tree__edit > summary::-webkit-details-marker {
+  display: none;
+}
+
+.safecontracts-contract-payment-tree__edit[open] {
+  flex-basis: 100%;
+  width: min(540px, 100%);
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--safecontracts-border, #d9e2e8);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(11, 42, 63, .08);
+}
+
+.safecontracts-contract-payment-tree__edit form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.safecontracts-contract-payment-tree__edit label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.safecontracts-contract-payment-tree__edit input {
+  width: 100%;
+}
+
+.safecontracts-contract-payment-tree__edit small,
+.safecontracts-contract-payment-tree__edit .button {
+  align-self: end;
+}
+
+@media (max-width: 782px) {
+  .safecontracts-contract-payment-tree > summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .safecontracts-contract-payment-tree__metrics {
+    justify-content: flex-start;
+  }
+
+  .safecontracts-contract-payment-tree__edit form {
+    grid-template-columns: 1fr;
+  }
+}
