@@ -54,7 +54,10 @@ $markers = [
         '$service->changeStatus($contractId, $targetStatus);',
         'ContractStatus::allowedTargets',
         "name=\"status\"",
-        'AdminPeriodFilter::render',
+        'self::renderFilters($filters, $selectedId)',
+        "name=\"financial_direction\"",
+        "name=\"year\"",
+        'AdminYearOptions::forCurrentUser',
     ],
     'wordpress-plugin/safecontracts/src/Admin/AdminReadRepository.php' => [
         'collectorAttachments',
