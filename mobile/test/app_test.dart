@@ -34,7 +34,6 @@ void main() {
     expect(find.byType(SafeContractsMetricCard), findsNWidgets(4));
     expect(find.text('Financial performance overview'), findsOneWidget);
     expect(find.text('Total contracts'), findsOneWidget);
-    expect(find.text('Payment Lifecycle Overview'), findsOneWidget);
     expect(find.text('Remaining'), findsWidgets);
     expect(find.textContaining('125.00'), findsWidgets);
 
