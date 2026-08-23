@@ -3,7 +3,6 @@ import '../session/session_controller.dart';
 
 enum MobileDestination {
   dashboard,
-  dashboardTwo,
   customers,
   suppliers,
   contracts,
@@ -47,7 +46,6 @@ final class MobileNavigationPolicy {
     if (hasAccess) {
       destinations.addAll(const <MobileDestination>[
         MobileDestination.dashboard,
-        MobileDestination.dashboardTwo,
         MobileDestination.customers,
       ]);
       if (session.can(viewSuppliersCapability)) {
