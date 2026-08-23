@@ -98,9 +98,11 @@ final class MobileLandingContent {
     final services = <MobileLandingService>[];
     final serviceKeys = <String>{};
     for (var index = 0; index < serviceValues.length; index++) {
-      final service = MobileLandingService.fromJson(serviceValues[index], index);
+      final service =
+          MobileLandingService.fromJson(serviceValues[index], index);
       if (!serviceKeys.add(service.key)) {
-        throw const FormatException('Mobile landing service keys must be unique.');
+        throw const FormatException(
+            'Mobile landing service keys must be unique.');
       }
       services.add(service);
     }
