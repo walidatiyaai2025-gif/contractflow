@@ -98,7 +98,9 @@ final class CollectionService
 
             $newPaid = ContractMoney::add($ledgerCollected, $amount);
             if (ContractMoney::compare($newPaid, $originalAmount) > 0) {
-                throw new DomainException('Settlement amount exceeds the remaining amount of this scheduled payment.');
+                // Keep the canonical P10 guard text stable for integrations and
+                // governance; the admin Arabic surface explains the limit in detail.
+                throw new DomainException('Collection amount exceeds the payment remaining balance.');
             }
             $this->assertContractSettlementCapacity($payment, $amount);
             $newRemaining = ContractMoney::subtract($originalAmount, $newPaid);
