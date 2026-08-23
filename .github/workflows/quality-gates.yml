@@ -95,6 +95,15 @@ jobs:
         run: |
           python3 wordpress-theme/package_theme.py build --output dist/SafeContracts-theme-candidate.zip
           python3 wordpress-theme/package_theme.py check dist/SafeContracts-theme-candidate.zip
+      - name: Upload deterministic plugin and theme candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: safecontracts-plugin-theme-candidates
+          path: |
+            dist/SafeContracts-plugin-candidate.zip
+            dist/SafeContracts-theme-candidate.zip
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify production SafeContracts health
         run: python3 scripts/verify_production_health.py "$SC_PRODUCTION_API_BASE_URL"
       - name: Bootstrap Android release platform
