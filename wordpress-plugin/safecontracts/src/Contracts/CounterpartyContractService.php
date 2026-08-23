@@ -108,9 +108,9 @@ final class CounterpartyContractService
             $currencyCode,
             $accountantUserId,
             $notes,
-            $actorId
+            $actorId,
+            $baseValue
         );
-        $this->repository->updateBaseValue($contractId, $baseValue, $actorId);
         RuntimeInspector::stage('contract.create.events', ['contract_id' => $contractId]);
         $legacyCustomerId = $type === Counterparty::CUSTOMER ? $counterpartyId : null;
         do_action('safecontracts_contract_created', $contractId, $actorId, $legacyCustomerId, $accountantUserId);
