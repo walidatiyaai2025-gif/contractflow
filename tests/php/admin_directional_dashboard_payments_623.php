@@ -31,7 +31,7 @@ sc_623_assert(str_contains($userGuide, "add_action('in_admin_footer'") && ! str_
 sc_623_assert(str_contains($css, '.toplevel_page_safecontracts .safecontracts-summary-injector') && str_contains($css, '.safecontracts-user-guide-footer'), 'legacy dashboard help/summary area is removed from prime content while footer guide remains styled');
 
 sc_623_assert(str_contains($dashboard, 'safecontracts-direction-dashboard') && str_contains($dashboard, 'FinancialDirection::RECEIVABLE') && str_contains($dashboard, 'FinancialDirection::PAYABLE'), 'dashboard has separate receivable and payable contract lanes');
-sc_623_assert(str_contains($dashboard, "'counterparty_type' => $type") && str_contains($dashboard, "'contract_id' => (int) ($contract['id'] ?? 0)"), 'dashboard contract cards link to the Contracts page with direction/type and contract filters');
+sc_623_assert(str_contains($dashboard, "'counterparty_type' => \$type") && str_contains($dashboard, "'contract_id' => (int) (\$contract['id'] ?? 0)"), 'dashboard contract cards link to the Contracts page with direction/type and contract filters');
 sc_623_assert(str_contains($dashboard, 'accountingByDirectionAndCurrency') && str_contains($dashboard, "__('Accounting totals by currency', 'safecontracts')"), 'dashboard builds direction-aware currency-separated accounting totals');
 sc_623_assert(str_contains($dashboard, 'ContractMoney::add') && str_contains($dashboard, 'ContractMoney::normalizeNonNegative'), 'dashboard accounting aggregation uses decimal contract money arithmetic rather than floating-point accumulation');
 sc_623_assert(str_contains($dashboard, "__('Collected from customers', 'safecontracts')") && str_contains($dashboard, "__('Paid to suppliers', 'safecontracts')"), 'dashboard clearly distinguishes incoming collections from outgoing supplier payments');
@@ -41,8 +41,8 @@ sc_623_assert(str_contains($payments, "__('Payment description', 'safecontracts'
 sc_623_assert(str_contains($payments, 'safecontracts-payment-panel--') && str_contains($payments, "__('Receivable payments · we will receive', 'safecontracts')") && str_contains($payments, "__('Payable payments · we will pay', 'safecontracts')"), 'Payments page renders separate green receivable and red payable sections');
 sc_623_assert(str_contains($payments, 'paymentsForDirection') && str_contains($payments, 'FinancialDirection::RECEIVABLE') && str_contains($payments, 'FinancialDirection::PAYABLE'), 'payment rows are split by server-authoritative financial direction');
 
-sc_623_assert(str_contains($paymentService, 'createAutoSequenced') && str_contains($paymentService, "$sequenceNo = (int) ($input['sequence_no'] ?? 0)"), 'PaymentService preserves explicit integration sequences while auto-sequencing admin creation');
-sc_623_assert(str_contains($paymentRepository, 'nextSequenceNo') && str_contains($paymentRepository, 'MAX(sequence_no)') && str_contains($paymentRepository, "str_contains($lastError, 'duplicate')"), 'PaymentRepository allocates the next contract sequence and retries duplicate races');
+sc_623_assert(str_contains($paymentService, 'createAutoSequenced') && str_contains($paymentService, "\$sequenceNo = (int) (\$input['sequence_no'] ?? 0)"), 'PaymentService preserves explicit integration sequences while auto-sequencing admin creation');
+sc_623_assert(str_contains($paymentRepository, 'nextSequenceNo') && str_contains($paymentRepository, 'MAX(sequence_no)') && str_contains($paymentRepository, "str_contains(\$lastError, 'duplicate')"), 'PaymentRepository allocates the next contract sequence and retries duplicate races');
 
 sc_623_assert(FeatureArabicDefaults::default('Payment description') === 'وصف الدفعة', 'Arabic payment-description label is explicit');
 sc_623_assert(FeatureArabicDefaults::default('Receivable payments · we will receive') === 'دفعات مستحقة لنا · سنستلمها', 'Arabic receivable lane explains that money is incoming');
