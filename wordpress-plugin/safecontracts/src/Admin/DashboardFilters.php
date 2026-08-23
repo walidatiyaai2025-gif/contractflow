@@ -12,7 +12,7 @@ use SafeContracts\Payments\PaymentStatus;
 
 final class DashboardFilters
 {
-    /** @return array{customer_id:int,counterparty_type:string,counterparty_id:int,financial_direction:string,currency_code:string,contract_id:int,accountant_user_id:int,status:string,year:int,due_from:?string,due_to:?string,date_from:?string,date_to:?string,date_range_error:bool} */
+    /** @return array{customer_id:int,counterparty_type:string,counterparty_id:int,financial_direction:string,currency_code:string,contract_id:int,accountant_user_id:int,status:string,year:int,month:int,due_from:?string,due_to:?string,date_from:?string,date_to:?string,date_range_error:bool} */
     public static function normalize(array $input): array
     {
         $customerId = self::id($input['customer_id'] ?? null);
@@ -39,6 +39,7 @@ final class DashboardFilters
         }
 
         $year = self::year($input['year'] ?? $input['dashboard_year'] ?? null);
+        $month = self::month($input['month'] ?? $input['dashboard_month'] ?? null);
 
         $dueFrom = self::date($input['due_from'] ?? null);
         $dueTo = self::date($input['due_to'] ?? null);
@@ -47,10 +48,15 @@ final class DashboardFilters
         }
 
         $periodInput = $input;
-        if ($year > 0) {
-            // A selected year is an explicit full-calendar-year context. It
-            // deliberately overrides ad-hoc period inputs so dashboard and
-            // drill-down pages cannot disagree about what “2026” means.
+        if ($month > 0) {
+            // Month-only filtering is anchored to the current calendar year.
+            // This keeps the control deterministic while still allowing the
+            // caller to combine an explicit year and month when required.
+            $effectiveYear = $year > 0 ? $year : (int) current_time('Y');
+            $start = new DateTimeImmutable(sprintf('%04d-%02d-01', $effectiveYear, $month));
+            $periodInput['date_from'] = $start->format('Y-m-d');
+            $periodInput['date_to'] = $start->modify('last day of this month')->format('Y-m-d');
+        } elseif ($year > 0) {
             $periodInput['date_from'] = sprintf('%04d-01-01', $year);
             $periodInput['date_to'] = sprintf('%04d-12-31', $year);
         }
@@ -66,6 +72,7 @@ final class DashboardFilters
             'accountant_user_id' => $accountantUserId,
             'status' => $status,
             'year' => $year,
+            'month' => $month,
             'due_from' => $dueFrom,
             'due_to' => $dueTo,
             'date_from' => $period['date_from'],
@@ -98,6 +105,19 @@ final class DashboardFilters
         }
         $year = (int) $raw;
         return $year >= 1900 && $year <= 2200 ? $year : 0;
+    }
+
+    private static function month(mixed $value): int
+    {
+        if (! is_scalar($value) || is_bool($value)) {
+            return 0;
+        }
+        $raw = trim((string) $value);
+        if ($raw === '' || $raw === '0' || ! preg_match('/^\d{1,2}$/', $raw)) {
+            return 0;
+        }
+        $month = (int) $raw;
+        return $month >= 1 && $month <= 12 ? $month : 0;
     }
 
     /** @param list<string> $allowed */
