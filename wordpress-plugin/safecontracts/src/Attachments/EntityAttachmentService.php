@@ -25,6 +25,12 @@ final class EntityAttachmentService
         return [self::CONTRACT, self::PAYMENT, self::COLLECTION];
     }
 
+    public function assertCanManage(string $entityType, int $entityId): void
+    {
+        $entityType = $this->normalizeType($entityType);
+        $this->assertWritable($entityType, $entityId);
+    }
+
     /**
      * @param list<int> $mediaIds
      * @return list<array{id:int,entity_type:string,entity_id:int,media_id:int,label:string,display_order:int,created_by:?int,created_at:string}>
