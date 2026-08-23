@@ -19,6 +19,7 @@ function sc_624_assert(bool $condition, string $message): void
 
 $root = dirname(__DIR__, 2);
 $repo = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Admin/FinancialSettlementAdminRepository.php');
+$summary = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Admin/AdminFinancialSettlementSummary.php');
 $collections = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Admin/CollectionsPage.php');
 $dashboard = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Admin/DashboardV2Page.php');
 $css = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/assets/admin/safecontracts-admin-financial-v3.css');
@@ -35,7 +36,9 @@ sc_624_assert(str_contains($collections, "payment['counterparty_name']") && str_
 
 sc_624_assert(str_contains($dashboard, "label('General account', 'الحساب العام')"), 'dashboard exposes the requested General account KPI');
 sc_624_assert(str_contains($dashboard, "ContractMoney::difference(\$r['outstanding'], \$p['outstanding'])"), 'General account is receivable outstanding minus payable outstanding');
-sc_624_assert(str_contains($dashboard, "['settled']") && str_contains($dashboard, 'paid_amount'), 'dashboard settlement totals follow the reconciled payment ledger');
+sc_624_assert(str_contains($dashboard, 'AdminFinancialSettlementSummary') && str_contains($dashboard, "['settled_total']"), 'dashboard settlement totals consume the actual settlement summary');
+sc_624_assert(str_contains($summary, 'safecontracts_payment_collections') && str_contains($summary, 'SUM(cl.amount)'), 'dashboard settlement summary is sourced from actual non-archived collection/settlement ledger movements');
+sc_624_assert(! str_contains($dashboard, "['paid_amount']"), 'dashboard must not treat scheduled-payment paid_amount snapshot as the authoritative settlement ledger');
 sc_624_assert(str_contains($dashboard, 'directionKpi') && str_contains($dashboard, "['base']"), 'receivable and payable contract KPI cards expose their contract totals');
 sc_624_assert(str_contains($css, '.safecontracts-dashboard-v2__kpi--general-account') && str_contains($css, '.safecontracts-settlement-panel--payable'), 'financial UX styles cover General account and signed payable settlements');
 
