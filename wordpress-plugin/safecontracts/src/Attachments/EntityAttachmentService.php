@@ -103,7 +103,7 @@ final class EntityAttachmentService
     private function assertWritable(string $entityType, int $entityId): void
     {
         $allowed = match ($entityType) {
-            self::CONTRACT => current_user_can(Capabilities::EDIT_CONTRACTS),
+            self::CONTRACT => current_user_can(Capabilities::EDIT_CONTRACTS) || current_user_can(Capabilities::CREATE_CONTRACTS),
             self::PAYMENT => current_user_can(Capabilities::MANAGE_PAYMENTS),
             self::COLLECTION => current_user_can(Capabilities::MANAGE_COLLECTIONS) || current_user_can(Capabilities::MANAGE_FINANCE),
             default => false,
