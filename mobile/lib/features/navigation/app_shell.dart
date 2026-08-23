@@ -5,15 +5,16 @@ import 'package:flutter/material.dart';
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
-import '../contracts/contract_details_screen.dart';
 import '../contracts/contract_edit_screen.dart';
 import '../contracts/contracts.dart';
 import '../contracts/contracts_screen.dart';
+import '../contracts/premium_contract_details_screen.dart';
 import '../customers/customers.dart';
 import '../customers/customers_screen.dart';
 import '../dashboard/dashboard_context_screen.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_models.dart';
+import '../dashboard/dashboard_two_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
 import '../finance/finance.dart';
@@ -104,9 +105,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
-    if (_foreground) {
-      unawaited(_refreshActiveSurface());
-    }
+    if (_foreground) unawaited(_refreshActiveSurface());
   }
 
   @override
@@ -123,6 +122,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     try {
       switch (_selected) {
         case MobileDestination.dashboard:
+        case MobileDestination.dashboardTwo:
           await widget.dashboardController.refreshSilently();
           shellSnapshotChanged = true;
           break;
@@ -152,9 +152,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           break;
         case MobileDestination.payments:
         case MobileDestination.followUps:
-          if (mounted) {
-            setState(() => _liveRefreshRevision++);
-          }
+          if (mounted) setState(() => _liveRefreshRevision++);
           break;
         case MobileDestination.export:
           await widget.dashboardController.refreshSilently();
@@ -163,21 +161,16 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
         case MobileDestination.collections:
           break;
       }
-      if (shellSnapshotChanged && mounted) {
-        setState(() {});
-      }
+      if (shellSnapshotChanged && mounted) setState(() {});
     } on Object {
-      // Automatic refresh is deliberately non-disruptive. The last good data
-      // remains visible and manual refresh still exposes actionable failures.
+      // Background refresh is deliberately non-disruptive.
     } finally {
       _liveRefreshInFlight = false;
     }
   }
 
   void _selectDestination(MobileDestination destination) {
-    if (_selected != destination) {
-      setState(() => _selected = destination);
-    }
+    if (_selected != destination) setState(() => _selected = destination);
     unawaited(_refreshActiveSurface());
   }
 
@@ -187,9 +180,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     if (!widget.policy.destinations.contains(_selected)) {
       _selected = widget.policy.destinations.first;
     }
-
     final bottomDestinations = _bottomDestinations();
     final quickAdds = availableMobileQuickAdds(widget.session);
+
     return Scaffold(
       backgroundColor: SafeContractsVisual.background,
       appBar: AppBar(
@@ -208,34 +201,21 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
             Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
+                color: Colors.white.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(11),
               ),
               child: const SafeContractsBrandMark(size: 32, borderRadius: 9),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: SafeContractsBrand.name,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    TextSpan(
-                      text: '  •  ${_label(l10n, _selected)}',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.76),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+              child: Text(
+                _label(l10n, _selected),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ],
@@ -285,7 +265,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                             ? 'مساحة العمل التنفيذية'
                             : 'Executive workspace',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.70),
+                              color: Colors.white.withValues(alpha: .70),
                             ),
                       ),
                     ],
@@ -321,20 +301,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               ),
             Expanded(
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 260),
-                reverseDuration: const Duration(milliseconds: 190),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  final slide = Tween<Offset>(
-                    begin: const Offset(0.025, 0),
-                    end: Offset.zero,
-                  ).animate(animation);
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(position: slide, child: child),
-                  );
-                },
+                duration: const Duration(milliseconds: 250),
                 child: KeyedSubtree(
                   key: ValueKey<MobileDestination>(_selected),
                   child: _body(),
@@ -387,6 +354,10 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                   ? () => _selectDestination(MobileDestination.payments)
                   : null,
         ),
+      MobileDestination.dashboardTwo => DashboardTwoScreen(
+          controller: widget.dashboardController,
+          currency: widget.config.currency,
+        ),
       MobileDestination.customers => CustomersScreen(
           controller: widget.customersController,
         ),
@@ -437,7 +408,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           onLanguageChanged: widget.onLanguageChanged,
           onClearSession: widget.onClearSession,
         ),
-      _ => _PlannedDestination(destination: _selected),
+      MobileDestination.collections =>
+        const _PlannedDestination(destination: MobileDestination.collections),
     };
   }
 
@@ -452,30 +424,12 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     if (!mounted || selected == null) return;
 
     final created = await Navigator.of(context).push<bool>(
-      PageRouteBuilder<bool>(
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return MobileQuickAddScreen(
-            client: widget.contractsController.repository.client,
-            session: widget.session,
-            type: selected,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 280),
-        reverseTransitionDuration: const Duration(milliseconds: 210),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
-          return FadeTransition(
-            opacity: curved,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
-              child: child,
-            ),
-          );
-        },
+      MaterialPageRoute<bool>(
+        builder: (context) => MobileQuickAddScreen(
+          client: widget.contractsController.repository.client,
+          session: widget.session,
+          type: selected,
+        ),
       ),
     );
     if (!mounted || created != true) return;
@@ -498,7 +452,6 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     if (widget.financeController.canAccess) {
       unawaited(widget.financeController.refreshSilently());
     }
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -511,15 +464,15 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 
   void _openContract(int contractId) {
-    final canOpenContractEditor = widget.contractsController.canEditContract ||
+    final canEdit = widget.contractsController.canEditContract ||
         widget.session.can('safecontracts_assign_contracts');
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => ContractDetailsScreen(
-          controller: widget.contractsController,
+        builder: (context) => PremiumContractDetailsScreen(
+          repository: widget.contractsController.repository,
           contractId: contractId,
           currency: widget.config.currency,
-          onEditContract: canOpenContractEditor ? _openContractEdit : null,
+          onEditContract: canEdit ? _openContractEdit : null,
         ),
       ),
     );
@@ -543,9 +496,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       SafeContractsDeepLinkDestination.customers => MobileDestination.customers,
       SafeContractsDeepLinkDestination.followUps => MobileDestination.followUps,
     };
-    if (!widget.policy.destinations.contains(destination)) {
-      return;
-    }
+    if (!widget.policy.destinations.contains(destination)) return;
     _selectDestination(destination);
     switch (link.destination) {
       case SafeContractsDeepLinkDestination.contracts:
@@ -561,65 +512,32 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 }
 
-final class _QuickAddFab extends StatefulWidget {
+final class _QuickAddFab extends StatelessWidget {
   const _QuickAddFab({required this.tooltip, required this.onPressed});
-
   final String tooltip;
   final VoidCallback onPressed;
 
   @override
-  State<_QuickAddFab> createState() => _QuickAddFabState();
-}
-
-final class _QuickAddFabState extends State<_QuickAddFab>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 430),
-    );
-    _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scale,
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: SafeContractsVisual.roseGoldSoft,
-            width: 3,
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: SafeContractsVisual.roseGoldSoft, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: SafeContractsVisual.roseGold.withValues(alpha: .30),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: SafeContractsVisual.roseGold.withValues(alpha: 0.30),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          tooltip: widget.tooltip,
-          onPressed: widget.onPressed,
-          backgroundColor: SafeContractsVisual.roseGold,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          child: const Icon(Icons.add_rounded, size: 34),
-        ),
+        ],
+      ),
+      child: FloatingActionButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        backgroundColor: SafeContractsVisual.roseGold,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        child: const Icon(Icons.add_rounded, size: 34),
       ),
     );
   }
@@ -627,7 +545,6 @@ final class _QuickAddFabState extends State<_QuickAddFab>
 
 final class _QuickAddSheet extends StatelessWidget {
   const _QuickAddSheet({required this.actions});
-
   final List<MobileQuickAddType> actions;
 
   @override
@@ -646,99 +563,48 @@ final class _QuickAddSheet extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                 ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            arabic
-                ? 'المتاح هنا حسب صلاحيات الإضافة الخاصة بحسابك.'
-                : 'Only create actions allowed for your account appear here.',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: SafeContractsVisual.muted),
-          ),
-          const SizedBox(height: 16),
-          ...actions.indexed.map((entry) {
-            final index = entry.$1;
-            final action = entry.$2;
-            return TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: 1),
-              duration: Duration(milliseconds: 220 + (index * 70)),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: Transform.translate(
-                    offset: Offset(0, 12 * (1 - value)),
-                    child: child,
+          const SizedBox(height: 12),
+          ...actions.map(
+            (action) => Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Material(
+                color: SafeContractsVisual.backgroundRaised,
+                borderRadius: BorderRadius.circular(16),
+                child: ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Material(
-                  color: SafeContractsVisual.backgroundRaised,
-                  borderRadius: BorderRadius.circular(18),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () => Navigator.of(context).pop(action),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: SafeContractsVisual.roseGoldSoft,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Icon(
-                              mobileQuickAddIcon(action),
-                              color: SafeContractsVisual.navy,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  mobileQuickAddLabel(context, action),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  mobileQuickAddDescription(context, action),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: SafeContractsVisual.muted,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Directionality.of(context) == TextDirection.rtl
-                                ? Icons.chevron_left_rounded
-                                : Icons.chevron_right_rounded,
-                            color: SafeContractsVisual.roseGoldDark,
-                          ),
-                        ],
-                      ),
+                  leading: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: SafeContractsVisual.roseGoldSoft,
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Icon(
+                      mobileQuickAddIcon(action),
+                      color: SafeContractsVisual.navy,
                     ),
                   ),
+                  title: Text(
+                    mobileQuickAddLabel(context, action),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  subtitle: Text(
+                    mobileQuickAddDescription(context, action),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Icon(
+                    Directionality.of(context) == TextDirection.rtl
+                        ? Icons.chevron_left_rounded
+                        : Icons.chevron_right_rounded,
+                  ),
+                  onTap: () => Navigator.of(context).pop(action),
                 ),
               ),
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );
@@ -765,9 +631,7 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
       child: DecoratedBox(
         decoration: const BoxDecoration(
           color: SafeContractsVisual.surface,
-          border: Border(
-            top: BorderSide(color: SafeContractsVisual.outline),
-          ),
+          border: Border(top: BorderSide(color: SafeContractsVisual.outline)),
           boxShadow: [
             BoxShadow(
               color: Color(0x205E5142),
@@ -780,51 +644,35 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(6, 8, 6, 6),
           child: Row(
             children: destinations.map((destination) {
-              final isSelected = destination == selected;
+              final selectedNow = destination == selected;
               return Expanded(
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () => onSelected(destination),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
+                  child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 5),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? SafeContractsVisual.roseGoldSoft.withValues(
-                              alpha: 0.86,
-                            )
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        AnimatedScale(
-                          scale: isSelected ? 1.08 : 1,
-                          duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeOutBack,
-                          child: Icon(
-                            _icon(destination),
-                            color: isSelected
-                                ? SafeContractsVisual.navy
-                                : SafeContractsVisual.muted,
-                          ),
+                        Icon(
+                          _icon(destination),
+                          color: selectedNow
+                              ? SafeContractsVisual.navy
+                              : SafeContractsVisual.muted,
                         ),
                         const SizedBox(height: 3),
                         Text(
                           labelFor(destination),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: isSelected
-                                        ? SafeContractsVisual.navy
-                                        : SafeContractsVisual.muted,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w800
-                                        : FontWeight.w500,
-                                  ),
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: selectedNow
+                                    ? SafeContractsVisual.navy
+                                    : SafeContractsVisual.muted,
+                                fontWeight: selectedNow
+                                    ? FontWeight.w900
+                                    : FontWeight.w500,
+                              ),
                         ),
                       ],
                     ),
@@ -841,7 +689,6 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
 
 final class _PlannedDestination extends StatelessWidget {
   const _PlannedDestination({required this.destination});
-
   final MobileDestination destination;
 
   @override
@@ -852,8 +699,8 @@ final class _PlannedDestination extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Text(
           l10n.isArabic
-              ? 'تم السماح بالتنقل إلى ${_label(l10n, destination)}. شاشة الموبايل المخصصة لها تُنفذ ضمن مهمة خارطة الطريق المقابلة.'
-              : '${_label(l10n, destination)} navigation is authorized. Its dedicated mobile screen is implemented in the corresponding roadmap task.',
+              ? 'تم السماح بالتنقل إلى ${_label(l10n, destination)}. هذه الشاشة ستظل كما كانت ضمن خارطة الطريق الحالية.'
+              : '${_label(l10n, destination)} remains on its existing roadmap surface.',
           textAlign: TextAlign.center,
         ),
       ),
@@ -862,8 +709,12 @@ final class _PlannedDestination extends StatelessWidget {
 }
 
 String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
+  if (destination == MobileDestination.dashboardTwo) {
+    return l10n.isArabic ? 'لوحة تحكم اتنين' : 'Dashboard Two';
+  }
   return l10n.t(switch (destination) {
     MobileDestination.dashboard => 'Dashboard',
+    MobileDestination.dashboardTwo => 'Dashboard Two',
     MobileDestination.customers => 'Customers',
     MobileDestination.suppliers => 'Suppliers',
     MobileDestination.contracts => 'Contracts',
@@ -880,6 +731,7 @@ String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
 IconData _icon(MobileDestination destination) {
   return switch (destination) {
     MobileDestination.dashboard => Icons.home_rounded,
+    MobileDestination.dashboardTwo => Icons.dashboard_customize_rounded,
     MobileDestination.customers => Icons.people_alt_outlined,
     MobileDestination.suppliers => Icons.local_shipping_outlined,
     MobileDestination.contracts => Icons.folder_copy_outlined,
