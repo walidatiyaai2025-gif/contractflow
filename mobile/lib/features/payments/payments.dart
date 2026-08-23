@@ -19,6 +19,7 @@ final class SafeContractsPayment {
     this.accountantUserId,
     this.reference,
     this.expectedPaymentDate,
+    this.financialDirection = 'receivable',
   });
 
   final int id;
@@ -37,6 +38,7 @@ final class SafeContractsPayment {
   final String remainingAmount;
   final String status;
   final bool contractIsArchived;
+  final String financialDirection;
 
   String? get displayOwner =>
       counterpartyName ?? customerName ?? contractNumber;
@@ -73,6 +75,8 @@ final class SafeContractsPayment {
         data['contract_is_archived'],
         'payment.contract_is_archived',
       ),
+      financialDirection:
+          _optionalText(data['financial_direction']) ?? 'receivable',
     );
   }
 }
