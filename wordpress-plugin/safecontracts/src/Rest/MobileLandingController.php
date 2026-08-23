@@ -23,8 +23,6 @@ final class MobileLandingController
     public static function show(WP_REST_Request $request): WP_REST_Response
     {
         unset($request);
-        $response = ApiResponse::ok((new MobileLandingContent())->read());
-        $response->header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
-        return $response;
+        return ApiResponse::ok((new MobileLandingContent())->read());
     }
 }
