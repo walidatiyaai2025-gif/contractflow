@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SafeContracts\Admin;
 
+use SafeContracts\Attachments\EntityAttachmentService;
 use SafeContracts\Contracts\ContractMoney;
 use SafeContracts\Deletion\SafeDeletionService;
 use SafeContracts\Payments\PaymentService;
@@ -32,7 +33,10 @@ final class PaymentsPage
         $service = new PaymentService();
         $paymentId = max(0, (int) ($_POST['payment_id'] ?? 0));
         $status = 'saved';
+        $uploadedMediaIds = [];
+        $linkingAttachments = false;
         try {
+            $uploadedMediaIds = MultipleAttachmentUploader::upload();
             if ($paymentId === 0) {
                 $paymentId = $service->create([
                     'contract_id' => (int) ($_POST['contract_id'] ?? 0),
@@ -45,8 +49,18 @@ final class PaymentsPage
             } else {
                 $service->updateDates($paymentId, $_POST['due_date'] ?? '', $_POST['expected_payment_date'] ?? null);
             }
+
+            if ($uploadedMediaIds !== []) {
+                $attachments = new EntityAttachmentService();
+                $attachments->assertCanManage(EntityAttachmentService::PAYMENT, $paymentId);
+                $linkingAttachments = true;
+                $attachments->attachMany(EntityAttachmentService::PAYMENT, $paymentId, $uploadedMediaIds);
+            }
         } catch (Throwable $error) {
             unset($error);
+            if (! $linkingAttachments && $uploadedMediaIds !== []) {
+                MultipleAttachmentUploader::cleanup($uploadedMediaIds);
+            }
             $status = 'invalid';
         }
         wp_safe_redirect(add_query_arg(['page' => self::SLUG, 'payment_id' => $paymentId, 'safecontracts_status' => $status], admin_url('admin.php')));
@@ -81,12 +95,15 @@ final class PaymentsPage
         $payments = $read->payments($filters);
         $contracts = $read->contractOptions($filters['customer_id']);
         $selected = null;
+        $selectedAttachments = [];
         $selectedId = max(0, (int) ($_GET['payment_id'] ?? 0));
         if ($selectedId > 0) {
             try {
                 $selected = (new PaymentService())->find($selectedId);
                 if (! empty($selected['is_archived'])) {
                     $selected = null;
+                } elseif ($selected !== null) {
+                    $selectedAttachments = (new EntityAttachmentService())->all(EntityAttachmentService::PAYMENT, $selectedId);
                 }
             } catch (Throwable $error) {
                 unset($error);
@@ -97,11 +114,18 @@ final class PaymentsPage
             || ContractMoney::compare((string) $selected['remaining_amount'], '0.0000') === 0
             || ! empty($selected['contract_is_archived'])
         );
+        $status = isset($_GET['safecontracts_status']) && is_scalar($_GET['safecontracts_status']) ? sanitize_key((string) $_GET['safecontracts_status']) : '';
+        $canManageAttachments = $selected !== null
+            && empty($selected['is_archived'])
+            && empty($selected['contract_is_archived'])
+            && current_user_can(Capabilities::MANAGE_PAYMENTS);
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Receivables', 'safecontracts'); ?></p><h1><?php echo esc_html__('Payments', 'safecontracts'); ?></h1></div></div>
             <?php AdminPeriodFilter::render(self::SLUG, $filters, $selectedId > 0 ? ['payment_id' => $selectedId] : []); ?>
             <p class="description"><?php echo esc_html__('The displayed period uses the contractual payment due date.', 'safecontracts'); ?></p>
+            <?php if ($status === 'attachment_failed' || $status === 'invalid') : ?><div class="notice notice-error inline"><p><?php echo esc_html__('Payment or attachment was not saved. Check the payment values, file type and permissions.', 'safecontracts'); ?></p></div><?php endif; ?>
+            <?php if ($status === 'attachments_added' || $status === 'attachment_removed') : ?><div class="notice notice-success inline"><p><?php echo esc_html__('Payment attachments were updated.', 'safecontracts'); ?></p></div><?php endif; ?>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Due date', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Reference', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Remaining', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
@@ -137,7 +161,7 @@ final class PaymentsPage
                         <p class="description"><?php echo esc_html__('Contractual due date controls Due/Due Soon/Overdue classification. Expected payment date is operational follow-up only.', 'safecontracts'); ?></p>
                     <?php endif; ?>
                     <?php if (! $terminal) : ?>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <form method="post" enctype="multipart/form-data" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>"><input type="hidden" name="payment_id" value="<?php echo esc_attr((string) ($selected['id'] ?? 0)); ?>"><?php wp_nonce_field(self::SAVE_ACTION); ?>
                         <?php if (! $selected) : ?>
                             <p><label><?php echo esc_html__('Contract', 'safecontracts'); ?><select class="widefat" name="contract_id" required><?php foreach ($contracts as $contract) : ?><option value="<?php echo esc_attr((string) $contract['id']); ?>"><?php echo esc_html($contract['contract_number']); ?></option><?php endforeach; ?></select></label></p>
@@ -146,9 +170,16 @@ final class PaymentsPage
                             <p><label><?php echo esc_html__('Original amount', 'safecontracts'); ?><input class="widefat" name="original_amount" inputmode="decimal" required></label></p>
                         <?php endif; ?>
                         <p class="safecontracts-field-row"><label><?php echo esc_html__('Due date', 'safecontracts'); ?><input type="date" name="due_date" required value="<?php echo esc_attr((string) ($selected['due_date'] ?? '')); ?>"></label><label><?php echo esc_html__('Expected payment date', 'safecontracts'); ?><input type="date" name="expected_payment_date" value="<?php echo esc_attr((string) ($selected['expected_payment_date'] ?? '')); ?>"></label></p>
+                        <?php EntityAttachmentView::renderUploadField(__('Payment files', 'safecontracts')); ?>
                         <?php submit_button($selected ? __('Save payment dates', 'safecontracts') : __('Schedule payment', 'safecontracts')); ?>
                     </form>
                     <?php else : ?><p class="notice notice-info inline"><?php echo esc_html__('Settled payments are terminal and shown read-only. Payments on archived contracts are also terminal and shown read-only.', 'safecontracts'); ?></p><?php endif; ?>
+                    <?php if ($selected) : ?>
+                        <hr>
+                        <h3><?php echo esc_html__('Payment attachments', 'safecontracts'); ?></h3>
+                        <?php EntityAttachmentView::render(EntityAttachmentService::PAYMENT, $selectedId, $selectedAttachments, $canManageAttachments); ?>
+                        <?php if ($canManageAttachments) : ?><?php EntityAttachmentView::renderUploadForm(EntityAttachmentService::PAYMENT, $selectedId, __('Add payment files', 'safecontracts')); ?><?php endif; ?>
+                    <?php endif; ?>
                 </section>
                 <?php endif; ?>
             </div>
