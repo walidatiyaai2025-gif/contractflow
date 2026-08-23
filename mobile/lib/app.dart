@@ -18,6 +18,7 @@ import 'features/navigation/app_shell.dart';
 import 'features/notifications/push_registration.dart';
 import 'features/session/session_controller.dart';
 import 'features/ui/mobile_layout.dart';
+import 'features/ui/safecontracts_design.dart';
 
 class SafeContractsApp extends StatefulWidget {
   const SafeContractsApp({
@@ -109,71 +110,137 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   ThemeData _theme(String languageCode) {
     final isArabic = languageCode.toLowerCase() == 'ar';
     final arabicFontFamily = isArabic ? GoogleFonts.cairo().fontFamily : null;
-    final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF173B65),
-      brightness: Brightness.light,
+    const scheme = ColorScheme.light(
+      primary: SafeContractsVisual.navy,
+      onPrimary: Colors.white,
+      primaryContainer: SafeContractsVisual.navySoft,
+      onPrimaryContainer: SafeContractsVisual.navyDeep,
+      secondary: SafeContractsVisual.roseGold,
+      onSecondary: Colors.white,
+      secondaryContainer: SafeContractsVisual.roseGoldSoft,
+      onSecondaryContainer: SafeContractsVisual.ink,
+      tertiary: SafeContractsVisual.green,
+      onTertiary: Colors.white,
+      error: SafeContractsVisual.red,
+      onError: Colors.white,
+      surface: SafeContractsVisual.surface,
+      onSurface: SafeContractsVisual.ink,
+      outline: SafeContractsVisual.outline,
+      outlineVariant: Color(0xFFE6DCD2),
+      surfaceContainerLowest: Color(0xFFFFFEFC),
+      surfaceContainerLow: SafeContractsVisual.backgroundRaised,
+      surfaceContainer: Color(0xFFF0E9E1),
+      surfaceContainerHigh: Color(0xFFE8DDD1),
+      surfaceContainerHighest: Color(0xFFDFD3C7),
     );
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: scheme.outlineVariant),
+      borderSide: const BorderSide(color: SafeContractsVisual.outline),
     );
+    final textTheme = isArabic
+        ? GoogleFonts.cairoTextTheme()
+        : GoogleFonts.interTextTheme();
+
     final theme = ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
       fontFamily: arabicFontFamily,
-      scaffoldBackgroundColor: const Color(0xFFF6F8FB),
+      textTheme: textTheme.apply(
+        bodyColor: SafeContractsVisual.ink,
+        displayColor: SafeContractsVisual.ink,
+      ),
+      scaffoldBackgroundColor: SafeContractsVisual.background,
+      canvasColor: SafeContractsVisual.background,
       appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
-        scrolledUnderElevation: 1,
-        backgroundColor: const Color(0xFFF6F8FB),
-        foregroundColor: scheme.onSurface,
+        scrolledUnderElevation: 0,
+        backgroundColor: SafeContractsVisual.navy,
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
-          color: scheme.onSurface,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          fontSize: 19,
+          fontWeight: FontWeight.w800,
           fontFamily: arabicFontFamily,
         ),
       ),
       cardTheme: CardThemeData(
         margin: EdgeInsets.zero,
         elevation: 0,
-        color: scheme.surface,
+        color: SafeContractsVisual.surface,
+        shadowColor: const Color(0x245A4638),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.62),
-          ),
+          borderRadius: BorderRadius.circular(SafeContractsVisual.radius),
+          side: const BorderSide(color: SafeContractsVisual.outline),
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: SafeContractsVisual.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SafeContractsVisual.radius),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: SafeContractsVisual.surface,
+        surfaceTintColor: Colors.transparent,
+        modalBackgroundColor: SafeContractsVisual.surface,
+        showDragHandle: true,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainerLowest,
+        fillColor: SafeContractsVisual.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 16,
+          vertical: 15,
         ),
+        labelStyle: const TextStyle(color: SafeContractsVisual.muted),
+        hintStyle: const TextStyle(color: SafeContractsVisual.muted),
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
-          borderSide: BorderSide(color: scheme.primary, width: 1.7),
+          borderSide: const BorderSide(
+            color: SafeContractsVisual.roseGold,
+            width: 1.8,
+          ),
+        ),
+        errorBorder: border.copyWith(
+          borderSide: const BorderSide(color: SafeContractsVisual.red),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: SafeContractsVisual.navy,
+          foregroundColor: Colors.white,
           minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
           textStyle: TextStyle(
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
             fontFamily: arabicFontFamily,
+          ),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: SafeContractsVisual.roseGold,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          minimumSize: const Size(0, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          foregroundColor: SafeContractsVisual.navy,
+          side: const BorderSide(color: SafeContractsVisual.navy),
           minimumSize: const Size(0, 48),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
           shape: RoundedRectangleBorder(
@@ -181,24 +248,72 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
           ),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: SafeContractsVisual.navy,
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: SafeContractsVisual.roseGold,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        focusElevation: 0,
+        highlightElevation: 0,
+      ),
       navigationBarTheme: NavigationBarThemeData(
         height: 72,
-        backgroundColor: scheme.surface,
-        indicatorColor: scheme.primaryContainer,
+        backgroundColor: SafeContractsVisual.surface,
+        indicatorColor: SafeContractsVisual.roseGoldSoft,
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? SafeContractsVisual.navy
+                : SafeContractsVisual.muted,
+          ),
+        ),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
+            color: states.contains(WidgetState.selected)
+                ? SafeContractsVisual.navy
+                : SafeContractsVisual.muted,
             fontSize: 12,
             fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w700
-                : FontWeight.w500,
+                ? FontWeight.w800
+                : FontWeight.w600,
             fontFamily: arabicFontFamily,
           ),
         ),
       ),
+      navigationDrawerTheme: const NavigationDrawerThemeData(
+        backgroundColor: SafeContractsVisual.surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: SafeContractsVisual.roseGoldSoft,
+      ),
       chipTheme: ChipThemeData(
+        backgroundColor: SafeContractsVisual.surface,
+        selectedColor: SafeContractsVisual.roseGoldSoft,
+        side: const BorderSide(color: SafeContractsVisual.outline),
+        labelStyle: const TextStyle(
+          color: SafeContractsVisual.ink,
+          fontWeight: FontWeight.w700,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      dividerTheme: DividerThemeData(color: scheme.outlineVariant),
+      dividerTheme: const DividerThemeData(color: SafeContractsVisual.outline),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: SafeContractsVisual.navyDeep,
+        contentTextStyle: TextStyle(
+          color: Colors.white,
+          fontFamily: arabicFontFamily,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: SafeContractsVisual.roseGold,
+        linearTrackColor: SafeContractsVisual.roseGoldSoft,
+      ),
     );
 
     if (!isArabic) return theme;
@@ -338,12 +453,13 @@ final class _BootstrapView extends StatelessWidget {
         }
 
         return Scaffold(
-          body: SafeArea(
-            child: Center(
-              child: Card(
-                margin: const EdgeInsets.all(24),
-                child: Padding(
+          body: SafeContractsBackdrop(
+            child: SafeArea(
+              child: Center(
+                child: SafeContractsSurface(
+                  margin: const EdgeInsets.all(24),
                   padding: const EdgeInsets.all(28),
+                  accent: SafeContractsVisual.roseGold,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -354,11 +470,15 @@ final class _BootstrapView extends StatelessWidget {
                         style: Theme.of(context)
                             .textTheme
                             .headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                            ?.copyWith(
+                              color: SafeContractsVisual.navy,
+                              fontWeight: FontWeight.w900,
+                            ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         '${l10n.t('Environment')}: ${environment.name.name}',
+                        style: const TextStyle(color: SafeContractsVisual.muted),
                       ),
                       const SizedBox(height: 18),
                       if (controller.state == MobileBootstrapState.idle ||
