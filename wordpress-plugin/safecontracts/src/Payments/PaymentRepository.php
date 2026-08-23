@@ -93,6 +93,44 @@ final class PaymentRepository
         ];
     }
 
+    /** @param list<int> $contractIds @return array<int,string> */
+    public function scheduledTotalsForContracts(array $contractIds): array
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+
+        $contractIds = array_values(array_unique(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, $contractIds),
+            static fn (int $id): bool => $id > 0
+        )));
+        if ($contractIds === []) {
+            return [];
+        }
+
+        $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $idList = implode(',', $contractIds);
+        $rows = $wpdb->get_results(
+            "SELECT contract_id, COALESCE(SUM(original_amount), 0) AS scheduled_total
+             FROM {$table}
+             WHERE is_archived = 0 AND contract_id IN ({$idList})
+             GROUP BY contract_id",
+            ARRAY_A
+        );
+        if (! is_array($rows)) {
+            return [];
+        }
+
+        $totals = [];
+        foreach ($rows as $row) {
+            $contractId = (int) ($row['contract_id'] ?? 0);
+            if ($contractId <= 0) {
+                continue;
+            }
+            $totals[$contractId] = (string) ($row['scheduled_total'] ?? '0.0000');
+        }
+        return $totals;
+    }
+
     public function create(
         int $contractId,
         int $sequenceNo,
