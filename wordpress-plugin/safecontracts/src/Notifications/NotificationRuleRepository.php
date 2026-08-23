@@ -105,6 +105,28 @@ final class NotificationRuleRepository
         ));
     }
 
+    public function setActiveById(int $id, bool $active, int $actorId): bool
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'safecontracts_notification_rules';
+        $updated = $wpdb->query($wpdb->prepare(
+            "UPDATE {$table} SET is_active = %d, updated_by = %d, updated_at = %s WHERE id = %d",
+            $active ? 1 : 0,
+            $actorId,
+            gmdate('Y-m-d H:i:s'),
+            $id
+        ));
+        return $updated !== false;
+    }
+
+    public function deleteById(int $id): bool
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'safecontracts_notification_rules';
+        $deleted = $wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE id = %d", $id));
+        return $deleted !== false && (int) $deleted === 1;
+    }
+
     /** @return list<array<string, mixed>> */
     public function activeBeforeDue(int $daysBefore): array
     {
