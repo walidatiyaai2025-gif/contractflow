@@ -22,7 +22,6 @@ final class AuditRecorder
         'safecontracts_contract_dates_changed',
         'safecontracts_payment_status_changed',
         'safecontracts_payment_dates_changed',
-        'safecontracts_payment_details_changed',
         'safecontracts_followup_recorded',
         'safecontracts_export_completed',
         'safecontracts_import_uploaded',
@@ -44,6 +43,13 @@ final class AuditRecorder
                 self::record($hook, $args);
             }, 10, 12);
         }
+
+        // Payment-detail edits are an additive governed event. Keep the frozen
+        // P10 critical-event registry intact while still persisting full
+        // before/after evidence for this newer edit surface.
+        add_action('safecontracts_payment_details_changed', static function (mixed ...$args): void {
+            self::record('safecontracts_payment_details_changed', $args);
+        }, 10, 4);
     }
 
     /** @param list<mixed> $args */
