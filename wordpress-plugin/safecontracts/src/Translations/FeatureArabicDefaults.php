@@ -28,6 +28,7 @@ final class FeatureArabicDefaults
         'Payment files' => 'ملفات الدفعة',
         'Payment attachments' => 'مرفقات الدفعة',
         'Add payment files' => 'إضافة ملفات للدفعة',
+        'Add payment' => 'إضافة دفعة',
         'Payment attachments were updated.' => 'تم تحديث مرفقات الدفعة.',
         'Payment or attachment was not saved. Check the payment values, file type and permissions.' => 'لم يتم حفظ الدفعة أو المرفق. راجع بيانات الدفعة ونوع الملف والصلاحيات.',
         'Collection / receipt files' => 'ملفات التحصيل / الإيصال',
