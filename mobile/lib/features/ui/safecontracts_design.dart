@@ -238,9 +238,8 @@ final class SafeContractsMetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final foreground = dark ? Colors.white : SafeContractsVisual.ink;
-    final secondary = dark
-        ? Colors.white.withValues(alpha: 0.72)
-        : SafeContractsVisual.muted;
+    final secondary =
+        dark ? Colors.white.withValues(alpha: 0.72) : SafeContractsVisual.muted;
     return Container(
       constraints: const BoxConstraints(minHeight: 116),
       padding: const EdgeInsets.all(16),
@@ -288,7 +287,8 @@ final class SafeContractsMetricCard extends StatelessWidget {
                         : accent.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(11),
                   ),
-                  child: Icon(icon, size: 19, color: dark ? Colors.white : accent),
+                  child:
+                      Icon(icon, size: 19, color: dark ? Colors.white : accent),
                 ),
             ],
           ),
