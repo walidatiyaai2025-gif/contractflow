@@ -31,6 +31,7 @@ final class FeatureArabicDefaults
         'Add payment' => 'إضافة دفعة',
         'Payment attachments were updated.' => 'تم تحديث مرفقات الدفعة.',
         'Payment or attachment was not saved. Check the payment values, file type and permissions.' => 'لم يتم حفظ الدفعة. راجع البيانات والمرفقات؛ النظام يمنع أي دفعة تجعل إجمالي الدفعات المجدولة يتجاوز قيمة العقد.',
+        'Delete this payment? Collection history prevents unsafe deletion.' => 'هل تريد حذف هذه الدفعة؟ يمنع النظام الحذف غير الآمن عند وجود سجل تحصيل أو سداد مرتبط بها.',
         'Collection / receipt files' => 'ملفات التحصيل / الإيصال',
         'Add files' => 'إضافة ملفات',
         'Collection attachments were updated.' => 'تم تحديث مرفقات التحصيل.',
