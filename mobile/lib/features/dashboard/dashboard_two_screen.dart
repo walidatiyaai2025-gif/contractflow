@@ -329,8 +329,7 @@ final class _Bars extends StatelessWidget {
               children: items.map((item) {
                 final value = double.tryParse(item.raw) ?? 0.0;
                 final ratio = maximum <= 0.0 ? 0.08 : value / maximum;
-                final height =
-                    (28.0 + 78.0 * ratio.clamp(0.0, 1.0)).toDouble();
+                final height = (28.0 + 78.0 * ratio.clamp(0.0, 1.0)).toDouble();
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5),
@@ -354,7 +353,8 @@ final class _Bars extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 5),
-                        Text(item.label, style: Theme.of(context).textTheme.labelSmall),
+                        Text(item.label,
+                            style: Theme.of(context).textTheme.labelSmall),
                       ],
                     ),
                   ),
@@ -393,7 +393,9 @@ final class _Activities extends StatelessWidget {
       children: [
         SafeContractsSectionTitle(
           title: ar ? 'آخر الأنشطة' : 'Latest activity',
-          subtitle: ar ? 'العقود والدفعات والمتابعات' : 'Contracts, payments and follow-ups',
+          subtitle: ar
+              ? 'العقود والدفعات والمتابعات'
+              : 'Contracts, payments and follow-ups',
         ),
         const SizedBox(height: 8),
         SafeContractsSurface(
@@ -401,7 +403,8 @@ final class _Activities extends StatelessWidget {
           child: records.isEmpty
               ? Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Text(ar ? 'لا توجد أنشطة حالياً.' : 'No activity yet.'),
+                  child:
+                      Text(ar ? 'لا توجد أنشطة حالياً.' : 'No activity yet.'),
                 )
               : Column(
                   children: records.indexed.map((entry) {
@@ -425,7 +428,8 @@ final class _Activities extends StatelessWidget {
                           ),
                           subtitle: Text(
                             [
-                              if (record.customerName != null) record.customerName!,
+                              if (record.customerName != null)
+                                record.customerName!,
                               if (record.date != null) record.date!,
                               if (amount != null)
                                 context.scL10n.money(amount, currency),
@@ -434,7 +438,9 @@ final class _Activities extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           trailing: Icon(
-                            ar ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                            ar
+                                ? Icons.chevron_left_rounded
+                                : Icons.chevron_right_rounded,
                           ),
                           onTap: () {
                             if (record.type == DashboardRecordType.contract) {
