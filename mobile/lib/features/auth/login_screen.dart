@@ -129,12 +129,11 @@ final class _SafeContractsLoginScreenState
                                   ),
                                 ],
                                 selected: <String>{selectedLanguage},
-                                onSelectionChanged:
-                                    submitting ||
-                                            widget.onLanguageChanged == null
-                                        ? null
-                                        : (selection) => widget
-                                            .onLanguageChanged!(selection.first),
+                                onSelectionChanged: submitting ||
+                                        widget.onLanguageChanged == null
+                                    ? null
+                                    : (selection) => widget
+                                        .onLanguageChanged!(selection.first),
                                 showSelectedIcon: false,
                                 style: ButtonStyle(
                                   foregroundColor:
