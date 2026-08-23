@@ -382,9 +382,7 @@ final class _SplitCard extends StatelessWidget {
         border: Border.all(color: accent.withValues(alpha: .55)),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x175A4638),
-              blurRadius: 16,
-              offset: Offset(0, 6)),
+              color: Color(0x175A4638), blurRadius: 16, offset: Offset(0, 6)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -513,9 +511,7 @@ final class _GeneralAccountCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x33092944),
-              blurRadius: 20,
-              offset: Offset(0, 8)),
+              color: Color(0x33092944), blurRadius: 20, offset: Offset(0, 8)),
         ],
       ),
       child: Column(
