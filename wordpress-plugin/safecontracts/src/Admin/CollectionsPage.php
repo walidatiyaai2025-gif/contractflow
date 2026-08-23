@@ -129,7 +129,11 @@ final class CollectionsPage
                             <td><?php echo esc_html((string) $collection['payment_method_name']); ?></td>
                             <td><?php echo esc_html(number_format((float) $collection['amount'], 2)); ?></td>
                             <td>
-                                <?php EntityAttachmentView::render(EntityAttachmentService::COLLECTION, $collectionId, $files, $canManage, true); ?>
+                                <?php if ($files === [] && ! empty($collection['proof_media_id'])) : ?>
+                                    <?php CollectorAttachmentView::render($collection, true); ?>
+                                <?php else : ?>
+                                    <?php EntityAttachmentView::render(EntityAttachmentService::COLLECTION, $collectionId, $files, $canManage, true); ?>
+                                <?php endif; ?>
                                 <?php if ($canManage) : ?><?php EntityAttachmentView::renderUploadForm(EntityAttachmentService::COLLECTION, $collectionId, __('Add files', 'safecontracts')); ?><?php endif; ?>
                             </td>
                             <td>
