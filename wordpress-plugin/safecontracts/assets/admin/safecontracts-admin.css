@@ -2,6 +2,7 @@
   --safecontracts-navy: #0b2a3f;
   --safecontracts-blue: #174f78;
   --safecontracts-green: #1f8f67;
+  --safecontracts-red: #b42318;
   --safecontracts-surface: #ffffff;
   --safecontracts-muted: #5f6b76;
   --safecontracts-border: #d9e2e8;
@@ -99,6 +100,54 @@
 .safecontracts-settings .button-primary {
   border-color: var(--safecontracts-blue);
   background: var(--safecontracts-blue);
+}
+
+.safecontracts-direction-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.safecontracts-direction-pill--receivable {
+  border-color: #abefc6;
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.safecontracts-direction-pill--payable {
+  border-color: #fecdca;
+  background: #fef3f2;
+  color: var(--safecontracts-red);
+}
+
+.safecontracts-payment-action--receivable {
+  border-color: var(--safecontracts-green) !important;
+  color: var(--safecontracts-green) !important;
+}
+
+.safecontracts-payment-action--receivable:hover,
+.safecontracts-payment-action--receivable:focus {
+  border-color: #067647 !important;
+  background: #ecfdf3 !important;
+  color: #067647 !important;
+}
+
+.safecontracts-payment-action--payable {
+  border-color: var(--safecontracts-red) !important;
+  color: var(--safecontracts-red) !important;
+}
+
+.safecontracts-payment-action--payable:hover,
+.safecontracts-payment-action--payable:focus {
+  border-color: #912018 !important;
+  background: #fef3f2 !important;
+  color: #912018 !important;
 }
 
 [dir="rtl"] .safecontracts-admin-shell,
