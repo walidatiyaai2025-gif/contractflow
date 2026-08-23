@@ -364,9 +364,7 @@ final class _PrimaryContractAction extends StatelessWidget {
         canEdit ? Icons.edit_outlined : Icons.assignment_ind_outlined,
       ),
       label: Text(
-        canEdit
-            ? l10n.t('Edit contract')
-            : l10n.t('Responsible accountant'),
+        canEdit ? l10n.t('Edit contract') : l10n.t('Responsible accountant'),
       ),
     );
   }
