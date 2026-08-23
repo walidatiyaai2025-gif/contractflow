@@ -53,6 +53,7 @@ use SafeContracts\Presence\PresenceService;
 use SafeContracts\Rest\Router;
 use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\ControlledInputArabicDefaults;
+use SafeContracts\Translations\FeatureArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
 use SafeContracts\Translations\NotificationCenterArabicDefaults;
 use SafeContracts\Translations\NotificationScheduleArabicDefaults;
@@ -85,6 +86,7 @@ final class Plugin
 
         TranslationCatalog::register();
         AdminArabicDefaults::register();
+        FeatureArabicDefaults::register();
         ProductionUxArabicDefaults::register();
         MigrationRecoveryArabicDefaults::register();
         ControlledInputArabicDefaults::register();
