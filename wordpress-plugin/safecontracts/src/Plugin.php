@@ -91,10 +91,6 @@ final class Plugin
         NotificationCenterArabicDefaults::register();
         RuntimeLabels::register();
 
-        // Schema compatibility is established before business services, REST
-        // routes, schedulers or mutation handlers are exposed. A migration
-        // failure therefore leaves Alkenzy ADV in a recovery-only state instead
-        // of continuing against a partial or incompatible schema.
         try {
             (new Migrator())->maybeMigrate();
         } catch (Throwable) {
@@ -172,6 +168,8 @@ final class Plugin
         add_action('admin_post_' . PaymentMethodsPage::SAVE_ACTION, [PaymentMethodsPage::class, 'handleSave']);
         add_action('admin_post_' . PaymentMethodsPage::DELETE_ACTION, [PaymentMethodsPage::class, 'handleDelete']);
         add_action('admin_post_' . NotificationSettingsPage::SAVE_ACTION, [NotificationSettingsPage::class, 'handleSave']);
+        add_action('admin_post_' . NotificationSettingsPage::TOGGLE_ACTION, [NotificationSettingsPage::class, 'handleToggle']);
+        add_action('admin_post_' . NotificationSettingsPage::DELETE_ACTION, [NotificationSettingsPage::class, 'handleDelete']);
         add_action('admin_post_' . NotificationCenterPage::SAVE_RULE_ACTION, [NotificationCenterPage::class, 'handleSaveRule']);
         add_action('admin_post_' . NotificationCenterPage::SAVE_TEMPLATE_ACTION, [NotificationCenterPage::class, 'handleSaveTemplate']);
         add_action('admin_post_' . NotificationCenterPage::SAVE_EMAIL_ACTION, [NotificationCenterPage::class, 'handleSaveEmail']);
