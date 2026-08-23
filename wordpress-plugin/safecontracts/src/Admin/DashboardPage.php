@@ -269,16 +269,26 @@ final class DashboardPage
                 <div class="safecontracts-contract-card-list">
                     <?php foreach (array_slice($contracts, 0, 25) as $contract) : ?>
                         <?php $contractId = (int) ($contract['id'] ?? 0); $totals = $paymentTotals[$contractId] ?? ['scheduled' => '0.0000', 'settled' => '0.0000', 'outstanding' => '0.0000']; ?>
-                        <a class="safecontracts-contract-card safecontracts-contract-card--<?php echo esc_attr($class); ?>" href="<?php echo esc_url(self::contractUrl($contract)); ?>">
-                            <span class="safecontracts-contract-card__top"><strong><?php echo esc_html((string) ($contract['contract_number'] ?? '')); ?></strong><span><?php echo esc_html(self::statusLabel((string) ($contract['status'] ?? ''))); ?></span></span>
-                            <span class="safecontracts-contract-card__party"><?php echo esc_html((string) ($contract['counterparty_name'] ?? '')); ?></span>
-                            <span class="safecontracts-contract-card__metrics">
-                                <span><small><?php echo esc_html__('Base value', 'safecontracts'); ?></small><strong><?php echo esc_html(self::money((string) ($contract['base_value'] ?? '0'), (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
-                                <span><small><?php echo esc_html__('Scheduled total', 'safecontracts'); ?></small><strong><?php echo esc_html(self::money($totals['scheduled'], (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
-                                <span><small><?php echo esc_html($receivable ? __('Collected', 'safecontracts') : __('Paid', 'safecontracts')); ?></small><strong><?php echo esc_html(self::money($totals['settled'], (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
-                                <span><small><?php echo esc_html__('Outstanding', 'safecontracts'); ?></small><strong><?php echo esc_html(self::money($totals['outstanding'], (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
-                            </span>
-                        </a>
+                        <article class="safecontracts-contract-card-shell safecontracts-contract-card-shell--<?php echo esc_attr($class); ?>">
+                            <a class="safecontracts-contract-card safecontracts-contract-card--<?php echo esc_attr($class); ?>" href="<?php echo esc_url(self::contractUrl($contract)); ?>">
+                                <span class="safecontracts-contract-card__top"><strong><?php echo esc_html((string) ($contract['contract_number'] ?? '')); ?></strong><span><?php echo esc_html(self::statusLabel((string) ($contract['status'] ?? ''))); ?></span></span>
+                                <span class="safecontracts-contract-card__party"><?php echo esc_html((string) ($contract['counterparty_name'] ?? '')); ?></span>
+                                <span class="safecontracts-contract-card__metrics">
+                                    <span><small><?php echo esc_html__('Base value', 'safecontracts'); ?></small><strong><?php echo esc_html(self::money((string) ($contract['base_value'] ?? '0'), (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
+                                    <span><small><?php echo esc_html__('Scheduled total', 'safecontracts'); ?></small><strong><?php echo esc_html(self::money($totals['scheduled'], (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
+                                    <span><small><?php echo esc_html($receivable ? __('Collected', 'safecontracts') : __('Paid', 'safecontracts')); ?></small><strong><?php echo esc_html(self::money($totals['settled'], (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
+                                    <span><small><?php echo esc_html__('Outstanding', 'safecontracts'); ?></small><strong><?php echo esc_html(self::money($totals['outstanding'], (string) ($contract['currency_code'] ?? ''))); ?></strong></span>
+                                </span>
+                            </a>
+                            <?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_SYSTEM)) : ?>
+                                <form class="safecontracts-contract-card-shell__actions" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Payments, collections, history and audit evidence will be preserved.', 'safecontracts'); ?>">
+                                    <input type="hidden" name="action" value="<?php echo esc_attr(self::ARCHIVE_ACTION); ?>">
+                                    <input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contractId); ?>">
+                                    <?php wp_nonce_field(self::ARCHIVE_ACTION . '_' . $contractId); ?>
+                                    <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
+                                </form>
+                            <?php endif; ?>
+                        </article>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
