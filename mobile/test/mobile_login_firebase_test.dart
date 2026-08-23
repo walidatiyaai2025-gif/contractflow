@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/app.dart';
 import 'package:safecontracts_mobile/core/api/api_client.dart';
@@ -103,12 +103,12 @@ void main() {
 
     expect(find.text('Username'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
+    final signIn = find.widgetWithText(FilledButton, 'Sign in');
+    expect(signIn, findsOneWidget);
     expect(find.text('You do not have access to SafeContracts.'), findsNothing);
 
     await tester.enterText(find.byType(EditableText).first, 'admin');
     await tester.enterText(find.byType(EditableText).last, 'secret');
-    final signIn = find.text('Sign in');
     await tester.ensureVisible(signIn);
     await tester.pumpAndSettle();
     await tester.tap(signIn);
