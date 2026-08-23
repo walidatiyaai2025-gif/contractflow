@@ -12,7 +12,7 @@ use SafeContracts\Payments\PaymentStatus;
 
 final class DashboardFilters
 {
-    /** @return array{customer_id:int,counterparty_type:string,counterparty_id:int,financial_direction:string,currency_code:string,contract_id:int,accountant_user_id:int,status:string,year:int,due_from:?string,due_to:?string,date_from:?string,date_to:?string,date_range_error:bool} */
+    /** @return array{customer_id:int,counterparty_type:string,counterparty_id:int,financial_direction:string,currency_code:string,contract_id:int,accountant_user_id:int,status:string,year:int,month:int,due_from:?string,due_to:?string,date_from:?string,date_to:?string,date_range_error:bool} */
     public static function normalize(array $input): array
     {
         $customerId = self::id($input['customer_id'] ?? null);
@@ -39,6 +39,7 @@ final class DashboardFilters
         }
 
         $year = self::year($input['year'] ?? $input['dashboard_year'] ?? null);
+        $month = self::month($input['month'] ?? $input['dashboard_month'] ?? null);
 
         $dueFrom = self::date($input['due_from'] ?? null);
         $dueTo = self::date($input['due_to'] ?? null);
@@ -47,10 +48,20 @@ final class DashboardFilters
         }
 
         $periodInput = $input;
-        if ($year > 0) {
-            // A selected year is an explicit full-calendar-year context. It
-            // deliberately overrides ad-hoc period inputs so dashboard and
-            // drill-down pages cannot disagree about what “2026” means.
+        if ($month > 0) {
+            // Month-only mode intentionally means the selected month in the
+            // current calendar year. Supplying year + month scopes that exact
+            // month. This keeps all authoritative SQL/settlement reads on the
+            // same concrete date range instead of inventing cross-year totals.
+            $effectiveYear = $year > 0
+                ? $year
+                : (int) (function_exists('wp_date') ? wp_date('Y') : gmdate('Y'));
+            $first = DateTimeImmutable::createFromFormat('!Y-n-j', sprintf('%04d-%d-1', $effectiveYear, $month));
+            if ($first !== false) {
+                $periodInput['date_from'] = $first->format('Y-m-d');
+                $periodInput['date_to'] = $first->modify('last day of this month')->format('Y-m-d');
+            }
+        } elseif ($year > 0) {
             $periodInput['date_from'] = sprintf('%04d-01-01', $year);
             $periodInput['date_to'] = sprintf('%04d-12-31', $year);
         }
@@ -66,6 +77,7 @@ final class DashboardFilters
             'accountant_user_id' => $accountantUserId,
             'status' => $status,
             'year' => $year,
+            'month' => $month,
             'due_from' => $dueFrom,
             'due_to' => $dueTo,
             'date_from' => $period['date_from'],
@@ -76,58 +88,51 @@ final class DashboardFilters
 
     private static function id(mixed $value): int
     {
-        if (! is_scalar($value) || is_bool($value)) {
-            return 0;
-        }
+        if (! is_scalar($value) || is_bool($value)) return 0;
         $raw = trim((string) $value);
-        if ($raw === '' || ! preg_match('/^\d+$/', $raw)) {
-            return 0;
-        }
+        if ($raw === '' || ! preg_match('/^\d+$/', $raw)) return 0;
         $validated = filter_var($raw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
         return $validated === false ? 0 : (int) $validated;
     }
 
     private static function year(mixed $value): int
     {
-        if (! is_scalar($value) || is_bool($value)) {
-            return 0;
-        }
+        if (! is_scalar($value) || is_bool($value)) return 0;
         $raw = trim((string) $value);
-        if ($raw === '' || $raw === '0' || ! preg_match('/^\d{4}$/', $raw)) {
-            return 0;
-        }
+        if ($raw === '' || $raw === '0' || ! preg_match('/^\d{4}$/', $raw)) return 0;
         $year = (int) $raw;
         return $year >= 1900 && $year <= 2200 ? $year : 0;
+    }
+
+    private static function month(mixed $value): int
+    {
+        if (! is_scalar($value) || is_bool($value)) return 0;
+        $raw = trim((string) $value);
+        if ($raw === '' || $raw === '0' || ! preg_match('/^\d{1,2}$/', $raw)) return 0;
+        $month = (int) $raw;
+        return $month >= 1 && $month <= 12 ? $month : 0;
     }
 
     /** @param list<string> $allowed */
     private static function enum(mixed $value, array $allowed): string
     {
-        if (! is_scalar($value) || is_bool($value)) {
-            return '';
-        }
+        if (! is_scalar($value) || is_bool($value)) return '';
         $normalized = strtolower(trim((string) $value));
         return in_array($normalized, $allowed, true) ? $normalized : '';
     }
 
     private static function currency(mixed $value): string
     {
-        if (! is_scalar($value) || is_bool($value)) {
-            return '';
-        }
+        if (! is_scalar($value) || is_bool($value)) return '';
         $currency = strtoupper(trim((string) $value));
         return preg_match('/^[A-Z]{3}$/', $currency) ? $currency : '';
     }
 
     private static function date(mixed $value): ?string
     {
-        if (! is_scalar($value) || is_bool($value)) {
-            return null;
-        }
+        if (! is_scalar($value) || is_bool($value)) return null;
         $value = trim((string) $value);
-        if ($value === '') {
-            return null;
-        }
+        if ($value === '') return null;
         $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
         return $date && $date->format('Y-m-d') === $value ? $value : null;
     }
