@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
+import '../contracts/contracts.dart';
+import '../contracts/premium_contract_details_screen.dart';
 import '../ui/safecontracts_design.dart';
 import 'dashboard_controller.dart';
 import 'dashboard_models.dart';
@@ -56,7 +58,17 @@ final class DashboardTwoScreen extends StatelessWidget {
                 lists: controller.lists,
                 currency: currency,
                 onOpenPayments: onOpenPayments,
-                onOpenContract: onOpenContract,
+                onOpenContract: (contractId) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => PremiumContractDetailsScreen(
+                        repository: ContractsRepository(controller.repository.client),
+                        contractId: contractId,
+                        currency: currency,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -329,7 +341,8 @@ final class _Bars extends StatelessWidget {
               children: items.map((item) {
                 final value = double.tryParse(item.raw) ?? 0.0;
                 final ratio = maximum <= 0.0 ? 0.08 : value / maximum;
-                final height = (28.0 + 78.0 * ratio.clamp(0.0, 1.0)).toDouble();
+                final height =
+                    (28.0 + 78.0 * ratio.clamp(0.0, 1.0)).toDouble();
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5),
@@ -353,8 +366,10 @@ final class _Bars extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 5),
-                        Text(item.label,
-                            style: Theme.of(context).textTheme.labelSmall),
+                        Text(
+                          item.label,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
                       ],
                     ),
                   ),
@@ -403,8 +418,9 @@ final class _Activities extends StatelessWidget {
           child: records.isEmpty
               ? Padding(
                   padding: const EdgeInsets.all(12),
-                  child:
-                      Text(ar ? 'لا توجد أنشطة حالياً.' : 'No activity yet.'),
+                  child: Text(
+                    ar ? 'لا توجد أنشطة حالياً.' : 'No activity yet.',
+                  ),
                 )
               : Column(
                   children: records.indexed.map((entry) {
