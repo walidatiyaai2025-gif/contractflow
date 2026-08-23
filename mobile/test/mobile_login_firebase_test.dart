@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/app.dart';
 import 'package:safecontracts_mobile/core/api/api_client.dart';
@@ -11,7 +11,7 @@ import 'package:safecontracts_mobile/core/config/app_environment.dart';
 import 'fake_api_transport.dart';
 
 void main() {
-  testWidgets('first launch shows login then opens authenticated app', (
+  testWidgets('first launch shows company landing then authenticated app', (
     tester,
   ) async {
     final environment = AppEnvironment.fromValues(
@@ -23,6 +23,9 @@ void main() {
     late FakeApiTransport transport;
     transport = FakeApiTransport((uri) {
       final request = transport.requests.last;
+      if (uri.path.endsWith('/mobile-landing')) {
+        return _ok(_landingPayload());
+      }
       if (uri.path.endsWith('/auth/login')) {
         return _ok(
           <String, Object?>{
@@ -101,14 +104,23 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Advertising built on experience'), findsOneWidget);
+    final landingSignIn = find.byKey(const Key('companyWelcomeSignIn'));
+    expect(landingSignIn, findsOneWidget);
+    expect(find.text('Username'), findsNothing);
+
+    await tester.ensureVisible(landingSignIn);
+    await tester.tap(landingSignIn);
+    await tester.pumpAndSettle();
+
     expect(find.text('Username'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
+    final signIn = find.widgetWithText(FilledButton, 'Sign in');
+    expect(signIn, findsOneWidget);
     expect(find.text('You do not have access to SafeContracts.'), findsNothing);
 
     await tester.enterText(find.byType(EditableText).first, 'admin');
     await tester.enterText(find.byType(EditableText).last, 'secret');
-    final signIn = find.text('Sign in');
     await tester.ensureVisible(signIn);
     await tester.pumpAndSettle();
     await tester.tap(signIn);
@@ -124,8 +136,64 @@ void main() {
       ),
       isTrue,
     );
+    expect(
+      transport.requests.any(
+        (request) => request.uri.path.endsWith('/mobile-landing'),
+      ),
+      isTrue,
+    );
   });
 }
+
+Map<String, Object?> _landingPayload() => <String, Object?>{
+      'schema_version': 1,
+      'brand_name': 'Alkenzy ADV',
+      'agency_name': <String, Object?>{
+        'en': 'Alkenzy Advertising Agency',
+        'ar': 'الكنزي للإعلان',
+      },
+      'headline': <String, Object?>{
+        'en': 'Advertising built on experience',
+        'ar': 'خبرة إعلانية تصنع الفرق',
+      },
+      'highlight': <String, Object?>{
+        'en': 'Planning, execution, and measurable impact',
+        'ar': 'تخطيط وتنفيذ وتأثير قابل للقياس',
+      },
+      'summary': <String, Object?>{
+        'en': 'Alkenzy advertising summary.',
+        'ar': 'ملخص خدمات الكنزي الإعلانية.',
+      },
+      'experience_years': 10,
+      'services': <Object?>[
+        <String, Object?>{
+          'key': 'strategy',
+          'title': <String, Object?>{
+            'en': 'Marketing strategy',
+            'ar': 'استراتيجيات تسويقية',
+          },
+          'subtitle': <String, Object?>{
+            'en': 'Campaign planning',
+            'ar': 'تخطيط الحملات',
+          },
+        },
+      ],
+      'contact': <String, Object?>{
+        'phones': <Object?>['01000272232'],
+        'office_address': <String, Object?>{
+          'en': '57 Khatam Al-Morselin, Giza',
+          'ar': '57 خاتم المرسلين، الجيزة',
+        },
+      },
+      'sign_in_label': <String, Object?>{
+        'en': 'Sign in',
+        'ar': 'تسجيل الدخول',
+      },
+      'learn_more_label': <String, Object?>{
+        'en': 'Learn more',
+        'ar': 'اعرف المزيد',
+      },
+    };
 
 ApiTransportResponse _ok(Object? data, {int statusCode = 200}) {
   return ApiTransportResponse(

@@ -44,31 +44,39 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: widget.controller,
-      builder: (context, child) => LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 900;
-          return Column(
-            children: [
-              _SupplierToolbar(
-                controller: widget.controller,
-                searchController: _searchController,
-                onCreate: widget.controller.canCreate
-                    ? () => unawaited(_openEditor())
-                    : null,
+      builder: (context, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 900;
+            final showingMobileDetail =
+                !wide && widget.controller.selectedSupplierId != null;
+            return SafeContractsBackdrop(
+              child: Column(
+                children: [
+                  if (!showingMobileDetail) ...[
+                    _SupplierDirectoryHeader(
+                      controller: widget.controller,
+                      searchController: _searchController,
+                      onCreate: widget.controller.canCreate
+                          ? () => unawaited(_openEditor())
+                          : null,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  Expanded(
+                    child: _SupplierContent(
+                      controller: widget.controller,
+                      wide: wide,
+                      onEdit: (supplier) => unawaited(_openEditor(supplier)),
+                      onArchive: (supplier) => unawaited(_archive(supplier)),
+                    ),
+                  ),
+                ],
               ),
-              const Divider(height: 1),
-              Expanded(
-                child: _SupplierContent(
-                  controller: widget.controller,
-                  wide: wide,
-                  onEdit: (supplier) => unawaited(_openEditor(supplier)),
-                  onArchive: (supplier) => unawaited(_archive(supplier)),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -148,8 +156,8 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
   }
 }
 
-final class _SupplierToolbar extends StatelessWidget {
-  const _SupplierToolbar({
+final class _SupplierDirectoryHeader extends StatelessWidget {
+  const _SupplierDirectoryHeader({
     required this.controller,
     required this.searchController,
     required this.onCreate,
@@ -162,65 +170,130 @@ final class _SupplierToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
+    final ar = l10n.isArabic;
     final busy = controller.state == SuppliersLoadState.loading ||
         controller.mutationInFlight;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 10,
-        runSpacing: 10,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+      child: Column(
         children: [
-          Text(
-            l10n.isArabic ? 'الموردون' : 'Suppliers',
-            style: Theme.of(context).textTheme.titleLarge,
+          SafeContractsPremiumHeader(
+            compact: true,
+            leading: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: SafeContractsVisual.roseGradient,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.local_shipping_outlined,
+                color: SafeContractsVisual.navyDeep,
+              ),
+            ),
+            title: ar ? 'دليل الموردين' : 'Supplier Directory',
+            subtitle: ar
+                ? 'بحث فعلي عبر الموردين المصرح لك بعرضهم'
+                : 'Server-backed search across authorized suppliers',
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.15),
+                ),
+              ),
+              child: Text(
+                '${controller.suppliers.length}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
           ),
-          SizedBox(
-            width: 280,
-            child: SearchBar(
-              controller: searchController,
-              enabled: !busy,
-              hintText: l10n.isArabic
-                  ? 'الاسم، الكود، التسجيل أو الرقم الضريبي'
-                  : 'Name, code, registration or tax number',
-              leading: const Icon(Icons.search_rounded),
-              trailing: [
-                if (searchController.text.isNotEmpty)
-                  IconButton(
-                    tooltip: l10n.t('Clear'),
-                    onPressed: busy
-                        ? null
-                        : () {
-                            searchController.clear();
-                            unawaited(controller.setSearch(''));
-                          },
-                    icon: const Icon(Icons.close_rounded),
-                  ),
+          const SizedBox(height: 10),
+          SafeContractsSurface(
+            elevated: false,
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                SearchBar(
+                  controller: searchController,
+                  enabled: !controller.mutationInFlight,
+                  leading: const Icon(Icons.search_rounded),
+                  hintText: ar
+                      ? 'الاسم، الكود، التسجيل أو الرقم الضريبي'
+                      : 'Name, code, registration or tax number',
+                  trailing: [
+                    if (controller.searchQuery.isNotEmpty)
+                      IconButton(
+                        tooltip: l10n.t('Clear'),
+                        onPressed: busy
+                            ? null
+                            : () {
+                                searchController.clear();
+                                unawaited(controller.setSearch(''));
+                              },
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                  ],
+                  onSubmitted: busy
+                      ? null
+                      : (value) => unawaited(controller.setSearch(value)),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    if (controller.canArchive)
+                      Expanded(
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: FilterChip(
+                            label: Text(
+                              ar ? 'إظهار المؤرشف' : 'Show archived',
+                            ),
+                            selected: controller.includeArchived,
+                            onSelected: busy
+                                ? null
+                                : (value) => unawaited(
+                                      controller.setIncludeArchived(value),
+                                    ),
+                            selectedColor: SafeContractsVisual.redSoft,
+                            showCheckmark: false,
+                            avatar: Icon(
+                              Icons.inventory_2_outlined,
+                              size: 17,
+                              color: controller.includeArchived
+                                  ? SafeContractsVisual.redDeep
+                                  : SafeContractsVisual.muted,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    IconButton.filledTonal(
+                      tooltip: l10n.t('Refresh'),
+                      onPressed:
+                          busy ? null : () => unawaited(controller.refresh()),
+                      icon: const Icon(Icons.refresh_rounded),
+                    ),
+                    if (onCreate != null) ...[
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        onPressed: busy ? null : onCreate,
+                        icon: const Icon(Icons.add_business_rounded),
+                        label: Text(ar ? 'مورد جديد' : 'New supplier'),
+                      ),
+                    ],
+                  ],
+                ),
               ],
-              onSubmitted: busy
-                  ? null
-                  : (value) => unawaited(controller.setSearch(value)),
             ),
           ),
-          if (controller.canArchive)
-            FilterChip(
-              label: Text(l10n.isArabic ? 'إظهار المؤرشف' : 'Show archived'),
-              selected: controller.includeArchived,
-              onSelected: busy
-                  ? null
-                  : (value) => unawaited(controller.setIncludeArchived(value)),
-            ),
-          IconButton(
-            tooltip: l10n.t('Refresh'),
-            onPressed: busy ? null : () => unawaited(controller.refresh()),
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-          if (onCreate != null)
-            FilledButton.icon(
-              onPressed: busy ? null : onCreate,
-              icon: const Icon(Icons.add_business_rounded),
-              label: Text(l10n.isArabic ? 'مورد جديد' : 'New supplier'),
-            ),
         ],
       ),
     );
@@ -263,16 +336,25 @@ final class _SupplierContent extends StatelessWidget {
       onEdit: onEdit,
       onArchive: onArchive,
     );
+
     if (wide) {
-      return Row(
-        children: [
-          Expanded(flex: 3, child: list),
-          const VerticalDivider(width: 1),
-          Expanded(flex: 2, child: detail),
-        ],
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        child: Row(
+          children: [
+            Expanded(flex: 3, child: list),
+            const SizedBox(width: 10),
+            Expanded(flex: 2, child: detail),
+          ],
+        ),
       );
     }
-    return controller.selectedSupplierId == null ? list : detail;
+
+    if (controller.selectedSupplierId != null) return detail;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      child: list,
+    );
   }
 }
 
@@ -285,78 +367,195 @@ final class _SupplierList extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     if (controller.suppliers.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: controller.refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            const SizedBox(height: 120),
-            const Icon(Icons.inventory_2_outlined, size: 52),
-            const SizedBox(height: 14),
-            Center(
-              child: Text(
-                l10n.isArabic
-                    ? 'لا يوجد موردون مطابقون للصلاحيات والبحث الحالي.'
-                    : 'No suppliers match your authorized scope and search.',
+      return SafeContractsSurface(
+        child: RefreshIndicator(
+          onRefresh: controller.refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              const SizedBox(height: 90),
+              const Icon(
+                Icons.manage_search_rounded,
+                size: 52,
+                color: SafeContractsVisual.muted,
               ),
-            ),
-          ],
+              const SizedBox(height: 14),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Text(
+                    l10n.isArabic
+                        ? 'لا يوجد موردون مطابقون للصلاحيات والبحث الحالي.'
+                        : 'No suppliers match your authorized scope and search.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
+
     return Column(
       children: [
         if (controller.state == SuppliersLoadState.loading ||
             controller.mutationInFlight)
-          const LinearProgressIndicator(),
+          const LinearProgressIndicator(minHeight: 2),
         if (controller.state == SuppliersLoadState.error)
-          MaterialBanner(
-            content: Text(
-              l10n.rawMessage(controller.errorMessage ?? 'Refresh failed.'),
+          _InlineSupplierError(
+            message: l10n.rawMessage(
+              controller.errorMessage ?? 'Refresh failed.',
             ),
-            actions: const [SizedBox.shrink()],
           ),
         Expanded(
           child: RefreshIndicator(
             onRefresh: controller.refresh,
-            child: ListView.separated(
+            child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.only(top: 2, bottom: 8),
               itemCount: controller.suppliers.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final supplier = controller.suppliers[index];
-                final subtitle = <String>[
-                  if (supplier.internalCode != null) supplier.internalCode!,
-                  if (supplier.defaultCurrency != null)
-                    supplier.defaultCurrency!,
-                  if (supplier.paymentTerms != null) supplier.paymentTerms!,
-                ].join(' • ');
-                return ListTile(
-                  selected: controller.selectedSupplierId == supplier.id,
-                  leading: CircleAvatar(
-                    backgroundColor: supplier.isArchived
-                        ? SafeContractsVisual.redSoft
-                        : SafeContractsVisual.navySoft,
-                    child: Icon(
-                      supplier.isArchived
-                          ? Icons.inventory_2_outlined
-                          : Icons.local_shipping_outlined,
-                      color: supplier.isArchived
-                          ? SafeContractsVisual.red
-                          : SafeContractsVisual.navy,
-                    ),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 9),
+                  child: _SupplierCard(
+                    supplier: supplier,
+                    selected: controller.selectedSupplierId == supplier.id,
+                    onTap: () =>
+                        unawaited(controller.openSupplier(supplier.id)),
                   ),
-                  title: Text(supplier.displayName),
-                  subtitle: subtitle.isEmpty ? null : Text(subtitle),
-                  trailing: _SupplierStatusChip(supplier: supplier),
-                  onTap: () => unawaited(controller.openSupplier(supplier.id)),
                 );
               },
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+final class _SupplierCard extends StatelessWidget {
+  const _SupplierCard({
+    required this.supplier,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final SafeContractsSupplier supplier;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = <String>[
+      if (supplier.internalCode != null) supplier.internalCode!,
+      if (supplier.defaultCurrency != null) supplier.defaultCurrency!,
+      if (supplier.paymentTerms != null) supplier.paymentTerms!,
+    ].join(' • ');
+    final accent = supplier.isArchived
+        ? SafeContractsVisual.red
+        : SafeContractsVisual.green;
+
+    return Material(
+      color: SafeContractsVisual.surface,
+      borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(SafeContractsVisual.compactRadius),
+            border: Border.all(
+              color: selected
+                  ? SafeContractsVisual.roseGold
+                  : SafeContractsVisual.outline,
+              width: selected ? 1.5 : 1,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x125A4638),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: supplier.isArchived
+                      ? SafeContractsVisual.redSoft
+                      : SafeContractsVisual.navySoft,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(
+                  supplier.isArchived
+                      ? Icons.inventory_2_outlined
+                      : Icons.local_shipping_outlined,
+                  color: supplier.isArchived
+                      ? SafeContractsVisual.redDeep
+                      : SafeContractsVisual.navy,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      supplier.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    if (meta.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        meta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SafeContractsVisual.muted,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.11),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  supplier.isArchived
+                      ? (context.scL10n.isArabic ? 'مؤرشف' : 'Archived')
+                      : context.scL10n.status(supplier.status),
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: SafeContractsVisual.muted,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -379,13 +578,27 @@ final class _SupplierDetail extends StatelessWidget {
     final l10n = context.scL10n;
     final id = controller.selectedSupplierId;
     if (id == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            l10n.isArabic
-                ? 'اختر مورداً لعرض البيانات المصرح بها.'
-                : 'Select a supplier to view authorized details.',
+      return SafeContractsSurface(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.touch_app_outlined,
+                  size: 40,
+                  color: SafeContractsVisual.muted,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  l10n.isArabic
+                      ? 'اختر مورداً لعرض البيانات المصرح بها.'
+                      : 'Select a supplier to view authorized details.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -401,137 +614,339 @@ final class _SupplierDetail extends StatelessWidget {
         onRetry: () => unawaited(controller.openSupplier(id)),
       );
     }
+
     final supplier = controller.selectedSupplier;
     if (supplier == null) return const SizedBox.shrink();
 
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        if (showBack)
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: TextButton.icon(
-              onPressed: controller.closeSupplier,
-              icon: const Icon(Icons.arrow_back_rounded),
-              label: Text(l10n.isArabic ? 'الموردون' : 'Suppliers'),
+    return SafeContractsSurface(
+      margin: showBack
+          ? const EdgeInsets.fromLTRB(14, 10, 14, 12)
+          : EdgeInsets.zero,
+      padding: EdgeInsets.zero,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showBack)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  onPressed: controller.closeSupplier,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  label: Text(l10n.isArabic ? 'الموردون' : 'Suppliers'),
+                ),
+              ),
+            _SupplierHero(supplier: supplier),
+            const SizedBox(height: 14),
+            _SupplierInfoField(
+              icon: Icons.email_outlined,
+              label: l10n.t('Email'),
+              value: supplier.email ?? '—',
+            ),
+            _SupplierInfoField(
+              icon: Icons.phone_outlined,
+              label: l10n.t('Phone'),
+              value: supplier.phone ?? '—',
+            ),
+            _SupplierInfoField(
+              icon: Icons.person_outline_rounded,
+              label: l10n.isArabic ? 'جهة الاتصال' : 'Contact',
+              value: supplier.contactName ?? '—',
+            ),
+            _SupplierInfoField(
+              icon: Icons.badge_outlined,
+              label: l10n.isArabic ? 'الكود الداخلي' : 'Internal code',
+              value: supplier.internalCode ?? '—',
+            ),
+            _SupplierInfoField(
+              icon: Icons.public_outlined,
+              label: l10n.isArabic ? 'الدولة' : 'Country',
+              value: supplier.countryCode ?? '—',
+            ),
+            _SupplierInfoField(
+              icon: Icons.app_registration_outlined,
+              label: l10n.isArabic ? 'رقم التسجيل' : 'Registration',
+              value: supplier.registrationNumber ?? '—',
+            ),
+            _SupplierInfoField(
+              icon: Icons.receipt_long_outlined,
+              label: l10n.isArabic ? 'الرقم الضريبي' : 'Tax / VAT',
+              value: supplier.taxNumber ?? '—',
+            ),
+            _SupplierInfoField(
+              icon: Icons.currency_exchange_rounded,
+              label: l10n.isArabic ? 'العملة الافتراضية' : 'Default currency',
+              value: supplier.defaultCurrency ?? '—',
+            ),
+            _SupplierInfoField(
+              icon: Icons.payments_outlined,
+              label: l10n.isArabic ? 'شروط السداد' : 'Payment terms',
+              value: supplier.paymentTerms ?? '—',
+            ),
+            if (supplier.address != null) ...[
+              const SizedBox(height: 4),
+              _SupplierLongField(
+                label: l10n.isArabic ? 'العنوان' : 'Address',
+                value: supplier.address!,
+              ),
+            ],
+            if (supplier.notes != null) ...[
+              const SizedBox(height: 10),
+              _SupplierLongField(
+                label: l10n.isArabic ? 'ملاحظات' : 'Notes',
+                value: supplier.notes!,
+              ),
+            ],
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (!supplier.isArchived && controller.canEdit)
+                  FilledButton.icon(
+                    onPressed: controller.mutationInFlight
+                        ? null
+                        : () => onEdit(supplier),
+                    icon: const Icon(Icons.edit_rounded),
+                    label: Text(l10n.t('Edit')),
+                  ),
+                if (!supplier.isArchived && controller.canArchive)
+                  OutlinedButton.icon(
+                    onPressed: controller.mutationInFlight
+                        ? null
+                        : () => onArchive(supplier),
+                    icon: const Icon(Icons.archive_outlined),
+                    label: Text(l10n.isArabic ? 'أرشفة' : 'Archive'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: SafeContractsVisual.navySoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.verified_user_outlined,
+                    size: 18,
+                    color: SafeContractsVisual.navy,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.isArabic
+                          ? 'القراءة والكتابة تتم فقط عبر API المصرح بها وصلاحيات الخادم هي المرجع النهائي.'
+                          : 'Reads and writes stay on authorized APIs; server permissions remain authoritative.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: SafeContractsVisual.navyDeep,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class _SupplierHero extends StatelessWidget {
+  const _SupplierHero({required this.supplier});
+
+  final SafeContractsSupplier supplier;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final statusColor = supplier.isArchived
+        ? SafeContractsVisual.red
+        : SafeContractsVisual.green;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: SafeContractsVisual.premiumHeaderGradient,
+        borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: SafeContractsVisual.roseGradient,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Icon(
+                  Icons.local_shipping_rounded,
+                  color: SafeContractsVisual.navyDeep,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      supplier.legalName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    if (supplier.tradingName != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        supplier.tradingName!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.72),
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _SupplierHeroPill(
+                icon: Icons.circle,
+                label: supplier.isArchived
+                    ? (l10n.isArabic ? 'مؤرشف' : 'Archived')
+                    : l10n.status(supplier.status),
+                color: statusColor,
+              ),
+              if (supplier.defaultCurrency != null)
+                _SupplierHeroPill(
+                  icon: Icons.currency_exchange_rounded,
+                  label: supplier.defaultCurrency!,
+                  color: SafeContractsVisual.champagne,
+                ),
+              if (supplier.internalCode != null)
+                _SupplierHeroPill(
+                  icon: Icons.tag_rounded,
+                  label: supplier.internalCode!,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _SupplierHeroPill extends StatelessWidget {
+  const _SupplierHeroPill({
+    required this.icon,
+    required this.label,
+    this.color = Colors.white,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.32)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
             ),
           ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+    );
+  }
+}
+
+final class _SupplierInfoField extends StatelessWidget {
+  const _SupplierInfoField({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(
+          color: SafeContractsVisual.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: SafeContractsVisual.outline),
+        ),
+        child: Row(
           children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: SafeContractsVisual.navySoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 18, color: SafeContractsVisual.navy),
+            ),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    supplier.legalName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    label,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SafeContractsVisual.muted,
+                        ),
                   ),
-                  if (supplier.tradingName != null) ...[
-                    const SizedBox(height: 4),
-                    Text(supplier.tradingName!),
-                  ],
+                  const SizedBox(height: 2),
+                  SelectableText(
+                    value,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
                 ],
               ),
             ),
-            _SupplierStatusChip(supplier: supplier),
           ],
         ),
-        const SizedBox(height: 20),
-        SafeContractsSurface(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              _SupplierField(label: 'ID', value: '${supplier.id}'),
-              _SupplierField(
-                label: l10n.isArabic ? 'الكود الداخلي' : 'Internal code',
-                value: supplier.internalCode ?? '—',
-              ),
-              _SupplierField(
-                label: l10n.isArabic ? 'جهة الاتصال' : 'Contact',
-                value: supplier.contactName ?? '—',
-              ),
-              _SupplierField(
-                label: l10n.t('Email'),
-                value: supplier.email ?? '—',
-              ),
-              _SupplierField(
-                label: l10n.t('Phone'),
-                value: supplier.phone ?? '—',
-              ),
-              _SupplierField(
-                label: l10n.isArabic ? 'الدولة' : 'Country',
-                value: supplier.countryCode ?? '—',
-              ),
-              _SupplierField(
-                label: l10n.isArabic ? 'رقم التسجيل' : 'Registration',
-                value: supplier.registrationNumber ?? '—',
-              ),
-              _SupplierField(
-                label: l10n.isArabic ? 'الرقم الضريبي' : 'Tax / VAT',
-                value: supplier.taxNumber ?? '—',
-              ),
-              _SupplierField(
-                label: l10n.isArabic ? 'العملة الافتراضية' : 'Default currency',
-                value: supplier.defaultCurrency ?? '—',
-              ),
-              _SupplierField(
-                label: l10n.isArabic ? 'شروط السداد' : 'Payment terms',
-                value: supplier.paymentTerms ?? '—',
-              ),
-            ],
-          ),
-        ),
-        if (supplier.address != null) ...[
-          const SizedBox(height: 14),
-          _SupplierLongField(
-            label: l10n.isArabic ? 'العنوان' : 'Address',
-            value: supplier.address!,
-          ),
-        ],
-        if (supplier.notes != null) ...[
-          const SizedBox(height: 14),
-          _SupplierLongField(
-            label: l10n.isArabic ? 'ملاحظات' : 'Notes',
-            value: supplier.notes!,
-          ),
-        ],
-        const SizedBox(height: 20),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            if (!supplier.isArchived && controller.canEdit)
-              FilledButton.icon(
-                onPressed:
-                    controller.mutationInFlight ? null : () => onEdit(supplier),
-                icon: const Icon(Icons.edit_rounded),
-                label: Text(l10n.t('Edit')),
-              ),
-            if (!supplier.isArchived && controller.canArchive)
-              OutlinedButton.icon(
-                onPressed: controller.mutationInFlight
-                    ? null
-                    : () => onArchive(supplier),
-                icon: const Icon(Icons.archive_outlined),
-                label: Text(l10n.isArabic ? 'أرشفة' : 'Archive'),
-              ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Text(
-          l10n.isArabic
-              ? 'العميل يقرأ ويكتب فقط من خلال API المصرح بها؛ صلاحيات الخادم هي المرجع النهائي.'
-              : 'The client reads and writes only through authorized APIs; server permissions remain authoritative.',
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: SafeContractsVisual.muted),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -758,54 +1173,6 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
   }
 }
 
-final class _SupplierStatusChip extends StatelessWidget {
-  const _SupplierStatusChip({required this.supplier});
-
-  final SafeContractsSupplier supplier;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = supplier.isArchived
-        ? (context.scL10n.isArabic ? 'مؤرشف' : 'Archived')
-        : context.scL10n.status(supplier.status);
-    return Chip(
-      avatar: Icon(
-        supplier.isArchived ? Icons.archive_outlined : Icons.circle,
-        size: 14,
-      ),
-      label: Text(label),
-    );
-  }
-}
-
-final class _SupplierField extends StatelessWidget {
-  const _SupplierField({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 130,
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SafeContractsVisual.muted,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
-            Expanded(child: Text(value)),
-          ],
-        ),
-      );
-}
-
 final class _SupplierLongField extends StatelessWidget {
   const _SupplierLongField({required this.label, required this.value});
 
@@ -813,23 +1180,25 @@ final class _SupplierLongField extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => SafeContractsSurface(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(color: SafeContractsVisual.muted),
-            ),
-            const SizedBox(height: 6),
-            Text(value),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    return SafeContractsSurface(
+      elevated: false,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: SafeContractsVisual.muted,
+                ),
+          ),
+          const SizedBox(height: 6),
+          SelectableText(value),
+        ],
+      ),
+    );
+  }
 }
 
 final class _SupplierError extends StatelessWidget {
@@ -839,13 +1208,20 @@ final class _SupplierError extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: SafeContractsSurface(
+          accent: SafeContractsVisual.red,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 44),
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 44,
+                color: SafeContractsVisual.red,
+              ),
               const SizedBox(height: 12),
               Text(message, textAlign: TextAlign.center),
               const SizedBox(height: 12),
@@ -857,5 +1233,35 @@ final class _SupplierError extends StatelessWidget {
             ],
           ),
         ),
-      );
+      ),
+    );
+  }
+}
+
+final class _InlineSupplierError extends StatelessWidget {
+  const _InlineSupplierError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: SafeContractsVisual.redSoft,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: SafeContractsVisual.red.withValues(alpha: 0.30),
+          ),
+        ),
+        child: Text(
+          message,
+          style: const TextStyle(color: SafeContractsVisual.redDeep),
+        ),
+      ),
+    );
+  }
 }

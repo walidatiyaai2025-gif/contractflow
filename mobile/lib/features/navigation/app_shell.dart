@@ -193,25 +193,44 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     return Scaffold(
       backgroundColor: SafeContractsVisual.background,
       appBar: AppBar(
-        backgroundColor: SafeContractsVisual.background,
+        backgroundColor: SafeContractsVisual.navy,
+        foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 8,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: SafeContractsVisual.premiumHeaderGradient,
+          ),
+        ),
         title: Row(
           children: [
-            const SafeContractsBrandMark(size: 32, borderRadius: 9),
-            const SizedBox(width: 9),
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const SafeContractsBrandMark(size: 32, borderRadius: 9),
+            ),
+            const SizedBox(width: 10),
             Expanded(
               child: Text.rich(
                 TextSpan(
                   children: [
                     const TextSpan(
                       text: SafeContractsBrand.name,
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                     TextSpan(
-                      text: ' | ${_label(l10n, _selected)}',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      text: '  •  ${_label(l10n, _selected)}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.76),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -231,19 +250,45 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           Navigator.of(context).pop();
         },
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 22, 16, 14),
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 14, 12, 10),
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+            decoration: BoxDecoration(
+              gradient: SafeContractsVisual.premiumHeaderGradient,
+              borderRadius: BorderRadius.circular(SafeContractsVisual.radius),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x2B092944),
+                  blurRadius: 20,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
             child: Row(
               children: [
-                const SafeContractsBrandMark(size: 46, borderRadius: 13),
+                const SafeContractsBrandMark(size: 48, borderRadius: 13),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    SafeContractsBrand.name,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: SafeContractsVisual.navy,
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        SafeContractsBrand.name,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        l10n.isArabic
+                            ? 'مساحة العمل التنفيذية'
+                            : 'Executive workspace',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.70),
+                            ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -555,9 +600,13 @@ final class _QuickAddFabState extends State<_QuickAddFab>
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
+          border: Border.all(
+            color: SafeContractsVisual.roseGoldSoft,
+            width: 3,
+          ),
           boxShadow: [
             BoxShadow(
-              color: SafeContractsVisual.navy.withValues(alpha: 0.24),
+              color: SafeContractsVisual.roseGold.withValues(alpha: 0.30),
               blurRadius: 24,
               offset: const Offset(0, 10),
             ),
@@ -566,7 +615,7 @@ final class _QuickAddFabState extends State<_QuickAddFab>
         child: FloatingActionButton(
           tooltip: widget.tooltip,
           onPressed: widget.onPressed,
-          backgroundColor: SafeContractsVisual.navy,
+          backgroundColor: SafeContractsVisual.roseGold,
           foregroundColor: Colors.white,
           elevation: 0,
           child: const Icon(Icons.add_rounded, size: 34),
@@ -593,8 +642,8 @@ final class _QuickAddSheet extends StatelessWidget {
           Text(
             arabic ? 'إضافة جديدة' : 'Quick add',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: SafeContractsVisual.ink,
-                  fontWeight: FontWeight.w800,
+                  color: SafeContractsVisual.navy,
+                  fontWeight: FontWeight.w900,
                 ),
           ),
           const SizedBox(height: 4),
@@ -627,7 +676,7 @@ final class _QuickAddSheet extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Material(
-                  color: SafeContractsVisual.background,
+                  color: SafeContractsVisual.backgroundRaised,
                   borderRadius: BorderRadius.circular(18),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(18),
@@ -640,7 +689,7 @@ final class _QuickAddSheet extends StatelessWidget {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: SafeContractsVisual.navySoft,
+                              color: SafeContractsVisual.roseGoldSoft,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Icon(
@@ -680,7 +729,7 @@ final class _QuickAddSheet extends StatelessWidget {
                             Directionality.of(context) == TextDirection.rtl
                                 ? Icons.chevron_left_rounded
                                 : Icons.chevron_right_rounded,
-                            color: SafeContractsVisual.muted,
+                            color: SafeContractsVisual.roseGoldDark,
                           ),
                         ],
                       ),
@@ -716,6 +765,9 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
       child: DecoratedBox(
         decoration: const BoxDecoration(
           color: SafeContractsVisual.surface,
+          border: Border(
+            top: BorderSide(color: SafeContractsVisual.outline),
+          ),
           boxShadow: [
             BoxShadow(
               color: Color(0x205E5142),
@@ -739,8 +791,8 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 5),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? SafeContractsVisual.navySoft.withValues(
-                              alpha: 0.74,
+                          ? SafeContractsVisual.roseGoldSoft.withValues(
+                              alpha: 0.86,
                             )
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(16),

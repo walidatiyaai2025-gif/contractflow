@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
+import '../ui/safecontracts_design.dart';
 import 'mobile_auth.dart';
 
 final class SafeContractsLoginScreen extends StatefulWidget {
@@ -12,12 +13,14 @@ final class SafeContractsLoginScreen extends StatefulWidget {
     required this.onAuthenticated,
     this.languageCode = 'en',
     this.onLanguageChanged,
+    this.onBack,
     super.key,
   });
 
   final MobileLoginController controller;
   final String languageCode;
   final ValueChanged<String>? onLanguageChanged;
+  final VoidCallback? onBack;
   final Future<void> Function() onAuthenticated;
 
   @override
@@ -61,94 +64,147 @@ final class _SafeContractsLoginScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
-    final scheme = Theme.of(context).colorScheme;
     if (_bootstrapping) {
-      return _BlockingBootstrapSplash(
-        label: l10n.t('Loading'),
-        scheme: scheme,
-      );
+      return _BlockingBootstrapSplash(label: l10n.t('Loading'));
     }
 
     final selectedLanguage = widget.languageCode == 'ar' ? 'ar' : 'en';
     return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: <Color>[
-              scheme.primaryContainer.withValues(alpha: 0.72),
-              scheme.surface,
-              scheme.surface,
-            ],
+      backgroundColor: SafeContractsVisual.navyDeep,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: <double>[0, 0.48, 0.72, 1],
+                colors: <Color>[
+                  SafeContractsVisual.navyDeep,
+                  SafeContractsVisual.navy,
+                  SafeContractsVisual.background,
+                  SafeContractsVisual.background,
+                ],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: AnimatedBuilder(
-                  animation: widget.controller,
-                  builder: (context, child) {
-                    final submitting =
-                        widget.controller.state == MobileLoginState.submitting;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: SegmentedButton<String>(
-                            segments: <ButtonSegment<String>>[
-                              ButtonSegment<String>(
-                                value: 'en',
-                                label: Text(l10n.t('English')),
-                              ),
-                              ButtonSegment<String>(
-                                value: 'ar',
-                                label: Text(l10n.t('Arabic')),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: AnimatedBuilder(
+                    animation: widget.controller,
+                    builder: (context, child) {
+                      final submitting = widget.controller.state ==
+                          MobileLoginState.submitting;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              if (widget.onBack != null)
+                                IconButton(
+                                  tooltip: l10n.t('Back'),
+                                  onPressed: submitting ? null : widget.onBack,
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.08),
+                                  ),
+                                  icon: const Icon(Icons.arrow_back_rounded),
+                                ),
+                              const Spacer(),
+                              SegmentedButton<String>(
+                                segments: <ButtonSegment<String>>[
+                                  ButtonSegment<String>(
+                                    value: 'en',
+                                    label: Text(l10n.t('English')),
+                                  ),
+                                  ButtonSegment<String>(
+                                    value: 'ar',
+                                    label: Text(l10n.t('Arabic')),
+                                  ),
+                                ],
+                                selected: <String>{selectedLanguage},
+                                onSelectionChanged: submitting ||
+                                        widget.onLanguageChanged == null
+                                    ? null
+                                    : (selection) => widget
+                                        .onLanguageChanged!(selection.first),
+                                showSelectedIcon: false,
+                                style: ButtonStyle(
+                                  foregroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                    return states.contains(WidgetState.selected)
+                                        ? SafeContractsVisual.navyDeep
+                                        : Colors.white;
+                                  }),
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                    return states.contains(WidgetState.selected)
+                                        ? SafeContractsVisual.roseGoldSoft
+                                        : Colors.white.withValues(alpha: 0.08);
+                                  }),
+                                  side: WidgetStateProperty.all(
+                                    BorderSide(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.22),
+                                    ),
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                ),
                               ),
                             ],
-                            selected: <String>{selectedLanguage},
-                            onSelectionChanged: submitting ||
-                                    widget.onLanguageChanged == null
-                                ? null
-                                : (selection) =>
-                                    widget.onLanguageChanged!(selection.first),
-                            showSelectedIcon: false,
-                            style: const ButtonStyle(
-                              visualDensity: VisualDensity.compact,
+                          ),
+                          const SizedBox(height: 24),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.16),
+                                ),
+                              ),
+                              child: const SafeContractsBrandMark(
+                                size: 76,
+                                borderRadius: 18,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 22),
-                        const SafeContractsBrandMark(
-                          size: 82,
-                          borderRadius: 24,
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          SafeContractsBrand.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          l10n.t(
-                              'Sign in with your WordPress username and password'),
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                        ),
-                        const SizedBox(height: 24),
-                        Card(
-                          child: Padding(
+                          const SizedBox(height: 18),
+                          Text(
+                            SafeContractsBrand.name,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.7,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.isArabic
+                                ? 'إدارة العقود والمدفوعات والتحصيلات في تجربة تنفيذية واحدة.'
+                                : 'Contracts, payments and collections in one executive workspace.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyLarge
+                                ?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.76),
+                                  height: 1.55,
+                                ),
+                          ),
+                          const SizedBox(height: 28),
+                          SafeContractsSurface(
+                            accent: SafeContractsVisual.roseGold,
                             padding: const EdgeInsets.all(22),
                             child: Form(
                               key: _formKey,
@@ -157,6 +213,31 @@ final class _SafeContractsLoginScreenState
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
+                                    Text(
+                                      l10n.isArabic
+                                          ? 'تسجيل الدخول'
+                                          : 'Sign in',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            color: SafeContractsVisual.navy,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      l10n.t(
+                                        'Sign in with your WordPress username and password',
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: SafeContractsVisual.muted,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 18),
                                     TextFormField(
                                       controller: _username,
                                       enabled: !submitting,
@@ -177,13 +258,13 @@ final class _SafeContractsLoginScreenState
                                               ? l10n.t('Enter your username.')
                                               : null,
                                     ),
-                                    const SizedBox(height: 16),
+                                    const SizedBox(height: 14),
                                     TextFormField(
                                       controller: _password,
                                       enabled: !submitting,
                                       obscureText: _obscurePassword,
                                       autofillHints: const <String>[
-                                        AutofillHints.password
+                                        AutofillHints.password,
                                       ],
                                       textInputAction: TextInputAction.done,
                                       onFieldSubmitted: submitting
@@ -212,7 +293,7 @@ final class _SafeContractsLoginScreenState
                                               ? l10n.t('Enter your password.')
                                               : null,
                                     ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 6),
                                     CheckboxListTile(
                                       value: widget.controller.rememberMe,
                                       onChanged: submitting
@@ -237,16 +318,21 @@ final class _SafeContractsLoginScreenState
                                         child: Container(
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: scheme.errorContainer,
+                                            color: SafeContractsVisual.redSoft,
                                             borderRadius:
                                                 BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: SafeContractsVisual.red
+                                                  .withValues(alpha: 0.28),
+                                            ),
                                           ),
                                           child: Text(
                                             l10n.rawMessage(
                                               widget.controller.errorMessage!,
                                             ),
-                                            style: TextStyle(
-                                              color: scheme.onErrorContainer,
+                                            style: const TextStyle(
+                                              color:
+                                                  SafeContractsVisual.redDeep,
                                             ),
                                           ),
                                         ),
@@ -261,13 +347,17 @@ final class _SafeContractsLoginScreenState
                                           ? const SizedBox.square(
                                               dimension: 18,
                                               child: CircularProgressIndicator(
-                                                  strokeWidth: 2),
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
                                             )
-                                          : const Icon(Icons.login),
+                                          : const Icon(Icons.login_rounded),
                                       label: Text(
-                                        l10n.t(submitting
-                                            ? 'Signing in…'
-                                            : 'Sign in'),
+                                        l10n.t(
+                                          submitting
+                                              ? 'Signing in…'
+                                              : 'Sign in',
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -275,44 +365,34 @@ final class _SafeContractsLoginScreenState
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
 final class _BlockingBootstrapSplash extends StatelessWidget {
-  const _BlockingBootstrapSplash({
-    required this.label,
-    required this.scheme,
-  });
+  const _BlockingBootstrapSplash({required this.label});
 
   final String label;
-  final ColorScheme scheme;
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
       child: Scaffold(
+        backgroundColor: SafeContractsVisual.navyDeep,
         body: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: <Color>[
-                scheme.primaryContainer.withValues(alpha: 0.78),
-                scheme.surface,
-              ],
-            ),
+          decoration: const BoxDecoration(
+            gradient: SafeContractsVisual.premiumHeaderGradient,
           ),
           child: SafeArea(
             child: Center(
@@ -322,25 +402,41 @@ final class _BlockingBootstrapSplash extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const SafeContractsBrandMark(
-                      size: 88,
-                      borderRadius: 26,
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: const SafeContractsBrandMark(
+                        size: 88,
+                        borderRadius: 26,
+                      ),
                     ),
                     const SizedBox(height: 22),
                     Text(
                       SafeContractsBrand.name,
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
                               ),
                     ),
                     const SizedBox(height: 18),
                     const SizedBox.square(
                       dimension: 34,
-                      child: CircularProgressIndicator(strokeWidth: 3),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: SafeContractsVisual.roseGold,
+                      ),
                     ),
                     const SizedBox(height: 14),
-                    Text(label),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.78),
+                      ),
+                    ),
                   ],
                 ),
               ),
