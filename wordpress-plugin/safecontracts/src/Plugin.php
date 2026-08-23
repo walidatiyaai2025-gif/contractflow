@@ -11,6 +11,7 @@ use SafeContracts\Admin\AdminShell;
 use SafeContracts\Admin\ArchivePage;
 use SafeContracts\Admin\AttachmentAdminController;
 use SafeContracts\Admin\CollectionsPage;
+use SafeContracts\Admin\ContractPaymentTree;
 use SafeContracts\Admin\ContractsPage;
 use SafeContracts\Admin\CustomersPage;
 use SafeContracts\Admin\DashboardPage;
@@ -115,6 +116,7 @@ final class Plugin
         LoginBranding::register();
         NavigationCleanup::register();
         AdminPageSummaryInjector::register();
+        ContractPaymentTree::register();
         UserGuidePage::registerContextualHelp();
         NotificationEmailTestControl::register();
         RuntimeInspector::register();
