@@ -127,7 +127,7 @@ final class MobileLandingContent
             return $fallback;
         }
 
-        $text = trim(wp_strip_all_tags((string) $value));
+        $text = trim(strip_tags((string) $value));
         if ($text === '' || strlen($text) > $maximum || str_contains($text, "\0")) {
             return $fallback;
         }
