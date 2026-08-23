@@ -24,7 +24,9 @@ final class UserGuidePage
 
     public static function registerContextualHelp(): void
     {
-        add_action('admin_notices', [self::class, 'renderContextualHelp'], 6);
+        // Keep contextual guidance available on every SafeContracts screen without
+        // consuming the prime operational area above the page content.
+        add_action('in_admin_footer', [self::class, 'renderContextualHelp'], 20);
     }
 
     public static function renderContextualHelp(): void
@@ -43,7 +45,7 @@ final class UserGuidePage
             return;
         }
 
-        echo '<div class="safecontracts-summary-injector" dir="auto">';
+        echo '<div class="safecontracts-user-guide-footer" dir="auto">';
         echo '<details class="safecontracts-admin-card safecontracts-user-guide-panel">';
         echo '<summary><strong>' . esc_html__('How to use this page', 'safecontracts') . '</strong></summary>';
         self::renderEntryBody($entry, true);
