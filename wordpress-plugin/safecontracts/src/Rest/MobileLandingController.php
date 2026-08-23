@@ -16,8 +16,13 @@ final class MobileLandingController
         register_rest_route(Router::NAMESPACE, '/mobile-landing', [
             'methods' => WP_REST_Server::READABLE,
             'callback' => [self::class, 'show'],
-            'permission_callback' => '__return_true',
+            'permission_callback' => [self::class, 'allowPublic'],
         ]);
+    }
+
+    public static function allowPublic(): bool
+    {
+        return true;
     }
 
     public static function show(WP_REST_Request $request): WP_REST_Response
