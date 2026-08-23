@@ -34,17 +34,22 @@ final class CollectionRepository
         $wpdb->query('ROLLBACK');
     }
 
-    /** @return array{id:int, contract_id:int, financial_direction:string, currency_code:string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, payment_is_archived:bool, accountant_user_id:?int, contract_is_archived:bool}|null */
+    /** @return array{id:int, contract_id:int, financial_direction:string, currency_code:string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, payment_is_archived:bool, accountant_user_id:?int, contract_is_archived:bool, contract_base_value:?string, contract_settled_total:?string}|null */
     public function lockPayment(int $paymentId): ?array
     {
         global $wpdb;
         $this->assertWpdb($wpdb);
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $collections = $wpdb->prefix . 'safecontracts_payment_collections';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT p.id, p.contract_id, p.financial_direction, p.currency_code, p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
-                        c.accountant_user_id, c.is_archived AS contract_is_archived
+                        c.accountant_user_id, c.is_archived AS contract_is_archived, c.base_value AS contract_base_value,
+                        (SELECT COALESCE(SUM(pc.amount), 0.0000)
+                           FROM {$collections} pc
+                           INNER JOIN {$payments} sp ON sp.id = pc.payment_id
+                          WHERE sp.contract_id = p.contract_id AND sp.is_archived = 0 AND pc.is_archived = 0) AS contract_settled_total
                  FROM {$payments} p
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
                  WHERE p.id = %d
@@ -74,6 +79,10 @@ final class CollectionRepository
                 ? (int) $row['accountant_user_id']
                 : null,
             'contract_is_archived' => (bool) ($row['contract_is_archived'] ?? false),
+            // Production SQL always selects these values; nullable fallbacks keep
+            // older repository mocks compatible with the stricter service guard.
+            'contract_base_value' => array_key_exists('contract_base_value', $row) ? (string) $row['contract_base_value'] : null,
+            'contract_settled_total' => array_key_exists('contract_settled_total', $row) ? (string) $row['contract_settled_total'] : null,
         ];
     }
 
