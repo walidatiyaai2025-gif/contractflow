@@ -72,7 +72,10 @@ final class CounterpartyContractService
         RuntimeInspector::stage('contract.create.currency');
         $currencyCode = CurrencyCode::fromInputOrSettings($input['currency_code'] ?? null);
         RuntimeInspector::stage('contract.create.base_value');
-        $baseValue = ContractMoney::normalizeNonNegative($input['base_value'] ?? '0');
+        $baseValue = ContractMoney::normalizeNonNegative($input['base_value'] ?? '');
+        if ($baseValue === '0.0000') {
+            throw new InvalidArgumentException('Contract base value must be greater than zero.');
+        }
         $direction = Counterparty::defaultFinancialDirection($type);
         RuntimeInspector::stage('contract.create.accountant.normalize');
         $accountantUserId = $this->optionalUserId($input['accountant_user_id'] ?? null);
