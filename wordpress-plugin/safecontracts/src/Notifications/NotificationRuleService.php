@@ -10,9 +10,12 @@ use Throwable;
 
 final class NotificationRuleService
 {
-    public function __construct(private ?NotificationRuleRepository $repository = null)
-    {
+    public function __construct(
+        private ?NotificationRuleRepository $repository = null,
+        private ?NotificationScheduleService $schedule = null
+    ) {
         $this->repository ??= new NotificationRuleRepository();
+        $this->schedule ??= new NotificationScheduleService();
     }
 
     /** @return list<array<string, mixed>> */
@@ -39,6 +42,90 @@ final class NotificationRuleService
         $this->repository->save($rule, $actorId);
         do_action('safecontracts_notification_rule_saved', $rule['code'], $actorId, $rule);
         return $rule;
+    }
+
+    /** @return array<string, mixed> */
+    public function saveAndReconcile(array $input): array
+    {
+        $this->requireCapability();
+        $input = $this->preserveExtendedFields($input);
+        $rule = NotificationRule::normalizeInput($input);
+        $existing = $this->repository->findByCode($rule['code']);
+        $actorId = get_current_user_id();
+
+        if ($existing !== null) {
+            $ruleId = (int) ($existing['id'] ?? 0);
+            $this->schedule->assertRuleIdle($ruleId);
+            $this->repository->setActiveById($ruleId, false, $actorId);
+            $this->schedule->removeRuleSchedule($ruleId);
+        }
+
+        try {
+            $this->repository->save($rule, $actorId);
+            $saved = $this->repository->findByCode($rule['code']);
+            if ($saved === null) {
+                throw new DomainException('Notification rule could not be reloaded after save.');
+            }
+            if (! empty($saved['is_active'])) {
+                $this->schedule->reconcileRule((int) $saved['id']);
+            }
+            do_action('safecontracts_notification_rule_saved', $rule['code'], $actorId, $rule);
+            return $saved;
+        } catch (Throwable $error) {
+            if ($existing !== null) {
+                try {
+                    $this->repository->save($existing, $actorId);
+                    if (! empty($existing['is_active'])) {
+                        $this->schedule->reconcileRule((int) $existing['id']);
+                    }
+                } catch (Throwable) {
+                    // Preserve the original failure; recovery can be retried by an administrator.
+                }
+            }
+            throw $error;
+        }
+    }
+
+    public function toggleActiveWithSchedule(string $code): bool
+    {
+        $this->requireCapability();
+        $rule = $this->repository->findByCode(NotificationRule::normalizeCode($code));
+        if ($rule === null) {
+            throw new DomainException('Notification rule was not found.');
+        }
+        $id = (int) $rule['id'];
+        $this->schedule->assertRuleIdle($id);
+        $actorId = get_current_user_id();
+        $next = empty($rule['is_active']);
+
+        // Disable first so cron cannot claim a new pending occurrence while the
+        // schedule is being replaced. Re-activation happens only after cleanup.
+        $this->repository->setActiveById($id, false, $actorId);
+        $this->schedule->removeRuleSchedule($id);
+        if ($next) {
+            $this->repository->setActiveById($id, true, $actorId);
+            $this->schedule->reconcileRule($id);
+        }
+        do_action('safecontracts_notification_rule_activation_changed', $id, $next, $actorId);
+        return $next;
+    }
+
+    public function deleteWithSchedule(string $code): void
+    {
+        $this->requireCapability();
+        $rule = $this->repository->findByCode(NotificationRule::normalizeCode($code));
+        if ($rule === null) {
+            throw new DomainException('Notification rule was not found.');
+        }
+        $id = (int) $rule['id'];
+        $this->schedule->assertRuleIdle($id);
+        $actorId = get_current_user_id();
+        $this->repository->setActiveById($id, false, $actorId);
+        $this->schedule->removeRuleSchedule($id);
+        if (! $this->repository->deleteById($id)) {
+            throw new DomainException('Notification rule could not be deleted.');
+        }
+        do_action('safecontracts_notification_rule_deleted', $id, (string) $rule['code'], $actorId);
     }
 
     /** @return list<array<string, mixed>> */
