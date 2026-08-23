@@ -281,7 +281,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        l10n.isArabic ? 'مساحة العمل التنفيذية' : 'Executive workspace',
+                        l10n.isArabic
+                            ? 'مساحة العمل التنفيذية'
+                            : 'Executive workspace',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.white.withValues(alpha: 0.70),
                             ),
