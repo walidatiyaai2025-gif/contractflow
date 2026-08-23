@@ -62,7 +62,8 @@ final class DashboardTwoScreen extends StatelessWidget {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => PremiumContractDetailsScreen(
-                        repository: ContractsRepository(controller.repository.client),
+                        repository:
+                            ContractsRepository(controller.repository.client),
                         contractId: contractId,
                         currency: currency,
                       ),
@@ -341,8 +342,7 @@ final class _Bars extends StatelessWidget {
               children: items.map((item) {
                 final value = double.tryParse(item.raw) ?? 0.0;
                 final ratio = maximum <= 0.0 ? 0.08 : value / maximum;
-                final height =
-                    (28.0 + 78.0 * ratio.clamp(0.0, 1.0)).toDouble();
+                final height = (28.0 + 78.0 * ratio.clamp(0.0, 1.0)).toDouble();
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5),
