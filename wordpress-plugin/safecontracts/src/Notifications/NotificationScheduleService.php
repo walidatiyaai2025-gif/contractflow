@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace SafeContracts\Notifications;
 
+use DateTimeImmutable;
+use DateTimeZone;
+use RuntimeException;
 use Throwable;
 
 final class NotificationScheduleService
@@ -29,26 +32,70 @@ final class NotificationScheduleService
         $count = 0;
 
         foreach ($rules as $rule) {
-            $repeatMax = max(0, (int) ($rule['max_repeats'] ?? 0));
-            for ($attemptNo = 0; $attemptNo <= $repeatMax; $attemptNo++) {
-                foreach ($payments as $payment) {
-                    try {
-                        $target = NotificationRule::targetDate($rule, $payment['due_date'] ?? '', $attemptNo);
-                        $plan = $this->engine->plan($rule, $payment, $target, $attemptNo);
-                        if ($plan === null) {
-                            continue;
-                        }
-                        $date = $target->format('Y-m-d');
-                        $this->schedule->upsert($plan, $attemptNo, $date, $this->settings->scheduledUtc($date));
-                        $count++;
-                    } catch (Throwable $error) {
-                        do_action('safecontracts_notification_schedule_sync_error', (int) ($rule['id'] ?? 0), (int) ($payment['id'] ?? 0), $attemptNo, sanitize_key($error->getMessage()));
-                    }
-                }
-            }
+            $count += $this->syncRule($rule, $payments, null);
         }
 
         do_action('safecontracts_notification_schedule_synced', $count);
+        return $count;
+    }
+
+    public function assertRuleIdle(int $ruleId): void
+    {
+        if ($this->schedule->hasProcessingForRule($ruleId)) {
+            throw new RuntimeException('Notification rule has an in-flight schedule dispatch. Retry after it finishes.');
+        }
+    }
+
+    public function removeRuleSchedule(int $ruleId): int
+    {
+        return $this->schedule->deleteForRule($ruleId);
+    }
+
+    public function reconcileRule(int $ruleId, int $paymentLimit = 5000): int
+    {
+        $this->assertRuleIdle($ruleId);
+        $this->schedule->deleteForRule($ruleId);
+        $rule = $this->rules->findById($ruleId);
+        if ($rule === null || empty($rule['is_active'])) {
+            do_action('safecontracts_notification_rule_schedule_reconciled', $ruleId, 0);
+            return 0;
+        }
+
+        $payments = $this->schedule->candidatePayments($paymentLimit);
+        $timezone = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
+        $today = new DateTimeImmutable('today', $timezone);
+        $count = $this->syncRule($rule, $payments, $today);
+        do_action('safecontracts_notification_rule_schedule_reconciled', $ruleId, $count);
+        return $count;
+    }
+
+    /**
+     * @param array<string,mixed> $rule
+     * @param list<array<string,mixed>> $payments
+     */
+    private function syncRule(array $rule, array $payments, ?DateTimeImmutable $notBefore): int
+    {
+        $count = 0;
+        $repeatMax = max(0, (int) ($rule['max_repeats'] ?? 0));
+        for ($attemptNo = 0; $attemptNo <= $repeatMax; $attemptNo++) {
+            foreach ($payments as $payment) {
+                try {
+                    $target = NotificationRule::targetDate($rule, $payment['due_date'] ?? '', $attemptNo);
+                    if ($notBefore !== null && $target < $notBefore) {
+                        continue;
+                    }
+                    $plan = $this->engine->plan($rule, $payment, $target, $attemptNo);
+                    if ($plan === null) {
+                        continue;
+                    }
+                    $date = $target->format('Y-m-d');
+                    $this->schedule->upsert($plan, $attemptNo, $date, $this->settings->scheduledUtc($date));
+                    $count++;
+                } catch (Throwable $error) {
+                    do_action('safecontracts_notification_schedule_sync_error', (int) ($rule['id'] ?? 0), (int) ($payment['id'] ?? 0), $attemptNo, sanitize_key($error->getMessage()));
+                }
+            }
+        }
         return $count;
     }
 
