@@ -91,18 +91,40 @@ foreach ([
     $assertContains($recipientContract, $resolver, 'notification resolver must route to the assigned accountant only when valid: ' . $recipientContract);
 }
 
+// 0.3.2 deliberately separates operational inbox, rule configuration and
+// mail-transport configuration. Keep each responsibility on its own page.
 $center = $read('wordpress-plugin/safecontracts/src/Admin/NotificationCenterPage.php');
+foreach ([
+    'Notification inbox',
+    'read_state',
+    'Mark all as read',
+    'Notification Settings',
+    'Email Settings',
+] as $inboxContract) {
+    $assertContains($inboxContract, $center, 'notification center must remain a focused inbox: ' . $inboxContract);
+}
+$assertNotContains('name="from_name"', $center, 'notification center must not render sender-name configuration');
+$assertNotContains('name="from_address"', $center, 'notification center must not render sender-email configuration');
+
+$notificationSettings = $read('wordpress-plugin/safecontracts/src/Admin/NotificationSettingsPage.php');
 foreach ([
     "'target_assigned_accountant' => isset(\$_POST['target_assigned_accountant'])",
     "'email_enabled' => isset(\$_POST['email_enabled'])",
     'Assigned Accountant',
-    'Email delivery',
+    'Delivery channels',
+    'Email notification',
+] as $notificationUiContract) {
+    $assertContains($notificationUiContract, $notificationSettings, 'notification settings must expose assignment/channel controls: ' . $notificationUiContract);
+}
+
+$emailSettingsPage = $read('wordpress-plugin/safecontracts/src/Admin/EmailSettingsPage.php');
+foreach ([
+    'Email Settings',
     'Sender name',
     'Sender email',
-    'Send to one user',
-    'Recent delivery attempts',
-] as $notificationUiContract) {
-    $assertContains($notificationUiContract, $center, 'notification center must expose assigned-accountant and email controls: ' . $notificationUiContract);
+    'Enable email notifications',
+] as $emailSettingsContract) {
+    $assertContains($emailSettingsContract, $emailSettingsPage, 'standalone email settings must expose sender configuration: ' . $emailSettingsContract);
 }
 
 $email = $read('wordpress-plugin/safecontracts/src/Notifications/EmailDeliveryService.php');
@@ -140,8 +162,9 @@ foreach ([
     'SMTP password',
     'Save Direct SMTP Settings',
     'WordPress wp_mail and WordPress SMTP plugins are bypassed.',
+    'EmailSettingsPage::SLUG',
 ] as $smtpUiContract) {
-    $assertContains($smtpUiContract, $smtpControl, 'Notification Center must expose guarded Direct SMTP settings: ' . $smtpUiContract);
+    $assertContains($smtpUiContract, $smtpControl, 'Email Settings must expose guarded Direct SMTP settings: ' . $smtpUiContract);
 }
 
 $emailTest = $read('wordpress-plugin/safecontracts/src/Admin/NotificationEmailTestControl.php');
@@ -158,6 +181,7 @@ foreach ([
     'Send test email',
     'safecontracts_email_test',
     'Direct SMTP',
+    'EmailSettingsPage::SLUG',
 ] as $emailTestContract) {
     $assertContains($emailTestContract, $emailTest, 'one-click email test must use the real guarded Direct SMTP path: ' . $emailTestContract);
 }
@@ -172,5 +196,8 @@ foreach ([
 ] as $wireContract) {
     $assertContains($wireContract, $plugin, 'plugin bootstrap must keep responsible-accountant/email handlers wired: ' . $wireContract);
 }
+$entry = $read('wordpress-plugin/safecontracts/safecontracts.php');
+$assertContains('EmailSettingsPage::register()', $entry, 'plugin bootstrap must register the standalone Email Settings page');
 
-echo "Responsible accountant -> scoped data -> direct SMTP notification/email regression checks passed.\n";
+
+echo "Responsible accountant -> scoped data -> separated notification/email settings -> direct SMTP regression checks passed.\n";
