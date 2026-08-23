@@ -54,8 +54,8 @@ $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true];
 ob_start();
 AdminShell::render();
 $rendered = (string) ob_get_clean();
-sc_p6a_assert(str_contains($rendered, 'Safe Contracts'), 'SC-P6-001 shell renders Safe Contracts identity');
-sc_p6a_assert(str_contains($rendered, 'data:image/jpeg;base64,'), 'SC-P6-001 shell renders the supplied brand artwork');
+sc_p6a_assert(! str_contains($rendered, 'safecontracts-admin-shell__hero'), 'SC-P6-001 dashboard omits the retired large hero header');
+sc_p6a_assert(! str_contains($rendered, 'data:image/jpeg;base64,'), 'SC-P6-001 dashboard does not repeat the brand artwork after hero removal');
 sc_p6a_assert(str_contains($rendered, 'Server-side authorization'), 'SC-P6-001 shell communicates server-side authorization boundary');
 sc_p6a_assert(! str_contains($rendered, '<table'), 'SC-P6-001 shell does not invent KPI/business data before later P6 tasks');
 

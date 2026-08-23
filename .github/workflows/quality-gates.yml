@@ -95,15 +95,8 @@ jobs:
         run: |
           python3 wordpress-theme/package_theme.py build --output dist/SafeContracts-theme-candidate.zip
           python3 wordpress-theme/package_theme.py check dist/SafeContracts-theme-candidate.zip
-      - name: Upload deterministic plugin and theme candidates
-        uses: actions/upload-artifact@v4
-        with:
-          name: safecontracts-plugin-theme-candidates
-          path: |
-            dist/SafeContracts-plugin-candidate.zip
-            dist/SafeContracts-theme-candidate.zip
-          if-no-files-found: error
-          retention-days: 14
+      - name: Verify production SafeContracts health
+        run: python3 scripts/verify_production_health.py "$SC_PRODUCTION_API_BASE_URL"
       - name: Bootstrap Android release platform
         run: bash scripts/bootstrap_android.sh
       - name: Create CI-only candidate signing key
@@ -161,13 +154,13 @@ jobs:
           The plugin and theme ZIPs are deterministic, validated install packages from the tested head.
           The APK targets the real production SafeContracts API at:
           $SC_PRODUCTION_API_BASE_URL
-          The APK manifest has android.permission.INTERNET and POST_NOTIFICATIONS.
+          The final APK manifest has android.permission.INTERNET and POST_NOTIFICATIONS.
           Firebase Android resources google_app_id and gcm_defaultSenderId are present.
           Mobile username/password login uses a server-issued opaque Bearer session token.
-          The APK uses a short-lived CI-only signing key and is installable for validation only.
-          It MUST NOT be copied to Last verified apk/ or published as the production Android release.
-          Production publication remains blocked until the production health gate is green,
-          production signing is verified, and real-device/business UAT evidence is complete.
+          The APK still uses a short-lived CI-only signing key and MUST NOT be copied to
+          Last verified apk/ or deployed as the production Android release.
+          Production APK publication still requires production signing secrets,
+          signature verification, real-device evidence and business UAT evidence.
           EOF
       - name: Upload release candidates
         uses: actions/upload-artifact@v4
@@ -176,5 +169,3 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 14
-      - name: Verify production SafeContracts health
-        run: python3 scripts/verify_production_health.py "$SC_PRODUCTION_API_BASE_URL"
