@@ -19,6 +19,8 @@ import 'features/notifications/push_registration.dart';
 import 'features/session/session_controller.dart';
 import 'features/ui/mobile_layout.dart';
 import 'features/ui/safecontracts_design.dart';
+import 'features/welcome/company_welcome_screen.dart';
+import 'features/welcome/mobile_landing.dart';
 
 class SafeContractsApp extends StatefulWidget {
   const SafeContractsApp({
@@ -46,6 +48,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   late final MobileBootstrapController _bootstrap;
   late final MobilePushRegistration _pushRegistration;
   late final MobileLocaleController _localeController;
+  late final MobileLandingController _landingController;
 
   @override
   void initState() {
@@ -76,6 +79,10 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
     _loginController = MobileLoginController(repository: _authRepository);
     _bootstrap = MobileBootstrapController(_client);
     _pushRegistration = MobilePushRegistration(client: _client);
+    _landingController = MobileLandingController(
+      MobileLandingRepository(_client),
+    );
+    unawaited(_landingController.ensureLoaded());
     unawaited(_bootstrap.bootstrap());
   }
 
@@ -326,6 +333,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   void dispose() {
     unawaited(_pushRegistration.dispose());
     _localeController.dispose();
+    _landingController.dispose();
     _loginController.dispose();
     _bootstrap.dispose();
     super.dispose();
@@ -354,6 +362,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         home: _BootstrapView(
           environment: widget.environment,
           controller: _bootstrap,
+          landingController: _landingController,
           loginController: _loginController,
           pushRegistration: _pushRegistration,
           languageCode: _localeController.languageCode,
@@ -367,10 +376,11 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   }
 }
 
-final class _BootstrapView extends StatelessWidget {
+final class _BootstrapView extends StatefulWidget {
   const _BootstrapView({
     required this.environment,
     required this.controller,
+    required this.landingController,
     required this.loginController,
     required this.pushRegistration,
     required this.languageCode,
@@ -382,6 +392,7 @@ final class _BootstrapView extends StatelessWidget {
 
   final AppEnvironment environment;
   final MobileBootstrapController controller;
+  final MobileLandingController landingController;
   final MobileLoginController loginController;
   final MobilePushRegistration pushRegistration;
   final String languageCode;
@@ -391,23 +402,30 @@ final class _BootstrapView extends StatelessWidget {
   final Future<void> Function() onLogout;
 
   @override
+  State<_BootstrapView> createState() => _BootstrapViewState();
+}
+
+final class _BootstrapViewState extends State<_BootstrapView> {
+  bool _showLogin = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
       builder: (context, child) {
-        if (controller.state == MobileBootstrapState.ready) {
-          final session = controller.sessionController?.session;
-          final config = controller.configController?.config;
-          final policy = controller.navigationPolicy;
-          final dashboard = controller.dashboardController;
-          final customers = controller.customersController;
-          final suppliers = controller.suppliersController;
-          final contracts = controller.contractsController;
-          final finance = controller.financeController;
-          final notifications = controller.notificationsController;
-          final profile = controller.profileController;
-          final excelExport = controller.excelExportController;
+        if (widget.controller.state == MobileBootstrapState.ready) {
+          final session = widget.controller.sessionController?.session;
+          final config = widget.controller.configController?.config;
+          final policy = widget.controller.navigationPolicy;
+          final dashboard = widget.controller.dashboardController;
+          final customers = widget.controller.customersController;
+          final suppliers = widget.controller.suppliersController;
+          final contracts = widget.controller.contractsController;
+          final finance = widget.controller.financeController;
+          final notifications = widget.controller.notificationsController;
+          final profile = widget.controller.profileController;
+          final excelExport = widget.controller.excelExportController;
           if (session != null &&
               config != null &&
               policy != null &&
@@ -419,7 +437,7 @@ final class _BootstrapView extends StatelessWidget {
               notifications != null &&
               profile != null &&
               excelExport != null) {
-            unawaited(onReady());
+            unawaited(widget.onReady());
             return SafeContractsShell(
               session: session,
               config: config,
@@ -432,22 +450,34 @@ final class _BootstrapView extends StatelessWidget {
               notificationsController: notifications,
               profileController: profile,
               excelExportController: excelExport,
-              pushRegistration: pushRegistration,
-              languageCode: languageCode,
-              onLanguageChanged: onLanguageChanged,
-              usingConfigDefaults: controller.usingConfigDefaults,
-              onClearSession: () => unawaited(onLogout()),
+              pushRegistration: widget.pushRegistration,
+              languageCode: widget.languageCode,
+              onLanguageChanged: widget.onLanguageChanged,
+              usingConfigDefaults: widget.controller.usingConfigDefaults,
+              onClearSession: () => unawaited(widget.onLogout()),
             );
           }
         }
 
-        if (controller.sessionController?.state ==
+        if (widget.controller.sessionController?.state ==
             SessionState.unauthenticated) {
+          if (!_showLogin) {
+            return AlkenzyCompanyWelcomeScreen(
+              controller: widget.landingController,
+              languageCode: widget.languageCode,
+              onLanguageChanged: widget.onLanguageChanged,
+              onSignIn: () => setState(() => _showLogin = true),
+            );
+          }
           return SafeContractsLoginScreen(
-            controller: loginController,
-            languageCode: languageCode,
-            onLanguageChanged: onLanguageChanged,
-            onAuthenticated: onAuthenticated,
+            controller: widget.loginController,
+            languageCode: widget.languageCode,
+            onLanguageChanged: widget.onLanguageChanged,
+            onBack: () => setState(() => _showLogin = false),
+            onAuthenticated: () async {
+              await widget.onAuthenticated();
+              if (mounted) setState(() => _showLogin = false);
+            },
           );
         }
 
@@ -476,25 +506,27 @@ final class _BootstrapView extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${l10n.t('Environment')}: ${environment.name.name}',
+                        '${l10n.t('Environment')}: ${widget.environment.name.name}',
                         style:
                             const TextStyle(color: SafeContractsVisual.muted),
                       ),
                       const SizedBox(height: 18),
-                      if (controller.state == MobileBootstrapState.idle ||
-                          controller.state == MobileBootstrapState.loading)
+                      if (widget.controller.state == MobileBootstrapState.idle ||
+                          widget.controller.state ==
+                              MobileBootstrapState.loading)
                         const CircularProgressIndicator()
                       else ...[
                         Text(
                           l10n.rawMessage(
-                            controller.message ??
+                            widget.controller.message ??
                                 'SafeContracts mobile is unavailable.',
                           ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 14),
                         FilledButton(
-                          onPressed: () => unawaited(controller.bootstrap()),
+                          onPressed: () =>
+                              unawaited(widget.controller.bootstrap()),
                           child: Text(l10n.t('Retry session')),
                         ),
                       ],
