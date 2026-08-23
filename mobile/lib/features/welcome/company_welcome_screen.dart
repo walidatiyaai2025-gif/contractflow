@@ -60,10 +60,12 @@ final class _AlkenzyCompanyWelcomeScreenState
                   color: SafeContractsVisual.roseGold,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final horizontal = constraints.maxWidth < 380 ? 14.0 : 20.0;
+                      final horizontal =
+                          constraints.maxWidth < 380 ? 14.0 : 20.0;
                       return SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 28),
+                        padding:
+                            EdgeInsets.fromLTRB(horizontal, 12, horizontal, 28),
                         child: Center(
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 720),
@@ -97,7 +99,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   onPressed: widget.onSignIn,
                                   style: FilledButton.styleFrom(
                                     minimumSize: const Size.fromHeight(58),
-                                    backgroundColor: SafeContractsVisual.roseGold,
+                                    backgroundColor:
+                                        SafeContractsVisual.roseGold,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
@@ -120,7 +123,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   onPressed: () => _showAbout(content),
                                   style: OutlinedButton.styleFrom(
                                     minimumSize: const Size.fromHeight(54),
-                                    foregroundColor: SafeContractsVisual.champagne,
+                                    foregroundColor:
+                                        SafeContractsVisual.champagne,
                                     side: const BorderSide(
                                       color: SafeContractsVisual.champagne,
                                     ),
@@ -203,16 +207,18 @@ final class _AlkenzyCompanyWelcomeScreenState
                       children: [
                         Text(
                           content.brandName,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: SafeContractsVisual.navyDeep,
-                                fontWeight: FontWeight.w900,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: SafeContractsVisual.navyDeep,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                         ),
                         Text(
                           content.agencyName.resolve(widget.languageCode),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SafeContractsVisual.muted,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: SafeContractsVisual.muted,
+                                  ),
                         ),
                       ],
                     ),
@@ -378,7 +384,8 @@ final class _Hero extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: SafeContractsVisual.roseGold.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(99),
