@@ -11,7 +11,7 @@ import 'package:safecontracts_mobile/features/ui/safecontracts_design.dart';
 import 'fake_api_transport.dart';
 
 void main() {
-  testWidgets('renders authenticated premium Alkenzy ADV dashboard shell', (
+  testWidgets('renders authenticated monthly premium dashboard shell', (
     tester,
   ) async {
     final environment = AppEnvironment.fromValues(
@@ -30,21 +30,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AppBar), findsOneWidget);
-    expect(find.byType(SafeContractsPremiumHeader), findsOneWidget);
-    expect(find.byType(SafeContractsMetricCard), findsNWidgets(4));
-    expect(find.text('Financial performance overview'), findsOneWidget);
-    expect(find.text('Total contracts'), findsOneWidget);
-    expect(find.text('Remaining'), findsWidgets);
-    expect(find.textContaining('125.00'), findsWidgets);
+    expect(find.text('Financial performance overview'), findsNothing);
+    expect(find.text('Year'), findsOneWidget);
+    expect(find.text('Month'), findsOneWidget);
+    expect(find.text('Receivable this month'), findsOneWidget);
+    expect(find.text('Due payments'), findsOneWidget);
+    expect(find.text('Expected payment'), findsOneWidget);
+    expect(find.text('Payable this month'), findsOneWidget);
+    expect(find.text('Amounts paid'), findsOneWidget);
+    expect(find.text('Amounts still due'), findsOneWidget);
+    expect(find.text('General account'), findsOneWidget);
 
     final appBar = tester.widget<AppBar>(find.byType(AppBar));
     expect(appBar.backgroundColor, SafeContractsVisual.navy);
     expect(appBar.foregroundColor, Colors.white);
-
-    await tester.tap(find.text('Payment filters'));
-    await tester.pumpAndSettle();
-    expect(find.text('All customers'), findsOneWidget);
-    expect(find.text('All contracts'), findsOneWidget);
   });
 }
 
