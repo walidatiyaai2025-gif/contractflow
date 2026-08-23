@@ -17,7 +17,7 @@ final class PaymentService
         $this->repository ??= new PaymentRepository();
     }
 
-    /** @param array{contract_id:mixed, sequence_no:mixed, reference?:mixed, due_date:mixed, expected_payment_date?:mixed, original_amount:mixed} $input */
+    /** @param array{contract_id:mixed, sequence_no?:mixed, reference?:mixed, due_date:mixed, expected_payment_date?:mixed, original_amount:mixed} $input */
     public function create(array $input): int
     {
         $this->requireCapability(Capabilities::MANAGE_PAYMENTS, 'You do not have permission to manage payments.');
@@ -26,7 +26,6 @@ final class PaymentService
         if ($contractId <= 0) {
             throw new InvalidArgumentException('Payment contract ID must be positive.');
         }
-
         $contract = $this->repository->contractContext($contractId);
         if ($contract === null) {
             throw new InvalidArgumentException('Payment contract was not found.');
@@ -34,11 +33,6 @@ final class PaymentService
         $this->assertScope($contract['accountant_user_id']);
         if ($contract['is_archived']) {
             throw new DomainException('Archived contracts cannot receive scheduled payments.');
-        }
-
-        $sequenceNo = (int) ($input['sequence_no'] ?? 0);
-        if ($sequenceNo <= 0) {
-            throw new InvalidArgumentException('Payment sequence number must be positive.');
         }
 
         $reference = $this->normalizeReference($input['reference'] ?? null);
@@ -50,19 +44,37 @@ final class PaymentService
         }
 
         $actorId = get_current_user_id();
-        $paymentId = $this->repository->create(
-            $contractId,
-            $sequenceNo,
-            $reference,
-            $dueDate,
-            $expectedPaymentDate,
-            $amount,
-            $actorId,
-            $contract['financial_direction'],
-            $contract['currency_code']
-        );
+        $sequenceNo = (int) ($input['sequence_no'] ?? 0);
+        if ($sequenceNo > 0) {
+            // Backward-compatible path for existing integrations/mobile callers.
+            $paymentId = $this->repository->create(
+                $contractId,
+                $sequenceNo,
+                $reference,
+                $dueDate,
+                $expectedPaymentDate,
+                $amount,
+                $actorId,
+                $contract['financial_direction'],
+                $contract['currency_code']
+            );
+        } else {
+            // Admin/backend creation owns sequence allocation; users should not
+            // have to discover or guess a database ordering value.
+            $created = $this->repository->createAutoSequenced(
+                $contractId,
+                $reference,
+                $dueDate,
+                $expectedPaymentDate,
+                $amount,
+                $actorId,
+                $contract['financial_direction'],
+                $contract['currency_code']
+            );
+            $paymentId = $created['id'];
+            $sequenceNo = $created['sequence_no'];
+        }
 
-        // Preserve established integration/audit payload positions.
         do_action(
             'safecontracts_payment_created',
             $paymentId,
@@ -81,7 +93,6 @@ final class PaymentService
             $contract['currency_code'],
             $actorId
         );
-
         return $paymentId;
     }
 
@@ -101,11 +112,9 @@ final class PaymentService
         $target = PaymentStatus::normalize($targetStatus);
         $current = PaymentStatus::normalize($payment['status']);
         PaymentStatus::assertTransition($current, $target);
-
         if ($current === $target) {
             return;
         }
-
         $actorId = get_current_user_id();
         $this->repository->updateStatus($paymentId, $target, $actorId);
         do_action('safecontracts_payment_status_changed', $paymentId, $current, $target, $actorId);
@@ -118,17 +127,8 @@ final class PaymentService
         $due = $this->normalizeRequiredDate($dueDate, 'due date');
         $expected = $this->normalizeOptionalDate($expectedPaymentDate, 'expected payment date');
         $actorId = get_current_user_id();
-
         $this->repository->updateDates($paymentId, $due, $expected, $actorId);
-        do_action(
-            'safecontracts_payment_dates_changed',
-            $paymentId,
-            $payment['due_date'],
-            $due,
-            $payment['expected_payment_date'],
-            $expected,
-            $actorId
-        );
+        do_action('safecontracts_payment_dates_changed', $paymentId, $payment['due_date'], $due, $payment['expected_payment_date'], $expected, $actorId);
     }
 
     /** @param array{reference?:mixed,due_date:mixed,expected_payment_date?:mixed,original_amount?:mixed} $input */
@@ -141,29 +141,16 @@ final class PaymentService
         $expected = $this->normalizeOptionalDate($input['expected_payment_date'] ?? null, 'expected payment date');
         $original = ContractMoney::normalizeNonNegative($payment['original_amount']);
         $paid = ContractMoney::normalizeNonNegative($payment['paid_amount']);
-        $amount = array_key_exists('original_amount', $input)
-            ? ContractMoney::normalizeNonNegative($input['original_amount'])
-            : $original;
+        $amount = array_key_exists('original_amount', $input) ? ContractMoney::normalizeNonNegative($input['original_amount']) : $original;
         if ($amount === '0.0000') {
             throw new InvalidArgumentException('Payment original amount must be greater than zero.');
         }
         if (ContractMoney::compare($paid, '0.0000') > 0 && ContractMoney::compare($amount, $original) !== 0) {
             throw new DomainException('Payment original amount cannot change after settlement activity exists.');
         }
-        $remaining = ContractMoney::compare($paid, '0.0000') === 0
-            ? $amount
-            : ContractMoney::normalizeNonNegative($payment['remaining_amount']);
+        $remaining = ContractMoney::compare($paid, '0.0000') === 0 ? $amount : ContractMoney::normalizeNonNegative($payment['remaining_amount']);
         $actorId = get_current_user_id();
-
-        $this->repository->updateEditable(
-            $paymentId,
-            $reference,
-            $due,
-            $expected,
-            $amount,
-            $remaining,
-            $actorId
-        );
+        $this->repository->updateEditable($paymentId, $reference, $due, $expected, $amount, $remaining, $actorId);
 
         do_action(
             'safecontracts_payment_details_changed',
@@ -184,21 +171,11 @@ final class PaymentService
             ],
             $actorId
         );
-
         if ($payment['due_date'] !== $due || $payment['expected_payment_date'] !== $expected) {
-            do_action(
-                'safecontracts_payment_dates_changed',
-                $paymentId,
-                $payment['due_date'],
-                $due,
-                $payment['expected_payment_date'],
-                $expected,
-                $actorId
-            );
+            do_action('safecontracts_payment_dates_changed', $paymentId, $payment['due_date'], $due, $payment['expected_payment_date'], $expected, $actorId);
         }
     }
 
-    /** Operational follow-up date only; it never changes contractual due classification. */
     public function effectiveDate(int $paymentId): string
     {
         $payment = $this->requirePayment($paymentId);
@@ -206,28 +183,21 @@ final class PaymentService
         if ($payment['is_archived']) {
             throw new DomainException('Archived payments are not available for operational follow-up.');
         }
-
         return $payment['expected_payment_date'] ?? $payment['due_date'];
     }
 
-    public function temporalStatus(
-        int $paymentId,
-        ?DateTimeImmutable $today = null,
-        int $dueSoonDays = 10
-    ): string {
+    public function temporalStatus(int $paymentId, ?DateTimeImmutable $today = null, int $dueSoonDays = 10): string
+    {
         $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts payments.');
         $payment = $this->requirePayment($paymentId);
         $this->assertScope($payment['accountant_user_id']);
         if ($payment['is_archived']) {
             throw new DomainException('Archived payments are not part of the operational schedule.');
         }
-
         $current = PaymentStatus::normalize($payment['status']);
         if ($current === PaymentStatus::PAID || $current === PaymentStatus::PARTIALLY_PAID) {
             return $current;
         }
-
-        // expected_payment_date is an operational promise/follow-up date only; contractual due classification stays based on due_date.
         return PaymentStatus::temporalForDueDate($payment['due_date'], $today, $dueSoonDays);
     }
 
@@ -252,7 +222,6 @@ final class PaymentService
         if ($payment['contract_is_archived']) {
             throw new DomainException('Payments on archived contracts cannot be edited.');
         }
-
         return $payment;
     }
 
@@ -262,12 +231,10 @@ final class PaymentService
         if ($paymentId <= 0) {
             throw new InvalidArgumentException('Payment ID must be positive.');
         }
-
         $payment = $this->repository->find($paymentId);
         if ($payment === null) {
             throw new InvalidArgumentException('Payment was not found.');
         }
-
         return $payment;
     }
 
@@ -276,15 +243,9 @@ final class PaymentService
         if (current_user_can(Capabilities::VIEW_ALL)) {
             return;
         }
-
-        if (
-            current_user_can(Capabilities::VIEW_ASSIGNED)
-            && $accountantUserId !== null
-            && $accountantUserId === get_current_user_id()
-        ) {
+        if (current_user_can(Capabilities::VIEW_ASSIGNED) && $accountantUserId !== null && $accountantUserId === get_current_user_id()) {
             return;
         }
-
         throw new DomainException('Payment is outside the current user data scope.');
     }
 
@@ -293,12 +254,10 @@ final class PaymentService
         if ($value === null || trim((string) $value) === '') {
             return null;
         }
-
         $reference = trim((string) $value);
         if (strlen($reference) > 100) {
-            throw new InvalidArgumentException('Payment reference must not exceed 100 characters.');
+            throw new InvalidArgumentException('Payment description must not exceed 100 characters.');
         }
-
         return $reference;
     }
 
@@ -308,7 +267,6 @@ final class PaymentService
         if ($date === null) {
             throw new InvalidArgumentException("Payment {$field} is required.");
         }
-
         return $date;
     }
 
@@ -317,13 +275,11 @@ final class PaymentService
         if ($value === null || trim((string) $value) === '') {
             return null;
         }
-
         $date = trim((string) $value);
         $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
         if (! $parsed || $parsed->format('Y-m-d') !== $date) {
             throw new InvalidArgumentException("Payment {$field} must use YYYY-MM-DD and be a valid calendar date.");
         }
-
         return $date;
     }
 
