@@ -39,14 +39,12 @@ final class DashboardController
             $kpis = $read->kpis($filters);
 
             // Legacy monetary KPIs intentionally remain Customer/AR-specific.
-            // On a real WordPress runtime wpdb exposes get_var(), so replace the
-            // headline count with the all-counterparty authoritative counter.
-            // The lightweight PHP test double predates get_var(); keeping its
-            // legacy KPI count there preserves the historical REST fixture/query
-            // ordering without weakening production behavior.
-            global $wpdb;
-            if (is_object($wpdb) && method_exists($wpdb, 'get_var')) {
-                $kpis['contract_count'] = (string) DashboardContractCounter::count($filters);
+            // The dedicated Admin read model supplies an all-counterparty count
+            // when the runtime supports it, without moving SQL/database access
+            // into the REST presentation layer.
+            $allContractCount = DashboardContractCounter::tryCount($filters);
+            if ($allContractCount !== null) {
+                $kpis['contract_count'] = (string) $allContractCount;
             }
 
             return RequestGuard::response([
