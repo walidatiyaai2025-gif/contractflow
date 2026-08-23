@@ -16,6 +16,34 @@ final class MoneyFormatter
 {
     public static function format(mixed $value, string $currency = ''): string
     {
+        $currency = strtoupper(trim($currency));
+        $fractionDigits = $currency === 'EGP' ? 0 : 2;
+        $amount = self::formatNumber($value, $fractionDigits, '.', ',');
+
+        if ($currency === '' || $currency === '—') {
+            return $amount;
+        }
+
+        $negative = str_starts_with($amount, '− ');
+        if ($negative) {
+            $amount = substr($amount, strlen('− '));
+        }
+        return ($negative ? '− ' : '') . $currency . ' ' . $amount;
+    }
+
+    /**
+     * Format a monetary numeric value without forcing visually redundant zeros.
+     *
+     * This is the compatibility entry point for legacy admin surfaces that used
+     * PHP number_format(..., 2). Meaningful fractions are preserved; trailing
+     * zeroes are removed. No storage or financial arithmetic is changed.
+     */
+    public static function formatNumber(
+        mixed $value,
+        int $fractionDigits = 2,
+        string $decimalSeparator = '.',
+        string $thousandsSeparator = ','
+    ): string {
         $raw = trim((string) $value);
         if ($raw === '') {
             $raw = '0';
@@ -27,24 +55,19 @@ final class MoneyFormatter
         }
 
         $normalized = ContractMoney::normalizeNonNegative($raw);
-        $currency = strtoupper(trim($currency));
-        $fractionDigits = $currency === 'EGP' ? 0 : 2;
+        $fractionDigits = max(0, min(ContractMoney::SCALE, $fractionDigits));
         [$whole, $fraction] = self::round($normalized, $fractionDigits);
-        $whole = preg_replace('/\B(?=(\d{3})+(?!\d))/', ',', $whole) ?? $whole;
+        $whole = preg_replace('/\B(?=(\d{3})+(?!\d))/', $thousandsSeparator, $whole) ?? $whole;
 
         if ($fractionDigits > 0) {
             $fraction = rtrim($fraction, '0');
         }
-        $amount = $whole . ($fraction === '' ? '' : '.' . $fraction);
+        $amount = $whole . ($fraction === '' ? '' : $decimalSeparator . $fraction);
         if ($amount === '0') {
             $negative = false;
         }
 
-        $prefix = $negative ? '− ' : '';
-        if ($currency === '' || $currency === '—') {
-            return $prefix . $amount;
-        }
-        return $prefix . $currency . ' ' . $amount;
+        return ($negative ? '− ' : '') . $amount;
     }
 
     /** @return array{0:string,1:string} */
