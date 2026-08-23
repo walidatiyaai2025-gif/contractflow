@@ -47,6 +47,6 @@ sc_625_assert(str_contains($source, 'ContractMoney::difference($r[\'remaining\']
 sc_625_assert(str_contains($source, 'directionMoney($contractTotals[\'scheduled\']'), 'selected-contract scheduled total is direction-signed');
 
 $plugin = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontracts.php');
-sc_625_assert(str_contains($plugin, 'Version: 0.2.2') && str_contains($plugin, "SAFECONTRACTS_VERSION', '0.2.2'"), 'plugin version is bumped so new payment-summary assets are cache-busted');
+sc_625_assert(str_contains($plugin, 'Version: 0.2.3') && str_contains($plugin, "SAFECONTRACTS_VERSION', '0.2.3'"), 'plugin version is bumped so new payment-summary assets and financial guards are cache-busted');
 
 echo "SafeContracts payment summary arithmetic regression passed ({$tests} assertions).\n";
