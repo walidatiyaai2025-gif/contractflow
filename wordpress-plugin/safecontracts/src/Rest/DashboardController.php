@@ -35,11 +35,28 @@ final class DashboardController
         try {
             $filters = RequestGuard::strictDashboardFilters($request);
             $read = new AdminReadRepository();
+            $kpis = $read->kpis($filters);
+
+            // Legacy KPI money fields remain receivable-specific, but the
+            // headline contract count must represent every contract visible in
+            // the current authorization/filter scope (Customer + Supplier).
+            // This fixes the 0.3.2 mobile dashboard under-count without mixing
+            // AP and AR monetary authority.
+            $contractFilters = $filters;
+            if (! in_array((string) ($contractFilters['status'] ?? ''), ['draft', 'active', 'completed', 'cancelled'], true)) {
+                $contractFilters['status'] = '';
+            }
+            $allContracts = array_values(array_filter(
+                $read->contracts($contractFilters),
+                static fn (array $row): bool => empty($row['is_archived'])
+            ));
+            $kpis['contract_count'] = (string) count($allContracts);
+
             return RequestGuard::response([
                 'filters' => $filters,
-                'kpis' => $read->kpis($filters),
+                'kpis' => $kpis,
                 'customers' => $read->customerOptions(),
-                'contracts' => $read->contractOptions($filters['customer_id']),
+                'contracts' => $read->contractOptions((int) ($filters['customer_id'] ?? 0)),
                 'finance' => (new FinanceOverviewService())->overview($filters),
             ]);
         } catch (InvalidArgumentException $error) {
