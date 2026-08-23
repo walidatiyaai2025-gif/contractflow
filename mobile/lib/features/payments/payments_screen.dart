@@ -6,6 +6,7 @@ import '../../core/api/api_client.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_models.dart';
+import '../ui/safecontracts_design.dart';
 import 'collection_entry_dialog.dart';
 import 'payments.dart';
 
@@ -225,24 +226,16 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               itemCount: page.payments.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: 9),
               itemBuilder: (context, index) {
                 final payment = page.payments[index];
                 final owner = payment.displayOwner ??
                     l10n.contractNumber(payment.contractId);
-                return Card(
-                  child: ListTile(
-                    title: Text(
-                      payment.reference ?? l10n.paymentNumber(payment.id),
-                    ),
-                    subtitle: Text(
-                      '$owner · ${payment.dueDate} · ${l10n.status(payment.status)}\n'
-                      '${l10n.t('Remaining')}: ${l10n.money(payment.remainingAmount, widget.currency)}',
-                    ),
-                    isThreeLine: true,
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => unawaited(_open(payment)),
-                  ),
+                return _PremiumPaymentTile(
+                  payment: payment,
+                  owner: owner,
+                  currency: widget.currency,
+                  onTap: () => unawaited(_open(payment)),
                 );
               },
             ),
@@ -273,6 +266,203 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
                 icon: const Icon(Icons.chevron_right),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _PremiumPaymentTile extends StatelessWidget {
+  const _PremiumPaymentTile({
+    required this.payment,
+    required this.owner,
+    required this.currency,
+    required this.onTap,
+  });
+
+  final SafeContractsPayment payment;
+  final String owner;
+  final MobileCurrencyConfig currency;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final visual = _paymentVisual(payment.status);
+    final direction = payment.financialDirection.toLowerCase();
+    final isPayable = direction == 'payable';
+    final directionColor =
+        isPayable ? const Color(0xFFA8443A) : const Color(0xFF28704F);
+    return Material(
+      color: SafeContractsVisual.surface,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: visual.$3),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x125A4638),
+                blurRadius: 15,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: visual.$3,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(visual.$1, color: visual.$2, size: 23),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            payment.reference ??
+                                l10n.paymentNumber(payment.id),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: SafeContractsVisual.ink,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: visual.$3,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            l10n.status(payment.status),
+                            style: TextStyle(
+                              color: visual.$2,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      owner,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: SafeContractsVisual.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 5,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _PaymentMeta(
+                          icon: Icons.calendar_today_outlined,
+                          text: payment.dueDate,
+                          color: SafeContractsVisual.navy,
+                        ),
+                        _PaymentMeta(
+                          icon: isPayable
+                              ? Icons.north_east_rounded
+                              : Icons.south_west_rounded,
+                          text: isPayable
+                              ? (l10n.isArabic ? 'مستحق علينا' : 'Payable')
+                              : (l10n.isArabic ? 'مستحق لنا' : 'Receivable'),
+                          color: directionColor,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Text(
+                          '${l10n.t('Remaining')}: ',
+                          style: const TextStyle(
+                            color: SafeContractsVisual.muted,
+                            fontSize: 11,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            l10n.money(payment.remainingAmount, currency),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: directionColor,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Directionality.of(context) == TextDirection.rtl
+                              ? Icons.chevron_left_rounded
+                              : Icons.chevron_right_rounded,
+                          color: SafeContractsVisual.muted,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _PaymentMeta extends StatelessWidget {
+  const _PaymentMeta({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -492,6 +682,36 @@ final class _ErrorState extends StatelessWidget {
           ),
         ),
       );
+}
+
+(IconData, Color, Color) _paymentVisual(String status) {
+  return switch (status.toLowerCase()) {
+    'paid' => (
+        Icons.check_circle_outline_rounded,
+        const Color(0xFF28704F),
+        const Color(0xFFE7F4EC),
+      ),
+    'overdue' => (
+        Icons.warning_amber_rounded,
+        const Color(0xFFAA3F36),
+        const Color(0xFFFFE9E5),
+      ),
+    'partially_paid' => (
+        Icons.pie_chart_outline_rounded,
+        const Color(0xFF9B7038),
+        const Color(0xFFFFF0D8),
+      ),
+    'due' || 'due_soon' => (
+        Icons.schedule_rounded,
+        const Color(0xFFC17645),
+        const Color(0xFFFFEEE3),
+      ),
+    _ => (
+        Icons.receipt_long_outlined,
+        const Color(0xFF315D7D),
+        const Color(0xFFE8F0F7),
+      ),
+  };
 }
 
 bool _validNullableDate(String value) {
