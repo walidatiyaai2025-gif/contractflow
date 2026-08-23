@@ -192,6 +192,39 @@ final class PaymentRepository
         $this->executeMutation($wpdb, $sql, 'Unable to update payment dates.');
     }
 
+    public function updateEditable(
+        int $paymentId,
+        ?string $reference,
+        string $dueDate,
+        ?string $expectedPaymentDate,
+        string $originalAmount,
+        string $remainingAmount,
+        int $actorId
+    ): void {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $referenceSql = $reference === null ? 'NULL' : '%s';
+        $expectedSql = $expectedPaymentDate === null ? 'NULL' : '%s';
+        $query = "UPDATE {$table}
+                  SET reference = {$referenceSql}, due_date = %s, expected_payment_date = {$expectedSql},
+                      original_amount = %s, remaining_amount = %s, updated_by = %d, updated_at = UTC_TIMESTAMP()
+                  WHERE id = %d AND is_archived = 0";
+        $args = [];
+        if ($reference !== null) {
+            $args[] = $reference;
+        }
+        $args[] = $dueDate;
+        if ($expectedPaymentDate !== null) {
+            $args[] = $expectedPaymentDate;
+        }
+        $args[] = $originalAmount;
+        $args[] = $remainingAmount;
+        $args[] = $actorId;
+        $args[] = $paymentId;
+        $this->executeMutation($wpdb, $wpdb->prepare($query, ...$args), 'Unable to update payment details.');
+    }
+
     /**
      * Older repository unit fixtures may omit P11 columns entirely. Real DB
      * rows selected by this repository always contain the columns; therefore
