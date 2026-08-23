@@ -1,0 +1,235 @@
+.toplevel_page_safecontracts .safecontracts-admin-shell {
+    margin-top: 12px;
+}
+
+.toplevel_page_safecontracts .safecontracts-admin-shell__content--dashboard {
+    padding-top: 0;
+}
+
+.safecontracts-monthly-dashboard {
+    position: relative;
+    max-width: 1440px;
+    padding-bottom: 36px;
+}
+
+.safecontracts-monthly-dashboard__period {
+    display: flex;
+    justify-content: flex-end;
+    align-items: end;
+    gap: 12px;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid #d9e0e7;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 7px 20px rgba(15, 51, 83, .06);
+}
+
+.safecontracts-monthly-dashboard__period label {
+    display: grid;
+    gap: 5px;
+    min-width: 150px;
+    color: #5d6c7b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.safecontracts-monthly-dashboard__period select {
+    min-height: 40px;
+    border-color: #cad5df;
+    border-radius: 10px;
+    background: #fff;
+    color: #173b65;
+    font-weight: 700;
+}
+
+.safecontracts-monthly-dashboard__cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.safecontracts-monthly-card {
+    overflow: hidden;
+    min-height: 170px;
+    border: 1px solid #dfe5eb;
+    border-top: 3px solid #a9b8c5;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(15, 51, 83, .08);
+}
+
+.safecontracts-monthly-card--contracts { border-top-color: #a98777; }
+.safecontracts-monthly-card--receivable { border-top-color: #239768; background: linear-gradient(180deg, #f8fffb 0, #fff 54%); }
+.safecontracts-monthly-card--payable { border-top-color: #d64c4c; background: linear-gradient(180deg, #fff8f7 0, #fff 54%); }
+.safecontracts-monthly-card--general { border-top-color: #173b65; background: linear-gradient(145deg, #0e3353 0%, #17496f 100%); color: #fff; }
+
+.safecontracts-monthly-card__title {
+    padding: 13px 15px 10px;
+    color: #43566a;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.safecontracts-monthly-card--general .safecontracts-monthly-card__title {
+    color: rgba(255,255,255,.78);
+}
+
+.safecontracts-monthly-card__split {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 125px;
+    border-top: 1px solid #edf1f4;
+}
+
+.safecontracts-monthly-card__half {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 14px;
+    color: #24394d;
+    text-decoration: none;
+}
+
+.safecontracts-monthly-card__half + .safecontracts-monthly-card__half {
+    border-inline-start: 1px solid #e7edf2;
+}
+
+.safecontracts-monthly-card__half:hover,
+.safecontracts-monthly-card__half:focus {
+    background: rgba(23, 59, 101, .035);
+    color: #173b65;
+}
+
+.safecontracts-monthly-card__half span {
+    color: #6a7b8b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.safecontracts-monthly-card__half strong,
+.safecontracts-monthly-card__general-values strong {
+    display: block;
+    color: #173b65;
+    font-size: clamp(21px, 2.2vw, 30px);
+    line-height: 1.08;
+    font-weight: 900;
+}
+
+.safecontracts-monthly-card--receivable .safecontracts-monthly-card__half strong { color: #16875b; }
+.safecontracts-monthly-card--payable .safecontracts-monthly-card__half strong { color: #be3d42; }
+
+.safecontracts-monthly-card__half small,
+.safecontracts-monthly-card--general > small {
+    color: #7d8994;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.safecontracts-monthly-card__general-values {
+    display: grid;
+    gap: 5px;
+    padding: 18px 16px 8px;
+}
+
+.safecontracts-monthly-card--general .safecontracts-monthly-card__general-values strong {
+    color: #55d59a;
+}
+
+.safecontracts-monthly-card--general > small {
+    display: block;
+    padding: 0 16px 16px;
+    color: rgba(255,255,255,.72);
+}
+
+.safecontracts-monthly-dashboard__lanes {
+    margin-top: 8px;
+}
+
+.safecontracts-monthly-dashboard__totals {
+    margin-top: 18px;
+}
+
+.safecontracts-monthly-dashboard__quick-add {
+    position: fixed;
+    z-index: 10050;
+    right: 28px;
+    bottom: 28px;
+}
+
+.rtl .safecontracts-monthly-dashboard__quick-add {
+    right: auto;
+    left: 28px;
+}
+
+.safecontracts-monthly-dashboard__quick-add > summary {
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #173b65;
+    color: #fff;
+    box-shadow: 0 14px 32px rgba(15, 51, 83, .28);
+    cursor: pointer;
+    font-size: 34px;
+    font-weight: 300;
+    line-height: 1;
+    list-style: none;
+}
+
+.safecontracts-monthly-dashboard__quick-add > summary::-webkit-details-marker { display: none; }
+.safecontracts-monthly-dashboard__quick-add[open] > summary { background: #c98a7b; }
+
+.safecontracts-monthly-dashboard__quick-menu {
+    position: absolute;
+    right: 0;
+    bottom: 68px;
+    display: grid;
+    gap: 8px;
+    width: 210px;
+    padding: 10px;
+    border: 1px solid #d9e1e8;
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 14px 38px rgba(15, 51, 83, .18);
+}
+
+.rtl .safecontracts-monthly-dashboard__quick-menu {
+    right: auto;
+    left: 0;
+}
+
+.safecontracts-monthly-dashboard__quick-menu a {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 11px;
+    border-radius: 10px;
+    color: #173b65;
+    text-decoration: none;
+    font-weight: 800;
+}
+
+.safecontracts-monthly-dashboard__quick-menu a:hover,
+.safecontracts-monthly-dashboard__quick-menu a:focus {
+    background: #f2f6f9;
+    color: #0e3353;
+}
+
+@media (max-width: 1180px) {
+    .safecontracts-monthly-dashboard__cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+    .safecontracts-monthly-dashboard__period { justify-content: stretch; }
+    .safecontracts-monthly-dashboard__period label { flex: 1; min-width: 0; }
+    .safecontracts-monthly-dashboard__cards { grid-template-columns: 1fr; }
+    .safecontracts-monthly-dashboard__quick-add { right: 18px; bottom: 18px; }
+    .rtl .safecontracts-monthly-dashboard__quick-add { right: auto; left: 18px; }
+}
