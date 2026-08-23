@@ -42,7 +42,8 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
         final controller = widget.controller;
         final page = controller.currentPage;
 
-        if (controller.state == NotificationsLoadState.loading && page == null) {
+        if (controller.state == NotificationsLoadState.loading &&
+            page == null) {
           return SafeContractsStateView(
             kind: MobileStateKind.loading,
             message: l10n.t('Loading notifications…'),
@@ -67,7 +68,8 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
           );
         }
 
-        final unread = page.notifications.where((item) => !_isRead(item)).length;
+        final unread =
+            page.notifications.where((item) => !_isRead(item)).length;
         final read = page.notifications.length - unread;
         final urgent = _firstUnread(page.notifications);
         final visible = page.notifications.where((item) {
@@ -131,10 +133,10 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                     IconButton.filledTonal(
                       tooltip: l10n.t('Refresh'),
-                      onPressed: controller.state ==
-                              NotificationsLoadState.loading
-                          ? null
-                          : () => unawaited(controller.refresh()),
+                      onPressed:
+                          controller.state == NotificationsLoadState.loading
+                              ? null
+                              : () => unawaited(controller.refresh()),
                       icon: const Icon(Icons.refresh_rounded),
                     ),
                   ],
@@ -614,7 +616,8 @@ final class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = read ? SafeContractsVisual.green : SafeContractsVisual.red;
-    final soft = read ? SafeContractsVisual.greenSoft : SafeContractsVisual.redSoft;
+    final soft =
+        read ? SafeContractsVisual.greenSoft : SafeContractsVisual.redSoft;
     return Material(
       color: SafeContractsVisual.surface,
       borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
