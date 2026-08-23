@@ -10,6 +10,7 @@ use SafeContracts\Contracts\ContractArchiveService;
 use SafeContracts\Contracts\ContractService;
 use SafeContracts\Contracts\ContractStatus;
 use SafeContracts\Counterparties\CounterpartyType;
+use SafeContracts\Payments\PaymentRepository;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Settings\GeneralSettings;
 use SafeContracts\Suppliers\SupplierService;
@@ -180,6 +181,15 @@ final class ContractsPage
         $read = new AdminReadRepository();
         $filters = DashboardFilters::normalize($_GET);
         $contracts = $read->contracts($filters);
+        $scheduledTotals = [];
+        try {
+            $scheduledTotals = (new PaymentRepository())->scheduledTotalsForContracts(array_values(array_map(
+                static fn (array $contract): int => (int) ($contract['id'] ?? 0),
+                $contracts
+            )));
+        } catch (Throwable $error) {
+            unset($error);
+        }
         $customers = $read->customerOptions();
         $suppliers = self::supplierOptions();
         $accountants = AdminLookupOptions::accountants();
@@ -256,18 +266,26 @@ final class ContractsPage
             <?php endif; ?>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th><th><?php echo esc_html__('Direction', 'safecontracts'); ?></th><th><?php echo esc_html__('Currency', 'safecontracts'); ?></th><th><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th><th><?php echo esc_html__('Direction', 'safecontracts'); ?></th><th><?php echo esc_html__('Currency', 'safecontracts'); ?></th><th><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th><th><?php echo esc_html__('Scheduled total', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php foreach ($contracts as $contract) : ?>
-                        <?php $accountantId = (int) ($contract['accountant_user_id'] ?? 0); ?>
+                        <?php
+                        $contractId = (int) ($contract['id'] ?? 0);
+                        $accountantId = (int) ($contract['accountant_user_id'] ?? 0);
+                        $direction = (string) ($contract['financial_direction'] ?? 'receivable');
+                        $directionClass = $direction === 'payable' ? 'payable' : 'receivable';
+                        $scheduledTotal = $scheduledTotals[$contractId] ?? '0.0000';
+                        $addPaymentUrl = add_query_arg(['page' => PaymentsPage::SLUG, 'contract_id' => $contractId], admin_url('admin.php'));
+                        ?>
                         <tr>
-                            <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><?php echo ! empty($contract['is_archived']) ? ' · ' . esc_html__('Archived', 'safecontracts') : ''; ?></td>
+                            <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => $contractId], admin_url('admin.php'))); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><?php echo ! empty($contract['is_archived']) ? ' · ' . esc_html__('Archived', 'safecontracts') : ''; ?></td>
                             <td><strong><?php echo esc_html((string) ($contract['counterparty_name'] ?? '')); ?></strong><br><small><?php echo esc_html(self::counterpartyTypeLabel((string) ($contract['counterparty_type'] ?? ''))); ?></small></td>
-                            <td><span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr((string) ($contract['financial_direction'] ?? '')); ?>"><?php echo esc_html(self::directionLabel((string) ($contract['financial_direction'] ?? ''))); ?></span></td>
+                            <td><span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr($directionClass); ?>"><?php echo esc_html(self::directionLabel($direction)); ?></span></td>
                             <td><?php echo esc_html((string) ($contract['currency_code'] ?: '—')); ?></td>
                             <td><?php echo $accountantId > 0 ? esc_html($accountantLabels[$accountantId] ?? __('Assigned user unavailable', 'safecontracts')) : '<strong>' . esc_html__('Unassigned', 'safecontracts') . '</strong>'; ?></td>
                             <td><?php echo esc_html(self::statusLabel((string) $contract['status'])); ?></td>
                             <td><?php echo esc_html(self::money($contract['base_value'], (string) ($contract['currency_code'] ?? ''))); ?></td>
-                            <td><div class="safecontracts-dashboard-table-actions"><a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => (int) $contract['id']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_SYSTEM)) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Payments, collections, history and audit evidence will be preserved.', 'safecontracts'); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contract['id']); ?>"><?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $contract['id']); ?><button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button></form><?php endif; ?></div></td>
+                            <td><strong><?php echo esc_html(self::money($scheduledTotal, (string) ($contract['currency_code'] ?? ''))); ?></strong></td>
+                            <td><div class="safecontracts-dashboard-table-actions"><a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'contract_id' => $contractId], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_PAYMENTS)) : ?><a class="button button-small safecontracts-payment-action safecontracts-payment-action--<?php echo esc_attr($directionClass); ?>" href="<?php echo esc_url($addPaymentUrl); ?>"><?php echo esc_html__('Add payment', 'safecontracts'); ?></a><?php endif; ?><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_SYSTEM)) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this contract from active operations? Payments, collections, history and audit evidence will be preserved.', 'safecontracts'); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contractId); ?>"><?php wp_nonce_field(self::DELETE_ACTION . '_' . $contractId); ?><button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button></form><?php endif; ?></div></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody></table>
