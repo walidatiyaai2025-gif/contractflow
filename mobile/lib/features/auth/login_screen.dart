@@ -96,8 +96,8 @@ final class _SafeContractsLoginScreenState
                   child: AnimatedBuilder(
                     animation: widget.controller,
                     builder: (context, child) {
-                      final submitting =
-                          widget.controller.state == MobileLoginState.submitting;
+                      final submitting = widget.controller.state ==
+                          MobileLoginState.submitting;
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -115,11 +115,11 @@ final class _SafeContractsLoginScreenState
                                 ),
                               ],
                               selected: <String>{selectedLanguage},
-                              onSelectionChanged: submitting ||
-                                      widget.onLanguageChanged == null
-                                  ? null
-                                  : (selection) => widget
-                                      .onLanguageChanged!(selection.first),
+                              onSelectionChanged:
+                                  submitting || widget.onLanguageChanged == null
+                                      ? null
+                                      : (selection) => widget
+                                          .onLanguageChanged!(selection.first),
                               showSelectedIcon: false,
                               style: ButtonStyle(
                                 foregroundColor:
@@ -198,7 +198,9 @@ final class _SafeContractsLoginScreenState
                                       CrossAxisAlignment.stretch,
                                   children: [
                                     Text(
-                                      l10n.isArabic ? 'تسجيل الدخول' : 'Sign in',
+                                      l10n.isArabic
+                                          ? 'تسجيل الدخول'
+                                          : 'Sign in',
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleLarge
@@ -292,34 +294,34 @@ final class _SafeContractsLoginScreenState
                                         ),
                                       ),
                                     ),
-                                    if (widget.controller.errorMessage != null)
-                                      ...[
-                                        const SizedBox(height: 8),
-                                        Semantics(
-                                          liveRegion: true,
-                                          child: Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: SafeContractsVisual.redSoft,
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              border: Border.all(
-                                                color: SafeContractsVisual.red
-                                                    .withValues(alpha: 0.28),
-                                              ),
+                                    if (widget.controller.errorMessage !=
+                                        null) ...[
+                                      const SizedBox(height: 8),
+                                      Semantics(
+                                        liveRegion: true,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: SafeContractsVisual.redSoft,
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: SafeContractsVisual.red
+                                                  .withValues(alpha: 0.28),
                                             ),
-                                            child: Text(
-                                              l10n.rawMessage(
-                                                widget.controller.errorMessage!,
-                                              ),
-                                              style: const TextStyle(
-                                                color:
-                                                    SafeContractsVisual.redDeep,
-                                              ),
+                                          ),
+                                          child: Text(
+                                            l10n.rawMessage(
+                                              widget.controller.errorMessage!,
+                                            ),
+                                            style: const TextStyle(
+                                              color:
+                                                  SafeContractsVisual.redDeep,
                                             ),
                                           ),
                                         ),
-                                      ],
+                                      ),
+                                    ],
                                     const SizedBox(height: 18),
                                     FilledButton.icon(
                                       onPressed: submitting
@@ -336,7 +338,9 @@ final class _SafeContractsLoginScreenState
                                           : const Icon(Icons.login_rounded),
                                       label: Text(
                                         l10n.t(
-                                          submitting ? 'Signing in…' : 'Sign in',
+                                          submitting
+                                              ? 'Signing in…'
+                                              : 'Sign in',
                                         ),
                                       ),
                                     ),
