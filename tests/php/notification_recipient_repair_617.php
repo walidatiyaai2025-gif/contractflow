@@ -87,8 +87,8 @@ final class SC_Recipient_Repair_Wpdb
 }
 
 sc_recipient_repair_assert(
-    Migrator::LATEST_VERSION === '1.19.0' && class_exists(Migration0020NotificationRecipientRepair::class),
-    'Notification recipient production repair is registered as database version 1.19.0'
+    version_compare(Migrator::LATEST_VERSION, '1.19.0', '>=') && class_exists(Migration0020NotificationRecipientRepair::class),
+    'Notification recipient production repair remains available from database version 1.19.0 onward'
 );
 
 $normalized = NotificationRecipientRolePolicy::normalizeStoredRoles([
