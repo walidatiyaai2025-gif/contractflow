@@ -52,9 +52,11 @@ final class ContractMedia {
 
   factory ContractMedia.fromData(Object? value) {
     final map = apiObjectMap(value, 'contract_media');
-    final rows = apiObjectList(map['attachments'], 'contract_media.attachments');
+    final rows =
+        apiObjectList(map['attachments'], 'contract_media.attachments');
     return ContractMedia(
-      contractId: _positiveInt(map['contract_id'], 'contract_media.contract_id'),
+      contractId:
+          _positiveInt(map['contract_id'], 'contract_media.contract_id'),
       heroUrl: _requiredUrl(map['hero_url'], 'contract_media.hero_url'),
       heroSource: _text(map['hero_source'], fallback: 'company'),
       attachments: List<ContractAttachment>.unmodifiable(
