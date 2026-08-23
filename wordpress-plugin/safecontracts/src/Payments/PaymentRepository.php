@@ -8,17 +8,19 @@ use RuntimeException;
 
 final class PaymentRepository
 {
-    /** @return array{id:int, accountant_user_id:?int, is_archived:bool, counterparty_type:string, counterparty_id:int, financial_direction:string, currency_code:string}|null */
+    /** @return array{id:int, accountant_user_id:?int, is_archived:bool, counterparty_type:string, counterparty_id:int, financial_direction:string, currency_code:string, base_value:?string, scheduled_total:?string}|null */
     public function contractContext(int $contractId): ?array
     {
         global $wpdb;
         $this->assertWpdb($wpdb);
 
         $table = $wpdb->prefix . 'safecontracts_contracts';
+        $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, accountant_user_id, is_archived, counterparty_type, counterparty_id, financial_direction, currency_code
-                 FROM {$table} WHERE id = %d LIMIT 1",
+                "SELECT c.id, c.accountant_user_id, c.is_archived, c.counterparty_type, c.counterparty_id, c.financial_direction, c.currency_code, c.base_value,
+                        (SELECT COALESCE(SUM(sp.original_amount), 0.0000) FROM {$payments} sp WHERE sp.contract_id = c.id AND sp.is_archived = 0) AS scheduled_total
+                 FROM {$table} c WHERE c.id = %d LIMIT 1",
                 $contractId
             ),
             ARRAY_A
@@ -37,10 +39,14 @@ final class PaymentRepository
             'counterparty_id' => (int) ($row['counterparty_id'] ?? 0),
             'financial_direction' => self::directionFromRow($row),
             'currency_code' => self::currencyFromRow($row),
+            // These keys are always selected in production. Nullable fallbacks keep
+            // legacy repository mocks compatible without weakening the real SQL path.
+            'base_value' => array_key_exists('base_value', $row) ? (string) $row['base_value'] : null,
+            'scheduled_total' => array_key_exists('scheduled_total', $row) ? (string) $row['scheduled_total'] : null,
         ];
     }
 
-    /** @return array{id:int, contract_id:int, financial_direction:string, currency_code:string, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool, counterparty_type:string, counterparty_id:int}|null */
+    /** @return array{id:int, contract_id:int, financial_direction:string, currency_code:string, sequence_no:int, reference:?string, due_date:string, expected_payment_date:?string, original_amount:string, paid_amount:string, remaining_amount:string, status:string, is_archived:bool, accountant_user_id:?int, contract_is_archived:bool, counterparty_type:string, counterparty_id:int, contract_base_value:?string, contract_scheduled_total:?string}|null */
     public function find(int $paymentId): ?array
     {
         global $wpdb;
@@ -51,7 +57,8 @@ final class PaymentRepository
             $wpdb->prepare(
                 "SELECT p.id, p.contract_id, p.financial_direction, p.currency_code, p.sequence_no, p.reference, p.due_date, p.expected_payment_date,
                         p.original_amount, p.paid_amount, p.remaining_amount, p.status, p.is_archived,
-                        c.accountant_user_id, c.is_archived AS contract_is_archived, c.counterparty_type, c.counterparty_id
+                        c.accountant_user_id, c.is_archived AS contract_is_archived, c.counterparty_type, c.counterparty_id, c.base_value AS contract_base_value,
+                        (SELECT COALESCE(SUM(sp.original_amount), 0.0000) FROM {$payments} sp WHERE sp.contract_id = c.id AND sp.is_archived = 0) AS contract_scheduled_total
                  FROM {$payments} p
                  INNER JOIN {$contracts} c ON c.id = p.contract_id
                  WHERE p.id = %d AND p.is_archived = 0 LIMIT 1",
@@ -81,6 +88,8 @@ final class PaymentRepository
             'contract_is_archived' => (bool) ($row['contract_is_archived'] ?? false),
             'counterparty_type' => (string) ($row['counterparty_type'] ?? ''),
             'counterparty_id' => (int) ($row['counterparty_id'] ?? 0),
+            'contract_base_value' => array_key_exists('contract_base_value', $row) ? (string) $row['contract_base_value'] : null,
+            'contract_scheduled_total' => array_key_exists('contract_scheduled_total', $row) ? (string) $row['contract_scheduled_total'] : null,
         ];
     }
 
