@@ -39,6 +39,7 @@ final class Router
         DataController::register();
         FinanceController::register();
         DashboardController::register();
+        ContractMediaController::register();
         MobileConfigController::register();
         ReferenceDataController::register();
         ExcelExportController::register();
