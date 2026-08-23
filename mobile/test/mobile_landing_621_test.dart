@@ -23,7 +23,8 @@ void main() {
     expect(controller.state, MobileLandingState.ready);
     expect(controller.usingFallback, isFalse);
     expect(controller.content.brandName, 'Alkenzy ADV');
-    expect(controller.content.headline.resolve('ar'), 'خبرة إعلانية تصنع الفرق');
+    expect(
+        controller.content.headline.resolve('ar'), 'خبرة إعلانية تصنع الفرق');
     expect(controller.content.services.single.key, 'strategy');
     expect(controller.content.phones, <String>['01000272232']);
     controller.dispose();
@@ -46,7 +47,8 @@ void main() {
 
     expect(controller.state, MobileLandingState.fallback);
     expect(controller.usingFallback, isTrue);
-    expect(controller.content.brandName, MobileLandingContent.fallback.brandName);
+    expect(
+        controller.content.brandName, MobileLandingContent.fallback.brandName);
     expect(controller.errorMessage, isNotNull);
     controller.dispose();
   });
