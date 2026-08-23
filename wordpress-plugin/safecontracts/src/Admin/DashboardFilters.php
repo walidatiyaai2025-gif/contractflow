@@ -12,7 +12,7 @@ use SafeContracts\Payments\PaymentStatus;
 
 final class DashboardFilters
 {
-    /** @return array{customer_id:int,counterparty_type:string,counterparty_id:int,financial_direction:string,currency_code:string,contract_id:int,accountant_user_id:int,status:string,due_from:?string,due_to:?string,date_from:?string,date_to:?string,date_range_error:bool} */
+    /** @return array{customer_id:int,counterparty_type:string,counterparty_id:int,financial_direction:string,currency_code:string,contract_id:int,accountant_user_id:int,status:string,year:int,due_from:?string,due_to:?string,date_from:?string,date_to:?string,date_range_error:bool} */
     public static function normalize(array $input): array
     {
         $customerId = self::id($input['customer_id'] ?? null);
@@ -38,13 +38,23 @@ final class DashboardFilters
             $status = '';
         }
 
+        $year = self::year($input['year'] ?? $input['dashboard_year'] ?? null);
+
         $dueFrom = self::date($input['due_from'] ?? null);
         $dueTo = self::date($input['due_to'] ?? null);
         if ($dueFrom !== null && $dueTo !== null && $dueTo < $dueFrom) {
             [$dueFrom, $dueTo] = [$dueTo, $dueFrom];
         }
 
-        $period = AdminPeriodFilter::normalize($input);
+        $periodInput = $input;
+        if ($year > 0) {
+            // A selected year is an explicit full-calendar-year context. It
+            // deliberately overrides ad-hoc period inputs so dashboard and
+            // drill-down pages cannot disagree about what “2026” means.
+            $periodInput['date_from'] = sprintf('%04d-01-01', $year);
+            $periodInput['date_to'] = sprintf('%04d-12-31', $year);
+        }
+        $period = AdminPeriodFilter::normalize($periodInput);
 
         return [
             'customer_id' => $customerId,
@@ -55,6 +65,7 @@ final class DashboardFilters
             'contract_id' => $contractId,
             'accountant_user_id' => $accountantUserId,
             'status' => $status,
+            'year' => $year,
             'due_from' => $dueFrom,
             'due_to' => $dueTo,
             'date_from' => $period['date_from'],
@@ -74,6 +85,19 @@ final class DashboardFilters
         }
         $validated = filter_var($raw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
         return $validated === false ? 0 : (int) $validated;
+    }
+
+    private static function year(mixed $value): int
+    {
+        if (! is_scalar($value) || is_bool($value)) {
+            return 0;
+        }
+        $raw = trim((string) $value);
+        if ($raw === '' || $raw === '0' || ! preg_match('/^\d{4}$/', $raw)) {
+            return 0;
+        }
+        $year = (int) $raw;
+        return $year >= 1900 && $year <= 2200 ? $year : 0;
     }
 
     /** @param list<string> $allowed */

@@ -46,12 +46,13 @@ final class NotificationEmailTestControl
             if ((int) ($result['email_sent'] ?? 0) > 0 && (int) ($result['email_failed'] ?? 0) === 0) {
                 $status = 'sent';
             }
-        } catch (Throwable) {
+        } catch (Throwable $error) {
+            unset($error);
             $status = 'failed';
         }
 
         wp_safe_redirect(add_query_arg([
-            'page' => NotificationCenterPage::SLUG,
+            'page' => EmailSettingsPage::SLUG,
             'safecontracts_email_test' => $status,
         ], admin_url('admin.php')));
         exit;
@@ -60,7 +61,7 @@ final class NotificationEmailTestControl
     public static function render(): void
     {
         $page = isset($_GET['page']) && is_scalar($_GET['page']) ? sanitize_key((string) $_GET['page']) : '';
-        if ($page !== NotificationCenterPage::SLUG || ! current_user_can(Capabilities::MANAGE_NOTIFICATIONS)) {
+        if ($page !== EmailSettingsPage::SLUG || ! current_user_can(Capabilities::MANAGE_NOTIFICATIONS)) {
             return;
         }
 

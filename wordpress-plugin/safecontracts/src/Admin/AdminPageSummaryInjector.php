@@ -12,6 +12,7 @@ use SafeContracts\ReferenceData\PaymentMethodRepository;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Settings\GeneralSettings;
 use SafeContracts\Settings\MobileConfiguration;
+use SafeContracts\Support\MoneyFormatter;
 use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
@@ -28,12 +29,20 @@ final class AdminPageSummaryInjector
             return;
         }
         $page = isset($_GET['page']) && is_scalar($_GET['page']) ? sanitize_key((string) $_GET['page']) : '';
-        if ($page === '' || in_array($page, [ArchivePage::SLUG, ActiveUsersPage::SLUG, NotificationCenterPage::SLUG, UsersRolesPage::SLUG], true)) {
+        if ($page === '' || in_array($page, [
+            AdminShell::SLUG,
+            ArchivePage::SLUG,
+            ActiveUsersPage::SLUG,
+            ContractsPage::SLUG,
+            NotificationCenterPage::SLUG,
+            UsersRolesPage::SLUG,
+        ], true)) {
             return;
         }
         try {
             $cards = self::cards($page);
-        } catch (Throwable) {
+        } catch (Throwable $error) {
+            unset($error);
             return;
         }
         if ($cards === []) {
@@ -49,14 +58,14 @@ final class AdminPageSummaryInjector
     {
         $filters = DashboardFilters::normalize($_GET);
         $repository = new AdminReadRepository();
-        if ($page === AdminShell::SLUG) {
-            $kpis = $repository->kpis($filters);
-            return [
-                ['label' => __('Contracts', 'safecontracts'), 'value' => (string) ($kpis['contract_count'] ?? 0)],
-                ['label' => __('Scheduled', 'safecontracts'), 'value' => (string) ($kpis['scheduled_total'] ?? '0.0000')],
-                ['label' => __('Remaining', 'safecontracts'), 'value' => (string) ($kpis['remaining_total'] ?? '0.0000')],
-                ['label' => __('Overdue', 'safecontracts'), 'value' => (string) ($kpis['overdue_exposure'] ?? '0.0000')],
-            ];
+        $currency = (string) ($filters['currency_code'] ?? '');
+        if ($currency === '') {
+            try {
+                $settings = (new GeneralSettings())->read();
+                $currency = strtoupper(trim((string) ($settings['currency_code'] ?? '')));
+            } catch (Throwable $error) {
+                unset($error);
+            }
         }
         if ($page === CustomersPage::SLUG) {
             $rows = $repository->customers($filters);
@@ -66,29 +75,20 @@ final class AdminPageSummaryInjector
                 ['label' => __('With phone', 'safecontracts'), 'value' => count(array_filter($rows, static fn (array $r): bool => trim((string) ($r['phone'] ?? '')) !== ''))],
             ];
         }
-        if ($page === ContractsPage::SLUG) {
-            $rows = $repository->contracts($filters);
-            return [
-                ['label' => __('Contracts shown', 'safecontracts'), 'value' => count($rows)],
-                ['label' => __('Active', 'safecontracts'), 'value' => self::countState($rows, 'status', 'active')],
-                ['label' => __('Completed', 'safecontracts'), 'value' => self::countState($rows, 'status', 'completed')],
-                ['label' => __('Draft', 'safecontracts'), 'value' => self::countState($rows, 'status', 'draft')],
-            ];
-        }
         if ($page === PaymentsPage::SLUG) {
             $rows = $repository->payments($filters);
             return [
                 ['label' => __('Payments shown', 'safecontracts'), 'value' => count($rows)],
                 ['label' => __('Overdue payments', 'safecontracts'), 'value' => self::countState($rows, 'status', 'overdue')],
                 ['label' => __('Paid payments', 'safecontracts'), 'value' => self::countState($rows, 'status', 'paid')],
-                ['label' => __('Remaining amount', 'safecontracts'), 'value' => number_format(self::sum($rows, 'remaining_amount'), 4, '.', '')],
+                ['label' => __('Remaining amount', 'safecontracts'), 'value' => MoneyFormatter::format((string) self::sum($rows, 'remaining_amount'), $currency)],
             ];
         }
         if ($page === CollectionsPage::SLUG) {
             $rows = $repository->collections($filters);
             return [
                 ['label' => __('Collections shown', 'safecontracts'), 'value' => count($rows)],
-                ['label' => __('Collected amount', 'safecontracts'), 'value' => number_format(self::sum($rows, 'amount'), 4, '.', '')],
+                ['label' => __('Collected amount', 'safecontracts'), 'value' => MoneyFormatter::format((string) self::sum($rows, 'amount'), $currency)],
                 ['label' => __('With attachments', 'safecontracts'), 'value' => count(array_filter($rows, static fn (array $r): bool => (int) ($r['proof_media_id'] ?? 0) > 0))],
             ];
         }
@@ -98,7 +98,7 @@ final class AdminPageSummaryInjector
                 ['label' => __('Contracts', 'safecontracts'), 'value' => (string) ($summary['contract_count'] ?? 0)],
                 ['label' => __('Collection transactions', 'safecontracts'), 'value' => (string) ($summary['collection_transactions'] ?? 0)],
                 ['label' => __('Follow-up events', 'safecontracts'), 'value' => (string) ($summary['followup_events'] ?? 0)],
-                ['label' => __('Overdue exposure', 'safecontracts'), 'value' => (string) ($summary['overdue_exposure'] ?? '0.0000')],
+                ['label' => __('Overdue exposure', 'safecontracts'), 'value' => MoneyFormatter::format((string) ($summary['overdue_exposure'] ?? '0'), $currency)],
             ];
         }
         if ($page === NotificationsPage::SLUG || $page === NotificationSettingsPage::SLUG) {

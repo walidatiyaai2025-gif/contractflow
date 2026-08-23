@@ -44,4 +44,8 @@ add_filter('gettext', static function (string $translation, string $text, string
 
 add_action('plugins_loaded', static function (): void {
     \SafeContracts\Plugin::instance()->boot();
+    // Email delivery configuration is intentionally a dedicated admin page,
+    // separate from the operational Notification Center.
+    \SafeContracts\Admin\EmailSettingsPage::register();
+    \SafeContracts\Admin\NotificationCenterPage::registerInboxActions();
 });

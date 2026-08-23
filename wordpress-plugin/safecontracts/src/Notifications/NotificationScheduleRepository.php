@@ -16,16 +16,27 @@ final class NotificationScheduleRepository
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
+        $suppliers = $wpdb->prefix . 'safecontracts_suppliers';
         $limit = max(1, min(10000, $limit));
 
         $rows = $wpdb->get_results(
             "SELECT p.id, p.contract_id, p.reference, p.due_date, p.remaining_amount, p.status,
-                    c.accountant_user_id, c.contract_number, cu.name AS customer_name
+                    p.financial_direction, p.currency_code,
+                    c.accountant_user_id, c.contract_number, c.counterparty_type, c.counterparty_id,
+                    CASE WHEN c.counterparty_type = 'customer' THEN cu.name
+                         WHEN c.counterparty_type = 'supplier' THEN su.name
+                         ELSE NULL END AS counterparty_name,
+                    CASE WHEN c.counterparty_type = 'customer' THEN cu.name ELSE NULL END AS customer_name,
+                    CASE WHEN c.counterparty_type = 'supplier' THEN su.name ELSE NULL END AS supplier_name
              FROM {$payments} p
              INNER JOIN {$contracts} c ON c.id = p.contract_id
-             INNER JOIN {$customers} cu ON cu.id = c.customer_id
-             WHERE p.is_archived = 0 AND c.is_archived = 0 AND cu.is_active = 1
+             LEFT JOIN {$customers} cu ON c.counterparty_type = 'customer' AND cu.id = c.counterparty_id
+             LEFT JOIN {$suppliers} su ON c.counterparty_type = 'supplier' AND su.id = c.counterparty_id
+             WHERE p.is_archived = 0 AND c.is_archived = 0
+               AND ((c.counterparty_type = 'customer' AND cu.id IS NOT NULL AND cu.is_active = 1)
+                    OR (c.counterparty_type = 'supplier' AND su.id IS NOT NULL))
                AND p.remaining_amount > 0 AND p.status <> 'paid'
+               AND p.financial_direction IN ('receivable','payable')
              ORDER BY p.due_date ASC, p.id ASC
              LIMIT {$limit}",
             ARRAY_A
@@ -41,13 +52,25 @@ final class NotificationScheduleRepository
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
+        $suppliers = $wpdb->prefix . 'safecontracts_suppliers';
         $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT p.id, p.contract_id, p.reference, p.due_date, p.remaining_amount, p.status,
-                    c.accountant_user_id, c.contract_number, cu.name AS customer_name
+                    p.financial_direction, p.currency_code,
+                    c.accountant_user_id, c.contract_number, c.counterparty_type, c.counterparty_id,
+                    CASE WHEN c.counterparty_type = 'customer' THEN cu.name
+                         WHEN c.counterparty_type = 'supplier' THEN su.name
+                         ELSE NULL END AS counterparty_name,
+                    CASE WHEN c.counterparty_type = 'customer' THEN cu.name ELSE NULL END AS customer_name,
+                    CASE WHEN c.counterparty_type = 'supplier' THEN su.name ELSE NULL END AS supplier_name
              FROM {$payments} p
              INNER JOIN {$contracts} c ON c.id = p.contract_id
-             INNER JOIN {$customers} cu ON cu.id = c.customer_id
-             WHERE p.id = %d AND p.is_archived = 0 AND c.is_archived = 0 AND cu.is_active = 1 LIMIT 1",
+             LEFT JOIN {$customers} cu ON c.counterparty_type = 'customer' AND cu.id = c.counterparty_id
+             LEFT JOIN {$suppliers} su ON c.counterparty_type = 'supplier' AND su.id = c.counterparty_id
+             WHERE p.id = %d AND p.is_archived = 0 AND c.is_archived = 0
+               AND ((c.counterparty_type = 'customer' AND cu.id IS NOT NULL AND cu.is_active = 1)
+                    OR (c.counterparty_type = 'supplier' AND su.id IS NOT NULL))
+               AND p.financial_direction IN ('receivable','payable')
+             LIMIT 1",
             $paymentId
         ), ARRAY_A);
         return is_array($rows) && $rows !== [] ? $rows[0] : null;
@@ -112,21 +135,33 @@ final class NotificationScheduleRepository
         $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
         $contracts = $wpdb->prefix . 'safecontracts_contracts';
         $customers = $wpdb->prefix . 'safecontracts_customers';
-        $where = ['p.is_archived = 0', 'c.is_archived = 0', 'cu.is_active = 1'];
+        $suppliers = $wpdb->prefix . 'safecontracts_suppliers';
+        $where = [
+            'p.is_archived = 0',
+            'c.is_archived = 0',
+            "((c.counterparty_type = 'customer' AND cu.id IS NOT NULL AND cu.is_active = 1) OR (c.counterparty_type = 'supplier' AND su.id IS NOT NULL))",
+        ];
         $args = [];
-        if ($dateFrom !== null && $dateFrom !== '') { $where[] = 's.scheduled_date >= %s'; $args[] = $dateFrom; }
-        if ($dateTo !== null && $dateTo !== '') { $where[] = 's.scheduled_date <= %s'; $args[] = $dateTo; }
-        if ($status !== '' && in_array($status, self::statuses(), true)) { $where[] = 's.status = %s'; $args[] = $status; }
+        if ($dateFrom !== null && $dateFrom !== '') { $where[] = 'ns.scheduled_date >= %s'; $args[] = $dateFrom; }
+        if ($dateTo !== null && $dateTo !== '') { $where[] = 'ns.scheduled_date <= %s'; $args[] = $dateTo; }
+        if ($status !== '' && in_array($status, self::statuses(), true)) { $where[] = 'ns.status = %s'; $args[] = $status; }
         $limit = max(1, min(1000, $limit));
-        $query = "SELECT s.*, r.code AS rule_code, r.name AS rule_name, p.reference AS payment_reference,
-                         p.due_date, c.contract_number, cu.name AS customer_name
-                  FROM {$schedule} s
-                  INNER JOIN {$rules} r ON r.id = s.rule_id
-                  INNER JOIN {$payments} p ON p.id = s.payment_id
+        $query = "SELECT ns.*, r.code AS rule_code, r.name AS rule_name, p.reference AS payment_reference,
+                         p.due_date, p.financial_direction, p.currency_code,
+                         c.contract_number, c.counterparty_type, c.counterparty_id,
+                         CASE WHEN c.counterparty_type = 'customer' THEN cu.name
+                              WHEN c.counterparty_type = 'supplier' THEN su.name
+                              ELSE NULL END AS counterparty_name,
+                         CASE WHEN c.counterparty_type = 'customer' THEN cu.name ELSE NULL END AS customer_name,
+                         CASE WHEN c.counterparty_type = 'supplier' THEN su.name ELSE NULL END AS supplier_name
+                  FROM {$schedule} ns
+                  INNER JOIN {$rules} r ON r.id = ns.rule_id
+                  INNER JOIN {$payments} p ON p.id = ns.payment_id
                   INNER JOIN {$contracts} c ON c.id = p.contract_id
-                  INNER JOIN {$customers} cu ON cu.id = c.customer_id
+                  LEFT JOIN {$customers} cu ON c.counterparty_type = 'customer' AND cu.id = c.counterparty_id
+                  LEFT JOIN {$suppliers} su ON c.counterparty_type = 'supplier' AND su.id = c.counterparty_id
                   WHERE " . implode(' AND ', $where) . "
-                  ORDER BY s.scheduled_for DESC, s.id DESC LIMIT {$limit}";
+                  ORDER BY ns.scheduled_for DESC, ns.id DESC LIMIT {$limit}";
         if ($args !== []) { $query = $wpdb->prepare($query, ...$args); }
         $rows = $wpdb->get_results($query, ARRAY_A);
         return array_map([$this, 'normalize'], is_array($rows) ? $rows : []);
