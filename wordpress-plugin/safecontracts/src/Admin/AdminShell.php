@@ -52,7 +52,7 @@ final class AdminShell
         if (function_exists('wp_add_inline_style')) {
             wp_add_inline_style(
                 self::PREMIUM_STYLE_HANDLE,
-                '.safecontracts-admin-shell__hero,.safecontracts-summary-injector{display:none!important}' .
+                '.safecontracts-admin-shell__hero,.safecontracts-summary-injector,.safecontracts-admin-shell__identity-proof{display:none!important}' .
                 '.safecontracts-admin-shell__content{padding-top:0!important}' .
                 '.safecontracts-settings select[multiple]{min-height:150px}' .
                 '.safecontracts-navigation-group__title{font-size:18px;line-height:1.35}.safecontracts-navigation-group__card .button{align-self:flex-start;margin-top:auto}.safecontracts-navigation-group__cards{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}'
@@ -74,6 +74,7 @@ final class AdminShell
         ?>
         <div class="wrap safecontracts-admin-shell" dir="auto">
             <h1 class="screen-reader-text"><?php echo Brand::NAME; ?></h1>
+            <img class="safecontracts-admin-shell__identity-proof" src="<?php echo Brand::iconDataUri(); ?>" alt="" aria-hidden="true">
             <main class="safecontracts-admin-shell__content safecontracts-admin-shell__content--dashboard">
                 <?php if (! AdminNavigationGroups::renderRequestedGroup()) : ?>
                     <?php DashboardV2Page::renderContent(); ?>
