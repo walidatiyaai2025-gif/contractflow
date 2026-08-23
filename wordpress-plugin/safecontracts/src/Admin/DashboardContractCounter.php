@@ -18,6 +18,22 @@ use SafeContracts\Roles\Capabilities;
  */
 final class DashboardContractCounter
 {
+    /**
+     * Return the all-counterparty count when the WordPress database adapter
+     * supports scalar reads. The lightweight legacy PHP test adapter does not
+     * expose get_var(), so callers can retain the historical fixture count there
+     * without moving database knowledge into REST presentation code.
+     */
+    public static function tryCount(array $filters = []): ?int
+    {
+        global $wpdb;
+        if (! is_object($wpdb) || ! method_exists($wpdb, 'get_var')) {
+            return null;
+        }
+
+        return self::count($filters);
+    }
+
     public static function count(array $filters = []): int
     {
         if (! current_user_can(Capabilities::ACCESS)) {
