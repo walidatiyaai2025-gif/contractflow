@@ -334,8 +334,7 @@ final class _PremiumPaymentTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            payment.reference ??
-                                l10n.paymentNumber(payment.id),
+                            payment.reference ?? l10n.paymentNumber(payment.id),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
