@@ -122,11 +122,23 @@ sc_622_assert(str_contains($paymentsPage, "__('Contract summary', 'safecontracts
 sc_622_assert(str_contains($paymentsPage, "__('Edit payment', 'safecontracts')"), 'Payments grid exposes an explicit edit action');
 sc_622_assert(str_contains($paymentsPage, "Accounts Payable · we will pay it") && str_contains($paymentsPage, "Accounts Receivable · will be paid to us"), 'payment UI distinguishes outgoing payable from incoming receivable');
 
+$contractsPage = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Admin/ContractsPage.php');
+sc_622_assert(str_contains($contractsPage, "__('Scheduled total', 'safecontracts')") && str_contains($contractsPage, 'scheduledTotalsForContracts'), 'Contracts grid shows the scheduled payment total for each visible contract');
+sc_622_assert(str_contains($contractsPage, "__('Add payment', 'safecontracts')") && str_contains($contractsPage, 'PaymentsPage::SLUG') && str_contains($contractsPage, "'contract_id' => $contractId"), 'Contracts grid links directly to a preselected payment-create flow');
+sc_622_assert(str_contains($contractsPage, 'safecontracts-payment-action--') && str_contains($contractsPage, 'safecontracts-direction-pill--'), 'Contracts grid applies directional styling hooks to receivable/payable actions');
+
+$paymentRepo = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Payments/PaymentRepository.php');
+sc_622_assert(str_contains($paymentRepo, 'scheduledTotalsForContracts') && str_contains($paymentRepo, 'SUM(original_amount)') && str_contains($paymentRepo, 'is_archived = 0'), 'scheduled totals aggregate only active scheduled-payment rows');
+$adminCss = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/assets/admin/safecontracts-admin.css');
+sc_622_assert(str_contains($adminCss, '.safecontracts-direction-pill--receivable') && str_contains($adminCss, '.safecontracts-direction-pill--payable'), 'direction badges distinguish receivable green from payable red');
+sc_622_assert(str_contains($adminCss, '.safecontracts-payment-action--receivable') && str_contains($adminCss, '.safecontracts-payment-action--payable'), 'add-payment shortcut follows the same green/red accounting direction');
+
 $contractRepo = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Contracts/ContractRepository.php');
 sc_622_assert(str_contains($contractRepo, 'ContractStatus::ACTIVE') && str_contains($contractRepo, 'Contract base value must be greater than zero.'), 'new contracts are inserted active only with positive base value');
 $rest = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Rest/CounterpartyContractsController.php');
 sc_622_assert(str_contains($rest, "'base_value'") && str_contains($rest, 'Contract base value is required.'), 'REST contract creation requires base value');
 sc_622_assert(FeatureArabicDefaults::default('Accounts Payable · we will pay it') === 'مديونية علينا · سندفعها', 'Arabic payable direction is explicit');
 sc_622_assert(FeatureArabicDefaults::default('Accounts Receivable · will be paid to us') === 'مستحق لنا · سيتم دفعه لنا', 'Arabic receivable direction is explicit');
+sc_622_assert(FeatureArabicDefaults::default('Add payment') === 'إضافة دفعة', 'Arabic add-payment shortcut is explicit');
 
 echo "SafeContracts contract/payment directional edit regression passed ({$tests} assertions).\n";
