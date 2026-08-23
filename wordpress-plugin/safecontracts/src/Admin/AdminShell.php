@@ -17,6 +17,7 @@ final class AdminShell
     public const RESPONSIVE_STYLE_HANDLE = 'safecontracts-admin-responsive';
     public const UX_STYLE_HANDLE = 'safecontracts-admin-v2';
     public const FINANCIAL_STYLE_HANDLE = 'safecontracts-admin-financial-v3';
+    public const CONTRACT_TREE_STYLE_HANDLE = 'safecontracts-contract-payment-tree';
 
     public static function register(): void
     {
@@ -44,6 +45,7 @@ final class AdminShell
         wp_enqueue_style(self::RESPONSIVE_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-responsive.css', [self::SETTINGS_STYLE_HANDLE], SAFECONTRACTS_VERSION);
         wp_enqueue_style(self::UX_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-v2.css', [self::RESPONSIVE_STYLE_HANDLE], SAFECONTRACTS_VERSION);
         wp_enqueue_style(self::FINANCIAL_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-financial-v3.css', [self::UX_STYLE_HANDLE], SAFECONTRACTS_VERSION);
+        wp_enqueue_style(self::CONTRACT_TREE_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/contract-payment-tree.css', [self::FINANCIAL_STYLE_HANDLE], SAFECONTRACTS_VERSION);
 
         if (function_exists('wp_add_inline_style')) {
             wp_add_inline_style(
