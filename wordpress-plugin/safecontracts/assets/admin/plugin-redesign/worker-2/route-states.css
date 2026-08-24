@@ -149,6 +149,12 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
     max-width: 100% !important;
   }
 
+  body[class*="_page_safecontracts-imports"] .safecontracts-settings input[type="date"] {
+    height: 44px !important;
+    min-height: 44px !important;
+    padding-block: 6px !important;
+  }
+
   body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat,
   body[class*="_page_safecontracts-collections"] .safecontracts-w2-table-scroll table.widefat,
   body[class*="_page_safecontracts-followups"] .safecontracts-w2-table-scroll table.widefat,
