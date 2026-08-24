@@ -137,7 +137,8 @@ void main() {
       canExport: false,
     );
     await export.downloadCurrentFilters();
-    await tester.pumpWidget(_app('ar', MobileExcelExportScreen(controller: export)));
+    await tester
+        .pumpWidget(_app('ar', MobileExcelExportScreen(controller: export)));
     await _pump(tester);
     expect(tester.takeException(), isNull);
     expect(export.state, ExcelExportState.error);
@@ -196,7 +197,8 @@ Widget _screen(String name, String language) {
         ),
       ),
     'profile' => _profile(harness, language),
-    'help' => const MobileUserGuideScreen(destinations: MobileDestination.values),
+    'help' =>
+      const MobileUserGuideScreen(destinations: MobileDestination.values),
     _ => throw StateError('Unknown Worker 3 screen: $name'),
   };
 }
@@ -308,7 +310,8 @@ Future<void> _pump(WidgetTester tester, {int cycles = 12}) async {
 }
 
 Future<void> _capture(WidgetTester tester, String name) async {
-  final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(_captureKey));
+  final boundary =
+      tester.renderObject<RenderRepaintBoundary>(find.byKey(_captureKey));
   final image = await boundary.toImage(pixelRatio: 1);
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   if (bytes == null) throw StateError('Unable to encode $name.');
@@ -320,7 +323,8 @@ Future<void> _capture(WidgetTester tester, String name) async {
   );
 }
 
-SafeContractsTestHarness _successHarness() => SafeContractsTestHarness(_success);
+SafeContractsTestHarness _successHarness() =>
+    SafeContractsTestHarness(_success);
 SafeContractsTestHarness _emptyHarness() => SafeContractsTestHarness(_empty);
 SafeContractsTestHarness _errorHarness() => SafeContractsTestHarness(
       (_) => SafeContractsTestHarness.error(503, 'unavailable', 'offline'),
@@ -345,9 +349,13 @@ ApiTransportResponse _success(Uri uri) {
       'order': 'desc',
     });
   }
-  if (path.endsWith('/payments/21')) return SafeContractsTestHarness.ok(_payment());
+  if (path.endsWith('/payments/21'))
+    return SafeContractsTestHarness.ok(_payment());
   if (path.endsWith('/payments')) {
-    return SafeContractsTestHarness.ok(<Object?>[_payment(), _supplierPayment()], meta: const <String, Object?>{
+    return SafeContractsTestHarness.ok(<Object?>[
+      _payment(),
+      _supplierPayment()
+    ], meta: const <String, Object?>{
       'api_version': 'v1',
       'page': 1,
       'per_page': 25,
@@ -359,13 +367,20 @@ ApiTransportResponse _success(Uri uri) {
   if (path.endsWith('/reference-data')) {
     return SafeContractsTestHarness.ok(<String, Object?>{
       'payment_methods': <Object?>[
-        <String, Object?>{'id': 3, 'code': 'bank', 'name': 'Bank transfer', 'display_order': 1},
+        <String, Object?>{
+          'id': 3,
+          'code': 'bank',
+          'name': 'Bank transfer',
+          'display_order': 1
+        },
       ],
     });
   }
-  if (path.endsWith('/finance/overview')) return SafeContractsTestHarness.ok(_overview());
+  if (path.endsWith('/finance/overview'))
+    return SafeContractsTestHarness.ok(_overview());
   if (path.endsWith('/finance/obligations')) {
-    return SafeContractsTestHarness.ok(<Object?>[_obligation('receivable'), _obligation('payable')]);
+    return SafeContractsTestHarness.ok(
+        <Object?>[_obligation('receivable'), _obligation('payable')]);
   }
   if (path.endsWith('/followups')) {
     return SafeContractsTestHarness.ok(<Object?>[
@@ -410,7 +425,10 @@ ApiTransportResponse _success(Uri uri) {
         'created_at': '2026-08-01 09:00:00',
         'updated_at': '2026-08-24 08:30:00',
       },
-    ], meta: const <String, Object?>{'api_version': 'v1', 'scope': 'current_user'});
+    ], meta: const <String, Object?>{
+      'api_version': 'v1',
+      'scope': 'current_user'
+    });
   }
   return SafeContractsTestHarness.error(404, 'not_found', 'Not found');
 }
@@ -427,23 +445,28 @@ ApiTransportResponse _empty(Uri uri) {
       'work_queue_preview': <Object?>[],
     });
   }
-  if (path.endsWith('/finance/obligations')) return SafeContractsTestHarness.ok(<Object?>[]);
-  if (path.endsWith('/payments')) return SafeContractsTestHarness.ok(<Object?>[], meta: _pageMeta());
-  if (path.endsWith('/followups')) return SafeContractsTestHarness.ok(<Object?>[], meta: _pageMeta());
+  if (path.endsWith('/finance/obligations'))
+    return SafeContractsTestHarness.ok(<Object?>[]);
+  if (path.endsWith('/payments'))
+    return SafeContractsTestHarness.ok(<Object?>[], meta: _pageMeta());
+  if (path.endsWith('/followups'))
+    return SafeContractsTestHarness.ok(<Object?>[], meta: _pageMeta());
   if (path.endsWith('/notifications')) {
-    return SafeContractsTestHarness.ok(<Object?>[], meta: const <String, Object?>{
-      'api_version': 'v1',
-      'scope': 'current_user',
-      'page': 1,
-      'per_page': 25,
-      'has_more': false,
-    });
+    return SafeContractsTestHarness.ok(<Object?>[],
+        meta: const <String, Object?>{
+          'api_version': 'v1',
+          'scope': 'current_user',
+          'page': 1,
+          'per_page': 25,
+          'has_more': false,
+        });
   }
   if (path.endsWith('/devices')) {
-    return SafeContractsTestHarness.ok(<Object?>[], meta: const <String, Object?>{
-      'api_version': 'v1',
-      'scope': 'current_user',
-    });
+    return SafeContractsTestHarness.ok(<Object?>[],
+        meta: const <String, Object?>{
+          'api_version': 'v1',
+          'scope': 'current_user',
+        });
   }
   return SafeContractsTestHarness.error(404, 'not_found', 'Not found');
 }
@@ -525,7 +548,9 @@ Map<String, Object?> _overview() => <String, Object?>{
       'work_queue_preview': <Object?>[_obligation('receivable')],
     };
 
-Map<String, Object?> _summary(String direction, String outstanding, String overdue) => <String, Object?>{
+Map<String, Object?> _summary(
+        String direction, String outstanding, String overdue) =>
+    <String, Object?>{
       'financial_direction': direction,
       'currency_code': 'KWD',
       'obligation_count': 9,
@@ -543,7 +568,8 @@ Map<String, Object?> _summary(String direction, String outstanding, String overd
       'upcoming_total': '900000.0000',
     };
 
-Map<String, Object?> _aging(String direction, String bucket, String amount) => <String, Object?>{
+Map<String, Object?> _aging(String direction, String bucket, String amount) =>
+    <String, Object?>{
       'financial_direction': direction,
       'currency_code': 'KWD',
       'aging_bucket': bucket,
@@ -551,7 +577,9 @@ Map<String, Object?> _aging(String direction, String bucket, String amount) => <
       'outstanding_total': amount,
     };
 
-Map<String, Object?> _cash(String date, String direction, String kind, String amount) => <String, Object?>{
+Map<String, Object?> _cash(
+        String date, String direction, String kind, String amount) =>
+    <String, Object?>{
       'due_date': date,
       'financial_direction': direction,
       'currency_code': 'KWD',
@@ -563,10 +591,13 @@ Map<String, Object?> _cash(String date, String direction, String kind, String am
 Map<String, Object?> _obligation(String direction) => <String, Object?>{
       'id': direction == 'receivable' ? 401 : 402,
       'contract_id': direction == 'receivable' ? 101 : 102,
-      'contract_number': direction == 'receivable' ? 'ADV-2026-001' : 'SUP-2026-014',
+      'contract_number':
+          direction == 'receivable' ? 'ADV-2026-001' : 'SUP-2026-014',
       'counterparty_type': direction == 'receivable' ? 'customer' : 'supplier',
       'counterparty_id': direction == 'receivable' ? 7 : 17,
-      'counterparty_name': direction == 'receivable' ? 'شركة الإبداع للإعلان' : 'شركة النخبة للتوريدات',
+      'counterparty_name': direction == 'receivable'
+          ? 'شركة الإبداع للإعلان'
+          : 'شركة النخبة للتوريدات',
       'financial_direction': direction,
       'currency_code': 'KWD',
       'sequence_no': 1,
@@ -580,19 +611,25 @@ Map<String, Object?> _obligation(String direction) => <String, Object?>{
       'aging_bucket': direction == 'receivable' ? '1-30' : 'current',
     };
 
-Map<String, Object?> _notification(int id, int paymentId, String code, bool read) => <String, Object?>{
+Map<String, Object?> _notification(
+        int id, int paymentId, String code, bool read) =>
+    <String, Object?>{
       'id': id,
       'payment_id': paymentId,
       'template_code': code,
       'scheduled_for': '2026-08-24 10:30:00',
       'created_at': '2026-08-24 09:30:00',
       'is_read': read,
-      'deep_link': <String, Object?>{'destination': 'payments', 'resource_id': paymentId},
+      'deep_link': <String, Object?>{
+        'destination': 'payments',
+        'resource_id': paymentId
+      },
     };
 
 final class _NoopPushGateway implements PushMessagingGateway {
   @override
-  Future<MobilePushPermissionState> requestPermission() async => MobilePushPermissionState.authorized;
+  Future<MobilePushPermissionState> requestPermission() async =>
+      MobilePushPermissionState.authorized;
 
   @override
   Future<String?> getToken() async => 'qa-token';
