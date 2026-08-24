@@ -11,6 +11,7 @@ use SafeContracts\Collections\CollectionReadRepository;
 use SafeContracts\Counterparties\CounterpartyReadRepository;
 use SafeContracts\FollowUps\FollowUpService;
 use SafeContracts\Payments\PaymentRepository;
+use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
 use Throwable;
 use WP_Error;
@@ -133,6 +134,11 @@ final class DataController
                 return ApiResponse::notFound('Payment');
             }
             ApiScope::assertAccountant($row['accountant_user_id']);
+            $row['status'] = PaymentStatus::authoritative(
+                $row['due_date'] ?? '',
+                $row['paid_amount'] ?? '0.0000',
+                $row['remaining_amount'] ?? '0.0000'
+            );
             return ApiResponse::ok(self::paymentView($row));
         });
     }
