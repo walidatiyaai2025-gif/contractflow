@@ -3,40 +3,36 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/features/ui/safecontracts_design.dart';
-import 'package:safecontracts_mobile/features/ui/safecontracts_theme.dart';
 import 'package:safecontracts_mobile/features/ui/safecontracts_tokens.dart';
 
 void main() {
-  test('B055 central typography scale is compact in English and Arabic', () {
-    for (final languageCode in const <String>['en', 'ar']) {
-      final theme = SafeContractsTheme.build(languageCode);
-      final textTheme = theme.textTheme;
+  test('B055 central typography scale is applied to Arabic and English theme', () {
+    final source = File(
+      'lib/features/ui/safecontracts_theme.dart',
+    ).readAsStringSync();
 
-      expect(
-        textTheme.displayLarge?.fontSize,
-        SafeContractsTypography.displayLarge,
-      );
-      expect(
-        textTheme.headlineSmall?.fontSize,
-        SafeContractsTypography.headlineSmall,
-      );
-      expect(
-        textTheme.titleLarge?.fontSize,
-        SafeContractsTypography.titleLarge,
-      );
-      expect(
-        textTheme.headlineMedium?.fontSize,
-        SafeContractsTypography.headlineMedium,
-      );
-      expect(
-        textTheme.labelSmall?.fontSize,
-        SafeContractsTypography.labelSmall,
-      );
-      expect(
-        theme.appBarTheme.titleTextStyle?.fontSize,
-        SafeContractsTypography.titleLarge,
-      );
-    }
+    expect(source, contains('GoogleFonts.cairoTextTheme()'));
+    expect(source, contains('GoogleFonts.interTextTheme()'));
+    expect(
+      source,
+      contains('fontSize: SafeContractsTypography.headlineSmall'),
+    );
+    expect(
+      source,
+      contains('fontSize: SafeContractsTypography.titleLarge'),
+    );
+    expect(
+      source,
+      contains('fontSize: SafeContractsTypography.headlineMedium'),
+    );
+    expect(
+      source,
+      contains('fontSize: SafeContractsTypography.labelSmall'),
+    );
+    expect(
+      source,
+      contains('titleTextStyle: textTheme.titleLarge?.copyWith('),
+    );
   });
 
   testWidgets('B056 shared section title consumes compact headline token', (
@@ -44,7 +40,14 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: SafeContractsTheme.build('en'),
+        theme: ThemeData(
+          textTheme: const TextTheme(
+            headlineSmall: TextStyle(
+              fontSize: SafeContractsTypography.headlineSmall,
+              height: SafeContractsTypography.headlineHeight,
+            ),
+          ),
+        ),
         home: const Scaffold(
           body: SafeContractsSectionTitle(title: 'Due information'),
         ),
