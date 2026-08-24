@@ -36,14 +36,38 @@ final class ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeContractsSurface(
-      padding: const EdgeInsets.all(20),
+    final enabledPermissions =
+        session.capabilities.values.where((enabled) => enabled).length;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: SafeContractsVisual.premiumHeaderGradient,
+        borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x2B092944),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Stack(
             clipBehavior: Clip.none,
             children: [
-              const SafeContractsBrandMark(size: 72, borderRadius: 22),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const SafeContractsBrandMark(
+                  size: 66,
+                  borderRadius: 20,
+                ),
+              ),
               PositionedDirectional(
                 end: -2,
                 bottom: -2,
@@ -54,7 +78,7 @@ final class ProfileHero extends StatelessWidget {
                     color: SafeContractsVisual.green,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: SafeContractsVisual.surface,
+                      color: SafeContractsVisual.navy,
                       width: 3,
                     ),
                   ),
@@ -67,7 +91,7 @@ final class ProfileHero extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +99,7 @@ final class ProfileHero extends StatelessWidget {
                 Text(
                   profileCopy(context, 'My profile', 'ملفي الشخصي'),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: SafeContractsVisual.ink,
+                        color: Colors.white,
                         fontWeight: FontWeight.w900,
                       ),
                 ),
@@ -87,28 +111,35 @@ final class ProfileHero extends StatelessWidget {
                     'المستخدم #${session.userId}',
                   ),
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: SafeContractsVisual.muted,
+                        color: Colors.white.withValues(alpha: 0.76),
                         fontWeight: FontWeight.w600,
                       ),
                 ),
                 const SizedBox(height: 10),
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: 7,
+                  runSpacing: 7,
                   children: [
-                    ProfilePill(
+                    _ProfileHeroPill(
                       icon: Icons.shield_outlined,
                       text: profileScopeLabel(context, session.scope),
                     ),
-                    ProfilePill(
+                    _ProfileHeroPill(
+                      icon: Icons.admin_panel_settings_outlined,
+                      text: profileCopy(
+                        context,
+                        '$enabledPermissions permissions enabled',
+                        '$enabledPermissions صلاحية مفعلة',
+                      ),
+                    ),
+                    _ProfileHeroPill(
                       icon: Icons.circle,
                       text: profileCopy(
                         context,
                         'Active session',
                         'جلسة نشطة',
                       ),
-                      background: SafeContractsVisual.greenSoft,
-                      foreground: SafeContractsVisual.green,
+                      success: true,
                     ),
                   ],
                 ),
@@ -119,6 +150,52 @@ final class ProfileHero extends StatelessWidget {
       ),
     );
   }
+}
+
+final class _ProfileHeroPill extends StatelessWidget {
+  const _ProfileHeroPill({
+    required this.icon,
+    required this.text,
+    this.success = false,
+  });
+
+  final IconData icon;
+  final String text;
+  final bool success;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: success
+              ? SafeContractsVisual.green.withValues(alpha: 0.2)
+              : Colors.white.withValues(alpha: 0.11),
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(
+            color: success
+                ? SafeContractsVisual.green.withValues(alpha: 0.45)
+                : Colors.white.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: icon == Icons.circle ? 8 : 14,
+              color: success ? SafeContractsVisual.green : Colors.white,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              text,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ],
+        ),
+      );
 }
 
 final class ProfilePreferences extends StatelessWidget {
@@ -211,6 +288,16 @@ final class ProfileAccount extends StatelessWidget {
             icon: Icons.data_object_rounded,
             label: l10n.t('Data scope'),
             value: profileScopeLabel(context, session.scope),
+          ),
+          const Divider(height: 24),
+          ProfileInfoRow(
+            icon: Icons.admin_panel_settings_outlined,
+            label: profileCopy(context, 'Permissions', 'الصلاحيات'),
+            value: profileCopy(
+              context,
+              '${session.capabilities.values.where((value) => value).length} enabled',
+              '${session.capabilities.values.where((value) => value).length} مفعلة',
+            ),
           ),
           const Divider(height: 24),
           ProfileInfoRow(
