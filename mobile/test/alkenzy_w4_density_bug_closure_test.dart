@@ -43,7 +43,7 @@ void main() {
     expect(
         payment,
         contains(
-            'Server values are shown as received; mobile does not recalculate them.'));
+            'Dates, balances and status are server-authoritative. Mobile does not recalculate them.'));
 
     expect(theme, contains('titleTextStyle: textTheme.titleLarge?.copyWith('));
     expect(theme, contains('foregroundColor: Colors.white'));
