@@ -80,7 +80,7 @@ MobileLandingController _readyController(MobileLandingContent content) {
     MobileLandingRepository(
       SafeContractsApiClient(
         environment: AppEnvironment.fromValues(
-          name: 'test',
+          name: 'local',
           apiBaseUrl: 'https://example.test/wp-json/safecontracts/v1/',
         ),
         transport: FakeApiTransport((uri) {
