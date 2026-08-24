@@ -1,0 +1,815 @@
+name: W1 Bug Closure Patch
+
+on:
+  push:
+    branches:
+      - bugfix/alkenzy-register-w1-customer-navigation
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-capture:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: bugfix/alkenzy-register-w1-customer-navigation
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Apply Worker 1 isolated closure patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one match, got {count}: {old[:80]!r}')
+              p.write_text(text.replace(old, new, 1))
+
+          def replace_region(path, start, end, new):
+              p = Path(path)
+              text = p.read_text()
+              a = text.find(start)
+              if a < 0:
+                  raise SystemExit(f'{path}: missing start marker {start!r}')
+              b = text.find(end, a + len(start))
+              if b < 0:
+                  raise SystemExit(f'{path}: missing end marker {end!r}')
+              p.write_text(text[:a] + new + text[b:])
+
+          customers = 'mobile/lib/features/customers/customers_screen.dart'
+          replace_once(customers, "label: const Text('A–Z'),", "label: Text(ar ? 'أ–ي' : 'A–Z'),")
+          replace_once(customers, "label: const Text('Z–A'),", "label: Text(ar ? 'ي–أ' : 'Z–A'),")
+          replace_once(
+              customers,
+              "      if (customer.phone != null) customer.phone!,",
+              "      if (customer.phone != null) '\\u2066${customer.phone!}\\u2069',",
+          )
+          replace_once(
+              customers,
+              """                      Text(
+                        detail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SafeContractsVisual.muted,
+                            ),
+                      ),""",
+              """                      Text(
+                        detail,
+                        softWrap: true,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SafeContractsVisual.muted,
+                            ),
+                      ),""",
+          )
+          replace_once(
+              customers,
+              """  int? _loadedId;
+  Future<CounterpartyBusinessSnapshot>? _snapshot;
+
+  void _ensureSnapshot(SafeContractsCustomer customer) {
+    if (_loadedId == customer.id && _snapshot != null) return;
+    _loadedId = customer.id;
+    _snapshot = CounterpartyBusinessSnapshotRepository(
+      widget.controller.repository.client,
+    ).load(counterpartyType: 'customer', counterpartyId: customer.id);
+  }""",
+              """  int? _loadedId;
+  Future<CounterpartyBusinessSnapshot>? _snapshot;
+
+  Future<CounterpartyBusinessSnapshot> _loadSnapshot(
+    SafeContractsCustomer customer,
+  ) {
+    return CounterpartyBusinessSnapshotRepository(
+      widget.controller.repository.client,
+    ).load(counterpartyType: 'customer', counterpartyId: customer.id);
+  }
+
+  void _ensureSnapshot(SafeContractsCustomer customer) {
+    if (_loadedId == customer.id && _snapshot != null) return;
+    _loadedId = customer.id;
+    _snapshot = _loadSnapshot(customer);
+  }
+
+  Future<void> _retrySnapshot(SafeContractsCustomer customer) async {
+    final next = _loadSnapshot(customer);
+    setState(() {
+      _loadedId = customer.id;
+      _snapshot = next;
+    });
+    try {
+      await next;
+    } on Object {
+      // FutureBuilder owns the visible server/parser failure state.
+    }
+  }""",
+          )
+          replace_once(
+              customers,
+              "label: Text(context.scL10n.t('Edit')),",
+              "label: Text(context.scL10n.isArabic ? 'تعديل' : 'Edit'),",
+          )
+          replace_once(
+              customers,
+              """              if (snapshot.hasError || snapshot.data == null) {
+                return _InlineNotice(
+                  text: context.scL10n.isArabic
+                      ? 'تعذر تحميل بيانات الأعمال المرتبطة بهذا العميل.'
+                      : 'Unable to load this customer’s linked business data.',
+                );
+              }""",
+              """              if (snapshot.hasError || snapshot.data == null) {
+                final fallback = context.scL10n.isArabic
+                    ? 'تعذر تحميل بيانات الأعمال المرتبطة بهذا العميل.'
+                    : 'Unable to load this customer’s linked business data.';
+                final rawError = snapshot.error?.toString();
+                final message = rawError == null || rawError.trim().isEmpty
+                    ? fallback
+                    : '$fallback\\n${rawError.trim()}';
+                return _StateMessage(
+                  icon: Icons.cloud_off_rounded,
+                  message: context.scL10n.rawMessage(message),
+                  action: () => _retrySnapshot(customer),
+                );
+              }""",
+          )
+          replace_once(
+              customers,
+              """                Text(
+                  customer.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(""",
+              """                Text(
+                  customer.name,
+                  softWrap: true,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(""",
+          )
+          replace_once(
+              customers,
+              """                Text(
+                  actual == null || actual.isEmpty ? '—' : actual,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),""",
+              """                Directionality(
+                  textDirection: icon == Icons.phone_outlined
+                      ? TextDirection.ltr
+                      : Directionality.of(context),
+                  child: Text(
+                    actual == null || actual.isEmpty ? '—' : actual,
+                    softWrap: true,
+                    textAlign: icon == Icons.phone_outlined
+                        ? TextAlign.start
+                        : null,
+                  ),
+                ),""",
+          )
+          replace_once(
+              customers,
+              """              TextField(
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  decoration:
+                      InputDecoration(labelText: ar ? 'الهاتف' : 'Phone')),""",
+              """              TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                textDirection: TextDirection.ltr,
+                textAlign: TextAlign.start,
+                decoration: InputDecoration(labelText: ar ? 'الهاتف' : 'Phone'),
+              ),""",
+          )
+          replace_once(
+              customers,
+              """          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w900)),""",
+              """          Text(
+            value,
+            softWrap: true,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),""",
+          )
+
+          welcome = 'mobile/lib/features/welcome/premium_compact_welcome_screen.dart'
+          replace_once(
+              welcome,
+              """                            const SizedBox(height: 18),
+                            const _ProgressDots(),
+                            const SizedBox(height: 18),""",
+              """                            const SizedBox(height: 18),""",
+          )
+          replace_region(
+              welcome,
+              'final class _ProgressDots extends StatelessWidget {',
+              'final class _ReferenceBackdrop extends StatelessWidget {',
+              '',
+          )
+          replace_once(
+              welcome,
+              "Expanded(child: Text(content.phones.join('  •  '))),",
+              """Expanded(
+                    child: Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(
+                        content.phones.join('  •  '),
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ),""",
+          )
+
+          shell = 'mobile/lib/features/navigation/app_shell.dart'
+          replace_region(
+              shell,
+              "            Expanded(\n              child: Text.rich(",
+              "          ],\n        ),\n      ),\n      drawer:",
+              """            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  '${SafeContractsBrand.name} • ${_label(l10n, _selected)}',
+                  maxLines: 1,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+""",
+          )
+          replace_region(
+              shell,
+              '      drawer: NavigationDrawer(',
+              '      body: SafeContractsBackdrop(',
+              """      drawer: NavigationDrawer(
+        backgroundColor: SafeContractsVisual.navyDeep,
+        indicatorColor: SafeContractsVisual.roseGoldSoft,
+        selectedIndex: widget.policy.destinations.indexOf(_selected),
+        onDestinationSelected: (index) {
+          final destination = widget.policy.destinations[index];
+          _selectDestination(destination);
+          Navigator.of(context).pop();
+        },
+        children: [
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 14, 12, 10),
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+            decoration: BoxDecoration(
+              gradient: SafeContractsVisual.premiumHeaderGradient,
+              borderRadius: BorderRadius.circular(SafeContractsVisual.radius),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x2B092944),
+                  blurRadius: 20,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const SafeContractsBrandMark(size: 48, borderRadius: 13),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        SafeContractsBrand.name,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        l10n.isArabic
+                            ? 'مساحة العمل التنفيذية'
+                            : 'Executive workspace',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.70),
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...widget.policy.destinations.map((destination) {
+            final selected = destination == _selected;
+            return NavigationDrawerDestination(
+              icon: Icon(
+                _icon(destination),
+                color: Colors.white.withValues(alpha: 0.86),
+              ),
+              selectedIcon: Icon(
+                _icon(destination),
+                color: SafeContractsVisual.navyDeep,
+              ),
+              label: Text(
+                _label(l10n, destination),
+                style: TextStyle(
+                  color: selected
+                      ? SafeContractsVisual.navyDeep
+                      : Colors.white.withValues(alpha: 0.94),
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+""",
+          )
+          replace_once(shell, '.take(5)\n', '.take(4)\n')
+          replace_once(
+              shell,
+              """              labelFor: (destination) => _label(l10n, destination),
+              onSelected: _selectDestination,""",
+              """              labelFor: (destination) => _label(l10n, destination),
+              centerGap: quickAdds.isNotEmpty,
+              onSelected: _selectDestination,""",
+          )
+          replace_once(shell, '            width: 3,', '            width: 2,')
+          replace_once(shell, '              blurRadius: 24,', '              blurRadius: 18,')
+          replace_once(
+              shell,
+              """        child: FloatingActionButton(
+          tooltip: widget.tooltip,
+          onPressed: widget.onPressed,
+          backgroundColor: SafeContractsVisual.roseGold,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          child: const Icon(Icons.add_rounded, size: 34),
+        ),""",
+              """        child: SizedBox.square(
+          dimension: 50,
+          child: FloatingActionButton(
+            tooltip: widget.tooltip,
+            onPressed: widget.onPressed,
+            backgroundColor: SafeContractsVisual.roseGold,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            child: const Icon(Icons.add_rounded, size: 26),
+          ),
+        ),""",
+          )
+          replace_region(
+              shell,
+              'final class _SafeContractsBottomNavigation extends StatelessWidget {',
+              'String _label(',
+              """final class _SafeContractsBottomNavigation extends StatelessWidget {
+  const _SafeContractsBottomNavigation({
+    required this.destinations,
+    required this.selected,
+    required this.labelFor,
+    required this.centerGap,
+    required this.onSelected,
+  });
+
+  final List<MobileDestination> destinations;
+  final MobileDestination selected;
+  final String Function(MobileDestination destination) labelFor;
+  final bool centerGap;
+  final ValueChanged<MobileDestination> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width <= 360;
+    final split = destinations.length ~/ 2;
+    final left = destinations.take(split).toList(growable: false);
+    final right = destinations.skip(split).toList(growable: false);
+
+    Widget group(List<MobileDestination> values) {
+      return Row(
+        children: values
+            .map(
+              (destination) => Expanded(
+                child: _BottomNavItem(
+                  destination: destination,
+                  selected: destination == this.selected,
+                  label: labelFor(destination),
+                  compact: compact,
+                  onTap: () => onSelected(destination),
+                ),
+              ),
+            )
+            .toList(growable: false),
+      );
+    }
+
+    final row = centerGap
+        ? Row(
+            children: [
+              Expanded(child: group(left)),
+              const SizedBox(width: 56),
+              Expanded(child: group(right)),
+            ],
+          )
+        : group(destinations);
+
+    return SafeArea(
+      top: false,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: SafeContractsVisual.surface,
+          border: Border(
+            top: BorderSide(color: SafeContractsVisual.outline),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x205E5142),
+              blurRadius: 18,
+              offset: Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(5, compact ? 6 : 7, 5, 5),
+          child: row,
+        ),
+      ),
+    );
+  }
+}
+
+final class _BottomNavItem extends StatelessWidget {
+  const _BottomNavItem({
+    required this.destination,
+    required this.selected,
+    required this.label,
+    required this.compact,
+    required this.onTap,
+  });
+
+  final MobileDestination destination;
+  final bool selected;
+  final String label;
+  final bool compact;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: ValueKey<String>('bottomNav_${destination.name}'),
+      borderRadius: BorderRadius.circular(13),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(vertical: compact ? 3 : 4, horizontal: 2),
+        decoration: BoxDecoration(
+          color: selected
+              ? SafeContractsVisual.roseGoldSoft.withValues(alpha: 0.86)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _icon(destination),
+              size: compact ? 19 : 20,
+              color: selected
+                  ? SafeContractsVisual.navy
+                  : SafeContractsVisual.muted,
+            ),
+            const SizedBox(height: 2),
+            SizedBox(
+              height: compact ? 13 : 14,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: compact ? 9.5 : 10.5,
+                        color: selected
+                            ? SafeContractsVisual.navy
+                            : SafeContractsVisual.muted,
+                        fontWeight:
+                            selected ? FontWeight.w800 : FontWeight.w600,
+                      ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+""",
+          )
+
+          visual = 'mobile/test/worker1_visual_capture_test.dart'
+          replace_once(visual, "import 'dart:convert';\n", "import 'dart:convert';\nimport 'dart:io';\n")
+          replace_once(
+              visual,
+              """    await tester.binding.setSurfaceSize(const Size(390, 844));""",
+              """    const captureWidth = int.fromEnvironment(
+      'W1_CAPTURE_WIDTH',
+      defaultValue: 390,
+    );
+    await tester.binding.setSurfaceSize(Size(captureWidth.toDouble(), 844));""",
+          )
+          for name in ('welcome_ar', 'login_ar', 'shell_ar', 'drawer_ar', 'quick_add_ar'):
+              replace_once(visual, f"await _capture(tester, '{name}');", f"await _capture(tester, '${{captureWidth}}_{name}');")
+          replace_once(
+              visual,
+              """      if (uri.path.endsWith('/customers') ||
+          uri.path.endsWith('/contracts') ||""",
+              """      if (uri.path.endsWith('/customers/7')) {
+        return _ok(<String, Object?>{
+          'id': 7,
+          'internal_code': 'C-007',
+          'name': 'شركة عميل تجريبي طويلة للاختبار',
+          'contact_name': 'إدارة العمليات',
+          'email': 'ops@example.test',
+          'phone': '+965 5555 1234',
+          'is_active': '1',
+        });
+      }
+      if (uri.path.endsWith('/customers')) {
+        return _ok(<Object?>[
+          <String, Object?>{
+            'id': 7,
+            'internal_code': 'C-007',
+            'name': 'شركة عميل تجريبي طويلة للاختبار',
+            'contact_name': 'إدارة العمليات',
+            'email': 'ops@example.test',
+            'phone': '+965 5555 1234',
+            'is_active': '1',
+          },
+        ], meta: <String, Object?>{
+          'api_version': 'v1',
+          'scope': 'assigned',
+          'page': 1,
+          'per_page': 25,
+          'sort': 'name',
+          'order': 'asc',
+          'has_more': false,
+          'bounded_window': 500,
+        });
+      }
+      if (uri.path.endsWith('/contracts') ||""",
+          )
+          replace_once(
+              visual,
+              """    final quickAdd = find.byType(FloatingActionButton);
+    expect(quickAdd, findsOneWidget);""",
+              """    await tester.tap(
+      find.byKey(const ValueKey<String>('bottomNav_customers')),
+    );
+    await tester.pumpAndSettle();
+    await _capture(tester, '${captureWidth}_customers_ar');
+
+    await tester.tap(find.text('شركة عميل تجريبي طويلة للاختبار'));
+    await tester.pumpAndSettle();
+    await _capture(tester, '${captureWidth}_customer_detail_ar');
+
+    final quickAdd = find.byType(FloatingActionButton);
+    expect(quickAdd, findsOneWidget);""",
+          )
+          replace_once(
+              visual,
+              """  final bytes = data!.buffer.asUint8List();
+  // Intentionally emitted only by this temporary visual-QA test.""",
+              """  final bytes = data!.buffer.asUint8List();
+  final directory = Directory('build/w1-bug-closure');
+  directory.createSync(recursive: true);
+  File('${directory.path}/$name.png').writeAsBytesSync(bytes);
+  // Intentionally emitted only by this visual-QA test.""",
+          )
+
+          regression = Path('mobile/test/alkenzy_w1_bug_closure_test.dart')
+          regression.write_text(r'''import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:safecontracts_mobile/core/api/api_client.dart';
+import 'package:safecontracts_mobile/core/api/api_transport.dart';
+import 'package:safecontracts_mobile/core/config/app_environment.dart';
+import 'package:safecontracts_mobile/features/customers/customers.dart';
+import 'package:safecontracts_mobile/features/customers/customers_screen.dart';
+
+import 'fake_api_transport.dart';
+
+void main() {
+  test('B005 Retry performs a real second customer request', () async {
+    var calls = 0;
+    final transport = FakeApiTransport((uri) {
+      if (!uri.path.endsWith('/customers')) {
+        return _error(404, 'not_found', 'Not found');
+      }
+      calls += 1;
+      if (calls == 1) {
+        return _error(503, 'temporarily_unavailable', 'Customer service unavailable');
+      }
+      return _customerPage();
+    });
+    final controller = CustomersController(
+      repository: CustomersRepository(_client(transport)),
+      pageSize: 25,
+      canAccess: true,
+    );
+
+    await controller.ensureLoaded();
+    expect(controller.state, CustomersLoadState.error);
+    expect(calls, 1);
+
+    await controller.loadPage(1);
+    expect(controller.state, CustomersLoadState.ready);
+    expect(calls, 2);
+    expect(controller.currentPage!.customers.single.id, 7);
+    controller.dispose();
+  });
+
+  testWidgets('B002 linked-data failure is visible and Retry reissues request',
+      (tester) async {
+    var contractCalls = 0;
+    final transport = FakeApiTransport((uri) {
+      if (uri.path.endsWith('/customers/7')) return _customerDetail();
+      if (uri.path.endsWith('/customers')) return _customerPage();
+      if (uri.path.endsWith('/contracts')) {
+        contractCalls += 1;
+        if (contractCalls == 1) {
+          return _error(503, 'linked_data_down', 'Linked contract service unavailable');
+        }
+        return _page(<Object?>[], sort: 'end_date', order: 'asc');
+      }
+      if (uri.path.endsWith('/payments')) {
+        return _page(<Object?>[], sort: 'due_date', order: 'asc');
+      }
+      if (uri.path.endsWith('/finance/summary')) {
+        return _ok(<Object?>[]);
+      }
+      if (uri.path.endsWith('/collections')) {
+        return _page(<Object?>[], sort: 'collection_date', order: 'desc');
+      }
+      return _error(404, 'not_found', 'Not found');
+    });
+    final controller = CustomersController(
+      repository: CustomersRepository(_client(transport)),
+      pageSize: 25,
+      canAccess: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: CustomersScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Acme Customer'));
+    await tester.pumpAndSettle();
+
+    expect(contractCalls, 1);
+    expect(find.textContaining('Unable to load this customer'), findsOneWidget);
+    expect(find.textContaining('Linked contract service unavailable'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(contractCalls, 2);
+    expect(find.text('Contracts (0)'), findsOneWidget);
+    controller.dispose();
+  });
+}
+
+SafeContractsApiClient _client(SafeContractsTransport transport) {
+  return SafeContractsApiClient(
+    environment: AppEnvironment.fromValues(
+      name: 'local',
+      apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
+    ),
+    transport: transport,
+  );
+}
+
+ApiTransportResponse _customerPage() => _page(
+      <Object?>[
+        <String, Object?>{
+          'id': 7,
+          'internal_code': 'C7',
+          'name': 'Acme Customer',
+          'contact_name': 'Operations',
+          'email': 'ops@example.test',
+          'phone': '+96555555555',
+          'is_active': '1',
+        },
+      ],
+      sort: 'name',
+      order: 'asc',
+    );
+
+ApiTransportResponse _customerDetail() => _ok(<String, Object?>{
+      'id': 7,
+      'internal_code': 'C7',
+      'name': 'Acme Customer',
+      'contact_name': 'Operations',
+      'email': 'ops@example.test',
+      'phone': '+96555555555',
+      'is_active': '1',
+    });
+
+ApiTransportResponse _page(
+  Object? data, {
+  required String sort,
+  required String order,
+}) =>
+    _ok(data, meta: <String, Object?>{
+      'api_version': 'v1',
+      'scope': 'assigned',
+      'page': 1,
+      'per_page': 25,
+      'sort': sort,
+      'order': order,
+      'returned': data is List ? data.length : 0,
+      'available_in_bounded_read': data is List ? data.length : 0,
+      'bounded_window': 500,
+      'has_more': false,
+    });
+
+ApiTransportResponse _ok(
+  Object? data, {
+  Map<String, Object?> meta = const <String, Object?>{'api_version': 'v1'},
+}) =>
+    ApiTransportResponse(
+      statusCode: 200,
+      headers: const <String, String>{'content-type': 'application/json'},
+      body: jsonEncode(<String, Object?>{'data': data, 'meta': meta}),
+    );
+
+ApiTransportResponse _error(int status, String code, String message) =>
+    ApiTransportResponse(
+      statusCode: status,
+      headers: const <String, String>{'content-type': 'application/json'},
+      body: jsonEncode(<String, Object?>{
+        'code': code,
+        'message': message,
+        'data': <String, Object?>{'status': status},
+      }),
+    );
+''')
+          PY
+      - name: Resolve dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Format all mobile Dart sources and tests
+        working-directory: mobile
+        run: dart format lib test
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze
+      - name: Run regression suite
+        working-directory: mobile
+        shell: bash
+        run: |
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
+      - name: Capture Worker 1 Arabic responsive evidence
+        working-directory: mobile
+        shell: bash
+        run: |
+          for width in 320 360 375 390 412 430; do
+            flutter test test/worker1_visual_capture_test.dart --dart-define=W1_CAPTURE_WIDTH="$width"
+          done
+      - name: Remove temporary patch workflow
+        run: rm .github/workflows/w1-bug-closure-patch.yml
+      - name: Verify scope and commit closure
+        shell: bash
+        run: |
+          git diff --check
+          git status --short
+          git config user.name "alkenzy-w1-bug-closure"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/lib/features/customers/customers_screen.dart \
+                  mobile/lib/features/navigation/app_shell.dart \
+                  mobile/lib/features/welcome/premium_compact_welcome_screen.dart \
+                  mobile/test/alkenzy_w1_bug_closure_test.dart \
+                  mobile/test/worker1_visual_capture_test.dart \
+                  .github/workflows/w1-bug-closure-patch.yml
+          git commit -m "fix(mobile): close W1 customer and navigation register bugs"
+          git push origin HEAD:bugfix/alkenzy-register-w1-customer-navigation
+      - name: Upload Worker 1 screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-w1-bug-closure-screenshots
+          path: mobile/build/w1-bug-closure/*.png
+          if-no-files-found: error
+          retention-days: 14
