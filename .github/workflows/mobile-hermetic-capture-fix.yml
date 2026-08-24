@@ -1,0 +1,100 @@
+name: Mobile Hermetic Capture Fix
+
+on:
+  push:
+    branches:
+      - feat/alkenzy-mobile-reference-redesign
+
+permissions:
+  contents: write
+
+jobs:
+  repair-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-mobile-reference-redesign
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Switch typography to bundled approved Cairo and Inter
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          theme = Path('mobile/lib/features/ui/safecontracts_theme.dart')
+          text = theme.read_text()
+          text = text.replace("import 'package:google_fonts/google_fonts.dart';\n", '')
+          old = """    final baseTextTheme =
+                  isArabic ? GoogleFonts.cairoTextTheme() : GoogleFonts.interTextTheme();
+              final fontFamily = isArabic
+                  ? GoogleFonts.cairo().fontFamily
+                  : GoogleFonts.inter().fontFamily;
+          """
+          if old not in text:
+              old = """    final baseTextTheme =
+                  isArabic ? GoogleFonts.cairoTextTheme() : GoogleFonts.interTextTheme();
+              final fontFamily = isArabic
+                  ? GoogleFonts.cairo().fontFamily
+                  : GoogleFonts.inter().fontFamily;
+          """
+          new = """    final fontFamily = isArabic ? 'Cairo' : 'Inter';
+              final baseTextTheme = ThemeData(useMaterial3: true)
+                  .textTheme
+                  .apply(fontFamily: fontFamily);
+          """
+          if old not in text:
+              raise SystemExit('Expected GoogleFonts theme block was not found')
+          theme.write_text(text.replace(old, new, 1))
+
+          pubspec = Path('mobile/pubspec.yaml')
+          yaml = pubspec.read_text().replace('  google_fonts: ^6.2.1\n', '')
+          old_assets = """  assets:
+              - assets/brand/alkenzy_adv.png
+              - assets/fonts/
+          """
+          new_assets = """  assets:
+              - assets/brand/alkenzy_adv.png
+            fonts:
+              - family: Cairo
+                fonts:
+                  - asset: assets/fonts/Cairo-Variable.ttf
+              - family: Inter
+                fonts:
+                  - asset: assets/fonts/Inter-Variable.ttf
+          """
+          if old_assets not in yaml:
+              raise SystemExit('Expected font assets block was not found')
+          pubspec.write_text(yaml.replace(old_assets, new_assets, 1))
+          PY
+      - name: Resolve and preserve formatter output
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+      - name: Validate analyze and complete Flutter suite
+        working-directory: mobile
+        run: |
+          flutter analyze
+          flutter test
+      - name: Verify dedicated reference capture offline
+        working-directory: mobile
+        run: flutter test test/reference_visual_capture_test.dart
+      - name: Commit hermetic typography and formatter result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/pubspec.yaml mobile/pubspec.lock mobile/lib/features/ui/safecontracts_theme.dart mobile/test/reference_visual_capture_test.dart
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix(mobile): make reference capture typography hermetic'
+            git push origin HEAD:feat/alkenzy-mobile-reference-redesign
+          fi
