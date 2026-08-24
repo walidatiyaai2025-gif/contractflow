@@ -115,6 +115,20 @@ jobs:
           npm install --no-save playwright@1.54.2
           npx playwright install --with-deps chromium
 
+      - name: Use native form submission in QA harness
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tests/plugin-redesign-visual-qa/worker2-functional.mjs')
+          text = path.read_text()
+          old = 'form.evaluate((node) => node.submit()),'
+          new = 'form.evaluate((node) => HTMLFormElement.prototype.submit.call(node)),'
+          if text.count(old) != 1:
+              raise SystemExit('Expected exactly one shadowed form.submit helper call')
+          path.write_text(text.replace(old, new))
+          PY
+
       - name: Execute Worker 2 authenticated functional acceptance
         run: node tests/plugin-redesign-visual-qa/worker2-functional.mjs
 
