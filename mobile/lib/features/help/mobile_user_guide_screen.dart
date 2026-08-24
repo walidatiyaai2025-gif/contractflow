@@ -24,37 +24,57 @@ final class MobileUserGuideScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: SafeContractsVisual.background,
       appBar: AppBar(
-        backgroundColor: SafeContractsVisual.background,
+        backgroundColor: SafeContractsVisual.navy,
+        foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         title: Text(mobileGuideText(l10n, 'User Guide')),
       ),
       body: SafeContractsBackdrop(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
           children: [
+            SafeContractsPremiumHeader(
+              title: mobileGuideText(l10n, 'How to use Alkenzy ADV'),
+              subtitle: mobileGuideText(
+                l10n,
+                'Only sections available to your account are shown.',
+              ),
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.help_outline_rounded,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             SafeContractsSurface(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      mobileGuideText(l10n, 'How to use Alkenzy ADV'),
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: SafeContractsVisual.ink,
-                                fontWeight: FontWeight.w800,
-                              ),
+              elevated: false,
+              accent: SafeContractsVisual.roseGold,
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: SafeContractsVisual.roseGoldSoft,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      mobileGuideText(
-                        l10n,
-                        'Only sections available to your account are shown.',
-                      ),
+                    child: const Icon(
+                      Icons.privacy_tip_outlined,
+                      color: SafeContractsVisual.roseGoldDark,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
                       mobileGuideText(
                         l10n,
                         'Choose records by name from available lists. Internal IDs and system codes are not user inputs.',
@@ -64,14 +84,21 @@ final class MobileUserGuideScreen extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
+            SafeContractsSectionTitle(
+              title: l10n.isArabic ? 'دليل الأقسام' : 'Feature guide',
+              subtitle: l10n.isArabic
+                  ? 'تظهر الأقسام التي تسمح بها صلاحيات حسابك فقط'
+                  : 'Only features authorized for your account appear here',
+            ),
+            const SizedBox(height: 10),
             ...entries.map(
               (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: _GuideCard(entry: entry),
               ),
             ),
@@ -92,79 +119,101 @@ final class _GuideCard extends StatelessWidget {
     final l10n = context.scL10n;
     final area = l10n.t(entry.title);
     return SafeContractsSurface(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: SafeContractsVisual.navySoft,
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Icon(entry.icon, color: SafeContractsVisual.navy),
+      padding: const EdgeInsets.all(15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: SafeContractsVisual.navySoft,
+                  borderRadius: BorderRadius.circular(13),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    area,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: SafeContractsVisual.ink,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              mobileGuideText(l10n, 'What this area does'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            Text(mobileGuideText(l10n, entry.purpose)),
-            const SizedBox(height: 12),
-            Text(
-              mobileGuideText(l10n, 'Recommended steps'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            ...entry.steps.indexed.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${item.$1 + 1}. '),
-                    Expanded(child: Text(mobileGuideText(l10n, item.$2))),
-                  ],
+                child: Icon(entry.icon, color: SafeContractsVisual.navy),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  area,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: SafeContractsVisual.ink,
+                        fontWeight: FontWeight.w900,
+                      ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: FilledButton.tonalIcon(
-                onPressed: () => Navigator.of(context).pop(entry.destination),
-                icon: const Icon(Icons.arrow_forward_rounded),
-                label: Text(
-                  mobileGuideText(l10n, 'Go to {area}')
-                      .replaceAll('{area}', area),
+            ],
+          ),
+          const SizedBox(height: 13),
+          Text(
+            mobileGuideText(l10n, 'What this area does'),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
                 ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            mobileGuideText(l10n, entry.purpose),
+            style: const TextStyle(color: SafeContractsVisual.muted),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            mobileGuideText(l10n, 'Recommended steps'),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 6),
+          ...entry.steps.indexed.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 23,
+                    height: 23,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: SafeContractsVisual.roseGoldSoft,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${item.$1 + 1}',
+                      style: const TextStyle(
+                        color: SafeContractsVisual.roseGoldDark,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(mobileGuideText(l10n, item.$2)),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => Navigator.of(context).pop(entry.destination),
+              icon: Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Icons.arrow_back_rounded
+                    : Icons.arrow_forward_rounded,
+              ),
+              label: Text(
+                mobileGuideText(l10n, 'Go to {area}')
+                    .replaceAll('{area}', area),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -197,17 +246,6 @@ _GuideEntry? _entryFor(MobileDestination destination) {
         steps: <String>[
           'Review the indicators and active filters first.',
           'Open the related customer, contract or payment list when you need the source records.',
-        ],
-      ),
-    MobileDestination.dashboardTwo => const _GuideEntry(
-        destination: MobileDestination.dashboardTwo,
-        title: 'Dashboard Two',
-        icon: Icons.dashboard_customize_rounded,
-        purpose:
-            'Dashboard Two provides the premium executive view across customer and supplier contracts using the same authorized server data.',
-        steps: <String>[
-          'Review the all-contract total, contract mix and financial pulse for the current scope.',
-          'Open recent contract activity to use the premium contract details view with payments and attachments.',
         ],
       ),
     MobileDestination.customers => const _GuideEntry(
