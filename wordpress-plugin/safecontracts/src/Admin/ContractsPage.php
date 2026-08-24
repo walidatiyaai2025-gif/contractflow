@@ -314,7 +314,7 @@ final class ContractsPage
             </section>
 
             <section class="safecontracts-worker1__toolbar">
-                <?php self::renderFilters($filters, $selectedId, $search, $tab, $currencyChoices); ?>
+                <?php self::renderFilters($filters, $selectedId); ?>
                 <p class="description"><?php echo esc_html(self::text('The year filter uses the complete calendar year and contract start date, falling back to record creation date when no start date exists. Monetary totals are never combined across currencies.', 'فلتر السنة يستخدم السنة الميلادية كاملة وتاريخ بداية العقد، أو تاريخ إنشاء السجل إذا لم يوجد تاريخ بداية. ولا يتم جمع العملات المختلفة في إجمالي واحد.')); ?></p>
             </section>
 
@@ -441,9 +441,24 @@ final class ContractsPage
         <?php
     }
 
-    /** @param array<string,mixed> $filters @param list<string> $currencyChoices */
-    private static function renderFilters(array $filters, int $selectedId, string $search, string $tab, array $currencyChoices): void
+    /** @param array<string,mixed> $filters */
+    private static function renderFilters(array $filters, int $selectedId): void
     {
+        $search = self::queryText('contract_search');
+        $tab = self::queryKey('contract_tab');
+        if (! in_array($tab, ['overview', 'payments', 'attachments'], true)) {
+            $tab = 'overview';
+        }
+
+        $read = new AdminReadRepository();
+        $filterCurrency = self::defaultCurrency();
+        if ($selectedId > 0) {
+            $selectedRows = $read->contracts(['contract_id' => $selectedId]);
+            if (($selectedRows[0]['currency_code'] ?? '') !== '') {
+                $filterCurrency = (string) $selectedRows[0]['currency_code'];
+            }
+        }
+        $currencyChoices = AdminLookupOptions::currencyChoices($read, $filterCurrency);
         $years = [];
         try { $years = AdminYearOptions::forCurrentUser(); } catch (Throwable $error) { unset($error); }
         $selectedYear = (int) ($filters['year'] ?? 0);
