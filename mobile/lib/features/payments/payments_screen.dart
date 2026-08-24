@@ -274,9 +274,8 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
           _PaymentPaging(
             page: page,
             loading: _loading,
-            onPrevious: page.page > 1
-                ? () => unawaited(_load(page.page - 1))
-                : null,
+            onPrevious:
+                page.page > 1 ? () => unawaited(_load(page.page - 1)) : null,
             onNext: page.hasMore && page.page < 5
                 ? () => unawaited(_load(page.page + 1))
                 : null,
@@ -364,20 +363,22 @@ final class _PremiumPaymentCard extends StatelessWidget {
                           payment.reference ?? l10n.paymentNumber(payment.id),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: SafeContractsVisual.ink,
-                                fontWeight: FontWeight.w900,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: SafeContractsVisual.ink,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           owner,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SafeContractsVisual.muted,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: SafeContractsVisual.muted,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                         ),
                       ],
                     ),
@@ -415,7 +416,8 @@ final class _PremiumPaymentCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: SafeContractsVisual.backgroundRaised,
                   borderRadius: BorderRadius.circular(13),
@@ -428,7 +430,10 @@ final class _PremiumPaymentCard extends StatelessWidget {
                         children: [
                           Text(
                             l10n.t('Remaining'),
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
                                   color: SafeContractsVisual.muted,
                                 ),
                           ),
@@ -441,7 +446,10 @@ final class _PremiumPaymentCard extends StatelessWidget {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
                                   color: directionColor,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -822,7 +830,8 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                   _DetailValue(
                                     icon: Icons.archive_outlined,
                                     label: l10n.t('Contract archived'),
-                                    value: l10n.yesNo(payment.contractIsArchived),
+                                    value:
+                                        l10n.yesNo(payment.contractIsArchived),
                                     last: true,
                                   ),
                                 ],
@@ -864,8 +873,10 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 onPressed: () => unawaited(
                                   _runAction(widget.onEditExpectedDate!),
                                 ),
-                                icon: const Icon(Icons.event_available_outlined),
-                                label: Text(l10n.t('Edit expected payment date')),
+                                icon:
+                                    const Icon(Icons.event_available_outlined),
+                                label:
+                                    Text(l10n.t('Edit expected payment date')),
                               ),
                             ],
                             if (!payment.contractIsArchived &&
