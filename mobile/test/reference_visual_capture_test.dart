@@ -17,6 +17,7 @@ const _captureKey = Key('referenceCaptureBoundary');
 
 void main() {
   setUpAll(() {
+    // Capture CI must resolve the approved bundled Cairo assets without HTTP.
     GoogleFonts.config.allowRuntimeFetching = false;
   });
   tearDownAll(() {
