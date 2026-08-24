@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 use SafeContracts\Contracts\ContractService;
 use SafeContracts\Customers\CustomerService;
 use SafeContracts\Payments\PaymentService;
