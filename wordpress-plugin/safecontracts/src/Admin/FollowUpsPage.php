@@ -134,8 +134,8 @@ final class FollowUpsPage
                         <tr>
                             <td><?php echo esc_html((string) $row['due_date']); ?></td>
                             <td><?php echo esc_html((string) (($context['counterparty_name'] ?? '') !== '' ? $context['counterparty_name'] : '—')); ?></td>
-                            <td><?php echo esc_html((string) (($context['contract_number'] ?? '') !== '' ? $context['contract_number'] : '#' . (string) $row['contract_id'])); ?></td>
-                            <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => $paymentId, 'date_from' => $filters['date_from'], 'date_to' => $filters['date_to']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) ($row['reference'] ?: '#' . $paymentId)); ?></a></td>
+                            <td><?php echo esc_html((string) (($context['contract_number'] ?? '') !== '' ? $context['contract_number'] : '—')); ?></td>
+                            <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => $paymentId, 'date_from' => $filters['date_from'], 'date_to' => $filters['date_to']], admin_url('admin.php'))); ?>"><?php echo esc_html((string) ($row['reference'] ?: '—')); ?></a></td>
                             <td><span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr($amountClass); ?>"><?php echo esc_html((string) $directionLabel); ?></span></td>
                             <td><strong class="safecontracts-financial-amount--<?php echo esc_attr($amountClass); ?>"><?php echo esc_html($money); ?></strong></td>
                             <td><?php echo esc_html(self::stateLabel((string) ($row['followup_state'] ?: 'pending'))); ?></td>
