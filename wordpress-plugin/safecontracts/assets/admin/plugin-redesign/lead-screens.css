@@ -145,6 +145,36 @@
     box-sizing: border-box;
     min-width: 0;
   }
+
+  /* Legacy WordPress form controls and CSS-grid min-content sizing can retain
+   * a desktop intrinsic width in RTL. Every General Settings container must be
+   * shrinkable so 390px remains a document-level no-overflow viewport. */
+  .safecontracts-general-settings,
+  .safecontracts-general-settings .safecontracts-settings-grid,
+  .safecontracts-general-settings .safecontracts-settings-grid > *,
+  .safecontracts-general-settings .safecontracts-settings-panel,
+  .safecontracts-general-settings form,
+  .safecontracts-general-settings .safecontracts-field-grid,
+  .safecontracts-general-settings .safecontracts-field {
+    box-sizing: border-box;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .safecontracts-general-settings form,
+  .safecontracts-general-settings .safecontracts-field-grid,
+  .safecontracts-general-settings input,
+  .safecontracts-general-settings select,
+  .safecontracts-general-settings textarea {
+    width: 100% !important;
+  }
+  .safecontracts-general-settings input,
+  .safecontracts-general-settings select,
+  .safecontracts-general-settings textarea,
+  .safecontracts-general-settings .button {
+    box-sizing: border-box;
+    max-width: 100% !important;
+  }
+
   .safecontracts-dashboard-reference-heading__brand { width: 40px; height: 40px; border-radius: 12px; }
   .safecontracts-dashboard-reference-heading__assurance { padding: 7px 9px; font-size: 11px; }
 }
@@ -152,4 +182,5 @@
 @media (max-width: 520px) {
   .safecontracts-settings .safecontracts-detail-list { grid-template-columns: 1fr; }
   .safecontracts-dashboard-reference-heading__assurance { width: 100%; justify-content: center; box-sizing: border-box; }
+  .safecontracts-general-settings .submit .button { min-width: 0; width: 100%; }
 }
