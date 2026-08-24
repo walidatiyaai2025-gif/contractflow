@@ -84,7 +84,8 @@ final class _PremiumCompactWelcomeScreenState
                               TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: ar ? 'مرحباً بك في\n' : 'Welcome to\n',
+                                    text:
+                                        ar ? 'مرحباً بك في\n' : 'Welcome to\n',
                                   ),
                                   const TextSpan(
                                     text: '${SafeContractsBrand.name} ',
@@ -123,7 +124,9 @@ final class _PremiumCompactWelcomeScreenState
                             const SizedBox(height: 22),
                             AlkenzyReferenceFeatureTile(
                               icon: Icons.contract_outlined,
-                              title: ar ? 'إدارة العقود بسهولة' : 'Contract control',
+                              title: ar
+                                  ? 'إدارة العقود بسهولة'
+                                  : 'Contract control',
                               description: ar
                                   ? 'أنشئ العقود وتابع حالتها من البداية حتى الإغلاق.'
                                   : 'Create contracts and follow every stage through closure.',
@@ -139,7 +142,9 @@ final class _PremiumCompactWelcomeScreenState
                             const SizedBox(height: 10),
                             AlkenzyReferenceFeatureTile(
                               icon: Icons.analytics_outlined,
-                              title: ar ? 'تقارير وبيانات دقيقة' : 'Clear reporting',
+                              title: ar
+                                  ? 'تقارير وبيانات دقيقة'
+                                  : 'Clear reporting',
                               description: ar
                                   ? 'رؤى وتقارير تساعدك على اتخاذ القرار من بيانات النظام الحقيقية.'
                                   : 'Use live system data for focused operational decisions.',
@@ -148,6 +153,7 @@ final class _PremiumCompactWelcomeScreenState
                             const _ProgressDots(),
                             const SizedBox(height: 18),
                             AlkenzyReferencePrimaryButton(
+                              key: const Key('companyWelcomeSignIn'),
                               label: ar ? 'ابدأ الآن' : 'Get started',
                               icon: ar
                                   ? Icons.arrow_back_rounded
@@ -250,6 +256,7 @@ final class _ReferenceHeader extends StatelessWidget {
     return Row(
       children: [
         TextButton(
+          key: const Key('companyWelcomeLearnMore'),
           onPressed: onLearnMore,
           child: Text(
             learnMoreLabel,
