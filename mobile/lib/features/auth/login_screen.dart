@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
-import '../ui/alkenzy_reference_components.dart';
+import '../ui/safecontracts_components.dart';
 import '../ui/safecontracts_design.dart';
+import '../ui/safecontracts_form.dart';
+import '../ui/safecontracts_splash.dart';
+import '../ui/safecontracts_tokens.dart';
 import 'mobile_auth.dart';
 
 final class SafeContractsLoginScreen extends StatefulWidget {
@@ -64,157 +67,141 @@ final class _SafeContractsLoginScreenState
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     if (_bootstrapping) {
-      return _BlockingBootstrapSplash(label: l10n.t('Loading'));
+      return _BlockingBootstrapSplash(
+        label: l10n.t('Loading'),
+        environmentLabel:
+            l10n.isArabic ? 'تجهيز مساحة العمل' : 'Preparing workspace',
+      );
     }
 
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, child) {
-        final submitting =
-            widget.controller.state == MobileLoginState.submitting;
-        return Scaffold(
-          backgroundColor: SafeContractsVisual.background,
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              const _LoginBackdrop(),
-              SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 360;
-                    return SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        compact ? 14 : 20,
-                        10,
-                        compact ? 14 : 20,
-                        24,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight - 34,
-                          maxWidth: 500,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _LoginTopBar(
-                              languageCode: widget.languageCode,
-                              onLanguageChanged: widget.onLanguageChanged,
-                              onBack: widget.onBack,
-                              disabled: submitting,
-                            ),
-                            const SizedBox(height: 26),
-                            const SafeContractsBrandMark(
-                              size: 58,
-                              borderRadius: 16,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              SafeContractsBrand.name,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              l10n.isArabic
-                                  ? 'مرحباً بك من جديد\nيرجى تسجيل الدخول لمتابعة أعمالك.'
-                                  : 'Welcome back\nSign in to continue managing your work.',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.80),
-                                    height: 1.55,
-                                  ),
-                            ),
-                            const SizedBox(height: 26),
-                            Container(
-                              padding:
-                                  const EdgeInsets.fromLTRB(18, 22, 18, 20),
-                              decoration: const BoxDecoration(
-                                color: SafeContractsVisual.backgroundRaised,
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(28),
-                                  bottom: Radius.circular(28),
-                                ),
-                                boxShadow: AlkenzyReferenceTokens.premiumShadow,
+    final selectedLanguage = widget.languageCode == 'ar' ? 'ar' : 'en';
+    return Scaffold(
+      backgroundColor: SafeContractsVisual.navyDeep,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const _LoginBackground(),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final horizontal = constraints.maxWidth <= 360
+                    ? SafeContractsSpacing.screenNarrow
+                    : SafeContractsSpacing.screen;
+                return SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontal,
+                    SafeContractsSpacing.sm,
+                    horizontal,
+                    SafeContractsSpacing.xl,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 470),
+                      child: AnimatedBuilder(
+                        animation: widget.controller,
+                        builder: (context, child) {
+                          final submitting = widget.controller.state ==
+                              MobileLoginState.submitting;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _LoginTopBar(
+                                selectedLanguage: selectedLanguage,
+                                submitting: submitting,
+                                onBack: widget.onBack,
+                                onLanguageChanged: widget.onLanguageChanged,
                               ),
-                              child: Form(
-                                key: _formKey,
-                                child: AutofillGroup(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      TextFormField(
-                                        controller: _username,
-                                        enabled: !submitting,
-                                        autofillHints: const [
-                                          AutofillHints.username,
-                                          AutofillHints.email,
-                                        ],
-                                        textInputAction: TextInputAction.next,
-                                        autocorrect: false,
-                                        enableSuggestions: false,
-                                        decoration: InputDecoration(
-                                          hintText: l10n.isArabic
-                                              ? 'البريد الإلكتروني أو اسم المستخدم'
-                                              : l10n.t('Username'),
-                                          prefixIcon:
-                                              const Icon(Icons.person_outline),
+                              const SizedBox(height: SafeContractsSpacing.xl),
+                              const _LoginBrandHero(),
+                              const SizedBox(height: SafeContractsSpacing.xl),
+                              SafeContractsCard(
+                                accent: SafeContractsVisual.roseGold,
+                                padding: const EdgeInsets.all(
+                                  SafeContractsSpacing.lg,
+                                ),
+                                child: Form(
+                                  key: _formKey,
+                                  child: AutofillGroup(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Text(
+                                          l10n.isArabic
+                                              ? 'تسجيل الدخول'
+                                              : 'Sign in',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineSmall
+                                              ?.copyWith(
+                                                color: SafeContractsVisual
+                                                    .navyDeep,
+                                                fontWeight: FontWeight.w900,
+                                              ),
                                         ),
-                                        validator: (value) => value == null ||
-                                                value.trim().isEmpty
-                                            ? l10n.t('Enter your username.')
-                                            : null,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      TextFormField(
-                                        controller: _password,
-                                        enabled: !submitting,
-                                        obscureText: _obscurePassword,
-                                        autofillHints: const [
-                                          AutofillHints.password,
-                                        ],
-                                        textInputAction: TextInputAction.done,
-                                        onFieldSubmitted: submitting
-                                            ? null
-                                            : (_) => unawaited(_submit()),
-                                        decoration: InputDecoration(
-                                          hintText: l10n.t('Password'),
-                                          prefixIcon:
-                                              const Icon(Icons.lock_outline),
-                                          suffixIcon: IconButton(
-                                            onPressed: submitting
-                                                ? null
-                                                : () => setState(() {
-                                                      _obscurePassword =
-                                                          !_obscurePassword;
-                                                    }),
-                                            icon: Icon(
-                                              _obscurePassword
-                                                  ? Icons.visibility_outlined
-                                                  : Icons
-                                                      .visibility_off_outlined,
-                                            ),
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.xxs,
+                                        ),
+                                        Text(
+                                          l10n.t(
+                                            'Sign in with your WordPress username and password',
                                           ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color:
+                                                    SafeContractsVisual.muted,
+                                                height: 1.45,
+                                              ),
                                         ),
-                                        validator: (value) =>
-                                            value == null || value.isEmpty
-                                                ? l10n.t('Enter your password.')
-                                                : null,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Material(
-                                        color: Colors.transparent,
-                                        child: CheckboxListTile(
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.lg,
+                                        ),
+                                        SafeContractsTextField(
+                                          controller: _username,
+                                          enabled: !submitting,
+                                          autofillHints: const <String>[
+                                            AutofillHints.username,
+                                            AutofillHints.email,
+                                          ],
+                                          textInputAction: TextInputAction.next,
+                                          autocorrect: false,
+                                          enableSuggestions: false,
+                                          label: l10n.t('Username'),
+                                          icon: Icons.person_outline_rounded,
+                                          validator: (value) => value == null ||
+                                                  value.trim().isEmpty
+                                              ? l10n.t('Enter your username.')
+                                              : null,
+                                        ),
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.sm,
+                                        ),
+                                        SafeContractsPasswordField(
+                                          controller: _password,
+                                          enabled: !submitting,
+                                          obscureText: _obscurePassword,
+                                          label: l10n.t('Password'),
+                                          onToggleVisibility: () =>
+                                              setState(() {
+                                            _obscurePassword =
+                                                !_obscurePassword;
+                                          }),
+                                          onSubmitted: submitting
+                                              ? null
+                                              : (_) => unawaited(_submit()),
+                                          validator: (value) =>
+                                              value == null || value.isEmpty
+                                                  ? l10n.t(
+                                                      'Enter your password.',
+                                                    )
+                                                  : null,
+                                        ),
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.xxs,
+                                        ),
+                                        CheckboxListTile(
                                           value: widget.controller.rememberMe,
                                           onChanged: submitting
                                               ? null
@@ -225,112 +212,161 @@ final class _SafeContractsLoginScreenState
                                           dense: true,
                                           controlAffinity:
                                               ListTileControlAffinity.leading,
-                                          title: Text(l10n.t('Remember me')),
-                                        ),
-                                      ),
-                                      if (widget.controller.errorMessage !=
-                                          null) ...[
-                                        const SizedBox(height: 6),
-                                        Semantics(
-                                          liveRegion: true,
-                                          child: AlkenzyReferenceCard(
-                                            background:
-                                                SafeContractsVisual.redSoft,
-                                            accent: SafeContractsVisual.red,
-                                            padding: const EdgeInsets.all(11),
-                                            child: Text(
-                                              l10n.rawMessage(
-                                                widget.controller.errorMessage!,
-                                              ),
-                                              style: const TextStyle(
-                                                color:
-                                                    SafeContractsVisual.redDeep,
-                                                fontWeight: FontWeight.w700,
-                                              ),
+                                          title: Text(
+                                            l10n.t('Remember me'),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                            l10n.t(
+                                              'Keep me signed in on this device. Your password is never stored.',
+                                            ),
+                                            style: const TextStyle(
+                                              color: SafeContractsVisual.muted,
                                             ),
                                           ),
                                         ),
-                                      ],
-                                      const SizedBox(height: 14),
-                                      AlkenzyReferencePrimaryButton(
-                                        label: l10n.t(
-                                          submitting
-                                              ? 'Signing in…'
-                                              : 'Sign in',
+                                        if (widget.controller.errorMessage !=
+                                            null) ...[
+                                          const SizedBox(
+                                            height: SafeContractsSpacing.xs,
+                                          ),
+                                          _AuthenticationError(
+                                            message: l10n.rawMessage(
+                                              widget.controller.errorMessage!,
+                                            ),
+                                          ),
+                                        ],
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.md,
                                         ),
-                                        icon: submitting ? null : Icons.login,
-                                        onPressed: submitting
-                                            ? null
-                                            : () => unawaited(_submit()),
-                                      ),
-                                      if (submitting) ...[
-                                        const SizedBox(height: 10),
-                                        const LinearProgressIndicator(
-                                          minHeight: 2,
+                                        SafeContractsButton(
+                                          key: const Key('loginSubmit'),
+                                          label: l10n.t(
+                                            submitting
+                                                ? 'Signing in…'
+                                                : 'Sign in',
+                                          ),
+                                          icon: Icons.login_rounded,
+                                          loading: submitting,
+                                          onPressed: submitting
+                                              ? null
+                                              : () => unawaited(_submit()),
+                                          variant: SafeContractsButtonVariant
+                                              .primary,
                                         ),
                                       ],
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(height: SafeContractsSpacing.md),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.lock_outline_rounded,
+                                    size: SafeContractsIconSizes.xs,
+                                    color: SafeContractsVisual.champagne,
+                                  ),
+                                  const SizedBox(
+                                    width: SafeContractsSpacing.xs,
+                                  ),
+                                  Flexible(
+                                    child: Text(
+                                      l10n.isArabic
+                                          ? 'دخول آمن للمستخدمين المصرح لهم فقط'
+                                          : 'Secure access for authorized users only',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.62,
+                                        ),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ),
-            ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        );
-      },
+        ],
+      ),
+    );
+  }
+}
+
+final class _BlockingBootstrapSplash extends StatelessWidget {
+  const _BlockingBootstrapSplash({
+    required this.label,
+    required this.environmentLabel,
+  });
+
+  final String label;
+  final String environmentLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: SafeContractsSplash(
+        label: label,
+        environmentLabel: environmentLabel,
+        blockBack: true,
+      ),
     );
   }
 }
 
 final class _LoginTopBar extends StatelessWidget {
   const _LoginTopBar({
-    required this.languageCode,
-    required this.onLanguageChanged,
+    required this.selectedLanguage,
+    required this.submitting,
     required this.onBack,
-    required this.disabled,
+    required this.onLanguageChanged,
   });
 
-  final String languageCode;
-  final ValueChanged<String>? onLanguageChanged;
+  final String selectedLanguage;
+  final bool submitting;
   final VoidCallback? onBack;
-  final bool disabled;
+  final ValueChanged<String>? onLanguageChanged;
 
   @override
   Widget build(BuildContext context) {
-    final selected = languageCode.toLowerCase() == 'ar' ? 'ar' : 'en';
     return Row(
       children: [
         if (onBack != null)
           IconButton(
-            onPressed: disabled ? null : onBack,
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: submitting ? null : onBack,
             style: IconButton.styleFrom(
               foregroundColor: Colors.white,
-              backgroundColor: Colors.white.withValues(alpha: 0.10),
+              disabledForegroundColor: Colors.white38,
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
             ),
             icon: const Icon(Icons.arrow_back_rounded),
-          )
-        else
-          const SizedBox(width: 48),
+          ),
         const Spacer(),
         SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'ar', label: Text('ع')),
-            ButtonSegment(value: 'en', label: Text('EN')),
+          segments: const <ButtonSegment<String>>[
+            ButtonSegment<String>(value: 'en', label: Text('EN')),
+            ButtonSegment<String>(value: 'ar', label: Text('ع')),
           ],
-          selected: {selected},
-          showSelectedIcon: false,
-          onSelectionChanged: disabled || onLanguageChanged == null
+          selected: <String>{selectedLanguage},
+          onSelectionChanged: submitting || onLanguageChanged == null
               ? null
               : (selection) => onLanguageChanged!(selection.first),
+          showSelectedIcon: false,
           style: ButtonStyle(
-            visualDensity: VisualDensity.compact,
             foregroundColor: WidgetStateProperty.resolveWith(
               (states) => states.contains(WidgetState.selected)
                   ? SafeContractsVisual.navyDeep
@@ -338,12 +374,13 @@ final class _LoginTopBar extends StatelessWidget {
             ),
             backgroundColor: WidgetStateProperty.resolveWith(
               (states) => states.contains(WidgetState.selected)
-                  ? SafeContractsVisual.surfaceWarm
+                  ? SafeContractsVisual.roseGoldSoft
                   : Colors.white.withValues(alpha: 0.08),
             ),
-            side: WidgetStateProperty.all(
+            side: WidgetStatePropertyAll(
               BorderSide(color: Colors.white.withValues(alpha: 0.18)),
             ),
+            visualDensity: VisualDensity.compact,
           ),
         ),
       ],
@@ -351,81 +388,93 @@ final class _LoginTopBar extends StatelessWidget {
   }
 }
 
-final class _BlockingBootstrapSplash extends StatelessWidget {
-  const _BlockingBootstrapSplash({required this.label});
-
-  final String label;
+final class _LoginBrandHero extends StatelessWidget {
+  const _LoginBrandHero();
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        backgroundColor: SafeContractsVisual.navyDeep,
-        body: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: SafeContractsVisual.premiumHeaderGradient,
+    final l10n = context.scL10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(SafeContractsRadii.lg),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
           ),
-          child: SafeArea(
-            child: Center(
-              child: Semantics(
-                liveRegion: true,
-                label: label,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: SafeContractsVisual.roseGold
-                              .withValues(alpha: 0.50),
-                        ),
-                      ),
-                      child: const SafeContractsBrandMark(
-                        size: 88,
-                        borderRadius: 24,
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    Text(
-                      SafeContractsBrand.name,
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                              ),
-                    ),
-                    const SizedBox(height: 16),
-                    const SizedBox.square(
-                      dimension: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.6,
-                        color: SafeContractsVisual.roseGold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.78),
-                      ),
-                    ),
-                  ],
+          child: const SafeContractsBrandMark(size: 66, borderRadius: 18),
+        ),
+        const SizedBox(height: SafeContractsSpacing.md),
+        Text(
+          SafeContractsBrand.name,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.7,
+              ),
+        ),
+        const SizedBox(height: SafeContractsSpacing.xs),
+        Text(
+          l10n.isArabic
+              ? 'العقود والمدفوعات والتحصيلات في مساحة عمل تنفيذية واحدة.'
+              : 'Contracts, payments and collections in one executive workspace.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.white.withValues(alpha: 0.74),
+                height: 1.55,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _AuthenticationError extends StatelessWidget {
+  const _AuthenticationError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(SafeContractsSpacing.sm),
+        decoration: BoxDecoration(
+          color: SafeContractsVisual.redSoft,
+          borderRadius: BorderRadius.circular(SafeContractsRadii.sm),
+          border: Border.all(
+            color: SafeContractsVisual.red.withValues(alpha: 0.28),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: SafeContractsVisual.redDeep,
+              size: SafeContractsIconSizes.sm,
+            ),
+            const SizedBox(width: SafeContractsSpacing.xs),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: SafeContractsVisual.redDeep,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-final class _LoginBackdrop extends StatelessWidget {
-  const _LoginBackdrop();
+final class _LoginBackground extends StatelessWidget {
+  const _LoginBackground();
 
   @override
   Widget build(BuildContext context) {
@@ -434,10 +483,10 @@ final class _LoginBackdrop extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: [0, 0.53, 0.54, 1],
-          colors: [
+          stops: <double>[0, 0.48, 0.73, 1],
+          colors: <Color>[
+            Color(0xFF061B2F),
             SafeContractsVisual.navyDeep,
-            SafeContractsVisual.navy,
             SafeContractsVisual.background,
             SafeContractsVisual.background,
           ],
