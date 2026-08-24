@@ -6,6 +6,7 @@ namespace SafeContracts\Counterparties;
 
 use DomainException;
 use SafeContracts\Admin\DashboardFilters;
+use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
 
 final class CounterpartyReadRepository
@@ -62,7 +63,10 @@ final class CounterpartyReadRepository
                 LEFT JOIN {$suppliers} su ON c.counterparty_type = 'supplier' AND su.id = c.counterparty_id
                 WHERE " . implode(' AND ', $where) . '
                 ORDER BY p.due_date ASC, p.sequence_no ASC LIMIT 500';
-        return $this->rows($wpdb->get_results($sql, ARRAY_A));
+        return $this->authoritativePaymentRows(
+            $this->rows($wpdb->get_results($sql, ARRAY_A)),
+            (string) ($f['status'] ?? '')
+        );
     }
 
     /** @return list<array<string,mixed>> */
@@ -83,7 +87,7 @@ final class CounterpartyReadRepository
         $sql = "SELECT cl.id, cl.payment_id, cl.financial_direction, cl.currency_code, cl.amount, cl.collection_date,
                        cl.payment_method_id, pm.name AS payment_method_name, cl.reference, cl.details, cl.proof_media_id,
                        cl.created_by, cl.created_at, p.reference AS payment_reference, p.sequence_no, p.due_date,
-                       p.status AS payment_status, p.remaining_amount, c.id AS contract_id, c.contract_number,
+                       p.status AS payment_status, p.paid_amount, p.remaining_amount, c.id AS contract_id, c.contract_number,
                        c.accountant_user_id, c.customer_id, c.counterparty_type, c.counterparty_id,
                        CASE WHEN c.counterparty_type = 'customer' THEN cu.name ELSE su.name END AS counterparty_name,
                        CASE WHEN c.counterparty_type = 'customer' THEN cu.name ELSE NULL END AS customer_name,
@@ -97,7 +101,10 @@ final class CounterpartyReadRepository
                 INNER JOIN {$methods} pm ON pm.id = cl.payment_method_id
                 WHERE " . implode(' AND ', $where) . '
                 ORDER BY cl.collection_date DESC, cl.id DESC LIMIT 500';
-        return $this->rows($wpdb->get_results($sql, ARRAY_A));
+        return $this->authoritativeSettlementRows(
+            $this->rows($wpdb->get_results($sql, ARRAY_A)),
+            (string) ($f['status'] ?? '')
+        );
     }
 
     /**
@@ -167,10 +174,9 @@ final class CounterpartyReadRepository
         }
         if ($filters['status'] !== '') {
             $paymentStatuses = ['upcoming', 'due_soon', 'due', 'overdue', 'partially_paid', 'paid'];
-            $alias = $paymentAlias !== null && in_array($filters['status'], $paymentStatuses, true)
-                ? $paymentAlias
-                : $contractAlias;
-            $where[] = $alias . ".status = '" . addslashes($filters['status']) . "'";
+            if ($paymentAlias === null || ! in_array($filters['status'], $paymentStatuses, true)) {
+                $where[] = $contractAlias . ".status = '" . addslashes($filters['status']) . "'";
+            }
         }
         if ($paymentAlias !== null) {
             if ($filters['due_from'] !== null) {
@@ -181,6 +187,45 @@ final class CounterpartyReadRepository
             }
         }
         return $where;
+    }
+
+    /** @param list<array<string,mixed>> $rows @return list<array<string,mixed>> */
+    private function authoritativePaymentRows(array $rows, string $statusFilter): array
+    {
+        $paymentStatuses = PaymentStatus::all();
+        $filter = in_array($statusFilter, $paymentStatuses, true) ? $statusFilter : '';
+        $result = [];
+        foreach ($rows as $row) {
+            $row['status'] = PaymentStatus::authoritative(
+                $row['due_date'] ?? '',
+                $row['paid_amount'] ?? '0.0000',
+                $row['remaining_amount'] ?? '0.0000'
+            );
+            if ($filter === '' || $row['status'] === $filter) {
+                $result[] = $row;
+            }
+        }
+        return $result;
+    }
+
+    /** @param list<array<string,mixed>> $rows @return list<array<string,mixed>> */
+    private function authoritativeSettlementRows(array $rows, string $statusFilter): array
+    {
+        $paymentStatuses = PaymentStatus::all();
+        $filter = in_array($statusFilter, $paymentStatuses, true) ? $statusFilter : '';
+        $result = [];
+        foreach ($rows as $row) {
+            $row['payment_status'] = PaymentStatus::authoritative(
+                $row['due_date'] ?? '',
+                $row['paid_amount'] ?? '0.0000',
+                $row['remaining_amount'] ?? '0.0000'
+            );
+            if ($filter === '' || $row['payment_status'] === $filter) {
+                unset($row['paid_amount']);
+                $result[] = $row;
+            }
+        }
+        return $result;
     }
 
     /** @return list<array<string,mixed>> */
