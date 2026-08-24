@@ -212,23 +212,35 @@ final class AlkenzyReferencePrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = FilledButton.styleFrom(
+      backgroundColor:
+          accent ? SafeContractsVisual.roseGoldDark : SafeContractsVisual.navy,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AlkenzyReferenceTokens.compactRadius),
+      ),
+    );
     return SizedBox(
       height: AlkenzyReferenceTokens.bottomActionHeight,
       width: double.infinity,
-      child: FilledButton.icon(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor:
-              accent ? SafeContractsVisual.roseGoldDark : SafeContractsVisual.navy,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(AlkenzyReferenceTokens.compactRadius),
-          ),
-        ),
-        icon: icon == null ? const SizedBox.shrink() : Icon(icon, size: 20),
-        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
-      ),
+      child: icon == null
+          ? FilledButton(
+              onPressed: onPressed,
+              style: style,
+              child: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            )
+          : FilledButton.icon(
+              onPressed: onPressed,
+              style: style,
+              icon: Icon(icon, size: 20),
+              label: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
     );
   }
 }
@@ -260,20 +272,9 @@ final class AlkenzyReferenceFeatureTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(13),
               border: Border.all(color: SafeContractsVisual.champagne),
             ),
-            child: const IconTheme(
-              data: IconThemeData(color: SafeContractsVisual.navy, size: 22),
-              child: SizedBox(),
-            ),
+            child: Icon(icon, color: SafeContractsVisual.navy, size: 22),
           ),
-          Transform.translate(
-            offset: const Offset(-42, 0),
-            child: SizedBox(
-              width: 42,
-              height: 42,
-              child: Icon(icon, color: SafeContractsVisual.navy, size: 22),
-            ),
-          ),
-          const SizedBox(width: -30),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
