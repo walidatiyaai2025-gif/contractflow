@@ -18,11 +18,6 @@ on:
         default: 'all'
         type: choice
         options: [all, lead, worker1, worker2, worker3]
-      extended_widths:
-        description: 'Also capture 600/1024/1280/1366/1920 Arabic widths'
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -34,7 +29,7 @@ concurrency:
 jobs:
   real-wordpress-visual-qa:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 55
     services:
       mysql:
         image: mysql:8.0
@@ -55,12 +50,14 @@ jobs:
       SC_QA_USER: visual-admin
       SC_QA_PASSWORD: VisualQa-Only-2026!
       SC_QA_OUTPUT: visual-qa-artifacts
+      SC_QA_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Validate locked design references
         run: python3 scripts/validate-plugin-design-references.py
@@ -82,13 +79,10 @@ jobs:
               *) scope=all ;;
             esac
           fi
-          widths='390,768,782,1440'
-          if [ '${{ github.event.inputs.extended_widths }}' = 'true' ]; then
-            widths='390,600,768,782,1024,1280,1366,1440,1920'
-          fi
+          widths='390,600,768,782,1024,1280,1366,1440,1920'
           echo "scope=$scope" >> "$GITHUB_OUTPUT"
           echo "arabic_widths=$widths" >> "$GITHUB_OUTPUT"
-          echo "Resolved scope=$scope Arabic widths=$widths"
+          echo "Resolved scope=$scope Arabic widths=$widths source head=$SC_QA_SOURCE_SHA workflow SHA=$GITHUB_SHA"
 
       - name: Setup PHP and WP-CLI
         uses: shivammathur/setup-php@v2
@@ -197,7 +191,15 @@ jobs:
           SC_QA_WIDTHS: '1440'
         run: node tests/plugin-redesign-visual-qa/capture.mjs
 
-      - name: Preserve runtime diagnostics
+      - name: Fail on runtime PHP or database errors
+        shell: bash
+        run: |
+          if grep -Ein 'PHP (Fatal error|Parse error)|Uncaught (Error|Exception)|WordPress database error' /tmp/safecontracts-visual-wp.log; then
+            echo 'Runtime PHP/database error detected in the real WordPress visual QA server log.' >&2
+            exit 1
+          fi
+
+      - name: Preserve runtime diagnostics and provenance
         if: always()
         shell: bash
         run: |
@@ -207,12 +209,14 @@ jobs:
           wp plugin status safecontracts --path="$WP_DIR" > visual-qa-artifacts/_runtime/plugin-status.txt 2>&1 || true
           wp core version --path="$WP_DIR" > visual-qa-artifacts/_runtime/wordpress-version.txt 2>&1 || true
           php -v > visual-qa-artifacts/_runtime/php-version.txt 2>&1 || true
+          printf '%s\n' "$SC_QA_SOURCE_SHA" > visual-qa-artifacts/_runtime/source-head-sha.txt
+          printf '%s\n' "$GITHUB_SHA" > visual-qa-artifacts/_runtime/workflow-event-sha.txt
 
       - name: Upload immutable visual QA evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: plugin-redesign-visual-qa-${{ steps.qa.outputs.scope }}-${{ github.sha }}
+          name: plugin-redesign-visual-qa-${{ steps.qa.outputs.scope }}-${{ env.SC_QA_SOURCE_SHA }}
           path: visual-qa-artifacts/
           if-no-files-found: error
           retention-days: 30
