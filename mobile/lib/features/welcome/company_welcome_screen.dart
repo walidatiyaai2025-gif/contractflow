@@ -85,7 +85,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                               children: [
                                 _ReferenceHeader(
                                   languageCode: widget.languageCode,
-                                  learnMoreLabel: content.learnMoreLabel.resolve(
+                                  learnMoreLabel:
+                                      content.learnMoreLabel.resolve(
                                     widget.languageCode,
                                   ),
                                   onLearnMore: () => _showAbout(content),
@@ -152,11 +153,13 @@ final class _AlkenzyCompanyWelcomeScreenState
                                 ),
                                 if (widget.controller.state ==
                                     MobileLandingState.loading) ...[
-                                  const SizedBox(height: SafeContractsSpacing.sm),
+                                  const SizedBox(
+                                      height: SafeContractsSpacing.sm),
                                   const LinearProgressIndicator(minHeight: 2),
                                 ],
                                 if (widget.controller.usingFallback) ...[
-                                  const SizedBox(height: SafeContractsSpacing.sm),
+                                  const SizedBox(
+                                      height: SafeContractsSpacing.sm),
                                   _FallbackNotice(
                                     arabic: arabic,
                                     onRetry: () =>
