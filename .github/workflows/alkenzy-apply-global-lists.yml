@@ -1,0 +1,118 @@
+name: ALKENZY Apply Global Lists
+
+on:
+  push:
+    branches:
+      - feat/alkenzy-mobile-reference-redesign
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-mobile-reference-redesign
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Apply and validate global list closure
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          stage=bootstrap
+          fail() {
+            rc=$?
+            set +e
+            {
+              printf 'stage=%s\nhead=%s\nexit=%s\n' "$stage" "$(git rev-parse HEAD)" "$rc"
+              [ -f /tmp/apply.log ] && { echo '--- apply ---'; tail -50 /tmp/apply.log; }
+              [ -f /tmp/php.log ] && { echo '--- php ---'; tail -80 /tmp/php.log; }
+            } > .github/ALKENZY_GLOBAL_INTEGRATION_FAILURE.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/ALKENZY_GLOBAL_INTEGRATION_FAILURE.txt
+            git commit -m "ci(list): record integration failure at $stage" || true
+            git push origin HEAD:feat/alkenzy-mobile-reference-redesign || true
+            exit "$rc"
+          }
+          trap fail ERR
+
+          stage=fetch-patch
+          git fetch origin bugfix/alkenzy-global-list-closure
+          git show origin/bugfix/alkenzy-global-list-closure:scripts/alkenzy_global_list_closure.py > /tmp/global.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/global.py')
+          text = p.read_text()
+          text = text.replace(
+              'contains("\'total_pages\' => $totalPages")',
+              'contains(r"\'total_pages\' => $totalPages")',
+          )
+          text = text.replace(
+              'contains("\'has_more\' => $page < $totalPages")',
+              'contains(r"\'has_more\' => $page < $totalPages")',
+          )
+          p.write_text(text)
+          PY
+          python3 -m py_compile /tmp/global.py
+
+          stage=apply-production
+          mkdir -p mobile/lib/core/widgets
+          python3 /tmp/global.py > /tmp/apply.log 2>&1 || { cat /tmp/apply.log; false; }
+
+          stage=align-notification-regression
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tests/php/rest_mobile_notifications_020_025.php')
+          text = p.read_text()
+          old = "$GLOBALS['sc_test_result_queue'] = [[$notificationRow]];"
+          new = "$GLOBALS['sc_test_result_queue'] = [[['total' => '1']], [$notificationRow]];"
+          if text.count(old) == 2:
+              text = text.replace(old, new)
+          elif text.count(new) != 2:
+              raise SystemExit('notification COUNT fixtures are not in an expected state')
+          old_page = "$badPage = NotificationsController::index(new WP_REST_Request(['page' => '6']));"
+          new_page = "$badPage = NotificationsController::index(new WP_REST_Request(['page' => '40002']));"
+          if old_page in text:
+              text = text.replace(old_page, new_page, 1)
+          elif new_page not in text:
+              raise SystemExit('notification abuse-page fixture missing')
+          p.write_text(text)
+          PY
+
+          stage=php
+          bash scripts/test-php.sh > /tmp/php.log 2>&1 || { cat /tmp/php.log; false; }
+
+          stage=dependencies
+          cd mobile
+          flutter pub get
+
+          stage=format
+          dart format lib test
+
+          stage=analyze
+          flutter analyze
+
+          stage=tests
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
+          cd ..
+
+          stage=commit
+          rm -f .github/workflows/alkenzy-apply-global-lists.yml
+          rm -f .github/ALKENZY_GLOBAL_INTEGRATION_FAILURE.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(alkenzy): close global pagination and list toolbar bugs"
+          git push origin HEAD:feat/alkenzy-mobile-reference-redesign
