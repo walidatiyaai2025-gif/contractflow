@@ -131,11 +131,25 @@
 }
 
 @media (max-width: 782px) {
+  /* WordPress mobile admin gives #wpcontent inline padding while #wpwrap is
+   * viewport-sized. Keep that padding inside the available box instead of
+   * manufacturing horizontal document overflow. */
+  body.toplevel_page_safecontracts #wpcontent,
+  body[class*="_page_safecontracts"] #wpcontent {
+    box-sizing: border-box;
+    width: auto;
+    max-width: 100%;
+  }
+  body.toplevel_page_safecontracts #wpbody-content,
+  body[class*="_page_safecontracts"] #wpbody-content {
+    box-sizing: border-box;
+    min-width: 0;
+  }
   .safecontracts-dashboard-reference-heading__brand { width: 40px; height: 40px; border-radius: 12px; }
   .safecontracts-dashboard-reference-heading__assurance { padding: 7px 9px; font-size: 11px; }
 }
 
 @media (max-width: 520px) {
   .safecontracts-settings .safecontracts-detail-list { grid-template-columns: 1fr; }
-  .safecontracts-dashboard-reference-heading__assurance { width: 100%; justify-content: center; }
+  .safecontracts-dashboard-reference-heading__assurance { width: 100%; justify-content: center; box-sizing: border-box; }
 }
