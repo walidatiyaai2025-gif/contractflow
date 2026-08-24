@@ -106,12 +106,18 @@ final class AdminShell
     {
         ?>
         <div class="safecontracts-page-heading safecontracts-dashboard-reference-heading">
-            <div>
-                <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Safe Contracts workspace', 'safecontracts'); ?></p>
-                <h1><?php echo esc_html__('Dashboard', 'safecontracts'); ?></h1>
-                <p class="description"><?php echo esc_html__('A real-time overview of contracts, receivables, payables, settlements and notifications.', 'safecontracts'); ?></p>
+            <div class="safecontracts-dashboard-reference-heading__identity">
+                <img class="safecontracts-dashboard-reference-heading__brand" src="<?php echo Brand::iconDataUri(); // Trusted embedded brand constant. ?>" alt="" aria-hidden="true">
+                <div>
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Safe Contracts workspace', 'safecontracts'); ?></p>
+                    <h1><?php echo esc_html__('Dashboard', 'safecontracts'); ?></h1>
+                    <p class="description"><?php echo esc_html__('A real-time overview of contracts, receivables, payables, settlements and notifications.', 'safecontracts'); ?></p>
+                </div>
             </div>
-            <span class="safecontracts-dashboard-reference-heading__icon dashicons dashicons-dashboard" aria-hidden="true"></span>
+            <div class="safecontracts-dashboard-reference-heading__assurance">
+                <span class="dashicons dashicons-lock" aria-hidden="true"></span>
+                <span><?php echo esc_html__('Server-side authorization', 'safecontracts'); ?></span>
+            </div>
         </div>
         <nav class="safecontracts-action-strip" aria-label="<?php echo esc_html__('Dashboard quick actions', 'safecontracts'); ?>">
             <?php if (current_user_can(Capabilities::CREATE_CUSTOMERS)) : ?>
