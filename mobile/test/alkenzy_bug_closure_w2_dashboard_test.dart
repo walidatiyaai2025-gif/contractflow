@@ -164,7 +164,7 @@ void main() {
 
 DashboardController _controller(List<Uri> requests) {
   final environment = AppEnvironment.fromValues(
-    name: 'test',
+    name: 'local',
     apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
   );
   final client = SafeContractsApiClient(
