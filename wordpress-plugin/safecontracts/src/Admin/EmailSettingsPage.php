@@ -62,30 +62,68 @@ final class EmailSettingsPage
         $status = isset($_GET['safecontracts_email_settings']) && is_scalar($_GET['safecontracts_email_settings'])
             ? sanitize_key((string) $_GET['safecontracts_email_settings'])
             : '';
+        $enabled = ! empty($settings['enabled']);
         ?>
+        <style id="safecontracts-email-settings-responsive">
+            @media (max-width: 782px) {
+                .safecontracts-email-settings .safecontracts-split-layout {
+                    display: grid !important;
+                    grid-template-columns: minmax(0, 1fr) !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                }
+                .safecontracts-email-settings .safecontracts-split-layout > *,
+                .safecontracts-email-settings .safecontracts-settings-card,
+                .safecontracts-email-settings .safecontracts-settings-card form,
+                .safecontracts-email-settings .safecontracts-settings-card p,
+                .safecontracts-email-settings .safecontracts-settings-card label {
+                    min-width: 0 !important;
+                    max-width: 100% !important;
+                    box-sizing: border-box !important;
+                }
+                .safecontracts-email-settings .safecontracts-settings-card input.widefat {
+                    display: block !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    max-width: 100% !important;
+                    box-sizing: border-box !important;
+                    margin-top: 6px !important;
+                }
+            }
+        </style>
         <div class="wrap safecontracts-settings safecontracts-email-settings" dir="auto">
             <div class="safecontracts-section-heading">
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html(self::text('Mail delivery configuration', 'تهيئة إرسال البريد')); ?></p>
                     <h1><?php echo esc_html(self::text('Email Settings', 'إعدادات البريد الإلكتروني')); ?></h1>
-                    <p><?php echo esc_html(self::text('Sender identity, Direct SMTP connection and delivery testing are managed here. Notification rules remain in Notification Settings.', 'تتم إدارة هوية المرسل واتصال SMTP المباشر واختبار الإرسال هنا. وتظل قواعد الإشعارات في إعدادات الإشعارات.')); ?></p>
+                    <p><?php echo esc_html(self::text('Manage the sender identity and whether SafeContracts email notifications are enabled. Mail transport remains the responsibility of WordPress and the server mail configuration.', 'إدارة هوية المرسل وما إذا كانت إشعارات البريد في SafeContracts مفعلة. تظل وسيلة الإرسال مسؤولية ووردبريس وإعدادات البريد على الخادم.')); ?></p>
                 </div>
+                <span class="safecontracts-state-chip <?php echo $enabled ? 'is-success' : 'is-warning'; ?>"><?php echo esc_html($enabled ? self::text('Email enabled', 'البريد مفعل') : self::text('Email disabled', 'البريد غير مفعل')); ?></span>
             </div>
 
             <?php if ($status === 'saved') : ?><div class="notice notice-success inline"><p><?php echo esc_html(self::text('Email settings saved.', 'تم حفظ إعدادات البريد الإلكتروني.')); ?></p></div><?php endif; ?>
             <?php if ($status === 'invalid') : ?><div class="notice notice-error inline"><p><?php echo esc_html(self::text('Email settings were not saved. Check the sender name and email address.', 'لم يتم حفظ إعدادات البريد الإلكتروني. راجع اسم المرسل وعنوان البريد.')); ?></p></div><?php endif; ?>
 
-            <section class="safecontracts-admin-card safecontracts-settings-card">
-                <h2><?php echo esc_html(self::text('Sender and email notifications', 'المرسل وإشعارات البريد')); ?></h2>
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>">
-                    <?php wp_nonce_field(self::SAVE_ACTION); ?>
-                    <p><label class="safecontracts-check-row"><input type="checkbox" name="enabled" value="1" <?php checked($settings['enabled']); ?>><?php echo esc_html(self::text('Enable email notifications', 'تفعيل إشعارات البريد الإلكتروني')); ?></label></p>
-                    <p><label><?php echo esc_html(self::text('Sender name', 'اسم المرسل')); ?><input class="widefat" name="from_name" maxlength="191" required value="<?php echo esc_attr((string) $settings['from_name']); ?>"></label></p>
-                    <p><label><?php echo esc_html(self::text('Sender email', 'بريد المرسل')); ?><input class="widefat" type="email" name="from_address" required value="<?php echo esc_attr((string) $settings['from_address']); ?>"></label></p>
-                    <?php submit_button(self::text('Save Email Settings', 'حفظ إعدادات البريد الإلكتروني')); ?>
-                </form>
-            </section>
+            <div class="safecontracts-split-layout">
+                <section class="safecontracts-admin-card safecontracts-settings-card">
+                    <div class="safecontracts-section-heading"><div><h2><?php echo esc_html(self::text('Sender and email notifications', 'المرسل وإشعارات البريد')); ?></h2><p class="description"><?php echo esc_html(self::text('Only non-secret sender settings are stored by this page.', 'تخزن هذه الصفحة إعدادات المرسل غير السرية فقط.')); ?></p></div></div>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>">
+                        <?php wp_nonce_field(self::SAVE_ACTION); ?>
+                        <p><label class="safecontracts-check-row"><input type="checkbox" name="enabled" value="1" <?php checked($enabled); ?>><?php echo esc_html(self::text('Enable email notifications', 'تفعيل إشعارات البريد الإلكتروني')); ?></label></p>
+                        <p><label><?php echo esc_html(self::text('Sender name', 'اسم المرسل')); ?><input class="widefat" name="from_name" maxlength="191" required value="<?php echo esc_attr((string) $settings['from_name']); ?>"></label></p>
+                        <p><label><?php echo esc_html(self::text('Sender email', 'بريد المرسل')); ?><input class="widefat" dir="ltr" type="email" name="from_address" required value="<?php echo esc_attr((string) $settings['from_address']); ?>"></label></p>
+                        <?php submit_button(self::text('Save Email Settings', 'حفظ إعدادات البريد الإلكتروني')); ?>
+                    </form>
+                </section>
+
+                <section class="safecontracts-admin-card">
+                    <div class="safecontracts-section-heading"><div><h2><?php echo esc_html(self::text('Transport boundary', 'حدود وسيلة الإرسال')); ?></h2></div></div>
+                    <p><?php echo esc_html(self::text('This screen does not expose SMTP passwords, API credentials, OAuth tokens or server secrets.', 'لا تعرض هذه الشاشة كلمات مرور SMTP أو بيانات اعتماد API أو رموز OAuth أو أسرار الخادم.')); ?></p>
+                    <p><?php echo esc_html(self::text('Delivery uses the existing WordPress mail path. Configure transport at the WordPress/server layer when required; notification rule channels remain managed in Notification Settings.', 'يستخدم الإرسال مسار البريد الحالي في ووردبريس. عند الحاجة تتم تهيئة وسيلة الإرسال على مستوى ووردبريس أو الخادم، بينما تظل قنوات قواعد الإشعارات في صفحة إعدادات الإشعارات.')); ?></p>
+                    <p><a class="button" href="<?php echo esc_url(add_query_arg(['page' => NotificationSettingsPage::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html(self::text('Open Notification Settings', 'فتح إعدادات الإشعارات')); ?></a></p>
+                </section>
+            </div>
         </div>
         <?php
     }

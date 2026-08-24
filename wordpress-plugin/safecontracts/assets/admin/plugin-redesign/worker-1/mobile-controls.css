@@ -1,0 +1,89 @@
+/* Worker #1 responsive control hardening for SC-013..SC-016. */
+.safecontracts-worker1__field-grid input:not([type="checkbox"]):not([type="radio"]),
+.safecontracts-worker1__field-grid select,
+.safecontracts-worker1__field-grid textarea,
+.safecontracts-worker1__field-full input:not([type="checkbox"]):not([type="radio"]),
+.safecontracts-worker1__field-full select,
+.safecontracts-worker1__field-full textarea {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* SC-013..SC-015: these registers deliberately use wide horizontally
+ * scrollable tables. Keep the final action column reachable at the logical
+ * trailing edge for both RTL (left) and LTR (right) at every width where the
+ * table still overflows its panel. */
+.safecontracts-customers .safecontracts-worker1__table-scroll table.widefat th:last-child,
+.safecontracts-customers .safecontracts-worker1__table-scroll table.widefat td:last-child,
+.safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat th:last-child,
+.safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat td:last-child,
+.safecontracts-contracts .safecontracts-worker1__table-scroll table.widefat th:last-child,
+.safecontracts-contracts .safecontracts-worker1__table-scroll table.widefat td:last-child {
+  position: sticky;
+  inset-inline-end: 0;
+  z-index: 3;
+  box-sizing: border-box;
+  min-width: 118px;
+  background: #fffdfb !important;
+  box-shadow: -8px 0 12px -10px rgba(11, 41, 69, .45);
+}
+
+.safecontracts-customers .safecontracts-worker1__table-scroll table.widefat thead th:last-child,
+.safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat thead th:last-child,
+.safecontracts-contracts .safecontracts-worker1__table-scroll table.widefat thead th:last-child {
+  z-index: 4;
+  background: #f2e7dc !important;
+}
+
+@media (max-width: 1024px) {
+  .safecontracts-customers .safecontracts-worker1__table-scroll table.widefat th:last-child,
+  .safecontracts-customers .safecontracts-worker1__table-scroll table.widefat td:last-child,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat th:last-child,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat td:last-child {
+    min-width: 118px;
+    max-width: 132px;
+  }
+
+  .safecontracts-contracts .safecontracts-worker1__table-scroll table.widefat th:last-child,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll table.widefat td:last-child {
+    min-width: 132px;
+    max-width: 150px;
+  }
+
+  .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions .button,
+  .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form,
+  .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form .button,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions .button,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form .button,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions .button,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form .button {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    text-align: center;
+  }
+}
+
+@media (max-width: 782px) {
+  .safecontracts-worker1 input[type="file"] {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+}

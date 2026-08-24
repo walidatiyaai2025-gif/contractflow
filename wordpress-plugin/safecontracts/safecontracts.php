@@ -30,6 +30,7 @@ require_once SAFECONTRACTS_DIR . 'src/Support/Autoloader.php';
 // every older Admin number_format(..., 2) presentation follows the centralized
 // no-redundant-decimals rule without changing DECIMAL storage or arithmetic.
 require_once SAFECONTRACTS_DIR . 'src/Admin/MoneyPresentationFunctions.php';
+\SafeContracts\Translations\PluginRedesignArabicDefaults::register();
 \SafeContracts\Translations\CompleteArabicDefaults::register();
 \SafeContracts\Translations\FeatureArabicDefaults::register();
 \SafeContracts\Translations\PremiumPolishArabicDefaults::register();

@@ -1,0 +1,62 @@
+/* ALKENZY ADV plugin redesign tokens — LEAD-owned shared visual contract. */
+:root {
+  --sc-ui-navy-950: #0d1b2a;
+  --sc-ui-navy-900: #10263b;
+  --sc-ui-navy-800: #1b3655;
+  --sc-ui-navy-700: #214866;
+  --sc-ui-cream-50: #fffdf9;
+  --sc-ui-cream-100: #f5f0e6;
+  --sc-ui-cream-200: #eee4d8;
+  --sc-ui-cream-300: #e8dcc2;
+  --sc-ui-copper-500: #c49a6c;
+  --sc-ui-copper-600: #ad8053;
+  --sc-ui-green-600: #2e7d32;
+  --sc-ui-green-50: #edf7ef;
+  --sc-ui-red-600: #d32f2f;
+  --sc-ui-red-50: #fff0ef;
+  --sc-ui-amber-600: #a86408;
+  --sc-ui-amber-50: #fff7e8;
+  --sc-ui-ink-900: #14283a;
+  --sc-ui-ink-700: #435566;
+  --sc-ui-ink-500: #70808d;
+  --sc-ui-line: #e7d7c8;
+  --sc-ui-line-strong: #d9c0aa;
+  --sc-ui-white: #ffffff;
+  --sc-ui-radius-sm: 8px;
+  --sc-ui-radius-md: 12px;
+  --sc-ui-radius-lg: 16px;
+  --sc-ui-radius-xl: 20px;
+  --sc-ui-shadow-xs: 0 1px 2px rgba(13, 27, 42, .05);
+  --sc-ui-shadow-sm: 0 5px 18px rgba(13, 27, 42, .07);
+  --sc-ui-shadow-md: 0 12px 28px rgba(13, 27, 42, .10);
+  --sc-ui-space-1: 4px;
+  --sc-ui-space-2: 8px;
+  --sc-ui-space-3: 12px;
+  --sc-ui-space-4: 16px;
+  --sc-ui-space-5: 20px;
+  --sc-ui-space-6: 24px;
+  --sc-ui-space-8: 32px;
+  --sc-ui-space-10: 40px;
+  --sc-ui-content-max: 1500px;
+}
+
+body.toplevel_page_safecontracts,
+body[class*="_page_safecontracts"] {
+  --sc-premium-navy: var(--sc-ui-navy-950);
+  --sc-premium-navy-2: var(--sc-ui-navy-800);
+  --sc-premium-navy-3: var(--sc-ui-navy-700);
+  --sc-premium-rose: var(--sc-ui-copper-500);
+  --sc-premium-rose-2: var(--sc-ui-copper-500);
+  --sc-premium-gold: var(--sc-ui-copper-500);
+  --sc-premium-ivory: var(--sc-ui-cream-100);
+  --sc-premium-ivory-2: var(--sc-ui-cream-200);
+  --sc-premium-card: var(--sc-ui-white);
+  --sc-premium-card-2: var(--sc-ui-cream-50);
+  --sc-premium-ink: var(--sc-ui-ink-900);
+  --sc-premium-muted: var(--sc-ui-ink-500);
+  --sc-premium-line: var(--sc-ui-line);
+  --sc-premium-line-strong: var(--sc-ui-line-strong);
+  --sc-premium-shadow: var(--sc-ui-shadow-md);
+  --sc-premium-shadow-soft: var(--sc-ui-shadow-sm);
+  --sc-premium-radius: var(--sc-ui-radius-lg);
+}

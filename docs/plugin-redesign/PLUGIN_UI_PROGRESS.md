@@ -1,0 +1,101 @@
+# ALKENZY ADV — PLUGIN UI REDESIGN PROGRESS
+
+## Governance checkpoint
+
+- Governance version: `1.0.0`
+- Official redesign foundation: `main@f671f436d9fd357de1a79089c29ec700d0572e78`
+- Current reference manifest version: `1.0.0`
+- Reference baseline date: `2026-08-24`
+- Locked reference binaries: `7/7`
+- Frozen screen inventory: `34`
+- Unassigned screens: `0`
+- Overlapping ownership: `0`
+- Foundation reference validator: `PASS`
+- Foundation Plugin Design Reference Guard: `PASS`
+- Foundation Quality Gates: `PASS`
+- Implementation start gate: `RELEASED`
+
+All redesign branches must preserve `FOUNDATION_SHA=f671f436d9fd357de1a79089c29ec700d0572e78` as their common ancestry contract. The locked references remain immutable.
+
+## LEAD — ACTIVE IMPLEMENTATION
+
+- Branch: `plugin-redesign/lead-integration`
+- PR: `#637`
+- Frozen scope: SC-001 through SC-012 only, plus protected shared PHP/CSS/JS/navigation/governance surfaces.
+- Current implementation state: `IMPLEMENTED — RUNTIME VISUAL QA PASS; EXACT-HEAD QUALITY REVALIDATION RUNNING`
+
+### LEAD implementation completed in code
+
+- Created the shared locked-reference design-token layer under `assets/admin/plugin-redesign/tokens.css`.
+- Created shared compact premium primitives under `assets/admin/plugin-redesign/primitives.css`.
+- Created shared WordPress navigation styling under `assets/admin/plugin-redesign/navigation.css`.
+- Created LEAD screen refinements under `assets/admin/plugin-redesign/lead-screens.css`.
+- Removed the oversized legacy SafeContracts hero/banner from `AdminShell` and restored a compact reference-aligned workspace heading.
+- Added permission-aware Dashboard quick actions that route only to real registered plugin pages and preserve WordPress capability checks.
+- Rebuilt all eight grouped-navigation landing states while retaining hidden leaf submenu rows in WordPress' authorization structure.
+- Redesigned General Settings while preserving `admin-post.php`, nonce validation, `MANAGE_SYSTEM` authorization and server-side `GeneralSettings` persistence.
+- Redesigned Migration Recovery and explicitly enqueued the shared redesign assets on the migration-failure boot path.
+- LEAD-only boot integration now registers the pre-existing `EmailSettingsPage` through its own `register()` method. SC-028 visual ownership remains WORKER-3.
+- Runtime Inspector is covered by the shared system-screen/table/detail primitives; its sanitized diagnostics, clear-history nonce and system capability rules remain unchanged.
+- Shared responsive layer now constrains settings split layouts with `minmax(0, 1fr)` under the WordPress mobile breakpoint so RTL controls can shrink without horizontal clipping.
+
+### LEAD acceptance checkpoint
+
+- Plugin Design Reference Guard: PASS on the current redesign line.
+- Real WordPress Visual QA: PASS on `7223f413a340814cc159c5bcc10b91ce2b8b0506`.
+- A subsequent shared responsive specificity hardening commit is under exact-head Quality/Visual revalidation before final integration approval.
+
+No LEAD screen is `APPROVED` until the final integrated exact-head runtime/evidence gates pass.
+
+## WORKER-1 — FROZEN SCOPE
+
+Customers; Suppliers; Contracts; Archive (SC-013..SC-016).
+
+- Production PR: `#638`.
+- Responsive runtime defects found by acceptance have been fixed rather than waived.
+- Current production head includes shrinkable contract editor controls and mobile file-input hardening.
+- Exact-head runtime QA is being rerun before READY FOR LEAD.
+
+## WORKER-2 — READY FOR LEAD
+
+Payments; Collections/Settlements; Follow-ups; Finance; Reports; Imports; Payment Methods (SC-017..SC-023).
+
+- Production PR: `#635` at `b8d7f063bec3a28d5bfdb8e40398d993f9d662e3`.
+- Production Quality Gates: PASS.
+- Production Plugin Design Reference Guard: PASS.
+- Real WordPress Worker 2 Functional QA: PASS.
+- Real WordPress Visual QA: PASS.
+- QA-overlay Quality Gates: PASS.
+- QA-overlay Plugin Design Reference Guard: PASS.
+- No fake data, cross-currency aggregation, weakened assertion or visual-only closure was accepted.
+
+## WORKER-3 — FROZEN SCOPE
+
+Notification Center; Notification Delivery Activity; Notification Schedule; Notification Settings; Email Settings; Active Users; Users & Roles; Firebase Settings; Mobile Configuration; Translations; User Guide (SC-024..SC-034).
+
+- Production PR: `#636`.
+- SC-031 narrow RTL acceptance exposed a CSS-grid min-content overflow in the shared settings split layout.
+- The shared LEAD responsive layer was hardened with a higher-specificity `minmax(0, 1fr)` rule so the later premium stylesheet cannot restore a non-shrinkable `1fr` track.
+- Real WordPress Visual QA is being rerun before READY FOR LEAD.
+
+SC-028 Email Settings remains boot-registered by the LEAD because `Plugin.php` is a protected shared file. WORKER-3 still owns the screen markup/visual implementation and its runtime evidence.
+
+## Latest screenshots
+
+Runtime screenshot artifacts are generated by the real WordPress + MySQL + authenticated wp-admin Playwright acceptance workflows. The seven locked reference images remain the visual source of truth; workflow GREEN is necessary but does not authorize fabricated evidence.
+
+## Known responsive issues
+
+No known responsive defect is being waived. The currently discovered Worker #1 contract-editor and Worker #3 Firebase RTL overflows have production/shared fixes committed and are under exact-head rerun.
+
+## Known RTL issues
+
+Arabic RTL remains the primary acceptance direction. The final integration cannot advance until exact-head RTL evidence is GREEN for every worker and the integrated Lead.
+
+## Next exact task
+
+1. Finish exact-head W1 and W3 runtime/Quality revalidation; fix any remaining real defects.
+2. Advance fully-green worker PRs to READY FOR LEAD.
+3. Integrate accepted worker branches in a controlled sequence without QA-only overlays.
+4. After integration, rerun Plugin Design Reference Guard, repository Quality Gates and real WordPress Visual QA on the exact integrated head.
+5. Only after integrated ALL GREEN, advance the LEAD release candidate to `main` and package the user-visible plugin release.
