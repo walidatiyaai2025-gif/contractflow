@@ -15,6 +15,7 @@ use SafeContracts\Admin\ContractPaymentTree;
 use SafeContracts\Admin\ContractsPage;
 use SafeContracts\Admin\CustomersPage;
 use SafeContracts\Admin\DashboardPage;
+use SafeContracts\Admin\EmailSettingsPage;
 use SafeContracts\Admin\FinancePage;
 use SafeContracts\Admin\FirebaseSettingsPage;
 use SafeContracts\Admin\FollowUpsPage;
@@ -114,6 +115,7 @@ final class Plugin
         NotificationScheduleAuditRecorder::register();
         SafeDeletionAuditRecorder::register();
         LoginBranding::register();
+        EmailSettingsPage::register();
         NavigationCleanup::register();
         AdminPageSummaryInjector::register();
         ContractPaymentTree::register();

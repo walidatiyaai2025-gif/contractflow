@@ -44,16 +44,19 @@ final class Migration0012Import implements Migration
             KEY actor_created (created_by, created_at, id)
         ) {$charset};");
 
+        // ROW_NUMBER is reserved by MySQL 8 window functions. Keep the
+        // historical column name for compatibility, but quote it everywhere
+        // so a fresh real WordPress/MySQL installation can create the table.
         dbDelta("CREATE TABLE {$errors} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             import_run_id bigint(20) unsigned NOT NULL,
-            row_number int(10) unsigned NOT NULL,
+            `row_number` int(10) unsigned NOT NULL,
             field_name varchar(100) NULL,
             error_code varchar(80) NOT NULL,
             message text NOT NULL,
             created_at datetime NOT NULL,
             PRIMARY KEY  (id),
-            KEY run_row (import_run_id, row_number, id),
+            KEY run_row (import_run_id, `row_number`, id),
             KEY run_code (import_run_id, error_code, id)
         ) {$charset};");
     }

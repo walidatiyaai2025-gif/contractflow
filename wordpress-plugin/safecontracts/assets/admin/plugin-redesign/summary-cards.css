@@ -1,0 +1,79 @@
+/* ALKENZY ADV plugin redesign — shared summary/KPI cards. */
+.safecontracts-summary-cards {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin: 0 0 16px !important;
+}
+
+.safecontracts-summary-card {
+  position: relative;
+  display: grid !important;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  min-height: 108px;
+  padding: 16px 18px !important;
+  border: 1px solid var(--sc-ui-line) !important;
+  border-radius: var(--sc-ui-radius-md) !important;
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf5 100%) !important;
+  box-shadow: var(--sc-ui-shadow-xs) !important;
+  box-sizing: border-box;
+}
+
+.safecontracts-summary-card::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 15px;
+  bottom: 15px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--sc-ui-copper-500);
+}
+
+.safecontracts-summary-card__label {
+  color: var(--sc-ui-ink-500) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  font-weight: 800 !important;
+}
+
+.safecontracts-summary-card__value {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--sc-ui-navy-950) !important;
+  font-size: clamp(24px, 2.2vw, 34px) !important;
+  line-height: 1.1 !important;
+  font-weight: 850 !important;
+  letter-spacing: -.02em;
+}
+
+.safecontracts-summary-card__detail {
+  display: block;
+  color: var(--sc-ui-ink-500) !important;
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+}
+
+@media (max-width: 1180px) {
+  .safecontracts-summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .safecontracts-summary-cards {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 9px !important;
+  }
+
+  .safecontracts-summary-card {
+    min-height: 0;
+    padding: 13px 14px !important;
+  }
+
+  .safecontracts-summary-card__value {
+    font-size: 25px !important;
+  }
+}

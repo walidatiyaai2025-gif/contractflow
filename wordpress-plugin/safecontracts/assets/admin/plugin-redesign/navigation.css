@@ -1,0 +1,133 @@
+/* ALKENZY ADV plugin redesign navigation — LEAD-owned. */
+body.toplevel_page_safecontracts #adminmenuwrap,
+body.toplevel_page_safecontracts #adminmenuback,
+body.toplevel_page_safecontracts #adminmenu,
+body[class*="_page_safecontracts"] #adminmenuwrap,
+body[class*="_page_safecontracts"] #adminmenuback,
+body[class*="_page_safecontracts"] #adminmenu {
+  background: var(--sc-ui-navy-950) !important;
+}
+
+body.toplevel_page_safecontracts #wpadminbar,
+body[class*="_page_safecontracts"] #wpadminbar {
+  background: var(--sc-ui-navy-950) !important;
+}
+
+body.toplevel_page_safecontracts #toplevel_page_safecontracts > a,
+body[class*="_page_safecontracts"] #toplevel_page_safecontracts > a {
+  background: var(--sc-ui-navy-900) !important;
+  color: #fff !important;
+  border-inline-start: 3px solid var(--sc-ui-copper-500);
+}
+
+#toplevel_page_safecontracts .wp-submenu {
+  padding: 8px 0 12px !important;
+  background: var(--sc-ui-navy-900) !important;
+}
+
+#toplevel_page_safecontracts .wp-submenu a {
+  position: relative;
+  margin: 2px 7px !important;
+  padding: 8px 10px 8px 12px !important;
+  border-radius: 7px;
+  color: #dbe5ee !important;
+  line-height: 1.35 !important;
+}
+
+#toplevel_page_safecontracts .wp-submenu a:hover,
+#toplevel_page_safecontracts .wp-submenu li.current a,
+#toplevel_page_safecontracts .wp-submenu a.current {
+  background: rgba(196,154,108,.15) !important;
+  color: #fff !important;
+}
+
+#toplevel_page_safecontracts .wp-submenu li.current a::before,
+#toplevel_page_safecontracts .wp-submenu a.current::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--sc-ui-copper-500);
+}
+
+.safecontracts-navigation-group { margin-top: 2px; }
+.safecontracts-navigation-group__cards {
+  display: grid !important;
+  grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+  gap: 14px !important;
+  margin: 0 !important;
+}
+
+.safecontracts-navigation-group__card {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 170px;
+  padding: 20px !important;
+  overflow: hidden;
+}
+
+.safecontracts-navigation-group__card::after {
+  content: "";
+  position: absolute;
+  inset: auto -30px -44px auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(196,154,108,.16), transparent 68%);
+  pointer-events: none;
+}
+
+.rtl .safecontracts-navigation-group__card::after,
+[dir="rtl"] .safecontracts-navigation-group__card::after { inset: auto auto -44px -30px; }
+
+.safecontracts-navigation-group__card-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 14px;
+  border: 1px solid #ead2bc;
+  border-radius: 12px;
+  background: #fff7ef;
+  color: var(--sc-ui-copper-600);
+  font-size: 19px;
+}
+
+.safecontracts-navigation-group__title {
+  margin: 0 0 6px !important;
+  color: var(--sc-ui-navy-950) !important;
+  font-size: 17px !important;
+  line-height: 1.35 !important;
+  font-weight: 800 !important;
+}
+
+.safecontracts-navigation-group__description {
+  flex: 1;
+  margin: 0 0 16px;
+  color: var(--sc-ui-ink-500);
+  line-height: 1.6;
+}
+
+.safecontracts-navigation-group__card .button { margin-top: auto !important; }
+
+.safecontracts-navigation-group__empty {
+  padding: 18px;
+  border: 1px dashed var(--sc-ui-line-strong);
+  border-radius: var(--sc-ui-radius-md);
+  background: rgba(255,255,255,.65);
+  color: var(--sc-ui-ink-700);
+}
+
+@media (max-width: 1080px) {
+  .safecontracts-navigation-group__cards { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+}
+
+@media (max-width: 600px) {
+  .safecontracts-navigation-group__cards { grid-template-columns: 1fr !important; }
+  .safecontracts-navigation-group__card { min-height: 0; }
+}
