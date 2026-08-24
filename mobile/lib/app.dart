@@ -114,14 +114,22 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
     try {
       await _pushRegistration.revokeAndStop();
     } on Object {
-      // Continue to revoke the SafeContracts mobile session.
+      // Push cleanup must not prevent authentication revocation.
     }
+
     try {
       await _authRepository.logout();
     } on Object {
-      await _tokenStore.clear();
+      try {
+        await _tokenStore.clear();
+      } on Object {
+        // The server-side logout may already have revoked the token. Protected
+        // in-memory state is invalidated below even if secure storage is
+        // temporarily unavailable.
+      }
+    } finally {
+      _bootstrap.signOutLocalState();
     }
-    _bootstrap.signOutLocalState();
   }
 
   @override
@@ -202,6 +210,19 @@ final class _BootstrapView extends StatefulWidget {
 
 final class _BootstrapViewState extends State<_BootstrapView> {
   bool _showLogin = false;
+  bool _logoutInFlight = false;
+
+  Future<void> _logoutFromAuthenticatedShell() async {
+    if (_logoutInFlight) return;
+    _logoutInFlight = true;
+    try {
+      await widget.onLogout();
+      if (!mounted) return;
+      setState(() => _showLogin = true);
+    } finally {
+      _logoutInFlight = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +270,8 @@ final class _BootstrapViewState extends State<_BootstrapView> {
               languageCode: widget.languageCode,
               onLanguageChanged: widget.onLanguageChanged,
               usingConfigDefaults: widget.controller.usingConfigDefaults,
-              onClearSession: () => unawaited(widget.onLogout()),
+              onClearSession: () =>
+                  unawaited(_logoutFromAuthenticatedShell()),
             );
           }
         }
