@@ -225,10 +225,7 @@ String _isoDate(DateTime value) =>
   if (start == null || end == null || start.year != end.year) {
     return (null, null);
   }
-  if (start.month == 1 &&
-      start.day == 1 &&
-      end.month == 12 &&
-      end.day == 31) {
+  if (start.month == 1 && start.day == 1 && end.month == 12 && end.day == 31) {
     return (start.year, null);
   }
   if (start.month == end.month &&
