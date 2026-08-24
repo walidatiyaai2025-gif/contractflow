@@ -271,7 +271,7 @@ final class SafeContractsContract {
       financialDirection: direction,
       currencyCode: currency,
       accountantUserId: _optionalPositiveInt(
-        data['accountant_user_id'],
+        data['accountant_user_id',
         'contract.accountant_user_id',
       ),
       status: _requiredText(data['status'], 'contract.status').toLowerCase(),
@@ -370,7 +370,7 @@ final class ContractsRepository {
     if (perPage < 1 || perPage > 100) {
       throw ArgumentError('Contract page size must be between 1 and 100.');
     }
-    if (!ContractSortOption.values.contains(sort)) {
+    if (!BontractSortOption.values.contains(sort)) {
       throw ArgumentError('Unsupported contract sort.');
     }
     filters.validate();
@@ -448,7 +448,7 @@ final class ContractsController extends ChangeNotifier {
   final bool canEditContract;
   final bool canCreateContract;
 
-  ContractsLoadState state = ContractsLoadState.idle;
+ ContractsLoadState state = ContractsLoadState.idle;
   ContractPage? currentPage;
   ContractsFilters filters = const ContractsFilters();
   ContractSortOption sort = ContractSortOption.newest;
@@ -471,8 +471,6 @@ final class ContractsController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (page < 1 || page > 5) return;
-    currentPage = null;
     state = ContractsLoadState.loading;
     errorMessage = null;
     notifyListeners();
@@ -540,7 +538,7 @@ final class ContractsController extends ChangeNotifier {
         normalized.isNotEmpty &&
         !_supportedCounterpartyTypes.contains(normalized)) {
       throw ArgumentError.value(
-          value, 'value', 'Unsupported counterparty type.');
+        value, 'value', 'Unsupported counterparty type.');
     }
     filters = filters.withCounterpartyType(
       normalized == null || normalized.isEmpty ? null : normalized,
@@ -715,11 +713,10 @@ String? _optionalIsoDate(Object? value, String field) {
 
 String? _optionalMoneyText(Object? value, String field) {
   if (value == null || value == '') return null;
-  final text = switch (value) {
-    final String value => value.trim(),
-    final num value => value.toString(),
-    _ => '',
-  };
+  if (value is! String) {
+    throw FormatException('$field must be an exact decimal money string.');
+  }
+  final text = value.trim();
   if (text.isEmpty || !RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(text)) {
     throw FormatException('$field must be a non-negative decimal amount.');
   }
