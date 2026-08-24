@@ -307,6 +307,8 @@ final class CounterpartyReadRepository
             }
         }
         return $result;
+    }
+
     /** @return array{0:list<string>,1:list<int|string>} */
     private function contractPageWhere(array $filters, string $search): array
     {
