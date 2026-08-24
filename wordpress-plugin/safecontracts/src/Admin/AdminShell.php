@@ -21,6 +21,7 @@ final class AdminShell
     public const PREMIUM_STYLE_HANDLE = 'safecontracts-admin-premium';
     public const REDESIGN_TOKENS_STYLE_HANDLE = 'safecontracts-plugin-redesign-tokens';
     public const REDESIGN_PRIMITIVES_STYLE_HANDLE = 'safecontracts-plugin-redesign-primitives';
+    public const REDESIGN_SUMMARY_CARDS_STYLE_HANDLE = 'safecontracts-plugin-redesign-summary-cards';
     public const REDESIGN_NAVIGATION_STYLE_HANDLE = 'safecontracts-plugin-redesign-navigation';
     public const REDESIGN_LEAD_SCREENS_STYLE_HANDLE = 'safecontracts-plugin-redesign-lead-screens';
 
@@ -66,9 +67,15 @@ final class AdminShell
             SAFECONTRACTS_VERSION
         );
         wp_enqueue_style(
+            self::REDESIGN_SUMMARY_CARDS_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/summary-cards.css',
+            [self::REDESIGN_PRIMITIVES_STYLE_HANDLE],
+            SAFECONTRACTS_VERSION
+        );
+        wp_enqueue_style(
             self::REDESIGN_NAVIGATION_STYLE_HANDLE,
             SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/navigation.css',
-            [self::REDESIGN_PRIMITIVES_STYLE_HANDLE],
+            [self::REDESIGN_SUMMARY_CARDS_STYLE_HANDLE],
             SAFECONTRACTS_VERSION
         );
         wp_enqueue_style(
