@@ -50,7 +50,7 @@ jobs:
       SC_QA_USER: visual-admin
       SC_QA_PASSWORD: VisualQa-Only-2026!
       SC_QA_OUTPUT: visual-qa-artifacts
-      SC_QA_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SC_QA_OVERLAY_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Checkout exact PR head
@@ -62,7 +62,7 @@ jobs:
       - name: Validate locked design references
         run: python3 scripts/validate-plugin-design-references.py
 
-      - name: Resolve visual QA scope and widths
+      - name: Resolve visual QA scope, source and widths
         id: qa
         shell: bash
         run: |
@@ -79,10 +79,22 @@ jobs:
               *) scope=all ;;
             esac
           fi
+
+          source_sha="$SC_QA_OVERLAY_SHA"
+          marker='tests/plugin-redesign-visual-qa/SOURCE_HEAD_SHA'
+          if [ -f "$marker" ]; then
+            source_sha="$(tr -d '\r\n[:space:]' < "$marker")"
+            if ! [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Invalid QA production-source marker: $source_sha" >&2
+              exit 1
+            fi
+          fi
+
           widths='390,600,768,782,1024,1280,1366,1440,1920'
           echo "scope=$scope" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           echo "arabic_widths=$widths" >> "$GITHUB_OUTPUT"
-          echo "Resolved scope=$scope Arabic widths=$widths source head=$SC_QA_SOURCE_SHA workflow SHA=$GITHUB_SHA"
+          echo "Resolved scope=$scope Arabic widths=$widths production source=$source_sha overlay head=$SC_QA_OVERLAY_SHA workflow SHA=$GITHUB_SHA"
 
       - name: Setup PHP and WP-CLI
         uses: shivammathur/setup-php@v2
@@ -174,6 +186,7 @@ jobs:
       - name: Capture authenticated Arabic RTL evidence
         env:
           SC_QA_SCOPE: ${{ steps.qa.outputs.scope }}
+          SC_QA_SOURCE_SHA: ${{ steps.qa.outputs.source_sha }}
           SC_QA_LOCALE: ar
           SC_QA_WIDTHS: ${{ steps.qa.outputs.arabic_widths }}
         run: node tests/plugin-redesign-visual-qa/capture.mjs
@@ -187,6 +200,7 @@ jobs:
       - name: Capture authenticated English LTR desktop smoke evidence
         env:
           SC_QA_SCOPE: ${{ steps.qa.outputs.scope }}
+          SC_QA_SOURCE_SHA: ${{ steps.qa.outputs.source_sha }}
           SC_QA_LOCALE: en_US
           SC_QA_WIDTHS: '1440'
         run: node tests/plugin-redesign-visual-qa/capture.mjs
@@ -209,14 +223,15 @@ jobs:
           wp plugin status safecontracts --path="$WP_DIR" > visual-qa-artifacts/_runtime/plugin-status.txt 2>&1 || true
           wp core version --path="$WP_DIR" > visual-qa-artifacts/_runtime/wordpress-version.txt 2>&1 || true
           php -v > visual-qa-artifacts/_runtime/php-version.txt 2>&1 || true
-          printf '%s\n' "$SC_QA_SOURCE_SHA" > visual-qa-artifacts/_runtime/source-head-sha.txt
+          printf '%s\n' '${{ steps.qa.outputs.source_sha }}' > visual-qa-artifacts/_runtime/source-head-sha.txt
+          printf '%s\n' "$SC_QA_OVERLAY_SHA" > visual-qa-artifacts/_runtime/overlay-head-sha.txt
           printf '%s\n' "$GITHUB_SHA" > visual-qa-artifacts/_runtime/workflow-event-sha.txt
 
       - name: Upload immutable visual QA evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: plugin-redesign-visual-qa-${{ steps.qa.outputs.scope }}-${{ env.SC_QA_SOURCE_SHA }}
+          name: plugin-redesign-visual-qa-${{ steps.qa.outputs.scope }}-${{ steps.qa.outputs.source_sha }}
           path: visual-qa-artifacts/
           if-no-files-found: error
           retention-days: 30
