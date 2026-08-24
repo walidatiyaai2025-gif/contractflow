@@ -110,3 +110,5 @@ jobs:
             git commit -m 'fix(mobile): align final locked-reference visual deltas'
             git push origin HEAD:feat/alkenzy-mobile-reference-redesign
           fi
+
+# Triggered explicitly after capture comparison to apply only the bounded deltas above.
