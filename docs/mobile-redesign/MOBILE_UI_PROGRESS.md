@@ -119,3 +119,13 @@ The immediately preceding test failure was isolated to `worker1_visual_capture_t
 ### Handoff rule
 
 This documentation checkpoint must itself pass the full Quality Gates on its exact final head before PR #630 is handed to the Lead. Worker 2 must not self-merge.
+
+---
+
+## Final closure checkpoint — 2026-08-24
+
+- Exact locked-reference capture is hermetic/offline with bundled Cairo/Inter font assets; runtime font fetching is disabled only in capture tests.
+- REF01–REF06 capture coverage is present, and the six original locked reference PNGs are available to the integration session for comparison.
+- Latest comparison-confirmed remaining source deltas are bounded to navigation drawer navy treatment, centered Quick Add, Arabic navigation labels, unnecessary whole-number `.00` display, supplier fixture fidelity, and reconciliation of the reachable Collections destination with the existing authoritative payment/collection flow.
+- No unrelated redesign or business-rule changes are authorized during this closure pass.
+- Final completion remains blocked until those bounded deltas are committed, exact-head Quality Gates and Mobile Reference Capture are GREEN, post-fix screenshot artifacts are re-compared to all six references, progress/matrix are updated from that evidence, and ZERO remaining redesign items is verified.
