@@ -1,0 +1,62 @@
+name: Fix Collections Exhaustive Reconciliation
+
+on:
+  push:
+    branches:
+      - feat/alkenzy-mobile-reference-redesign
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-mobile-reference-redesign
+          fetch-depth: 0
+      - name: Remove obsolete collections placeholder branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('mobile/lib/features/navigation/app_shell.dart')
+          text = path.read_text()
+
+          obsolete_refresh = '''        case MobileDestination.export:\n          await widget.dashboardController.refreshSilently();\n          shellSnapshotChanged = true;\n          break;\n        case MobileDestination.collections:\n          break;'''
+          fixed_refresh = '''        case MobileDestination.export:\n          await widget.dashboardController.refreshSilently();\n          shellSnapshotChanged = true;\n          break;'''
+          if obsolete_refresh in text:
+              text = text.replace(obsolete_refresh, fixed_refresh, 1)
+          if '        case MobileDestination.collections:\n          break;' in text:
+              raise SystemExit('obsolete collections refresh case remains')
+
+          text = text.replace(
+              '      _ => _PlannedDestination(destination: _selected),\n',
+              '',
+              1,
+          )
+
+          planned = '''final class _PlannedDestination extends StatelessWidget {\n  const _PlannedDestination({required this.destination});\n\n  final MobileDestination destination;\n\n  @override\n  Widget build(BuildContext context) {\n    final l10n = context.scL10n;\n    return Center(\n      child: Padding(\n        padding: const EdgeInsets.all(24),\n        child: Text(\n          l10n.isArabic\n              ? 'تم السماح بالتنقل إلى ${_label(l10n, destination)}. شاشة الموبايل المخصصة لها تُنفذ ضمن مهمة خارطة الطريق المقابلة.'\n              : '${_label(l10n, destination)} navigation is authorized. Its dedicated mobile screen is implemented in the corresponding roadmap task.',\n          textAlign: TextAlign.center,\n        ),\n      ),\n    );\n  }\n}\n\n'''
+          if planned in text:
+              text = text.replace(planned, '', 1)
+          if '_PlannedDestination' in text:
+              raise SystemExit('planned destination placeholder remains')
+
+          path.write_text(text)
+          PY
+      - name: Commit reconciliation cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/lib/features/navigation/app_shell.dart
+          if git diff --cached --quiet; then
+            echo 'No reconciliation cleanup remains.'
+            exit 0
+          fi
+          git commit -m 'fix(mobile): finish collections flow reconciliation'
+          git push origin HEAD:feat/alkenzy-mobile-reference-redesign
