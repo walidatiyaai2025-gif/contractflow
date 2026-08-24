@@ -136,15 +136,20 @@ final class _CompactEntityContext extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                Text(
-                  entityName,
-                  maxLines: 2,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: SafeContractsVisual.navy,
-                        fontSize: 11,
-                        height: 1.15,
-                        fontWeight: FontWeight.w900,
-                      ),
+                Semantics(
+                  label: isArabic
+                      ? 'كل الأرقام والمؤشرات أدناه مفلترة لهذه الجهة.'
+                      : 'All figures and indicators below are filtered for this entity.',
+                  child: Text(
+                    entityName,
+                    maxLines: 2,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: SafeContractsVisual.navy,
+                          fontSize: 11,
+                          height: 1.15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                  ),
                 ),
                 if (contractNumber != null)
                   Text(
