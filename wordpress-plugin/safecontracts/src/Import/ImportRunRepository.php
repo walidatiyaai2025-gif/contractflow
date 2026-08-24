@@ -162,7 +162,7 @@ final class ImportRunRepository
 
         if ($fieldName === null) {
             $sql = $wpdb->prepare(
-                "INSERT INTO {$table} (import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, NULL, %s, %s, UTC_TIMESTAMP())",
+                "INSERT INTO {$table} (import_run_id, `row_number`, field_name, error_code, message, created_at) VALUES (%d, %d, NULL, %s, %s, UTC_TIMESTAMP())",
                 $runId,
                 max(0, $rowNumber),
                 $code,
@@ -170,7 +170,7 @@ final class ImportRunRepository
             );
         } else {
             $sql = $wpdb->prepare(
-                "INSERT INTO {$table} (import_run_id, row_number, field_name, error_code, message, created_at) VALUES (%d, %d, %s, %s, %s, UTC_TIMESTAMP())",
+                "INSERT INTO {$table} (import_run_id, `row_number`, field_name, error_code, message, created_at) VALUES (%d, %d, %s, %s, %s, UTC_TIMESTAMP())",
                 $runId,
                 max(0, $rowNumber),
                 $fieldName,
@@ -204,7 +204,7 @@ final class ImportRunRepository
         $limit = max(1, min(1000, $limit));
         $table = $wpdb->prefix . 'safecontracts_import_errors';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, import_run_id, row_number, field_name, error_code, message, created_at FROM {$table} WHERE import_run_id = %d ORDER BY row_number ASC, id ASC LIMIT {$limit}",
+            "SELECT id, import_run_id, `row_number`, field_name, error_code, message, created_at FROM {$table} WHERE import_run_id = %d ORDER BY `row_number` ASC, id ASC LIMIT {$limit}",
             $runId
         ), ARRAY_A);
         return is_array($rows) ? array_values($rows) : [];
