@@ -209,7 +209,7 @@ final class CustomersPage
                                                             <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
                                                             <input type="hidden" name="customer_id" value="<?php echo esc_attr((string) $customerId); ?>">
                                                             <?php wp_nonce_field(self::DELETE_ACTION . '_' . $customerId); ?>
-                                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Archive', 'safecontracts'); ?></button>
+                                                            <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
                                                         </form>
                                                     </div>
                                                 <?php endif; ?>
