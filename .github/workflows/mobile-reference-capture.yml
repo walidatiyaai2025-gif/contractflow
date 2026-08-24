@@ -6,7 +6,7 @@ on:
       - feat/alkenzy-0.3.2-premium-final
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   capture:
@@ -16,12 +16,119 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-mobile-reference-redesign
+          fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
       - name: Resolve dependencies
         run: flutter pub get
+      - name: Apply bounded screenshot-confirmed closure deltas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          shell = Path('lib/features/navigation/app_shell.dart')
+          text = shell.read_text()
+          text = text.replace(
+              'backgroundColor: SafeContractsVisual.surface,\n        selectedIndex:',
+              'backgroundColor: SafeContractsVisual.navyDeep,\n        selectedIndex:',
+              1,
+          )
+          text = text.replace(
+              'floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,',
+              'floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,',
+              1,
+          )
+          text = text.replace(
+              '        case MobileDestination.payments:\n        case MobileDestination.followUps:',
+              '        case MobileDestination.payments:\n        case MobileDestination.collections:\n        case MobileDestination.followUps:',
+              1,
+          )
+          text = text.replace(
+              '        case MobileDestination.collections:\n          break;\n',
+              '',
+              1,
+          )
+          text = text.replace(
+              '      MobileDestination.payments => PaymentsScreen(',
+              '      MobileDestination.payments || MobileDestination.collections =>\n          PaymentsScreen(',
+              1,
+          )
+          text = text.replace(
+              '      _ => _PlannedDestination(destination: _selected),\n',
+              '',
+              1,
+          )
+          text = re.sub(
+              r'\nfinal class _PlannedDestination extends StatelessWidget \{.*?\n\}\n\nString _label',
+              '\nString _label',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          shell.write_text(text)
+
+          l10n = Path('lib/core/localization/safecontracts_localizations.dart')
+          text = l10n.read_text()
+          old = "return '$sign$whole.${cents.toString().padLeft(2, '0')}';"
+          new = """if (cents == 0) return '$sign$whole';
+  return '$sign$whole.${cents.toString().padLeft(2, '0')}';"""
+          if old in text:
+              text = text.replace(old, new, 1)
+          additions = ''.join(
+              line for line in (
+                  "  'Suppliers': 'الموردون',\n",
+                  "  'Finance': 'المالية',\n",
+                  "  'Dashboard Two': 'لوحة تحكم اتنين',\n",
+              )
+              if line not in text
+          )
+          anchor = "  'Customers': 'العملاء',\n"
+          if additions:
+              if anchor not in text:
+                  raise SystemExit('translation anchor missing')
+              text = text.replace(anchor, anchor + additions, 1)
+          l10n.write_text(text)
+
+          capture = Path('test/reference_visual_capture_extended_test.dart')
+          text = capture.read_text()
+          old_supplier = """        'id': 8,
+        'name': 'شركة الخليج للتوريدات',
+        'internal_code': 'S-008',
+        'contact_name': 'سالم حسن',
+        'email': 'supplier@example.com',
+        'phone': '+96550000008',
+        'is_active': true,
+"""
+          new_supplier = """        'id': 8,
+        'internal_code': 'S-008',
+        'legal_name': 'شركة الخليج للتوريدات',
+        'trading_name': 'الخليج للتوريدات',
+        'contact_name': 'سالم حسن',
+        'email': 'supplier@example.com',
+        'phone': '+96550000008',
+        'default_currency': 'KWD',
+        'status': 'active',
+        'is_archived': false,
+"""
+          if old_supplier in text:
+              text = text.replace(old_supplier, new_supplier, 1)
+          capture.write_text(text)
+          PY
+          dart format lib test
+      - name: Analyze patched capture source
+        run: flutter analyze
+      - name: Test patched source
+        shell: bash
+        run: |
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
       - name: Capture locked-reference implementation surfaces
         run: |
           flutter test test/reference_visual_capture_test.dart
@@ -33,3 +140,14 @@ jobs:
           path: mobile/build/reference-captures/*.png
           if-no-files-found: error
           retention-days: 7
+      - name: Commit validated bounded closure deltas
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/features/navigation/app_shell.dart lib/core/localization/safecontracts_localizations.dart test/reference_visual_capture_extended_test.dart
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix(mobile): align final locked-reference visual deltas'
+            git push origin HEAD:feat/alkenzy-mobile-reference-redesign
+          fi
