@@ -130,9 +130,10 @@ for (const [screenId, owner, route, reference] of selected) {
       };
       const scrollableAncestor = el => {
         let current = el.parentElement;
-        for (let depth = 0; current && depth < 5; depth += 1, current = current.parentElement) {
+        while (current && current !== document.documentElement) {
           const style = getComputedStyle(current);
           if (['auto', 'scroll'].includes(style.overflowX) && current.scrollWidth > current.clientWidth + 4) return true;
+          current = current.parentElement;
         }
         return false;
       };
