@@ -1,16 +1,42 @@
 /* ALKENZY ADV plugin redesign — LEAD-owned screen refinements. */
-.safecontracts-dashboard-reference-heading__icon {
-  display: grid;
-  place-items: center;
+.safecontracts-dashboard-reference-heading__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.safecontracts-dashboard-reference-heading__brand {
   flex: 0 0 auto;
   width: 46px;
   height: 46px;
+  object-fit: cover;
   border: 1px solid #e8ccb1;
   border-radius: 14px;
   background: #fff8f0;
-  color: var(--sc-ui-copper-600);
-  font-size: 23px;
   box-shadow: var(--sc-ui-shadow-xs);
+}
+
+.safecontracts-dashboard-reference-heading__assurance {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1px solid var(--sc-ui-line);
+  border-radius: 999px;
+  background: #fffaf5;
+  color: var(--sc-ui-navy-800);
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: var(--sc-ui-shadow-xs);
+}
+
+.safecontracts-dashboard-reference-heading__assurance .dashicons {
+  width: 16px;
+  height: 16px;
+  color: var(--sc-ui-copper-600);
+  font-size: 16px;
 }
 
 /* AdminShell owns the reference-aligned dashboard heading. Avoid rendering
@@ -105,9 +131,11 @@
 }
 
 @media (max-width: 782px) {
-  .safecontracts-dashboard-reference-heading__icon { width: 40px; height: 40px; border-radius: 12px; font-size: 20px; }
+  .safecontracts-dashboard-reference-heading__brand { width: 40px; height: 40px; border-radius: 12px; }
+  .safecontracts-dashboard-reference-heading__assurance { padding: 7px 9px; font-size: 11px; }
 }
 
 @media (max-width: 520px) {
   .safecontracts-settings .safecontracts-detail-list { grid-template-columns: 1fr; }
+  .safecontracts-dashboard-reference-heading__assurance { width: 100%; justify-content: center; }
 }
