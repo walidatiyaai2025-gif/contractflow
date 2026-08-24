@@ -43,7 +43,7 @@ async function formForAction(action) {
 
 async function submitAndWait(form) {
   await Promise.all([
-    page.waitForNavigation({waitUntil: 'networkidle'}),
+    page.waitForNavigation({waitUntil: 'domcontentloaded'}),
     form.evaluate((node) => node.requestSubmit()),
   ]);
 }
