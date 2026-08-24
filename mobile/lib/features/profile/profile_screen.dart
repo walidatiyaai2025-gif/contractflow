@@ -109,7 +109,10 @@ final class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
                                     color: SafeContractsVisual.muted,
                                   ),
                             ),
