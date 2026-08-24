@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
-import 'package:cross_file/cross_file.dart';
 import 'package:excel/excel.dart' as xl;
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
@@ -46,7 +45,7 @@ Future<void> showReportOutputDialog(
             ? 'اختر الصيغة. سيتم إخراج السجلات المعروضة في الجدول الحالي فقط.'
             : 'Choose a format. Only the records currently shown in this grid will be output.',
       ),
-      actionsAlignment: MainAxisAlignment.stretch,
+      actionsAlignment: MainAxisAlignment.start,
       actions: [
         _FormatButton(
           icon: Icons.picture_as_pdf_outlined,
@@ -172,7 +171,11 @@ Uint8List _buildExcel(ReportGrid report) {
   final workbook = xl.Excel.createExcel();
   final defaultSheet = workbook.getDefaultSheet();
   final safeName = _safeSheetName(report.title);
-  final sheet = workbook.rename(defaultSheet ?? 'Sheet1', safeName);
+  final originalSheet = defaultSheet ?? 'Sheet1';
+  if (originalSheet != safeName) {
+    workbook.rename(originalSheet, safeName);
+  }
+  final sheet = workbook[safeName];
   sheet.appendRow(
     report.columns.map((value) => xl.TextCellValue(value)).toList(),
   );

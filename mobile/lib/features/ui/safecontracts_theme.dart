@@ -180,7 +180,7 @@ abstract final class SafeContractsTheme {
           borderSide: const BorderSide(color: Color(0xFFE7DED5)),
         ),
         focusedBorder: enabledBorder.copyWith(
-          borderSide: const BorderSide(color: palette.accent, width: 1.8),
+          borderSide: BorderSide(color: palette.accent, width: 1.8),
         ),
         errorBorder: enabledBorder.copyWith(
           borderSide: const BorderSide(color: SafeContractsVisual.red),
