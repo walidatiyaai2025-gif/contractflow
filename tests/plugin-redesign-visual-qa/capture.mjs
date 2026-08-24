@@ -139,6 +139,10 @@ for (const [screenId, owner, route, reference] of selected) {
       const clientWidth = document.documentElement.clientWidth;
       const clippedControls = [...document.querySelectorAll('button, input:not([type="hidden"]), select, textarea, a.button')]
         .filter(visible)
+        // Controls inside a deliberately horizontally-scrollable table remain
+        // reachable by scrolling that table container. The document itself must
+        // still remain overflow-free, and non-table clipped controls still fail.
+        .filter(el => !(el.closest('table') && scrollableAncestor(el)))
         .map(el => ({ tag: el.tagName, text: (el.innerText || el.getAttribute('aria-label') || el.getAttribute('name') || '').trim(), rect: el.getBoundingClientRect() }))
         .filter(item => item.rect.left < -4 || item.rect.right > clientWidth + 4)
         .map(item => `${item.tag}:${item.text || 'unnamed'} [${Math.round(item.rect.left)},${Math.round(item.rect.right)}]`);
