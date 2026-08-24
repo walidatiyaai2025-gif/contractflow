@@ -68,7 +68,12 @@ jobs:
               "  Future<void> _offerBiometricEnrollment() async {\\n"'''
           if old not in text:
               raise SystemExit('Unable to normalize unique login state build marker.')
-          p.write_text(text.replace(old, new, 1))
+          text = text.replace(old, new, 1)
+          old_theme = 'replace_once(path, "        backgroundColor: SafeContractsVisual.navy,", "        backgroundColor: palette.primary,")'
+          new_theme = 'write(path, read(path).replace("        backgroundColor: SafeContractsVisual.navy,", "        backgroundColor: palette.primary,", 1))'
+          if old_theme not in text:
+              raise SystemExit('Unable to normalize app bar palette marker.')
+          p.write_text(text.replace(old_theme, new_theme, 1))
           PY
 
           stage=apply
