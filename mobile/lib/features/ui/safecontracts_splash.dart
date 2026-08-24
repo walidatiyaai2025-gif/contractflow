@@ -93,10 +93,11 @@ final class SafeContractsSplash extends StatelessWidget {
                         Text(
                           label,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.76),
-                                height: 1.5,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.76),
+                                    height: 1.5,
+                                  ),
                         ),
                         if (environmentLabel != null &&
                             environmentLabel!.trim().isNotEmpty) ...[
@@ -148,8 +149,7 @@ final class SafeContractsSplash extends StatelessWidget {
                                   SafeContractsButton(
                                     label: retryLabel ?? 'Retry',
                                     onPressed: onRetry,
-                                    variant:
-                                        SafeContractsButtonVariant.outline,
+                                    variant: SafeContractsButtonVariant.outline,
                                   ),
                                 ],
                               ],
