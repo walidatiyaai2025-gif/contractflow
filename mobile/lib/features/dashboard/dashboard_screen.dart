@@ -50,68 +50,59 @@ final class DashboardScreen extends StatelessWidget {
           );
         }
 
-        final lists = controller.lists;
+        final width = MediaQuery.sizeOf(context).width;
+        final horizontalPadding = width <= 360 ? 10.0 : 14.0;
         return SafeContractsBackdrop(
           child: RefreshIndicator(
             onRefresh: controller.refresh,
             color: SafeContractsVisual.navy,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                8,
+                horizontalPadding,
+                24,
+              ),
               children: [
                 if (controller.state == DashboardLoadState.loading)
                   const LinearProgressIndicator(
                     minHeight: 2,
                     color: SafeContractsVisual.navy,
                   ),
-                const SizedBox(height: 8),
-                SafeContractsSectionTitle(
-                  title: _copy(l10n, 'Quick Filters', 'فلاتر سريعة'),
-                ),
-                const SizedBox(height: 12),
-                _QuickFilters(controller: controller, overview: overview),
-                const SizedBox(height: 22),
-                SafeContractsSectionTitle(
-                  title: _copy(l10n, 'Filter Payments', 'تصفية الدفعات'),
-                ),
-                const SizedBox(height: 12),
-                _DetailedFilters(controller: controller, overview: overview),
-                const SizedBox(height: 22),
                 if (controller.state == DashboardLoadState.error) ...[
                   _InlineError(
                     message: l10n.rawMessage(
                       controller.errorMessage ?? 'Dashboard refresh failed.',
                     ),
+                    onRetry: () => unawaited(controller.refresh()),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                 ],
-                _PaymentLifecycleOverview(
+                _CompactSummary(
                   kpis: overview.kpis,
-                  payments: lists?.payments ?? const <DashboardRecord>[],
                   currency: currency,
                 ),
-                const SizedBox(height: 28),
-                if (lists != null && lists.payments.isNotEmpty) ...[
-                  SafeContractsSectionTitle(
-                    title: _copy(l10n, 'Your Payment Pipeline', 'مسار الدفعات'),
-                  ),
-                  const SizedBox(height: 14),
-                  _PaymentPipeline(
-                    payments: lists.payments,
+                const SizedBox(height: 8),
+                _CompactKpiRow(
+                  kpis: overview.kpis,
+                  currency: currency,
+                ),
+                const SizedBox(height: 8),
+                _GlobalPeriodFilter(controller: controller),
+                const SizedBox(height: 8),
+                _DashboardTabs(controller: controller),
+                const SizedBox(height: 8),
+                _TabSwipeRegion(
+                  controller: controller,
+                  child: _ActiveTab(
+                    controller: controller,
+                    overview: overview,
+                    lists: controller.lists,
                     currency: currency,
+                    onOpenPayments: onOpenPayments,
                   ),
-                  const SizedBox(height: 28),
-                ],
-                SafeContractsSectionTitle(
-                  title: _copy(l10n, 'Recent Activity', 'أحدث النشاطات'),
                 ),
-                const SizedBox(height: 12),
-                _RecentActivity(
-                  lists: lists,
-                  currency: currency,
-                  onOpenPayments: onOpenPayments,
-                ),
-                const SizedBox(height: 22),
-                _OperationalSections(lists: lists, currency: currency),
               ],
             ),
           ),
@@ -121,313 +112,10 @@ final class DashboardScreen extends StatelessWidget {
   }
 }
 
-final class _QuickFilters extends StatelessWidget {
-  const _QuickFilters({required this.controller, required this.overview});
-
-  final DashboardController controller;
-  final DashboardOverview overview;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final status = controller.filters.status;
-    final busy = controller.state == DashboardLoadState.loading;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _StatusFilterChip(
-            label: _copy(l10n, 'All', 'الكل'),
-            icon: Icons.qr_code_2_rounded,
-            selected: status == null || status.isEmpty,
-            color: SafeContractsVisual.navy,
-            onSelected:
-                busy ? null : () => unawaited(controller.selectStatus(null)),
-          ),
-          const SizedBox(width: 10),
-          _StatusFilterChip(
-            label: l10n.status('overdue'),
-            icon: Icons.circle,
-            selected: status == 'overdue',
-            color: SafeContractsVisual.red,
-            onSelected: busy
-                ? null
-                : () => unawaited(controller.selectStatus('overdue')),
-          ),
-          const SizedBox(width: 10),
-          _StatusFilterChip(
-            label: l10n.status('paid'),
-            icon: Icons.circle,
-            selected: status == 'paid',
-            color: SafeContractsVisual.green,
-            onSelected:
-                busy ? null : () => unawaited(controller.selectStatus('paid')),
-          ),
-          const SizedBox(width: 10),
-          ActionChip(
-            avatar: const Icon(Icons.people_outline, size: 20),
-            label: Text(
-              controller.filters.customerId == null
-                  ? _copy(l10n, 'Customers', 'العملاء')
-                  : overview.customers
-                          .where(
-                            (item) => item.id == controller.filters.customerId,
-                          )
-                          .map((item) => item.name)
-                          .firstOrNull ??
-                      _copy(l10n, 'Customers', 'العملاء'),
-            ),
-            backgroundColor: SafeContractsVisual.surface,
-            side: const BorderSide(color: SafeContractsVisual.outline),
-            shape: const StadiumBorder(),
-            onPressed: busy
-                ? null
-                : () => _showCustomerPicker(
-                      context,
-                      controller: controller,
-                      overview: overview,
-                    ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _StatusFilterChip extends StatelessWidget {
-  const _StatusFilterChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.color,
-    required this.onSelected,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final Color color;
-  final VoidCallback? onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilterChip(
-      selected: selected,
-      avatar: Icon(icon, size: 17, color: color),
-      label: Text(label),
-      selectedColor: color.withValues(alpha: 0.14),
-      backgroundColor: SafeContractsVisual.surface,
-      side: BorderSide(color: selected ? color : SafeContractsVisual.outline),
-      shape: const StadiumBorder(),
-      onSelected: onSelected == null ? null : (_) => onSelected!(),
-    );
-  }
-}
-
-Future<void> _showCustomerPicker(
-  BuildContext context, {
-  required DashboardController controller,
-  required DashboardOverview overview,
-}) async {
-  final l10n = context.scL10n;
-  await showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: SafeContractsVisual.surface,
-    showDragHandle: true,
-    builder: (sheetContext) => SafeArea(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 460),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-          children: [
-            ListTile(
-              leading: const Icon(Icons.people_alt_outlined),
-              title: Text(l10n.t('All customers')),
-              selected: controller.filters.customerId == null,
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                unawaited(controller.selectCustomer(null));
-              },
-            ),
-            ...overview.customers.map(
-              (customer) => ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: Text(customer.name),
-                selected: controller.filters.customerId == customer.id,
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  unawaited(controller.selectCustomer(customer.id));
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-final class _DetailedFilters extends StatelessWidget {
-  const _DetailedFilters({required this.controller, required this.overview});
-
-  final DashboardController controller;
-  final DashboardOverview overview;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final busy = controller.state == DashboardLoadState.loading;
-    return SafeContractsSurface(
-      padding: EdgeInsets.zero,
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-        leading: const Icon(
-          Icons.tune_rounded,
-          color: SafeContractsVisual.navy,
-        ),
-        title: Text(
-          _copy(l10n, 'Payment filters', 'فلاتر الدفعات'),
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        children: [
-          Wrap(
-            spacing: 16,
-            runSpacing: 12,
-            children: [
-              _FilterField(
-                label: l10n.t('Customer'),
-                child: DropdownButton<int>(
-                  value: controller.filters.customerId ?? 0,
-                  isExpanded: true,
-                  underline: const SizedBox.shrink(),
-                  onChanged: busy
-                      ? null
-                      : (value) => unawaited(
-                            controller
-                                .selectCustomer(value == 0 ? null : value),
-                          ),
-                  items: <DropdownMenuItem<int>>[
-                    DropdownMenuItem(
-                      value: 0,
-                      child: Text(l10n.t('All customers')),
-                    ),
-                    ...overview.customers.map(
-                      (option) => DropdownMenuItem(
-                        value: option.id,
-                        child: Text(option.name),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _FilterField(
-                label: l10n.t('Contract'),
-                child: DropdownButton<int>(
-                  value: controller.filters.contractId ?? 0,
-                  isExpanded: true,
-                  underline: const SizedBox.shrink(),
-                  onChanged: busy
-                      ? null
-                      : (value) => unawaited(
-                            controller
-                                .selectContract(value == 0 ? null : value),
-                          ),
-                  items: <DropdownMenuItem<int>>[
-                    DropdownMenuItem(
-                      value: 0,
-                      child: Text(l10n.t('All contracts')),
-                    ),
-                    ...controller.availableContracts.map(
-                      (option) => DropdownMenuItem(
-                        value: option.id,
-                        child: Text(option.contractNumber),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _FilterField(
-                label: l10n.t('Status'),
-                child: DropdownButton<String>(
-                  value: controller.filters.status ?? '',
-                  isExpanded: true,
-                  underline: const SizedBox.shrink(),
-                  onChanged: busy
-                      ? null
-                      : (value) => unawaited(
-                            controller.selectStatus(
-                              value == null || value.isEmpty ? null : value,
-                            ),
-                          ),
-                  items: <DropdownMenuItem<String>>[
-                    DropdownMenuItem(
-                      value: '',
-                      child: Text(l10n.t('All statuses')),
-                    ),
-                    for (final value in const <String>[
-                      'active',
-                      'due',
-                      'overdue',
-                      'partially_paid',
-                      'paid',
-                    ])
-                      DropdownMenuItem(
-                        value: value,
-                        child: Text(l10n.status(value)),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _FilterField extends StatelessWidget {
-  const _FilterField({required this.label, required this.child});
-
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 220,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 6),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: SafeContractsVisual.background.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: SafeContractsVisual.outline),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: child,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _PaymentLifecycleOverview extends StatelessWidget {
-  const _PaymentLifecycleOverview({
-    required this.kpis,
-    required this.payments,
-    required this.currency,
-  });
+final class _CompactSummary extends StatelessWidget {
+  const _CompactSummary({required this.kpis, required this.currency});
 
   final DashboardKpis kpis;
-  final List<DashboardRecord> payments;
   final MobileCurrencyConfig currency;
 
   @override
@@ -436,116 +124,71 @@ final class _PaymentLifecycleOverview extends StatelessWidget {
     final scheduled = _moneyDouble(kpis.scheduledTotal);
     final collected = _moneyDouble(kpis.collectedTotal);
     final overdue = _moneyDouble(kpis.overdueExposure);
-    final remaining = _moneyDouble(kpis.remainingTotal);
-    final pendingCount = payments.where((payment) {
-      final status = payment.status?.toLowerCase();
-      return status != 'paid' && status != 'overdue';
-    }).length;
-
     return SafeContractsSurface(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
         children: [
-          Text(
-            _copy(
-              l10n,
-              'Payment Lifecycle Overview',
-              'نظرة عامة على دورة الدفعات',
+          SizedBox.square(
+            dimension: 82,
+            child: CustomPaint(
+              painter: _CompactFinancialRingPainter(
+                scheduled: scheduled,
+                collected: collected,
+                overdue: overdue,
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 23,
+                  color: SafeContractsVisual.navy,
+                ),
+              ),
             ),
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 18),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final chart = SizedBox.square(
-                dimension: constraints.maxWidth < 430 ? 210 : 230,
-                child: CustomPaint(
-                  painter: _LifecycleRingPainter(
-                    scheduled: scheduled,
-                    collected: collected,
-                    overdue: overdue,
-                    remaining: remaining,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _copy(l10n, 'Financial performance', 'الأداء المالي'),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: SafeContractsVisual.navy,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                        height: 1.15,
+                      ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  _copy(
+                    l10n,
+                    'Total account balance',
+                    'إجمالي رصيد الحساب',
                   ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.payments_outlined,
-                          color: SafeContractsVisual.navy,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: SafeContractsVisual.muted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 1),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    l10n.money(kpis.remainingTotal, currency),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: SafeContractsVisual.ink,
+                          fontSize: 20,
+                          height: 1.05,
+                          fontWeight: FontWeight.w900,
                         ),
-                        const SizedBox(height: 5),
-                        Text(
-                          '${payments.length}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        Text(
-                          l10n.t('Payments'),
-                          style: Theme.of(context).textTheme.labelMedium,
-                        ),
-                      ],
-                    ),
                   ),
                 ),
-              );
-              final legend = _LifecycleLegend(
-                entries: [
-                  _LifecycleMetric(
-                    label: _copy(l10n, 'Total Scheduled', 'إجمالي المجدول'),
-                    value: l10n.money(kpis.scheduledTotal, currency),
-                    icon: Icons.calendar_month_outlined,
-                    color: SafeContractsVisual.navy,
-                  ),
-                  _LifecycleMetric(
-                    label: _copy(l10n, 'Total Overdue', 'إجمالي المتأخر'),
-                    value: l10n.money(kpis.overdueExposure, currency),
-                    icon: Icons.error_outline_rounded,
-                    color: SafeContractsVisual.red,
-                  ),
-                  _LifecycleMetric(
-                    label: _copy(l10n, 'Pending', 'قيد الانتظار'),
-                    value: _copy(
-                      l10n,
-                      '$pendingCount payments',
-                      '$pendingCount دفعات',
-                    ),
-                    icon: Icons.remove_circle_outline,
-                    color: SafeContractsVisual.amber,
-                  ),
-                  _LifecycleMetric(
-                    label: l10n.t('Collected'),
-                    value: l10n.money(kpis.collectedTotal, currency),
-                    icon: Icons.check_circle_outline,
-                    color: SafeContractsVisual.green,
-                  ),
-                  _LifecycleMetric(
-                    label: l10n.t('Remaining'),
-                    value: l10n.money(kpis.remainingTotal, currency),
-                    icon: Icons.schedule_outlined,
-                    color: SafeContractsVisual.navy,
-                  ),
-                ],
-              );
-              if (constraints.maxWidth >= 720) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    chart,
-                    const SizedBox(width: 26),
-                    Expanded(child: legend),
-                  ],
-                );
-              }
-              return Column(
-                children: [chart, const SizedBox(height: 20), legend],
-              );
-            },
+              ],
+            ),
           ),
         ],
       ),
@@ -553,8 +196,114 @@ final class _PaymentLifecycleOverview extends StatelessWidget {
   }
 }
 
-final class _LifecycleMetric {
-  const _LifecycleMetric({
+final class _CompactFinancialRingPainter extends CustomPainter {
+  const _CompactFinancialRingPainter({
+    required this.scheduled,
+    required this.collected,
+    required this.overdue,
+  });
+
+  final double scheduled;
+  final double collected;
+  final double overdue;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = math.min(size.width, size.height) / 2 - 8;
+    final track = Paint()
+      ..color = SafeContractsVisual.outline.withValues(alpha: 0.55)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 9
+      ..strokeCap = StrokeCap.round;
+    final collectedPaint = Paint()
+      ..color = SafeContractsVisual.green
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 9
+      ..strokeCap = StrokeCap.round;
+    final overduePaint = Paint()
+      ..color = SafeContractsVisual.red
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, track);
+    final base = math.max(1.0, scheduled);
+    final collectedRatio = (collected / base).clamp(0.0, 1.0);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      math.pi * 2 * collectedRatio,
+      false,
+      collectedPaint,
+    );
+    if (overdue > 0) {
+      final overdueRatio = (overdue / base).clamp(0.0, 1.0);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - 10),
+        -math.pi / 2,
+        math.pi * 2 * overdueRatio,
+        false,
+        overduePaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CompactFinancialRingPainter oldDelegate) =>
+      oldDelegate.scheduled != scheduled ||
+      oldDelegate.collected != collected ||
+      oldDelegate.overdue != overdue;
+}
+
+final class _CompactKpiRow extends StatelessWidget {
+  const _CompactKpiRow({required this.kpis, required this.currency});
+
+  final DashboardKpis kpis;
+  final MobileCurrencyConfig currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final items = <_CompactKpi>[
+      _CompactKpi(
+        label: _copy(l10n, 'Total', 'العقود'),
+        value: '${kpis.contractCount}',
+        icon: Icons.folder_copy_outlined,
+        color: SafeContractsVisual.champagne,
+      ),
+      _CompactKpi(
+        label: _copy(l10n, 'Scheduled', 'المجدول'),
+        value: l10n.money(kpis.scheduledTotal, currency),
+        icon: Icons.event_note_outlined,
+        color: SafeContractsVisual.navy,
+      ),
+      _CompactKpi(
+        label: _copy(l10n, 'Collected', 'المحصل'),
+        value: l10n.money(kpis.collectedTotal, currency),
+        icon: Icons.south_west_rounded,
+        color: SafeContractsVisual.green,
+      ),
+      _CompactKpi(
+        label: _copy(l10n, 'Remaining', 'المتبقي'),
+        value: l10n.money(kpis.remainingTotal, currency),
+        icon: Icons.schedule_rounded,
+        color: SafeContractsVisual.roseGold,
+      ),
+    ];
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var index = 0; index < items.length; index++) ...[
+          Expanded(child: _CompactKpiCard(item: items[index])),
+          if (index != items.length - 1) const SizedBox(width: 5),
+        ],
+      ],
+    );
+  }
+}
+
+final class _CompactKpi {
+  const _CompactKpi({
     required this.label,
     required this.value,
     required this.icon,
@@ -567,151 +316,145 @@ final class _LifecycleMetric {
   final Color color;
 }
 
-final class _LifecycleLegend extends StatelessWidget {
-  const _LifecycleLegend({required this.entries});
+final class _CompactKpiCard extends StatelessWidget {
+  const _CompactKpiCard({required this.item});
 
-  final List<_LifecycleMetric> entries;
+  final _CompactKpi item;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 14,
-      children: entries
-          .map(
-            (entry) => SizedBox(
-              width: 190,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: entry.color.withValues(alpha: 0.14),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(entry.icon, size: 20, color: entry.color),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          entry.label,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 2),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text(
-                            entry.value,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                      ],
+    return Container(
+      height: 70,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+      decoration: BoxDecoration(
+        color: SafeContractsVisual.surface,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: SafeContractsVisual.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Icon(item.icon, size: 15, color: item.color),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      item.value,
+                      style: const TextStyle(
+                        color: SafeContractsVisual.ink,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                        height: 1,
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          )
-          .toList(growable: false),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            item.label,
+            maxLines: 2,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: SafeContractsVisual.muted,
+                  fontSize: 8.5,
+                  height: 1.05,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-final class _LifecycleRingPainter extends CustomPainter {
-  const _LifecycleRingPainter({
-    required this.scheduled,
-    required this.collected,
-    required this.overdue,
-    required this.remaining,
-  });
+final class _GlobalPeriodFilter extends StatelessWidget {
+  const _GlobalPeriodFilter({required this.controller});
 
-  final double scheduled;
-  final double collected;
-  final double overdue;
-  final double remaining;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final base = math.max(1, scheduled);
-    final rings = <(double, Color)>[
-      ((remaining / base).clamp(0, 1), SafeContractsVisual.navy),
-      ((collected / base).clamp(0, 1), SafeContractsVisual.green),
-      ((overdue / base).clamp(0, 1), SafeContractsVisual.red),
-    ];
-    const strokeWidth = 22.0;
-    var radius = math.min(size.width, size.height) / 2 - strokeWidth;
-    for (final ring in rings) {
-      final track = Paint()
-        ..color = SafeContractsVisual.outline.withValues(alpha: 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round;
-      final active = Paint()
-        ..color = ring.$2
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round;
-      canvas.drawCircle(center, radius, track);
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        -math.pi / 2,
-        math.pi * 2 * ring.$1,
-        false,
-        active,
-      );
-      radius -= 30;
-    }
-  }
-
-  @override
-  bool shouldRepaint(_LifecycleRingPainter oldDelegate) =>
-      oldDelegate.scheduled != scheduled ||
-      oldDelegate.collected != collected ||
-      oldDelegate.overdue != overdue ||
-      oldDelegate.remaining != remaining;
-}
-
-final class _PaymentPipeline extends StatelessWidget {
-  const _PaymentPipeline({required this.payments, required this.currency});
-
-  final List<DashboardRecord> payments;
-  final MobileCurrencyConfig currency;
+  final DashboardController controller;
 
   @override
   Widget build(BuildContext context) {
-    final ordered = List<DashboardRecord>.of(payments)
-      ..sort(
-        (a, b) => (a.date ?? '9999-12-31').compareTo(b.date ?? '9999-12-31'),
-      );
-    final visible = ordered.take(5).toList(growable: false);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    final l10n = context.scL10n;
+    final busy = controller.state == DashboardLoadState.loading;
+    final currentYear = DateTime.now().year;
+    final years = <int>[
+      for (var year = currentYear + 1; year >= 2000; year--) year,
+    ];
+    return SafeContractsSurface(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (var index = 0; index < visible.length; index++) ...[
-            _PipelineNode(record: visible[index], currency: currency),
-            if (index != visible.length - 1)
-              Container(
-                width: 32,
-                height: 3,
-                margin: const EdgeInsets.only(top: 47),
-                decoration: BoxDecoration(
-                  color: SafeContractsVisual.outline,
-                  borderRadius: BorderRadius.circular(99),
+          Expanded(
+            child: _CompactDropdown<int>(
+              icon: Icons.calendar_today_outlined,
+              value: controller.selectedYear,
+              hint: _copy(l10n, 'Year', 'السنة'),
+              enabled: !busy,
+              items: [
+                _DropdownValue<int>(
+                  value: null,
+                  label: _copy(l10n, 'All years', 'كل السنوات'),
+                ),
+                ...years.map(
+                  (year) => _DropdownValue<int>(
+                    value: year,
+                    label: '$year',
+                  ),
+                ),
+              ],
+              onChanged: (value) => unawaited(
+                controller.selectPeriod(
+                  year: value,
+                  month: value == null ? null : controller.selectedMonth,
                 ),
               ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _CompactDropdown<int>(
+              icon: Icons.date_range_outlined,
+              value: controller.selectedMonth,
+              hint: _copy(l10n, 'Month', 'الشهر'),
+              enabled: !busy && controller.selectedYear != null,
+              items: [
+                _DropdownValue<int>(
+                  value: null,
+                  label: _copy(l10n, 'All months', 'كل الشهور'),
+                ),
+                for (var month = 1; month <= 12; month++)
+                  _DropdownValue<int>(
+                    value: month,
+                    label: _monthLabel(l10n, month),
+                  ),
+              ],
+              onChanged: (value) => unawaited(
+                controller.selectPeriod(
+                  year: controller.selectedYear,
+                  month: value,
+                ),
+              ),
+            ),
+          ),
+          if (controller.selectedYear != null) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: _copy(l10n, 'Clear period', 'مسح الفترة'),
+              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              onPressed: busy
+                  ? null
+                  : () => unawaited(controller.selectPeriod()),
+              icon: const Icon(Icons.close_rounded, size: 18),
+            ),
           ],
         ],
       ),
@@ -719,105 +462,66 @@ final class _PaymentPipeline extends StatelessWidget {
   }
 }
 
-final class _PipelineNode extends StatelessWidget {
-  const _PipelineNode({required this.record, required this.currency});
+final class _DropdownValue<T> {
+  const _DropdownValue({required this.value, required this.label});
 
-  final DashboardRecord record;
-  final MobileCurrencyConfig currency;
+  final T? value;
+  final String label;
+}
+
+final class _CompactDropdown<T> extends StatelessWidget {
+  const _CompactDropdown({
+    required this.icon,
+    required this.value,
+    required this.hint,
+    required this.enabled,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final T? value;
+  final String hint;
+  final bool enabled;
+  final List<_DropdownValue<T>> items;
+  final ValueChanged<T?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final color = safeContractsStatusColor(record.status);
-    return SizedBox(
-      width: 154,
-      child: Column(
+    return Container(
+      height: 38,
+      padding: const EdgeInsetsDirectional.only(start: 8, end: 5),
+      decoration: BoxDecoration(
+        color: SafeContractsVisual.background.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: SafeContractsVisual.outline),
+      ),
+      child: Row(
         children: [
-          Container(
-            width: 74,
-            height: 74,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: safeContractsStatusSoftColor(record.status),
-              border: Border.all(color: color, width: 3),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.18),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Text(
-              _compactDate(record.date),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: color, fontWeight: FontWeight.w800),
-            ),
-          ),
-          Container(width: 2, height: 18, color: color.withValues(alpha: 0.65)),
-          Container(
-            width: 150,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: SafeContractsVisual.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withValues(alpha: 0.7)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x165E5142),
-                  blurRadius: 12,
-                  offset: Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                if (record.customerName != null)
-                  Text(
-                    record.customerName!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                const SizedBox(height: 4),
-                Text(
-                  record.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.circle, size: 9, color: color),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        l10n.status(record.status ?? 'upcoming'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+          Icon(icon, size: 15, color: SafeContractsVisual.navy),
+          const SizedBox(width: 5),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<T>(
+                value: value,
+                isExpanded: true,
+                isDense: true,
+                hint: Text(hint),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: SafeContractsVisual.ink,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
                     ),
-                  ],
-                ),
-                if ((record.remainingAmount ?? record.amount) != null) ...[
-                  const SizedBox(height: 5),
-                  FittedBox(
-                    child: Text(
-                      l10n.money(
-                        record.remainingAmount ?? record.amount ?? '',
-                        currency,
+                onChanged: enabled ? onChanged : null,
+                items: items
+                    .map(
+                      (item) => DropdownMenuItem<T>(
+                        value: item.value,
+                        child: Text(item.label),
                       ),
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
-                  ),
-                ],
-              ],
+                    )
+                    .toList(growable: false),
+              ),
             ),
           ),
         ],
@@ -826,111 +530,555 @@ final class _PipelineNode extends StatelessWidget {
   }
 }
 
-final class _RecentActivity extends StatelessWidget {
-  const _RecentActivity({
+final class _DashboardTabs extends StatelessWidget {
+  const _DashboardTabs({required this.controller});
+
+  final DashboardController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final compact = MediaQuery.sizeOf(context).width <= 360;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: SafeContractsVisual.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SafeContractsVisual.outline),
+      ),
+      child: Row(
+        children: [
+          for (var index = 0; index < DashboardTab.values.length; index++) ...[
+            Expanded(
+              child: _DashboardTabButton(
+                label: _tabLabel(l10n, DashboardTab.values[index]),
+                selected: controller.selectedTab == DashboardTab.values[index],
+                compact: compact,
+                onTap: () => controller.selectTab(DashboardTab.values[index]),
+              ),
+            ),
+            if (index != DashboardTab.values.length - 1)
+              const SizedBox(width: 3),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+final class _DashboardTabButton extends StatelessWidget {
+  const _DashboardTabButton({
+    required this.label,
+    required this.selected,
+    required this.compact,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final bool compact;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          height: 35,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          decoration: BoxDecoration(
+            color: selected ? SafeContractsVisual.navy : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                color: selected ? Colors.white : SafeContractsVisual.muted,
+                fontSize: compact ? 9.2 : 10.5,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final class _TabSwipeRegion extends StatelessWidget {
+  const _TabSwipeRegion({required this.controller, required this.child});
+
+  final DashboardController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity.abs() < 220) return;
+        final rtl = Directionality.of(context) == TextDirection.rtl;
+        final goNext = rtl ? velocity > 0 : velocity < 0;
+        final current = controller.selectedTab.index;
+        final next = goNext ? current + 1 : current - 1;
+        if (next < 0 || next >= DashboardTab.values.length) return;
+        controller.selectTab(DashboardTab.values[next]);
+      },
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 180),
+        child: KeyedSubtree(
+          key: ValueKey<DashboardTab>(controller.selectedTab),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+final class _ActiveTab extends StatelessWidget {
+  const _ActiveTab({
+    required this.controller,
+    required this.overview,
     required this.lists,
     required this.currency,
     required this.onOpenPayments,
   });
 
+  final DashboardController controller;
+  final DashboardOverview overview;
   final DashboardLists? lists;
   final MobileCurrencyConfig currency;
   final VoidCallback? onOpenPayments;
 
   @override
   Widget build(BuildContext context) {
+    return switch (controller.selectedTab) {
+      DashboardTab.overview => _OverviewTab(
+          lists: lists,
+          currency: currency,
+        ),
+      DashboardTab.payments => _PaymentsTab(
+          controller: controller,
+          overview: overview,
+          records: lists?.payments ?? const <DashboardRecord>[],
+          currency: currency,
+          onOpenPayments: onOpenPayments,
+        ),
+      DashboardTab.contracts => _RecordsTab(
+          title: _copy(context.scL10n, 'Contracts', 'العقود'),
+          icon: Icons.folder_copy_outlined,
+          records: lists?.contracts ?? const <DashboardRecord>[],
+          currency: currency,
+        ),
+      DashboardTab.collections => _RecordsTab(
+          title: _copy(context.scL10n, 'Collections', 'التحصيلات'),
+          icon: Icons.task_alt_rounded,
+          records: lists?.collections ?? const <DashboardRecord>[],
+          currency: currency,
+        ),
+    };
+  }
+}
+
+final class _OverviewTab extends StatelessWidget {
+  const _OverviewTab({required this.lists, required this.currency});
+
+  final DashboardLists? lists;
+  final MobileCurrencyConfig currency;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.scL10n;
-    final value = lists;
     final records = <DashboardRecord>[
-      ...?value?.payments,
-      ...?value?.collections,
-      ...?value?.followUps,
+      ...?lists?.payments,
+      ...?lists?.collections,
+      ...?lists?.followUps,
     ]..sort((a, b) => (b.date ?? '').compareTo(a.date ?? ''));
-    final visible = records.take(5).toList(growable: false);
-    return SafeContractsSurface(
-      child: Column(
-        children: [
-          if (visible.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(l10n.t('No records match the current filters.')),
-            )
-          else
-            for (var index = 0; index < visible.length; index++) ...[
-              _ActivityTile(record: visible[index], currency: currency),
-              if (index != visible.length - 1)
-                const Divider(height: 22, color: SafeContractsVisual.outline),
-            ],
-          if (onOpenPayments != null) ...[
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF9FD3F3),
-                  foregroundColor: SafeContractsVisual.ink,
-                  minimumSize: const Size.fromHeight(52),
-                  shape: const StadiumBorder(),
-                ),
-                onPressed: onOpenPayments,
-                child: Text(
-                  _copy(l10n, 'View All Payments', 'عرض كل الدفعات'),
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+    return _RecordsCard(
+      title: _copy(l10n, 'Recent activity', 'أحدث النشاطات'),
+      icon: Icons.history_rounded,
+      records: records.take(6).toList(growable: false),
+      currency: currency,
+    );
+  }
+}
+
+final class _PaymentsTab extends StatelessWidget {
+  const _PaymentsTab({
+    required this.controller,
+    required this.overview,
+    required this.records,
+    required this.currency,
+    required this.onOpenPayments,
+  });
+
+  final DashboardController controller;
+  final DashboardOverview overview;
+  final List<DashboardRecord> records;
+  final MobileCurrencyConfig currency;
+  final VoidCallback? onOpenPayments;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _PaymentFilterBar(controller: controller, overview: overview),
+        const SizedBox(height: 8),
+        _RecordsCard(
+          title: _copy(l10n, 'Payments', 'الدفعات'),
+          icon: Icons.payments_outlined,
+          records: records,
+          currency: currency,
+        ),
+        if (onOpenPayments != null) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 42,
+            child: FilledButton.icon(
+              onPressed: onOpenPayments,
+              style: FilledButton.styleFrom(
+                backgroundColor: SafeContractsVisual.navy,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
+              icon: const Icon(Icons.open_in_new_rounded, size: 17),
+              label: Text(
+                _copy(l10n, 'Open payments', 'فتح الدفعات'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
-          ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+final class _PaymentFilterBar extends StatelessWidget {
+  const _PaymentFilterBar({required this.controller, required this.overview});
+
+  final DashboardController controller;
+  final DashboardOverview overview;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final busy = controller.state == DashboardLoadState.loading;
+    final currentStatus = controller.filters.status;
+    const quickStatuses = <String>['', 'due', 'overdue', 'paid'];
+    final dropdownValue =
+        quickStatuses.contains(currentStatus ?? '') ? currentStatus ?? '' : '';
+    final advancedCount = (controller.filters.customerId == null ? 0 : 1) +
+        (controller.filters.contractId == null ? 0 : 1);
+    return SafeContractsSurface(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 38,
+              padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
+              decoration: BoxDecoration(
+                color: SafeContractsVisual.background.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: SafeContractsVisual.outline),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.bolt_rounded,
+                    size: 16,
+                    color: SafeContractsVisual.navy,
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: dropdownValue,
+                        isDense: true,
+                        isExpanded: true,
+                        onChanged: busy
+                            ? null
+                            : (value) => unawaited(
+                                  controller.selectStatus(
+                                    value == null || value.isEmpty ? null : value,
+                                  ),
+                                ),
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: SafeContractsVisual.ink,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                        items: [
+                          DropdownMenuItem(
+                            value: '',
+                            child: Text(
+                              _copy(l10n, 'Quick filter: All', 'فلتر سريع: الكل'),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'due',
+                            child: Text(l10n.status('due')),
+                          ),
+                          DropdownMenuItem(
+                            value: 'overdue',
+                            child: Text(l10n.status('overdue')),
+                          ),
+                          DropdownMenuItem(
+                            value: 'paid',
+                            child: Text(l10n.status('paid')),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          SizedBox(
+            height: 38,
+            child: OutlinedButton.icon(
+              onPressed: busy
+                  ? null
+                  : () => _showAdvancedPaymentFilters(
+                        context,
+                        controller: controller,
+                        overview: overview,
+                      ),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                foregroundColor: SafeContractsVisual.navy,
+                side: const BorderSide(color: SafeContractsVisual.outline),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(11),
+                ),
+              ),
+              icon: const Icon(Icons.tune_rounded, size: 16),
+              label: Text(
+                advancedCount == 0
+                    ? _copy(l10n, 'Filters', 'فلاتر')
+                    : _copy(
+                        l10n,
+                        'Filters ($advancedCount)',
+                        'فلاتر ($advancedCount)',
+                      ),
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-final class _ActivityTile extends StatelessWidget {
-  const _ActivityTile({required this.record, required this.currency});
+Future<void> _showAdvancedPaymentFilters(
+  BuildContext context, {
+  required DashboardController controller,
+  required DashboardOverview overview,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    showDragHandle: true,
+    isScrollControlled: true,
+    backgroundColor: SafeContractsVisual.surface,
+    builder: (sheetContext) => _AdvancedPaymentFiltersSheet(
+      controller: controller,
+      customers: overview.customers,
+    ),
+  );
+}
 
-  final DashboardRecord record;
-  final MobileCurrencyConfig currency;
+final class _AdvancedPaymentFiltersSheet extends StatelessWidget {
+  const _AdvancedPaymentFiltersSheet({
+    required this.controller,
+    required this.customers,
+  });
+
+  final DashboardController controller;
+  final List<CustomerOption> customers;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final color = safeContractsStatusColor(record.status);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: safeContractsStatusSoftColor(record.status),
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        final l10n = context.scL10n;
+        final busy = controller.state == DashboardLoadState.loading;
+        final customerValue = controller.filters.customerId ?? 0;
+        final contractValue = controller.filters.contractId ?? 0;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            0,
+            16,
+            MediaQuery.viewInsetsOf(context).bottom + 18,
           ),
-          child: Icon(_activityIcon(record), size: 20, color: color),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                record.title,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              if (record.customerName != null) Text(record.customerName!),
-              Text(
-                [
-                  if ((record.remainingAmount ?? record.amount) != null)
-                    l10n.money(
-                      record.remainingAmount ?? record.amount ?? '',
-                      currency,
+                _copy(l10n, 'Payment filters', 'فلاتر الدفعات'),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: SafeContractsVisual.navy,
+                      fontWeight: FontWeight.w900,
                     ),
-                  if (record.status != null) l10n.status(record.status!),
-                  if (record.date != null) record.date!,
-                ].join(' • '),
-                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              _SheetDropdown<int>(
+                label: l10n.t('Customer'),
+                value: customerValue,
+                enabled: !busy,
+                items: [
+                  _SheetOption<int>(
+                    value: 0,
+                    label: l10n.t('All customers'),
+                  ),
+                  ...customers.map(
+                    (customer) => _SheetOption<int>(
+                      value: customer.id,
+                      label: customer.name,
+                    ),
+                  ),
+                ],
+                onChanged: (value) => unawaited(
+                  controller.selectCustomer(value == 0 ? null : value),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _SheetDropdown<int>(
+                label: l10n.t('Contract'),
+                value: contractValue,
+                enabled: !busy,
+                items: [
+                  _SheetOption<int>(
+                    value: 0,
+                    label: l10n.t('All contracts'),
+                  ),
+                  ...controller.availableContracts.map(
+                    (contract) => _SheetOption<int>(
+                      value: contract.id,
+                      label: contract.contractNumber,
+                    ),
+                  ),
+                ],
+                onChanged: (value) => unawaited(
+                  controller.selectContract(value == 0 ? null : value),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: busy ||
+                              (controller.filters.customerId == null &&
+                                  controller.filters.contractId == null)
+                          ? null
+                          : () => unawaited(controller.selectCustomer(null)),
+                      child: Text(_copy(l10n, 'Clear', 'مسح')),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: busy ? null : () => Navigator.of(context).pop(),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: SafeContractsVisual.navy,
+                      ),
+                      child: Text(_copy(l10n, 'Done', 'تم')),
+                    ),
+                  ),
+                ],
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+final class _SheetOption<T> {
+  const _SheetOption({required this.value, required this.label});
+
+  final T value;
+  final String label;
+}
+
+final class _SheetDropdown<T> extends StatelessWidget {
+  const _SheetDropdown({
+    required this.label,
+    required this.value,
+    required this.enabled,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String label;
+  final T value;
+  final bool enabled;
+  final List<_SheetOption<T>> items;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final safeValue = items.any((item) => item.value == value)
+        ? value
+        : items.first.value;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        const SizedBox(height: 5),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          decoration: BoxDecoration(
+            color: SafeContractsVisual.background.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: SafeContractsVisual.outline),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<T>(
+              value: safeValue,
+              isExpanded: true,
+              onChanged: enabled
+                  ? (value) {
+                      if (value != null) onChanged(value);
+                    }
+                  : null,
+              items: items
+                  .map(
+                    (item) => DropdownMenuItem<T>(
+                      value: item.value,
+                      child: Text(item.label),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
           ),
         ),
       ],
@@ -938,86 +1086,191 @@ final class _ActivityTile extends StatelessWidget {
   }
 }
 
-final class _OperationalSections extends StatelessWidget {
-  const _OperationalSections({required this.lists, required this.currency});
+final class _RecordsTab extends StatelessWidget {
+  const _RecordsTab({
+    required this.title,
+    required this.icon,
+    required this.records,
+    required this.currency,
+  });
 
-  final DashboardLists? lists;
+  final String title;
+  final IconData icon;
+  final List<DashboardRecord> records;
+  final MobileCurrencyConfig currency;
+
+  @override
+  Widget build(BuildContext context) {
+    return _RecordsCard(
+      title: title,
+      icon: icon,
+      records: records,
+      currency: currency,
+    );
+  }
+}
+
+final class _RecordsCard extends StatelessWidget {
+  const _RecordsCard({
+    required this.title,
+    required this.icon,
+    required this.records,
+    required this.currency,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<DashboardRecord> records;
   final MobileCurrencyConfig currency;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
-    final value = lists;
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
     return SafeContractsSurface(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 8),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _RecordExpansion(
-            title: l10n.t('Contracts'),
-            records: value.contracts,
-            currency: currency,
+          Row(
+            children: [
+              Icon(icon, size: 18, color: SafeContractsVisual.navy),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: SafeContractsVisual.navy,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+              ),
+              Text(
+                '${records.length}',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: SafeContractsVisual.muted,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+            ],
           ),
-          _RecordExpansion(
-            title: l10n.t('Collections'),
-            records: value.collections,
-            currency: currency,
-          ),
-          _RecordExpansion(
-            title: l10n.t('Follow-up'),
-            records: value.followUps,
-            currency: currency,
-          ),
+          const SizedBox(height: 6),
+          if (records.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Center(
+                child: Text(
+                  l10n.t('No records match the current filters.'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SafeContractsVisual.muted,
+                      ),
+                ),
+              ),
+            )
+          else
+            for (var index = 0; index < records.length; index++) ...[
+              _DashboardRecordTile(
+                record: records[index],
+                currency: currency,
+              ),
+              if (index != records.length - 1)
+                const Divider(height: 10, color: SafeContractsVisual.outline),
+            ],
         ],
       ),
     );
   }
 }
 
-final class _RecordExpansion extends StatelessWidget {
-  const _RecordExpansion({
-    required this.title,
-    required this.records,
-    required this.currency,
-  });
+final class _DashboardRecordTile extends StatelessWidget {
+  const _DashboardRecordTile({required this.record, required this.currency});
 
-  final String title;
-  final List<DashboardRecord> records;
+  final DashboardRecord record;
   final MobileCurrencyConfig currency;
 
   @override
   Widget build(BuildContext context) {
-    if (records.isEmpty) return const SizedBox.shrink();
     final l10n = context.scL10n;
-    return ExpansionTile(
-      title: Text('$title (${records.length})'),
-      children: records
-          .take(8)
-          .map(
-            (record) => ListTile(
-              leading: Icon(
-                _activityIcon(record),
-                color: safeContractsStatusColor(record.status),
-              ),
-              title: Text(record.title),
-              subtitle: Text(
-                [
-                  if (record.customerName != null) record.customerName!,
-                  if (record.status != null) l10n.status(record.status!),
-                  if (record.date != null) record.date!,
-                ].join(' • '),
-              ),
-              trailing: (record.remainingAmount ?? record.amount) == null
-                  ? null
-                  : Text(
-                      l10n.money(
-                        record.remainingAmount ?? record.amount ?? '',
-                        currency,
-                      ),
-                    ),
+    final color = safeContractsStatusColor(record.status);
+    final amount = record.remainingAmount ?? record.amount;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 31,
+            height: 31,
+            decoration: BoxDecoration(
+              color: safeContractsStatusSoftColor(record.status),
+              borderRadius: BorderRadius.circular(10),
             ),
-          )
-          .toList(growable: false),
+            child: Icon(_activityIcon(record), size: 17, color: color),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  record.title,
+                  style: const TextStyle(
+                    color: SafeContractsVisual.ink,
+                    fontSize: 11.5,
+                    height: 1.2,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (record.customerName != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    record.customerName!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SafeContractsVisual.muted,
+                          fontSize: 9.5,
+                        ),
+                  ),
+                ],
+                const SizedBox(height: 2),
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (record.status != null)
+                      Text(
+                        l10n.status(record.status!),
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    if (record.date != null)
+                      Text(
+                        record.date!,
+                        style: const TextStyle(
+                          color: SafeContractsVisual.muted,
+                          fontSize: 9,
+                        ),
+                      ),
+                    if (amount != null)
+                      Text(
+                        l10n.money(amount, currency),
+                        style: const TextStyle(
+                          color: SafeContractsVisual.ink,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1032,19 +1285,19 @@ final class _DashboardError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: SafeContractsSurface(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
                 Icons.error_outline,
-                size: 48,
+                size: 42,
                 color: SafeContractsVisual.red,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 9),
               Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               FilledButton(
                 onPressed: onRetry,
                 child: Text(context.scL10n.t('Retry')),
@@ -1058,37 +1311,52 @@ final class _DashboardError extends StatelessWidget {
 }
 
 final class _InlineError extends StatelessWidget {
-  const _InlineError({required this.message});
+  const _InlineError({required this.message, required this.onRetry});
 
   final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: SafeContractsVisual.redSoft,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: SafeContractsVisual.red),
       ),
-      child: Text(
-        message,
-        style: const TextStyle(color: SafeContractsVisual.red),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: SafeContractsVisual.red,
+                fontSize: 10,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(context.scL10n.t('Retry')),
+          ),
+        ],
       ),
     );
   }
 }
 
-String _copy(SafeContractsLocalizations l10n, String english, String arabic) =>
-    l10n.isArabic ? arabic : english;
+String _tabLabel(SafeContractsLocalizations l10n, DashboardTab tab) {
+  return switch (tab) {
+    DashboardTab.overview => _copy(l10n, 'Overview', 'نظرة'),
+    DashboardTab.payments => _copy(l10n, 'Payments', 'دفعات'),
+    DashboardTab.contracts => _copy(l10n, 'Contracts', 'عقود'),
+    DashboardTab.collections => _copy(l10n, 'Collections', 'تحصيل'),
+  };
+}
 
-double _moneyDouble(String value) => double.tryParse(value.trim()) ?? 0;
-
-String _compactDate(String? value) {
-  if (value == null || value.isEmpty) return '—';
-  final parsed = DateTime.tryParse(value);
-  if (parsed == null) return value;
-  const months = <String>[
+String _monthLabel(SafeContractsLocalizations l10n, int month) {
+  const english = <String>[
     'Jan',
     'Feb',
     'Mar',
@@ -1102,8 +1370,27 @@ String _compactDate(String? value) {
     'Nov',
     'Dec',
   ];
-  return '${months[parsed.month - 1]}\n${parsed.day}';
+  const arabic = <String>[
+    'يناير',
+    'فبراير',
+    'مارس',
+    'أبريل',
+    'مايو',
+    'يونيو',
+    'يوليو',
+    'أغسطس',
+    'سبتمبر',
+    'أكتوبر',
+    'نوفمبر',
+    'ديسمبر',
+  ];
+  return l10n.isArabic ? arabic[month - 1] : english[month - 1];
 }
+
+String _copy(SafeContractsLocalizations l10n, String english, String arabic) =>
+    l10n.isArabic ? arabic : english;
+
+double _moneyDouble(String value) => double.tryParse(value.trim()) ?? 0;
 
 IconData _activityIcon(DashboardRecord record) {
   return switch (record.type) {
