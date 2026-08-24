@@ -62,11 +62,11 @@ NEVER USE [CLOSED] WITHOUT QA-PASS.
 
 No bug may have two production owners at the same time.
 
-### Worker #1 — Customers / Navigation / Landing
+### Worker #1 — Customers / Navigation / Landing / Shell chrome
 
 Owns exactly:
 
-`B002, B003, B005, B006, B007, B008, B009, B010, B013`
+`B002, B003, B005, B006, B007, B008, B009, B010, B013, B025, B026`
 
 Primary production areas:
 
@@ -74,14 +74,17 @@ Primary production areas:
 - capability-driven Drawer/Sidebar navigation
 - landing PageView/indicator
 - local RTL phone rendering/localization fixes within scope
+- Bottom Navigation labels/spacing and centered FAB shell chrome
 
-Must not take Dashboard, Profile/Auth, Payments, Contracts/Pagination ownership.
+Worker #1 exclusively owns `app_shell.dart` / Bottom Navigation / FAB / Drawer visual-navigation changes during this pass. Other Workers must not rewrite those shared shell files; they may request a small Lead-mediated adaptation if absolutely required.
 
-### Worker #2 — Dashboard
+Must not take Dashboard body, Profile/Auth, Payments, Contracts/Pagination ownership.
+
+### Worker #2 — Dashboard body / data tabs
 
 Owns exactly:
 
-`B012, B014-B030, B071-B080`
+`B012, B014-B024, B027-B030, B071-B080`
 
 Primary production areas:
 
@@ -90,7 +93,7 @@ Primary production areas:
 - Dashboard Tabs and state
 - dashboard-specific responsive behavior
 
-Must not take App Shell/Drawer, Profile, Payments business semantics, Contracts/Pagination ownership.
+Must not modify App Shell/Drawer/Bottom Navigation/FAB, Profile, Payments business semantics, Contracts/Pagination ownership.
 
 ### Worker #3 — Profile / Authentication presentation/runtime
 
