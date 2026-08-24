@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/features/payments/payments.dart';
 
+// Exact-head acceptance regression for B001 server-authoritative status.
 void main() {
   test('B001 Flutter consumes server-authoritative payment status unchanged',
       () {
