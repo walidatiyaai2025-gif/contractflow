@@ -8,7 +8,7 @@ import '../ui/safecontracts_design.dart';
 import 'deep_link.dart';
 import 'notifications.dart';
 
-enum _NotificationFilter { all, unread, read }
+enum _NotificationFilter { all, unread, read, paymentDue, overdue }
 
 final class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({
@@ -52,8 +52,10 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
         if (controller.state == NotificationsLoadState.error && page == null) {
           final message =
               controller.errorMessage ?? 'Notifications are unavailable.';
-          final offline = message.toLowerCase().contains('unreachable') ||
-              message.toLowerCase().contains('timed out');
+          final normalized = message.toLowerCase();
+          final offline = normalized.contains('unreachable') ||
+              normalized.contains('timed out') ||
+              normalized.contains('network');
           return SafeContractsStateView(
             kind: offline ? MobileStateKind.offline : MobileStateKind.error,
             message: l10n.rawMessage(message),
@@ -71,14 +73,16 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
         final unread =
             page.notifications.where((item) => !_isRead(item)).length;
         final read = page.notifications.length - unread;
-        final urgent = _firstUnread(page.notifications);
-        final visible = page.notifications.where((item) {
-          return switch (_filter) {
-            _NotificationFilter.all => true,
-            _NotificationFilter.unread => !_isRead(item),
-            _NotificationFilter.read => _isRead(item),
-          };
-        }).toList(growable: false);
+        final attention = _firstAttentionItem(page.notifications);
+        final hasDue = page.notifications.any(_isPaymentDue);
+        final hasOverdue = page.notifications.any(_isOverdue);
+        if ((!hasDue && _filter == _NotificationFilter.paymentDue) ||
+            (!hasOverdue && _filter == _NotificationFilter.overdue)) {
+          _filter = _NotificationFilter.all;
+        }
+        final visible = page.notifications.where(_matchesFilter).toList(
+              growable: false,
+            );
 
         return SafeContractsBackdrop(
           child: RefreshIndicator(
@@ -103,23 +107,23 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                     message: l10n.rawMessage(controller.errorMessage!),
                   ),
                 ],
-                if (urgent != null) ...[
+                if (attention != null) ...[
                   const SizedBox(height: 14),
-                  _UrgentCard(
-                    notification: urgent,
-                    paymentLabel: l10n.paymentNumber(urgent.paymentId),
+                  _AttentionCard(
+                    notification: attention,
+                    paymentLabel: l10n.paymentNumber(attention.paymentId),
                     isArabic: l10n.isArabic,
-                    onTap: () => unawaited(_openNotification(urgent)),
+                    onTap: () => unawaited(_openNotification(attention)),
                   ),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 _NotificationOverview(
                   total: page.notifications.length,
                   unread: unread,
                   read: read,
                   isArabic: l10n.isArabic,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -127,8 +131,8 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                       child: SafeContractsSectionTitle(
                         title: l10n.isArabic ? 'الإشعارات' : 'Notifications',
                         subtitle: l10n.isArabic
-                            ? 'رتّب ما يحتاج انتباهك أولاً'
-                            : 'Prioritize what needs your attention',
+                            ? 'الحالة والنوع واضحان بدون الاعتماد على اللون فقط'
+                            : 'Status and type remain explicit without relying on color alone',
                       ),
                     ),
                     IconButton.filledTonal(
@@ -141,11 +145,13 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _Filters(
                   selected: _filter,
                   unread: unread,
                   read: read,
+                  hasDue: hasDue,
+                  hasOverdue: hasOverdue,
                   isArabic: l10n.isArabic,
                   onChanged: (value) => setState(() => _filter = value),
                 ),
@@ -153,6 +159,7 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                 if (visible.isEmpty)
                   SafeContractsSurface(
                     elevated: false,
+                    padding: const EdgeInsets.all(18),
                     child: Column(
                       children: [
                         const Icon(
@@ -196,11 +203,21 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _isRead(SafeContractsNotification item) =>
       item.isRead || widget.controller.isRead(item.id);
 
-  SafeContractsNotification? _firstUnread(
+  bool _matchesFilter(SafeContractsNotification item) {
+    return switch (_filter) {
+      _NotificationFilter.all => true,
+      _NotificationFilter.unread => !_isRead(item),
+      _NotificationFilter.read => _isRead(item),
+      _NotificationFilter.paymentDue => _isPaymentDue(item),
+      _NotificationFilter.overdue => _isOverdue(item),
+    };
+  }
+
+  SafeContractsNotification? _firstAttentionItem(
     List<SafeContractsNotification> notifications,
   ) {
     for (final item in notifications) {
-      if (!_isRead(item)) return item;
+      if (!_isRead(item) && _isOverdue(item)) return item;
     }
     return null;
   }
@@ -223,100 +240,47 @@ final class _PremiumNotificationHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: SafeContractsVisual.premiumHeaderGradient,
-        borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x2B092944),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
+    return SafeContractsPremiumHeader(
+      title: isArabic ? 'مركز الإشعارات' : 'Notification Center',
+      subtitle: isArabic
+          ? 'تنبيهات الدفعات المصرح بها في مكان واحد'
+          : 'Authorized payment alerts in one focused inbox',
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Icon(
+          Icons.notifications_active_outlined,
+          color: Colors.white,
+        ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isArabic
-                      ? 'مركز الإشعارات العاجلة'
-                      : 'Urgent Notification Center',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isArabic
-                      ? 'تنبيهات العقود والمدفوعات في مكان واحد'
-                      : 'Contract and payment alerts in one place',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.72),
-                      ),
-                ),
-              ],
-            ),
+      trailing: Container(
+        constraints: const BoxConstraints(minWidth: 36),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: unread > 0
+              ? SafeContractsVisual.red.withValues(alpha: 0.92)
+              : Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Text(
+          '$unread',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
           ),
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: unread > 0
-                  ? SafeContractsVisual.red.withValues(alpha: 0.9)
-                  : Colors.white.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Center(
-                  child: Icon(
-                    Icons.notifications_active_outlined,
-                    color: Colors.white,
-                  ),
-                ),
-                if (unread > 0)
-                  PositionedDirectional(
-                    top: -4,
-                    end: -4,
-                    child: Container(
-                      constraints: const BoxConstraints(minWidth: 20),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: SafeContractsVisual.surface,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$unread',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: SafeContractsVisual.redDeep,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-final class _UrgentCard extends StatelessWidget {
-  const _UrgentCard({
+final class _AttentionCard extends StatelessWidget {
+  const _AttentionCard({
     required this.notification,
     required this.paymentLabel,
     required this.isArabic,
@@ -349,8 +313,8 @@ final class _UrgentCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 40,
+                height: 40,
                 decoration: const BoxDecoration(
                   color: SafeContractsVisual.redSoft,
                   shape: BoxShape.circle,
@@ -360,13 +324,15 @@ final class _UrgentCard extends StatelessWidget {
                   color: SafeContractsVisual.redDeep,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic ? 'يتطلب انتباهك' : 'Needs your attention',
+                      isArabic
+                          ? 'متأخر ويتطلب إجراء'
+                          : 'Overdue — action needed',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: SafeContractsVisual.redDeep,
                             fontWeight: FontWeight.w900,
@@ -374,7 +340,7 @@ final class _UrgentCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _template(notification.templateCode),
+                      _template(notification.templateCode, isArabic),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -383,7 +349,7 @@ final class _UrgentCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '$paymentLabel  •  ${notification.scheduledFor}',
+                      '$paymentLabel • ${notification.scheduledFor}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -393,10 +359,7 @@ final class _UrgentCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: SafeContractsVisual.muted,
-              ),
+              _DirectionalChevron(color: SafeContractsVisual.muted),
             ],
           ),
         ),
@@ -423,7 +386,7 @@ final class _NotificationOverview extends StatelessWidget {
     final unreadFactor = total == 0 ? 0.0 : unread / total;
     final readFactor = total == 0 ? 0.0 : read / total;
     return SafeContractsSurface(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -431,7 +394,7 @@ final class _NotificationOverview extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  isArabic ? 'بيان الإشعارات' : 'Notification Overview',
+                  isArabic ? 'نظرة سريعة' : 'Notification overview',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
@@ -445,7 +408,7 @@ final class _NotificationOverview extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -457,7 +420,7 @@ final class _NotificationOverview extends StatelessWidget {
                   color: SafeContractsVisual.roseGold,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: _OverviewBar(
                   value: read,
@@ -489,7 +452,7 @@ final class _OverviewBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = 38.0 + factor.clamp(0.0, 1.0).toDouble() * 42.0;
+    final height = 32.0 + factor.clamp(0.0, 1.0).toDouble() * 36.0;
     return Column(
       children: [
         Text(
@@ -508,10 +471,10 @@ final class _OverviewBar extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [color.withValues(alpha: 0.72), color],
+              colors: [color.withValues(alpha: 0.66), color],
             ),
             borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(12),
+              top: Radius.circular(11),
             ),
           ),
         ),
@@ -534,6 +497,8 @@ final class _Filters extends StatelessWidget {
     required this.selected,
     required this.unread,
     required this.read,
+    required this.hasDue,
+    required this.hasOverdue,
     required this.isArabic,
     required this.onChanged,
   });
@@ -541,6 +506,8 @@ final class _Filters extends StatelessWidget {
   final _NotificationFilter selected;
   final int unread;
   final int read;
+  final bool hasDue;
+  final bool hasOverdue;
   final bool isArabic;
   final ValueChanged<_NotificationFilter> onChanged;
 
@@ -556,20 +523,38 @@ final class _Filters extends StatelessWidget {
             Icons.filter_list_rounded,
             SafeContractsVisual.navy,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 7),
           _chip(
             _NotificationFilter.unread,
             isArabic ? 'جديد $unread' : 'New $unread',
             Icons.notifications_active_outlined,
-            SafeContractsVisual.red,
+            SafeContractsVisual.roseGoldDark,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 7),
           _chip(
             _NotificationFilter.read,
             isArabic ? 'مقروء $read' : 'Read $read',
             Icons.done_all_rounded,
-            SafeContractsVisual.green,
+            SafeContractsVisual.greenDeep,
           ),
+          if (hasDue) ...[
+            const SizedBox(width: 7),
+            _chip(
+              _NotificationFilter.paymentDue,
+              isArabic ? 'دفعات مستحقة' : 'Payment due',
+              Icons.event_note_outlined,
+              SafeContractsVisual.amber,
+            ),
+          ],
+          if (hasOverdue) ...[
+            const SizedBox(width: 7),
+            _chip(
+              _NotificationFilter.overdue,
+              isArabic ? 'متأخرة' : 'Overdue',
+              Icons.warning_amber_rounded,
+              SafeContractsVisual.redDeep,
+            ),
+          ],
         ],
       ),
     );
@@ -615,9 +600,17 @@ final class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = read ? SafeContractsVisual.green : SafeContractsVisual.red;
-    final soft =
-        read ? SafeContractsVisual.greenSoft : SafeContractsVisual.redSoft;
+    final overdue = _isOverdue(notification);
+    final accent = overdue
+        ? SafeContractsVisual.redDeep
+        : read
+            ? SafeContractsVisual.greenDeep
+            : SafeContractsVisual.roseGoldDark;
+    final soft = overdue
+        ? SafeContractsVisual.redSoft
+        : read
+            ? SafeContractsVisual.greenSoft
+            : SafeContractsVisual.roseGoldSoft;
     return Material(
       color: SafeContractsVisual.surface,
       borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
@@ -628,9 +621,9 @@ final class _NotificationCard extends StatelessWidget {
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
             border: Border.all(
-              color: read
+              color: read && !overdue
                   ? SafeContractsVisual.outline
-                  : accent.withValues(alpha: 0.26),
+                  : accent.withValues(alpha: 0.28),
             ),
             borderRadius:
                 BorderRadius.circular(SafeContractsVisual.compactRadius),
@@ -639,55 +632,62 @@ final class _NotificationCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: soft,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  read
-                      ? Icons.notifications_none_outlined
-                      : Icons.notifications_active_outlined,
+                  overdue
+                      ? Icons.warning_amber_rounded
+                      : read
+                          ? Icons.notifications_none_outlined
+                          : Icons.notifications_active_outlined,
                   color: accent,
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 11),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
-                            _template(notification.templateCode),
+                            _template(notification.templateCode, isArabic),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w800),
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 7),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
+                            horizontal: 7,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: soft,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(99),
                           ),
                           child: Text(
-                            read
-                                ? (isArabic ? 'مقروء' : 'Read')
-                                : (isArabic ? 'جديد' : 'New'),
+                            overdue
+                                ? (isArabic ? 'متأخر' : 'Overdue')
+                                : read
+                                    ? (isArabic ? 'مقروء' : 'Read')
+                                    : (isArabic ? 'جديد' : 'New'),
                             style: TextStyle(
                               color: accent,
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -712,13 +712,8 @@ final class _NotificationCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.only(top: 7),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  color: SafeContractsVisual.muted,
-                ),
-              ),
+              const SizedBox(width: 4),
+              _DirectionalChevron(color: SafeContractsVisual.muted),
             ],
           ),
         ),
@@ -740,15 +735,37 @@ final class _Meta extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: SafeContractsVisual.muted),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SafeContractsVisual.muted,
-              ),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: SafeContractsVisual.muted,
+                ),
+          ),
         ),
       ],
     );
   }
+}
+
+final class _DirectionalChevron extends StatelessWidget {
+  const _DirectionalChevron({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 7),
+        child: Icon(
+          Directionality.of(context) == TextDirection.rtl
+              ? Icons.chevron_left_rounded
+              : Icons.chevron_right_rounded,
+          color: color,
+        ),
+      );
 }
 
 final class _RefreshWarning extends StatelessWidget {
@@ -758,16 +775,12 @@ final class _RefreshWarning extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SafeContractsSurface(
+      elevated: false,
+      accent: SafeContractsVisual.amber,
       padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: SafeContractsVisual.amberSoft,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: SafeContractsVisual.amber.withValues(alpha: 0.35),
-        ),
-      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(
             Icons.info_outline_rounded,
@@ -794,6 +807,7 @@ final class _PagingControls extends StatelessWidget {
     final l10n = context.scL10n;
     final page = controller.currentPage;
     if (page == null) return const SizedBox.shrink();
+    final rtl = Directionality.of(context) == TextDirection.rtl;
     return SafeContractsSurface(
       elevated: false,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -807,7 +821,7 @@ final class _PagingControls extends StatelessWidget {
             onPressed: page.page > 1
                 ? () => unawaited(controller.previousPage())
                 : null,
-            icon: const Icon(Icons.chevron_left),
+            icon: Icon(rtl ? Icons.chevron_right : Icons.chevron_left),
             label: Text(l10n.t('Previous')),
           ),
           Container(
@@ -827,7 +841,7 @@ final class _PagingControls extends StatelessWidget {
           OutlinedButton.icon(
             onPressed:
                 page.hasMore ? () => unawaited(controller.nextPage()) : null,
-            icon: const Icon(Icons.chevron_right),
+            icon: Icon(rtl ? Icons.chevron_left : Icons.chevron_right),
             label: Text(l10n.t('Next')),
           ),
         ],
@@ -836,9 +850,37 @@ final class _PagingControls extends StatelessWidget {
   }
 }
 
-String _template(String code) {
+bool _isPaymentDue(SafeContractsNotification notification) {
+  final code = notification.templateCode.toLowerCase();
+  return code == 'payment_due' ||
+      (code.contains('payment') &&
+          code.contains('due') &&
+          !_isOverdue(notification));
+}
+
+bool _isOverdue(SafeContractsNotification notification) {
+  final code = notification.templateCode.toLowerCase();
+  return code.contains('overdue') || code.contains('late_payment');
+}
+
+String _template(String code, bool isArabic) {
+  final normalized = code.trim().toLowerCase();
+  if (isArabic) {
+    return switch (normalized) {
+      'payment_due' => 'دفعة مستحقة',
+      'payment_overdue' || 'overdue_payment' => 'دفعة متأخرة',
+      _ => _humanizeTemplate(normalized),
+    };
+  }
+  return switch (normalized) {
+    'payment_due' => 'Payment due',
+    'payment_overdue' || 'overdue_payment' => 'Payment overdue',
+    _ => _humanizeTemplate(normalized),
+  };
+}
+
+String _humanizeTemplate(String code) {
   final value = code
-      .trim()
       .replaceAll(RegExp(r'[_\-]+'), ' ')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();

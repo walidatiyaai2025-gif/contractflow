@@ -40,6 +40,8 @@ final class SafeContractsPayment {
   final bool contractIsArchived;
   final String financialDirection;
 
+  bool get isPayable => financialDirection == 'payable';
+
   String? get displayOwner =>
       counterpartyName ?? customerName ?? contractNumber;
 
@@ -75,8 +77,7 @@ final class SafeContractsPayment {
         data['contract_is_archived'],
         'payment.contract_is_archived',
       ),
-      financialDirection:
-          _optionalText(data['financial_direction']) ?? 'receivable',
+      financialDirection: _financialDirection(data['financial_direction']),
     );
   }
 }
@@ -348,6 +349,16 @@ String _moneyText(Object? value, String field) {
     );
   }
   return value;
+}
+
+String _financialDirection(Object? value) {
+  if (value == null || value == '') return 'receivable';
+  final direction =
+      _requiredText(value, 'payment.financial_direction').toLowerCase();
+  if (direction != 'receivable' && direction != 'payable') {
+    throw const FormatException('payment.financial_direction is invalid.');
+  }
+  return direction;
 }
 
 String? _optionalText(Object? value) {
