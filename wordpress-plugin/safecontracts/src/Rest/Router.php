@@ -76,18 +76,32 @@ final class Router
             $capabilities[$capability] = current_user_can($capability);
         }
 
-        $user = wp_get_current_user();
-        $displayName = trim((string) ($user->display_name ?? ''));
-        if ($displayName === '') {
-            $displayName = trim((string) ($user->user_login ?? ''));
+        $userId = get_current_user_id();
+        $displayName = '';
+        $avatarUrl = null;
+        if (function_exists('get_userdata')) {
+            $user = get_userdata($userId);
+            if (is_object($user)) {
+                $displayName = trim((string) ($user->display_name ?? ''));
+                if ($displayName === '') {
+                    $displayName = trim((string) ($user->user_login ?? ''));
+                }
+            }
         }
-        $avatarUrl = get_avatar_url((int) $user->ID, ['size' => 160]);
+        if (function_exists('get_avatar_url')) {
+            $resolvedAvatarUrl = get_avatar_url($userId, ['size' => 160]);
+            if (is_string($resolvedAvatarUrl) && $resolvedAvatarUrl !== '') {
+                $avatarUrl = function_exists('esc_url_raw')
+                    ? esc_url_raw($resolvedAvatarUrl)
+                    : $resolvedAvatarUrl;
+            }
+        }
 
         return ApiResponse::ok([
             'authenticated' => true,
-            'user_id' => get_current_user_id(),
-            'display_name' => $displayName,
-            'avatar_url' => is_string($avatarUrl) && $avatarUrl !== '' ? esc_url_raw($avatarUrl) : null,
+            'user_id' => $userId,
+            'display_name' => $displayName !== '' ? $displayName : null,
+            'avatar_url' => $avatarUrl,
             'scope' => AccessScope::current(),
             'capabilities' => $capabilities,
         ]);
