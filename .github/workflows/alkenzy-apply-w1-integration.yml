@@ -21,7 +21,7 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Apply validate and commit W1 closure
+      - name: Apply validate and commit W1 production closure
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -76,15 +76,6 @@ jobs:
           stage=tests
           mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
           flutter test "${tests[@]}"
-
-          stage=responsive-evidence
-          for language in ar en; do
-            for width in 320 360 375 390 412 430; do
-              flutter test test/worker1_visual_capture_test.dart \
-                --dart-define=W1_CAPTURE_WIDTH="$width" \
-                --dart-define=W1_CAPTURE_LANG="$language"
-            done
-          done
           cd ..
 
           stage=commit
@@ -98,3 +89,24 @@ jobs:
           git diff --cached --check
           git commit -m "fix(w1): close customer navigation bugs on integrated exact head"
           git push origin HEAD:feat/alkenzy-mobile-reference-redesign
+
+      - name: Capture W1 AR EN responsive evidence
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          for language in ar en; do
+            for width in 320 360 375 390 412 430; do
+              flutter test test/worker1_visual_capture_test.dart \
+                --dart-define=W1_CAPTURE_WIDTH="$width" \
+                --dart-define=W1_CAPTURE_LANG="$language"
+            done
+          done
+
+      - name: Upload W1 responsive evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-w1-integrated-responsive-evidence
+          path: mobile/build/w1-bug-closure/*.png
+          if-no-files-found: error
+          retention-days: 14
