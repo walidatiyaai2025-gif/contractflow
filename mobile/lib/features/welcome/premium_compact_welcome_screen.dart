@@ -123,7 +123,7 @@ final class _PremiumCompactWelcomeScreenState
                             ),
                             const SizedBox(height: 22),
                             AlkenzyReferenceFeatureTile(
-                              icon: Icons.contract_outlined,
+                              icon: Icons.description_outlined,
                               title: ar
                                   ? 'إدارة العقود بسهولة'
                                   : 'Contract control',
