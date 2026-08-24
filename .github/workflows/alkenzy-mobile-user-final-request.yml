@@ -21,39 +21,11 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Apply and validate complete mobile request
+      - name: Apply, materialize and validate final mobile request
         shell: bash
         run: |
           set -Eeuo pipefail
-          stage=bootstrap
-          fail() {
-            rc=$?
-            set +e
-            {
-              echo "stage=$stage"
-              echo "head=$(git rev-parse HEAD)"
-              echo "exit=$rc"
-              echo "--- apply ---"
-              tail -n 180 /tmp/alkenzy-apply.log 2>/dev/null || true
-              echo "--- pubget ---"
-              tail -n 180 /tmp/alkenzy-pubget.log 2>/dev/null || true
-              echo "--- analyze ---"
-              tail -n 240 /tmp/alkenzy-analyze.log 2>/dev/null || true
-              echo "--- tests ---"
-              tail -n 280 /tmp/alkenzy-tests.log 2>/dev/null || true
-              echo "--- android ---"
-              tail -n 240 /tmp/alkenzy-android.log 2>/dev/null || true
-            } > .github/ALKENZY_USER_FINAL_FAILURE.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add .github/ALKENZY_USER_FINAL_FAILURE.txt
-            git commit -m "ci(mobile): record final request failure at $stage" || true
-            git push origin HEAD:feat/alkenzy-mobile-user-final-request || true
-            exit "$rc"
-          }
-          trap fail ERR
 
-          stage=normalize-patch
           python3 - <<'PY'
           from pathlib import Path
           p = Path('scripts/alkenzy_mobile_user_final_patch.py')
@@ -69,7 +41,7 @@ jobs:
           if old not in text:
               raise SystemExit('Unable to normalize unique login state build marker.')
           text = text.replace(old, new, 1)
-          replacements = [
+          for old_marker, new_marker in [
               (
                   'replace_once(path, "        backgroundColor: SafeContractsVisual.navy,", "        backgroundColor: palette.primary,")',
                   'write(path, read(path).replace("        backgroundColor: SafeContractsVisual.navy,", "        backgroundColor: palette.primary,", 1))',
@@ -78,47 +50,83 @@ jobs:
                   'replace_once(path, "          foregroundColor: SafeContractsVisual.navy,", "          foregroundColor: palette.primary,")',
                   'write(path, read(path).replace("          foregroundColor: SafeContractsVisual.navy,", "          foregroundColor: palette.primary,", 1))',
               ),
-          ]
-          for old_marker, new_marker in replacements:
+          ]:
               if old_marker not in text:
                   raise SystemExit(f'Unable to normalize theme marker: {old_marker}')
               text = text.replace(old_marker, new_marker, 1)
           p.write_text(text)
           PY
 
-          stage=apply
-          python3 scripts/alkenzy_mobile_user_final_patch.py 2>&1 | tee /tmp/alkenzy-apply.log
+          python3 scripts/alkenzy_mobile_user_final_patch.py
 
-          stage=pubget
+          python3 - <<'PY'
+          from pathlib import Path
+
+          reports = Path('mobile/lib/features/reports/reports_screen.dart')
+          text = reports.read_text()
+          marker = ".map((row) => Map<String, Object?>.from(row))"
+          if text.count(marker) != 2:
+              raise SystemExit(f'Unexpected reports row mapping count: {text.count(marker)}')
+          text = text.replace(
+              marker,
+              ".map((row) => apiObjectMap(row, 'reports.${definition.id}.row'))",
+          )
+          reports.write_text(text)
+
+          guide = Path('mobile/lib/features/help/mobile_user_guide_screen.dart')
+          text = guide.read_text()
+          marker = "    MobileDestination.profile => const _GuideEntry("
+          addition = """    MobileDestination.reports => const _GuideEntry(
+        destination: MobileDestination.reports,
+        title: 'Reports',
+        icon: Icons.assessment_outlined,
+        purpose:
+            'Reports provides authorized printable views of customers, contracts, payments and operational data.',
+        steps: <String>[
+          'Choose the report that matches the business data you need.',
+          'Review the loaded rows, then export them as PDF, Word or Excel.',
+        ],
+      ),
+"""
+          if marker not in text or 'MobileDestination.reports => const _GuideEntry(' in text:
+              raise SystemExit('Unexpected reports guide state.')
+          guide.write_text(text.replace(marker, addition + marker, 1))
+          PY
+
           cd mobile
-          flutter pub get 2>&1 | tee /tmp/alkenzy-pubget.log
-
-          stage=format
+          flutter pub get
           dart format lib test
-
-          stage=analyze
-          flutter analyze 2>&1 | tee /tmp/alkenzy-analyze.log
-
-          stage=tests
-          flutter test 2>&1 | tee /tmp/alkenzy-tests.log
           cd ..
 
-          stage=android
-          bash scripts/bootstrap_android.sh 2>&1 | tee /tmp/alkenzy-android.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile scripts/bootstrap_android.sh .github/workflows/quality-gates.yml
+          git diff --cached --check
+          git commit -m "feat(mobile): materialize biometric reports printing themes and sidebar"
+          git push origin HEAD:feat/alkenzy-mobile-user-final-request
+
+          cd mobile
+          flutter analyze
+          flutter test
+          cd ..
+
+          bash scripts/bootstrap_android.sh
           cd mobile
           flutter build apk --debug \
             --dart-define=SC_ENV=production \
-            --dart-define=SC_API_BASE_URL=https://sys.alkenzy.com/wp-json/safecontracts/v1/ \
-            2>&1 | tee -a /tmp/alkenzy-android.log
+            --dart-define=SC_API_BASE_URL=https://sys.alkenzy.com/wp-json/safecontracts/v1/
           cd ..
 
-          stage=commit
-          rm -f .github/ALKENZY_USER_FINAL_FAILURE.txt
           rm -f .github/workflows/alkenzy-mobile-user-final-request.yml
           rm -f scripts/alkenzy_mobile_user_final_patch.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --check
-          git commit -m "feat(mobile): biometric login reports printing themes and sidebar"
+          git commit -m "chore(mobile): remove final request build helpers"
           git push origin HEAD:feat/alkenzy-mobile-user-final-request
+      - name: Upload final APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-adv-final-user-request-apk
+          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
