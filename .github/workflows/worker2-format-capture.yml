@@ -22,6 +22,35 @@ jobs:
           cache: true
       - name: Resolve dependencies
         run: flutter pub get
+      - name: Apply Worker 2 analyzer corrections
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path('lib/features/contracts/contracts_screen.dart'),
+              Path('lib/features/customers/customers_screen.dart'),
+              Path('lib/features/suppliers/suppliers_screen.dart'),
+          ]
+          for path in paths:
+              text = path.read_text()
+              text = text.replace(',\n                matchTextDirection: true', '')
+              text = text.replace(',\n                  matchTextDirection: true', '')
+              path.write_text(text)
+
+          customer = Path('lib/features/customers/customers_screen.dart')
+          text = customer.read_text()
+          text = text.replace(
+              'action: () => unawaited(controller.loadPage(1)),',
+              'action: () => controller.loadPage(1),',
+          )
+          text = text.replace(
+              'action: () => unawaited(controller.openCustomer(id)),',
+              'action: () => controller.openCustomer(id),',
+          )
+          customer.write_text(text)
+          PY
       - name: Format Worker 2 sources
         run: |
           dart format \
@@ -33,10 +62,10 @@ jobs:
             lib/features/customers/customers.dart \
             lib/features/customers/customers_screen.dart \
             lib/features/suppliers/suppliers_screen.dart
-      - name: Upload formatter output
+      - name: Upload corrected formatter output
         uses: actions/upload-artifact@v4
         with:
-          name: worker2-formatted-sources
+          name: worker2-corrected-sources
           path: |
             mobile/lib/features/contracts/contract_edit_screen.dart
             mobile/lib/features/contracts/contracts.dart
