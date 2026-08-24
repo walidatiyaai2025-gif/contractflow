@@ -62,6 +62,31 @@ body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontract
   color: var(--sc-ui-ink-500, #70808d) !important;
 }
 
+/* Grid children must be allowed to shrink; table overflow belongs to the card,
+ * never to the whole WordPress admin page. */
+body[class*="_page_safecontracts-payments"] .safecontracts-split-layout > *,
+body[class*="_page_safecontracts-collections"] .safecontracts-split-layout > *,
+body[class*="_page_safecontracts-followups"] .safecontracts-split-layout > *,
+body[class*="_page_safecontracts-finance"] .safecontracts-split-layout > *,
+body[class*="_page_safecontracts-reports"] .safecontracts-split-layout > *,
+body[class*="_page_safecontracts-imports"] .safecontracts-split-layout > *,
+body[class*="_page_safecontracts-payment-methods"] .safecontracts-split-layout > * {
+  min-width: 0;
+}
+
+body[class*="_page_safecontracts-payments"] .safecontracts-table-card,
+body[class*="_page_safecontracts-collections"] .safecontracts-table-card,
+body[class*="_page_safecontracts-followups"] .safecontracts-table-card,
+body[class*="_page_safecontracts-finance"] .safecontracts-table-card,
+body[class*="_page_safecontracts-reports"] .safecontracts-table-card,
+body[class*="_page_safecontracts-imports"] .safecontracts-table-card,
+body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
 .safecontracts-w2-pagination {
   display: flex;
   align-items: center;
@@ -86,6 +111,18 @@ body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontract
 }
 .safecontracts-w2-empty-row td { padding: 14px !important; }
 .safecontracts-w2-runtime-notice { border-inline-start-width: 4px !important; }
+
+@media (max-width: 782px) {
+  body[class*="_page_safecontracts-payments"] .safecontracts-table-card table.widefat,
+  body[class*="_page_safecontracts-collections"] .safecontracts-table-card table.widefat,
+  body[class*="_page_safecontracts-followups"] .safecontracts-table-card table.widefat,
+  body[class*="_page_safecontracts-finance"] .safecontracts-table-card table.widefat,
+  body[class*="_page_safecontracts-reports"] .safecontracts-table-card table.widefat,
+  body[class*="_page_safecontracts-imports"] .safecontracts-table-card table.widefat,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card table.widefat {
+    min-width: 680px;
+  }
+}
 
 @media (max-width: 600px) {
   .safecontracts-w2-pagination { justify-content: space-between; flex-wrap: wrap; }
