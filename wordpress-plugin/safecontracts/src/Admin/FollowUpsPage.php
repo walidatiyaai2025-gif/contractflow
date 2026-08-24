@@ -125,7 +125,7 @@ final class FollowUpsPage
                         $isPayable = $direction === FinancialDirection::PAYABLE;
                         $isReceivable = $direction === FinancialDirection::RECEIVABLE;
                         $amountClass = $isPayable ? 'payable' : ($isReceivable ? 'receivable' : 'neutral');
-                        $directionLabel = $isPayable ? __('Payable', 'safecontracts') : ($isReceivable ? __('Receivable', 'safecontracts') : '—');
+                        $directionLabel = $isPayable ? __('Money going out', 'safecontracts') : ($isReceivable ? __('Money coming in', 'safecontracts') : '—');
                         $currency = trim((string) ($context['currency_code'] ?? ''));
                         $remaining = number_format((float) ($row['remaining_amount'] ?? 0), 2);
                         $remaining = preg_replace('/\.00$/', '', $remaining) ?? $remaining;
