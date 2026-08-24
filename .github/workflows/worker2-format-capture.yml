@@ -1,0 +1,50 @@
+name: Worker2 Format Capture
+
+on:
+  push:
+    branches:
+      - mobile-redesign/customers-suppliers-contracts
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Format Worker 2 sources
+        run: |
+          dart format \
+            lib/features/contracts/contract_edit_screen.dart \
+            lib/features/contracts/contracts.dart \
+            lib/features/contracts/contracts_screen.dart \
+            lib/features/contracts/counterparty_business_snapshot.dart \
+            lib/features/contracts/premium_contract_details_screen.dart \
+            lib/features/customers/customers.dart \
+            lib/features/customers/customers_screen.dart \
+            lib/features/suppliers/suppliers_screen.dart
+      - name: Upload formatted Worker 2 sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker2-formatted-sources
+          path: |
+            mobile/lib/features/contracts/contract_edit_screen.dart
+            mobile/lib/features/contracts/contracts.dart
+            mobile/lib/features/contracts/contracts_screen.dart
+            mobile/lib/features/contracts/counterparty_business_snapshot.dart
+            mobile/lib/features/contracts/premium_contract_details_screen.dart
+            mobile/lib/features/customers/customers.dart
+            mobile/lib/features/customers/customers_screen.dart
+            mobile/lib/features/suppliers/suppliers_screen.dart
+          if-no-files-found: error
+          retention-days: 1
