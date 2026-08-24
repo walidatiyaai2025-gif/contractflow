@@ -1,0 +1,43 @@
+name: Worker 1 Mobile Autofmt
+
+on:
+  push:
+    branches:
+      - mobile-redesign/foundation-auth-navigation
+
+permissions:
+  contents: write
+
+jobs:
+  format-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile-redesign/foundation-auth-navigation
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Apply Dart formatter
+        working-directory: mobile
+        run: dart format lib test
+      - name: Commit formatter output and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "safecontracts-bot"
+          git config user.email "safecontracts-bot@users.noreply.github.com"
+          git add mobile/lib mobile/test
+          git rm .github/workflows/worker1-mobile-autofmt.yml
+          git commit -m "style(mobile): apply official Dart formatter"
+          git push origin HEAD:mobile-redesign/foundation-auth-navigation
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze
+      - name: Test
+        working-directory: mobile
+        run: flutter test
