@@ -146,9 +146,21 @@
     min-width: 0;
   }
 
-  /* Legacy WordPress form controls and CSS-grid min-content sizing can retain
-   * a desktop intrinsic width in RTL. Every General Settings container must be
-   * shrinkable so 390px remains a document-level no-overflow viewport. */
+  /* General Settings uses a two-column desktop grid and WordPress widefat form
+   * controls. Collapse the grid before constraining controls so no 680px
+   * intrinsic desktop track can survive into the 390px RTL viewport. */
+  .safecontracts-general-settings .safecontracts-settings-grid {
+    display: block !important;
+    inline-size: 100% !important;
+    width: 100% !important;
+  }
+  .safecontracts-general-settings .safecontracts-settings-grid > * + * {
+    margin-top: 14px;
+  }
+  .safecontracts-general-settings .safecontracts-field-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    inline-size: 100% !important;
+  }
   .safecontracts-general-settings,
   .safecontracts-general-settings .safecontracts-settings-grid,
   .safecontracts-general-settings .safecontracts-settings-grid > *,
@@ -158,7 +170,9 @@
   .safecontracts-general-settings .safecontracts-field {
     box-sizing: border-box;
     min-width: 0 !important;
+    min-inline-size: 0 !important;
     max-width: 100% !important;
+    max-inline-size: 100% !important;
   }
   .safecontracts-general-settings form,
   .safecontracts-general-settings .safecontracts-field-grid,
@@ -166,13 +180,20 @@
   .safecontracts-general-settings select,
   .safecontracts-general-settings textarea {
     width: 100% !important;
+    inline-size: 100% !important;
   }
+  .safecontracts-general-settings input.widefat,
+  .safecontracts-general-settings select.widefat,
+  .safecontracts-general-settings textarea.widefat,
   .safecontracts-general-settings input,
   .safecontracts-general-settings select,
   .safecontracts-general-settings textarea,
   .safecontracts-general-settings .button {
-    box-sizing: border-box;
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    min-inline-size: 0 !important;
     max-width: 100% !important;
+    max-inline-size: 100% !important;
   }
 
   .safecontracts-dashboard-reference-heading__brand { width: 40px; height: 40px; border-radius: 12px; }
