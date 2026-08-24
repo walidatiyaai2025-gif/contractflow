@@ -212,17 +212,20 @@ final class _SafeContractsLoginScreenState
                                                 : null,
                                       ),
                                       const SizedBox(height: 4),
-                                      CheckboxListTile(
-                                        value: widget.controller.rememberMe,
-                                        onChanged: submitting
-                                            ? null
-                                            : (value) => widget.controller
-                                                .setRememberMe(value ?? false),
-                                        contentPadding: EdgeInsets.zero,
-                                        dense: true,
-                                        controlAffinity:
-                                            ListTileControlAffinity.leading,
-                                        title: Text(l10n.t('Remember me')),
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: CheckboxListTile(
+                                          value: widget.controller.rememberMe,
+                                          onChanged: submitting
+                                              ? null
+                                              : (value) => widget.controller
+                                                  .setRememberMe(value ?? false),
+                                          contentPadding: EdgeInsets.zero,
+                                          dense: true,
+                                          controlAffinity:
+                                              ListTileControlAffinity.leading,
+                                          title: Text(l10n.t('Remember me')),
+                                        ),
                                       ),
                                       if (widget.controller.errorMessage !=
                                           null) ...[
