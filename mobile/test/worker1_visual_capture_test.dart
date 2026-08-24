@@ -199,8 +199,10 @@ Map<String, Object?> _landingPayload() => <String, Object?>{
         'ar': 'العقود والدفعات والتقارير في مكان واحد',
       },
       'summary': <String, Object?>{
-        'en': 'Manage contracts, payments and follow-ups from one secure workspace.',
-        'ar': 'منصة متكاملة لإدارة العقود والمدفوعات والمتابعات والتقارير في مكان واحد.',
+        'en':
+            'Manage contracts, payments and follow-ups from one secure workspace.',
+        'ar':
+            'منصة متكاملة لإدارة العقود والمدفوعات والمتابعات والتقارير في مكان واحد.',
       },
       'experience_years': 10,
       'services': <Object?>[],
