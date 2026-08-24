@@ -16,6 +16,7 @@ use SafeContracts\Admin\AdminShell;
 final class RedesignAssets
 {
     public const STYLE_HANDLE = 'safecontracts-plugin-redesign-worker-2';
+    public const STATE_STYLE_HANDLE = 'safecontracts-plugin-redesign-worker-2-states';
     public const SCRIPT_HANDLE = 'safecontracts-plugin-redesign-worker-2-ui';
 
     /** @var list<string> */
@@ -52,6 +53,12 @@ final class RedesignAssets
             self::STYLE_HANDLE,
             SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-2/finance-operations.css',
             [AdminShell::PREMIUM_STYLE_HANDLE],
+            SAFECONTRACTS_VERSION
+        );
+        wp_enqueue_style(
+            self::STATE_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-2/route-states.css',
+            [self::STYLE_HANDLE],
             SAFECONTRACTS_VERSION
         );
         wp_enqueue_script(
