@@ -8,6 +8,7 @@ use SafeContracts\Notifications\DeliveryLogRepository;
 use SafeContracts\Notifications\NotificationRuleService;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Translations\RuntimeLabels;
+use SafeContracts\Translations\TranslationCatalog;
 
 final class NotificationsPage
 {
@@ -50,30 +51,30 @@ final class NotificationsPage
             <div class="safecontracts-section-heading">
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Notification operations', 'safecontracts'); ?></p>
-                    <h1><?php echo esc_html__('Notification Delivery Activity', 'safecontracts'); ?></h1>
-                    <p><?php echo esc_html__('Inspect server-side delivery attempts without hiding failed, pending, suppressed or retry states.', 'safecontracts'); ?></p>
+                    <h1><?php echo esc_html(self::text('Notification Delivery Activity', 'نشاط تسليم الإشعارات')); ?></h1>
+                    <p><?php echo esc_html(self::text('Inspect server-side delivery attempts without hiding failed, pending, suppressed or retry states.', 'راجع محاولات التسليم من الخادم دون إخفاء حالات الفشل أو الانتظار أو المنع أو إعادة المحاولة.')); ?></p>
                 </div>
             </div>
             <?php AdminSummaryCards::render([
                 ['label' => __('Sent', 'safecontracts'), 'value' => $sent],
                 ['label' => __('Pending', 'safecontracts'), 'value' => $pending],
                 ['label' => __('Failed', 'safecontracts'), 'value' => $failed],
-                ['label' => __('Suppressed / retry', 'safecontracts'), 'value' => $suppressedOrRetry],
+                ['label' => self::text('Suppressed / retry', 'ممنوع / إعادة محاولة'), 'value' => $suppressedOrRetry],
             ]); ?>
 
             <form class="safecontracts-filter-bar" method="get">
                 <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
                 <?php AdminPeriodFilter::renderFields($filters); ?>
-                <label><?php echo esc_html__('Delivery state', 'safecontracts'); ?><select name="delivery_status"><option value=""><?php echo esc_html__('All states', 'safecontracts'); ?></option><?php foreach ($availableStatuses as $state) : ?><option value="<?php echo esc_attr($state); ?>" <?php selected($statusFilter, $state); ?>><?php echo esc_html(self::stateLabel($state)); ?></option><?php endforeach; ?></select></label>
+                <label><?php echo esc_html(self::text('Delivery state', 'حالة التسليم')); ?><select name="delivery_status"><option value=""><?php echo esc_html(self::text('All states', 'كل الحالات')); ?></option><?php foreach ($availableStatuses as $state) : ?><option value="<?php echo esc_attr($state); ?>" <?php selected($statusFilter, $state); ?>><?php echo esc_html(self::stateLabel($state)); ?></option><?php endforeach; ?></select></label>
                 <button class="button button-primary" type="submit"><?php echo esc_html__('Apply filters', 'safecontracts'); ?></button>
-                <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Clear', 'safecontracts'); ?></a>
+                <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html(self::text('Clear', 'مسح')); ?></a>
             </form>
             <p class="description"><?php echo esc_html__('The period filter applies to notification delivery-log creation time. Rule definitions remain configuration and are intentionally not date-filtered.', 'safecontracts'); ?></p>
 
             <section class="safecontracts-admin-card safecontracts-table-card">
-                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Rules in effect', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html__('These are the real configured rules currently available to the notification engine.', 'safecontracts'); ?></p></div></div>
+                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html(self::text('Rules in effect', 'القواعد السارية')); ?></h2><p class="description"><?php echo esc_html(self::text('These are the real configured rules currently available to the notification engine.', 'هذه هي القواعد الفعلية المهيأة والمتاحة حاليًا لمحرك الإشعارات.')); ?></p></div></div>
                 <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Rule', 'safecontracts'); ?></th><th><?php echo esc_html__('Trigger', 'safecontracts'); ?></th><th><?php echo esc_html__('Recipients', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th></tr></thead><tbody>
-                <?php if ($rules === []) : ?><tr><td colspan="5"><?php echo esc_html__('No notification rules are configured.', 'safecontracts'); ?></td></tr><?php endif; ?>
+                <?php if ($rules === []) : ?><tr><td colspan="5"><?php echo esc_html(self::text('No notification rules are configured.', 'لا توجد قواعد إشعارات مهيأة.')); ?></td></tr><?php endif; ?>
                 <?php foreach ($rules as $rule) : ?>
                     <?php $roles = is_array($rule['recipient_roles'] ?? null) ? $rule['recipient_roles'] : []; $active = ! empty($rule['is_active']); ?>
                     <tr><td><strong><?php echo esc_html((string) $rule['name']); ?></strong><br><code dir="ltr"><?php echo esc_html((string) $rule['code']); ?></code></td><td><?php echo esc_html(self::triggerLabel((string) $rule['trigger_type'])); ?></td><td><?php echo esc_html(implode(', ', array_map([self::class, 'roleLabel'], array_map('strval', $roles)))); ?><?php echo ! empty($rule['target_assigned_accountant']) ? ' + ' . esc_html(RuntimeLabels::text('Assigned Accountant')) : ''; ?></td><td><code dir="ltr"><?php echo esc_html((string) $rule['template_code']); ?></code></td><td><span class="safecontracts-state-chip <?php echo $active ? 'is-success' : 'is-warning'; ?>"><?php echo $active ? esc_html__('Active', 'safecontracts') : esc_html__('Disabled', 'safecontracts'); ?></span></td></tr>
@@ -82,14 +83,14 @@ final class NotificationsPage
             </section>
 
             <section class="safecontracts-admin-card safecontracts-table-card">
-                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Delivery attempts', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html__('Result values below come directly from the server-side delivery log. Errors stay errors.', 'safecontracts'); ?></p></div></div>
-                <table class="widefat striped"><thead><tr><th><?php echo esc_html__('When', 'safecontracts'); ?></th><th><?php echo esc_html__('Related payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Recipient', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('Attempt', 'safecontracts'); ?></th><th><?php echo esc_html__('Result', 'safecontracts'); ?></th></tr></thead><tbody>
-                <?php if ($deliveries === []) : ?><tr><td colspan="6"><?php echo esc_html__('No delivery attempts match the selected period and state.', 'safecontracts'); ?></td></tr><?php endif; ?>
+                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Delivery attempts', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html(self::text('Result values below come directly from the server-side delivery log. Errors stay errors.', 'تأتي قيم النتائج أدناه مباشرة من سجل التسليم على الخادم. تظل الأخطاء معروضة كأخطاء.')); ?></p></div></div>
+                <table class="widefat striped"><thead><tr><th><?php echo esc_html__('When', 'safecontracts'); ?></th><th><?php echo esc_html(self::text('Related payment', 'الدفعة المرتبطة')); ?></th><th><?php echo esc_html(self::text('Recipient', 'المستلم')); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('Attempt', 'safecontracts'); ?></th><th><?php echo esc_html__('Result', 'safecontracts'); ?></th></tr></thead><tbody>
+                <?php if ($deliveries === []) : ?><tr><td colspan="6"><?php echo esc_html(self::text('No delivery attempts match the selected period and state.', 'لا توجد محاولات تسليم تطابق الفترة والحالة المحددتين.')); ?></td></tr><?php endif; ?>
                 <?php foreach ($deliveries as $delivery) : $state = sanitize_key((string) ($delivery['status'] ?? '')); ?>
                     <tr><td><?php echo esc_html((string) ($delivery['created_at'] ?? '')); ?></td><td>#<?php echo esc_html((string) (int) ($delivery['payment_id'] ?? 0)); ?></td><td>#<?php echo esc_html((string) (int) ($delivery['user_id'] ?? 0)); ?></td><td><code dir="ltr"><?php echo esc_html((string) ($delivery['template_code'] ?? '')); ?></code></td><td><?php echo esc_html((string) ($delivery['attempt_no'] ?? '')); ?></td><td><span class="safecontracts-state-chip <?php echo esc_attr(self::stateClass($state)); ?>"><?php echo esc_html(self::stateLabel($state)); ?></span><?php if (! empty($delivery['error_code'])) : ?><br><code dir="ltr"><?php echo esc_html((string) $delivery['error_code']); ?></code><?php endif; ?></td></tr>
                 <?php endforeach; ?>
                 </tbody></table>
-                <p class="description"><?php echo esc_html__('Settled-payment suppression and retry rules remain enforced by the notification engine; this page does not rewrite delivery semantics.', 'safecontracts'); ?></p>
+                <p class="description"><?php echo esc_html(self::text('Settled-payment suppression and retry rules remain enforced by the notification engine; this page does not rewrite delivery semantics.', 'تظل قواعد منع إشعارات الدفعات المسددة وإعادة المحاولة مفروضة بواسطة محرك الإشعارات؛ ولا تعيد هذه الصفحة تعريف منطق التسليم.')); ?></p>
             </section>
         </div>
         <?php
@@ -131,5 +132,10 @@ final class NotificationsPage
             'suppressed', 'pending', 'processing', 'queued', 'retry', 'retrying', 'retry_pending' => 'is-warning',
             default => '',
         };
+    }
+
+    private static function text(string $english, string $arabic): string
+    {
+        return TranslationCatalog::currentLanguage() === 'ar' ? $arabic : __($english, 'safecontracts');
     }
 }
