@@ -60,9 +60,13 @@ final class ThemePaletteController extends ChangeNotifier {
 
   Future<void> load() async {
     final raw = await _storage.read(key: _key);
-    final parsed = AlkenzyThemePalette.values
-        .where((value) => value.storageValue == raw)
-        .firstOrNull;
+    AlkenzyThemePalette? parsed;
+    for (final value in AlkenzyThemePalette.values) {
+      if (value.storageValue == raw) {
+        parsed = value;
+        break;
+      }
+    }
     if (parsed == null || parsed == _palette) return;
     _palette = parsed;
     notifyListeners();
