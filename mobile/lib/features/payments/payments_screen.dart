@@ -281,7 +281,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
                 itemCount: page.payments.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final payment = page.payments[index];
                   final owner =
@@ -1227,7 +1227,7 @@ final class _PaymentsLoading extends StatelessWidget {
     child: ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       itemCount: detail ? 4 : 5,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) => Container(
         height: detail ? (index == 0 ? 112 : 92) : 128,
         decoration: BoxDecoration(

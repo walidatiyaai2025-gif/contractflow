@@ -148,7 +148,7 @@ final class ContractsFilters {
     validate();
     return <String, String>{
       if (customerId != null) 'customer_id': '$customerId',
-      if (counterpartyType != null) 'counterparty_type': counterpartyType!,
+      'counterparty_type': ?counterpartyType,
       if (counterpartyId != null) 'counterparty_id': '$counterpartyId',
       if (status != null && status!.isNotEmpty) 'status': status!,
     };

@@ -89,8 +89,9 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title:
-            Text(context.scL10n.isArabic ? 'أرشفة المورد' : 'Archive supplier'),
+        title: Text(
+          context.scL10n.isArabic ? 'أرشفة المورد' : 'Archive supplier',
+        ),
         content: Text(
           context.scL10n.isArabic
               ? 'سيتم منع استخدام المورد في العمليات الجديدة مع بقاء العقود والسجل المالي محفوظين.'
@@ -194,7 +195,8 @@ final class _SupplierHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ar = context.scL10n.isArabic;
-    final busy = controller.state == SuppliersLoadState.loading ||
+    final busy =
+        controller.state == SuppliersLoadState.loading ||
         controller.mutationInFlight;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
@@ -264,7 +266,7 @@ final class _SupplierHeader extends StatelessWidget {
                     for (final item in const [
                       'active',
                       'inactive',
-                      'suspended'
+                      'suspended',
                     ])
                       _FilterChip(
                         label: context.scL10n.status(item),
@@ -279,13 +281,14 @@ final class _SupplierHeader extends StatelessWidget {
                         onSelected: busy
                             ? null
                             : (value) => unawaited(
-                                  controller.setIncludeArchived(value),
-                                ),
+                                controller.setIncludeArchived(value),
+                              ),
                       ),
                     IconButton.filledTonal(
                       tooltip: context.scL10n.t('Refresh'),
-                      onPressed:
-                          busy ? null : () => unawaited(controller.refresh()),
+                      onPressed: busy
+                          ? null
+                          : () => unawaited(controller.refresh()),
                       icon: const Icon(Icons.refresh_rounded),
                     ),
                     if (onCreate != null)
@@ -390,7 +393,7 @@ final class _SupplierList extends StatelessWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.only(top: 2, bottom: 8),
               itemCount: suppliers.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final supplier = suppliers[index];
                 return _SupplierCard(
@@ -436,8 +439,9 @@ final class _SupplierCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(SafeContractsVisual.compactRadius),
+            borderRadius: BorderRadius.circular(
+              SafeContractsVisual.compactRadius,
+            ),
             border: Border.all(
               color: selected
                   ? SafeContractsVisual.roseGold
@@ -483,8 +487,8 @@ final class _SupplierCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SafeContractsVisual.muted,
-                            ),
+                          color: SafeContractsVisual.muted,
+                        ),
                       ),
                     ],
                   ],
@@ -573,9 +577,7 @@ final class _SupplierDetailState extends State<_SupplierDetail> {
             alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
               onPressed: controller.closeSupplier,
-              icon: const Icon(
-                Icons.arrow_back_rounded,
-              ),
+              icon: const Icon(Icons.arrow_back_rounded),
               label: Text(context.scL10n.isArabic ? 'الموردون' : 'Suppliers'),
             ),
           ),
@@ -675,9 +677,9 @@ final class _SupplierHero extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                     if (supplier.tradingName != null)
                       Text(
@@ -685,7 +687,8 @@ final class _SupplierHero extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.72)),
+                          color: Colors.white.withValues(alpha: 0.72),
+                        ),
                       ),
                   ],
                 ),
@@ -705,8 +708,9 @@ final class _SupplierHero extends StatelessWidget {
               ),
               if (supplier.defaultCurrency != null)
                 _DarkPill(
-                    label: supplier.defaultCurrency!,
-                    color: SafeContractsVisual.champagne),
+                  label: supplier.defaultCurrency!,
+                  color: SafeContractsVisual.champagne,
+                ),
               if (supplier.internalCode != null)
                 _DarkPill(label: supplier.internalCode!),
             ],
@@ -730,21 +734,25 @@ final class _SupplierContactPanel extends StatelessWidget {
       child: Column(
         children: [
           _ContactRow(
-              icon: Icons.person_outline,
-              label: ar ? 'جهة الاتصال' : 'Contact',
-              value: supplier.contactName),
+            icon: Icons.person_outline,
+            label: ar ? 'جهة الاتصال' : 'Contact',
+            value: supplier.contactName,
+          ),
           _ContactRow(
-              icon: Icons.phone_outlined,
-              label: ar ? 'الهاتف' : 'Phone',
-              value: supplier.phone),
+            icon: Icons.phone_outlined,
+            label: ar ? 'الهاتف' : 'Phone',
+            value: supplier.phone,
+          ),
           _ContactRow(
-              icon: Icons.email_outlined,
-              label: ar ? 'البريد' : 'Email',
-              value: supplier.email),
+            icon: Icons.email_outlined,
+            label: ar ? 'البريد' : 'Email',
+            value: supplier.email,
+          ),
           _ContactRow(
-              icon: Icons.location_on_outlined,
-              label: ar ? 'العنوان' : 'Address',
-              value: supplier.address),
+            icon: Icons.location_on_outlined,
+            label: ar ? 'العنوان' : 'Address',
+            value: supplier.address,
+          ),
         ],
       ),
     );
@@ -761,13 +769,13 @@ final class _SupplierBusinessIdentity extends StatelessWidget {
     final entries = <({String label, String? value})>[
       (
         label: ar ? 'رقم التسجيل' : 'Registration',
-        value: supplier.registrationNumber
+        value: supplier.registrationNumber,
       ),
       (label: ar ? 'الرقم الضريبي' : 'Tax / VAT', value: supplier.taxNumber),
       (label: ar ? 'الدولة' : 'Country', value: supplier.countryCode),
       (
         label: ar ? 'شروط السداد' : 'Payment terms',
-        value: supplier.paymentTerms
+        value: supplier.paymentTerms,
       ),
     ];
     return SafeContractsSurface(
@@ -792,8 +800,10 @@ final class _SupplierBusinessIdentity extends StatelessWidget {
           ),
           if (supplier.notes != null) ...[
             const SizedBox(height: 12),
-            Text(ar ? 'ملاحظات' : 'Notes',
-                style: const TextStyle(fontWeight: FontWeight.w800)),
+            Text(
+              ar ? 'ملاحظات' : 'Notes',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 4),
             Text(supplier.notes!),
           ],
@@ -826,14 +836,16 @@ final class _SupplierBusinessSnapshot extends StatelessWidget {
           )
         else if (value.finance.isEmpty)
           _InlineNotice(
-              text: ar ? 'لا توجد التزامات حالية.' : 'No current payables.')
+            text: ar ? 'لا توجد التزامات حالية.' : 'No current payables.',
+          )
         else
           ...value.finance.map((row) => _PayableCard(row: row)),
         const SizedBox(height: 14),
         _SectionLabel(
-            title: ar
-                ? 'عقود المورد (${value.contracts.length})'
-                : 'Supplier contracts (${value.contracts.length})'),
+          title: ar
+              ? 'عقود المورد (${value.contracts.length})'
+              : 'Supplier contracts (${value.contracts.length})',
+        ),
         if (value.contracts.isEmpty)
           _InlineNotice(text: ar ? 'لا توجد عقود.' : 'No contracts.')
         else
@@ -844,16 +856,18 @@ final class _SupplierBusinessSnapshot extends StatelessWidget {
         _SectionLabel(title: ar ? 'الدفعات القادمة' : 'Upcoming payments'),
         if (pending.isEmpty)
           _InlineNotice(
-              text: ar ? 'لا توجد دفعات معلقة.' : 'No pending payments.')
+            text: ar ? 'لا توجد دفعات معلقة.' : 'No pending payments.',
+          )
         else
           ...pending.map((payment) => _PaymentLine(payment: payment)),
         const SizedBox(height: 14),
         _SectionLabel(
-            title: ar ? 'آخر عمليات السداد' : 'Recent payment activity'),
+          title: ar ? 'آخر عمليات السداد' : 'Recent payment activity',
+        ),
         if (value.activity.isEmpty)
           _InlineNotice(
-              text:
-                  ar ? 'لا توجد عمليات سداد مسجلة.' : 'No settlement activity.')
+            text: ar ? 'لا توجد عمليات سداد مسجلة.' : 'No settlement activity.',
+          )
         else
           ...value.activity
               .take(5)
@@ -881,19 +895,27 @@ final class _PayableCard extends StatelessWidget {
           runSpacing: 8,
           children: [
             _Metric(
-                label: ar ? 'العملة' : 'Currency',
-                value: row.currencyCode as String),
+              label: ar ? 'العملة' : 'Currency',
+              value: row.currencyCode as String,
+            ),
             _Metric(
-                label: ar ? 'المطلوب دفعه' : 'Outstanding',
-                value: _money(row.outstandingTotal as String,
-                    row.currencyCode as String)),
+              label: ar ? 'المطلوب دفعه' : 'Outstanding',
+              value: _money(
+                row.outstandingTotal as String,
+                row.currencyCode as String,
+              ),
+            ),
             _Metric(
-                label: ar ? 'المتأخر' : 'Overdue',
-                value: _money(
-                    row.overdueTotal as String, row.currencyCode as String)),
+              label: ar ? 'المتأخر' : 'Overdue',
+              value: _money(
+                row.overdueTotal as String,
+                row.currencyCode as String,
+              ),
+            ),
             _Metric(
-                label: ar ? 'الدفعات' : 'Obligations',
-                value: '${row.obligationCount}'),
+              label: ar ? 'الدفعات' : 'Obligations',
+              value: '${row.obligationCount}',
+            ),
           ],
         ),
       ),
@@ -918,17 +940,21 @@ final class _MiniContract extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.description_outlined,
-                color: SafeContractsVisual.navy),
+            const Icon(
+              Icons.description_outlined,
+              color: SafeContractsVisual.navy,
+            ),
             const SizedBox(width: 9),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(contract.contractNumber,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w900)),
+                  Text(
+                    contract.contractNumber,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
                   Text(
                     <String>[
                       if (contract.endDate != null) contract.endDate!,
@@ -937,17 +963,17 @@ final class _MiniContract extends StatelessWidget {
                     ].join(' • '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: SafeContractsVisual.muted),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SafeContractsVisual.muted,
+                    ),
                   ),
                 ],
               ),
             ),
             _StatusBadge(
-                label: context.scL10n.status(contract.status),
-                color: safeContractsStatusColor(contract.status)),
+              label: context.scL10n.status(contract.status),
+              color: safeContractsStatusColor(contract.status),
+            ),
           ],
         ),
       ),
@@ -973,20 +999,29 @@ final class _PaymentLine extends StatelessWidget {
               color: safeContractsStatusSoftColor(payment.status as String),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Text('${payment.sequenceNo}',
-                style: const TextStyle(fontWeight: FontWeight.w900)),
+            child: Text(
+              '${payment.sequenceNo}',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
           ),
           const SizedBox(width: 9),
           Expanded(
-              child: Text(payment.dueDate as String,
-                  maxLines: 1, overflow: TextOverflow.ellipsis)),
+            child: Text(
+              payment.dueDate as String,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           const SizedBox(width: 8),
-          Text(_compactNumber(payment.remainingAmount as String),
-              style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(
+            _compactNumber(payment.remainingAmount as String),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
           const SizedBox(width: 8),
           _StatusBadge(
-              label: context.scL10n.status(payment.status as String),
-              color: safeContractsStatusColor(payment.status as String)),
+            label: context.scL10n.status(payment.status as String),
+            color: safeContractsStatusColor(payment.status as String),
+          ),
         ],
       ),
     );
@@ -1002,8 +1037,10 @@ final class _ActivityLine extends StatelessWidget {
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
-      leading:
-          const Icon(Icons.payments_outlined, color: SafeContractsVisual.amber),
+      leading: const Icon(
+        Icons.payments_outlined,
+        color: SafeContractsVisual.amber,
+      ),
       title: Text(_money(activity.amount, activity.currencyCode)),
       subtitle: Text(
         <String>[
@@ -1019,8 +1056,11 @@ final class _ActivityLine extends StatelessWidget {
 }
 
 final class _ContactRow extends StatelessWidget {
-  const _ContactRow(
-      {required this.icon, required this.label, required this.value});
+  const _ContactRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
   final IconData icon;
   final String label;
   final String? value;
@@ -1038,13 +1078,17 @@ final class _ContactRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
-                        ?.copyWith(color: SafeContractsVisual.muted)),
-                Text(actual == null || actual.isEmpty ? '—' : actual,
-                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: SafeContractsVisual.muted,
+                  ),
+                ),
+                Text(
+                  actual == null || actual.isEmpty ? '—' : actual,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -1056,8 +1100,10 @@ final class _ContactRow extends StatelessWidget {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                      content: Text(
-                          context.scL10n.isArabic ? 'تم النسخ.' : 'Copied.')),
+                    content: Text(
+                      context.scL10n.isArabic ? 'تم النسخ.' : 'Copied.',
+                    ),
+                  ),
                 );
               },
               icon: const Icon(Icons.copy_rounded, size: 18),
@@ -1094,11 +1140,13 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
       'email': TextEditingController(text: supplier?.email ?? ''),
       'address': TextEditingController(text: supplier?.address ?? ''),
       'countryCode': TextEditingController(text: supplier?.countryCode ?? ''),
-      'registrationNumber':
-          TextEditingController(text: supplier?.registrationNumber ?? ''),
+      'registrationNumber': TextEditingController(
+        text: supplier?.registrationNumber ?? '',
+      ),
       'taxNumber': TextEditingController(text: supplier?.taxNumber ?? ''),
-      'defaultCurrency':
-          TextEditingController(text: supplier?.defaultCurrency ?? ''),
+      'defaultCurrency': TextEditingController(
+        text: supplier?.defaultCurrency ?? '',
+      ),
       'paymentTerms': TextEditingController(text: supplier?.paymentTerms ?? ''),
       'notes': TextEditingController(text: supplier?.notes ?? ''),
     };
@@ -1113,8 +1161,12 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
     super.dispose();
   }
 
-  Widget _field(String key, String label,
-      {TextInputType? keyboardType, int maxLines = 1}) {
+  Widget _field(
+    String key,
+    String label, {
+    TextInputType? keyboardType,
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
@@ -1131,7 +1183,11 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
     final ar = context.scL10n.isArabic;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          16, 8, 16, MediaQuery.viewInsetsOf(context).bottom + 18),
+        16,
+        8,
+        16,
+        MediaQuery.viewInsetsOf(context).bottom + 18,
+      ),
       child: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -1151,7 +1207,8 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
               TextFormField(
                 controller: _fields['legalName'],
                 decoration: InputDecoration(
-                    labelText: ar ? 'الاسم القانوني *' : 'Legal name *'),
+                  labelText: ar ? 'الاسم القانوني *' : 'Legal name *',
+                ),
                 validator: (value) => value == null || value.trim().isEmpty
                     ? (ar ? 'الاسم القانوني مطلوب.' : 'Legal name is required.')
                     : null,
@@ -1160,28 +1217,44 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
               _field('tradingName', ar ? 'الاسم التجاري' : 'Trading name'),
               _field('internalCode', ar ? 'الكود الداخلي' : 'Internal code'),
               _field('contactName', ar ? 'جهة الاتصال' : 'Contact name'),
-              _field('phone', ar ? 'الهاتف' : 'Phone',
-                  keyboardType: TextInputType.phone),
-              _field('email', ar ? 'البريد الإلكتروني' : 'Email',
-                  keyboardType: TextInputType.emailAddress),
+              _field(
+                'phone',
+                ar ? 'الهاتف' : 'Phone',
+                keyboardType: TextInputType.phone,
+              ),
+              _field(
+                'email',
+                ar ? 'البريد الإلكتروني' : 'Email',
+                keyboardType: TextInputType.emailAddress,
+              ),
               _field('address', ar ? 'العنوان' : 'Address', maxLines: 2),
-              _field('countryCode',
-                  ar ? 'كود الدولة (حرفان)' : 'Country code (2 letters)'),
-              _field('registrationNumber',
-                  ar ? 'رقم التسجيل' : 'Registration number'),
+              _field(
+                'countryCode',
+                ar ? 'كود الدولة (حرفان)' : 'Country code (2 letters)',
+              ),
+              _field(
+                'registrationNumber',
+                ar ? 'رقم التسجيل' : 'Registration number',
+              ),
               _field('taxNumber', ar ? 'الرقم الضريبي' : 'Tax number'),
-              _field('defaultCurrency',
-                  ar ? 'العملة (3 أحرف)' : 'Currency (3 letters)'),
+              _field(
+                'defaultCurrency',
+                ar ? 'العملة (3 أحرف)' : 'Currency (3 letters)',
+              ),
               _field('paymentTerms', ar ? 'شروط السداد' : 'Payment terms'),
               _field('notes', ar ? 'ملاحظات' : 'Notes', maxLines: 3),
               DropdownButtonFormField<String>(
                 initialValue: _status,
-                decoration:
-                    InputDecoration(labelText: ar ? 'الحالة' : 'Status'),
+                decoration: InputDecoration(
+                  labelText: ar ? 'الحالة' : 'Status',
+                ),
                 items: const ['active', 'inactive', 'suspended']
-                    .map((value) => DropdownMenuItem(
+                    .map(
+                      (value) => DropdownMenuItem(
                         value: value,
-                        child: Text(context.scL10n.status(value))))
+                        child: Text(context.scL10n.status(value)),
+                      ),
+                    )
                     .toList(growable: false),
                 onChanged: (value) =>
                     setState(() => _status = value ?? 'active'),
@@ -1221,8 +1294,11 @@ final class _SupplierEditorState extends State<_SupplierEditor> {
 }
 
 final class _FilterChip extends StatelessWidget {
-  const _FilterChip(
-      {required this.label, required this.selected, required this.onTap});
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -1251,9 +1327,13 @@ final class _CountBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
-      child: Text(value,
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w900)),
+      child: Text(
+        value,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
@@ -1269,13 +1349,19 @@ final class _StatusBadge extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 92),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.11),
-          borderRadius: BorderRadius.circular(20)),
-      child: Text(label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+        color: color.withValues(alpha: 0.11),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
@@ -1295,11 +1381,16 @@ final class _DarkPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.30)),
       ),
-      child: Text(label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-              color: color, fontSize: 12, fontWeight: FontWeight.w800)),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
@@ -1329,16 +1420,19 @@ final class _Metric extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(color: SafeContractsVisual.muted)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: SafeContractsVisual.muted),
+          ),
           const SizedBox(height: 2),
-          Text(value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
         ],
       ),
     );
@@ -1387,10 +1481,13 @@ final class _InlineNotice extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-          color: SafeContractsVisual.navySoft,
-          borderRadius: BorderRadius.circular(12)),
-      child: Text(text,
-          style: const TextStyle(color: SafeContractsVisual.navyDeep)),
+        color: SafeContractsVisual.navySoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(color: SafeContractsVisual.navyDeep),
+      ),
     );
   }
 }

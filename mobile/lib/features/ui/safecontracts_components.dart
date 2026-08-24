@@ -226,31 +226,29 @@ final class SafeContractsButton extends StatelessWidget {
 
     final button = switch (variant) {
       SafeContractsButtonVariant.primary => FilledButton(
-          onPressed: callback,
-          child: child,
-        ),
+        onPressed: callback,
+        child: child,
+      ),
       SafeContractsButtonVariant.accent => FilledButton(
-          onPressed: callback,
-          style: FilledButton.styleFrom(
-            backgroundColor: SafeContractsVisual.roseGold,
-          ),
-          child: child,
+        onPressed: callback,
+        style: FilledButton.styleFrom(
+          backgroundColor: SafeContractsVisual.roseGold,
         ),
+        child: child,
+      ),
       SafeContractsButtonVariant.outline => OutlinedButton(
-          onPressed: callback,
-          child: child,
-        ),
+        onPressed: callback,
+        child: child,
+      ),
       SafeContractsButtonVariant.ghost => TextButton(
-          onPressed: callback,
-          child: child,
-        ),
+        onPressed: callback,
+        child: child,
+      ),
       SafeContractsButtonVariant.danger => FilledButton(
-          onPressed: callback,
-          style: FilledButton.styleFrom(
-            backgroundColor: SafeContractsVisual.red,
-          ),
-          child: child,
-        ),
+        onPressed: callback,
+        style: FilledButton.styleFrom(backgroundColor: SafeContractsVisual.red),
+        child: child,
+      ),
     };
 
     return expand ? SizedBox(width: double.infinity, child: button) : button;
@@ -285,8 +283,11 @@ final class SafeContractsStatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon,
-                size: SafeContractsIconSizes.xs, color: colors.foreground),
+            Icon(
+              icon,
+              size: SafeContractsIconSizes.xs,
+              color: colors.foreground,
+            ),
             const SizedBox(width: SafeContractsSpacing.xxs),
           ],
           Flexible(
@@ -295,9 +296,9 @@ final class SafeContractsStatusChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colors.foreground,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: colors.foreground,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -388,13 +389,14 @@ final class SafeContractsAmount extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = (compact
-            ? Theme.of(context).textTheme.titleMedium
-            : Theme.of(context).textTheme.titleLarge)
-        ?.copyWith(
-      color: SafeContractsVisual.navyDeep,
-      fontWeight: emphasis ? FontWeight.w900 : FontWeight.w700,
-    );
+    final style =
+        (compact
+                ? Theme.of(context).textTheme.titleMedium
+                : Theme.of(context).textTheme.titleLarge)
+            ?.copyWith(
+              color: SafeContractsVisual.navyDeep,
+              fontWeight: emphasis ? FontWeight.w900 : FontWeight.w700,
+            );
     return FittedBox(
       fit: BoxFit.scaleDown,
       alignment: AlignmentDirectional.centerStart,
@@ -514,12 +516,12 @@ final class _NavigationTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: selected
-                          ? SafeContractsVisual.navyDeep
-                          : SafeContractsVisual.muted,
-                      fontSize: 10.5,
-                      fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
-                    ),
+                  color: selected
+                      ? SafeContractsVisual.navyDeep
+                      : SafeContractsVisual.muted,
+                  fontSize: 10.5,
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -565,8 +567,9 @@ final class SafeContractsDrawer<T> extends StatelessWidget {
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius:
-                          BorderRadius.circular(SafeContractsRadii.md),
+                      borderRadius: BorderRadius.circular(
+                        SafeContractsRadii.md,
+                      ),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.10),
                       ),
@@ -585,21 +588,19 @@ final class SafeContractsDrawer<T> extends StatelessWidget {
                           SafeContractsBrand.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                              ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           workspaceLabel,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: SafeContractsVisual.champagne,
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: SafeContractsVisual.champagne),
                         ),
                       ],
                     ),
@@ -612,7 +613,7 @@ final class SafeContractsDrawer<T> extends StatelessWidget {
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
                 itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 3),
+                separatorBuilder: (_, _) => const SizedBox(height: 3),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   final isSelected = item.value == selected;
@@ -620,11 +621,13 @@ final class SafeContractsDrawer<T> extends StatelessWidget {
                     selected: isSelected,
                     onTap: () => onSelected(item.value),
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(SafeContractsRadii.md),
+                      borderRadius: BorderRadius.circular(
+                        SafeContractsRadii.md,
+                      ),
                     ),
-                    selectedTileColor:
-                        SafeContractsVisual.roseGold.withValues(alpha: 0.16),
+                    selectedTileColor: SafeContractsVisual.roseGold.withValues(
+                      alpha: 0.16,
+                    ),
                     leading: Icon(
                       item.icon,
                       color: isSelected
@@ -637,8 +640,9 @@ final class SafeContractsDrawer<T> extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
-                        fontWeight:
-                            isSelected ? FontWeight.w900 : FontWeight.w600,
+                        fontWeight: isSelected
+                            ? FontWeight.w900
+                            : FontWeight.w600,
                       ),
                     ),
                     trailing: isSelected
@@ -718,17 +722,17 @@ final class SafeContractsBottomSheetShell extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: SafeContractsVisual.navyDeep,
-                    fontWeight: FontWeight.w900,
-                  ),
+                color: SafeContractsVisual.navyDeep,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
               const SizedBox(height: SafeContractsSpacing.xxs),
               Text(
                 subtitle!,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: SafeContractsVisual.muted,
-                    ),
+                  color: SafeContractsVisual.muted,
+                ),
               ),
             ],
             const SizedBox(height: SafeContractsSpacing.md),
@@ -849,9 +853,9 @@ final class _SafeContractsStateCard extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
           ),
           if (message != null && message!.trim().isNotEmpty) ...[
             const SizedBox(height: SafeContractsSpacing.xs),
@@ -859,8 +863,8 @@ final class _SafeContractsStateCard extends StatelessWidget {
               message!,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: SafeContractsVisual.muted,
-                  ),
+                color: SafeContractsVisual.muted,
+              ),
             ),
           ],
           if (action != null) ...[
@@ -877,42 +881,42 @@ SafeContractsStatusColors _statusColors(
   SafeContractsStatusTone? tone,
   String? status,
 ) {
-  final resolvedTone = tone ??
+  final resolvedTone =
+      tone ??
       switch (status?.trim().toLowerCase()) {
         'paid' || 'completed' || 'active' => SafeContractsStatusTone.success,
         'overdue' || 'cancelled' || 'error' => SafeContractsStatusTone.danger,
         'due' ||
         'due_soon' ||
-        'partially_paid' =>
-          SafeContractsStatusTone.warning,
+        'partially_paid' => SafeContractsStatusTone.warning,
         'pending' || 'processing' => SafeContractsStatusTone.info,
         _ => SafeContractsStatusTone.neutral,
       };
   return switch (resolvedTone) {
     SafeContractsStatusTone.success => SafeContractsStatusColors(
-        foreground: SafeContractsVisual.greenDeep,
-        background: SafeContractsVisual.greenSoft,
-        border: SafeContractsVisual.green.withValues(alpha: 0.25),
-      ),
+      foreground: SafeContractsVisual.greenDeep,
+      background: SafeContractsVisual.greenSoft,
+      border: SafeContractsVisual.green.withValues(alpha: 0.25),
+    ),
     SafeContractsStatusTone.warning => SafeContractsStatusColors(
-        foreground: const Color(0xFF8C5714),
-        background: SafeContractsVisual.amberSoft,
-        border: SafeContractsVisual.amber.withValues(alpha: 0.28),
-      ),
+      foreground: const Color(0xFF8C5714),
+      background: SafeContractsVisual.amberSoft,
+      border: SafeContractsVisual.amber.withValues(alpha: 0.28),
+    ),
     SafeContractsStatusTone.danger => SafeContractsStatusColors(
-        foreground: SafeContractsVisual.redDeep,
-        background: SafeContractsVisual.redSoft,
-        border: SafeContractsVisual.red.withValues(alpha: 0.25),
-      ),
+      foreground: SafeContractsVisual.redDeep,
+      background: SafeContractsVisual.redSoft,
+      border: SafeContractsVisual.red.withValues(alpha: 0.25),
+    ),
     SafeContractsStatusTone.info => SafeContractsStatusColors(
-        foreground: SafeContractsVisual.navy,
-        background: SafeContractsVisual.navySoft,
-        border: SafeContractsVisual.navy.withValues(alpha: 0.22),
-      ),
+      foreground: SafeContractsVisual.navy,
+      background: SafeContractsVisual.navySoft,
+      border: SafeContractsVisual.navy.withValues(alpha: 0.22),
+    ),
     SafeContractsStatusTone.neutral => const SafeContractsStatusColors(
-        foreground: SafeContractsVisual.muted,
-        background: SafeContractsVisual.backgroundRaised,
-        border: SafeContractsVisual.outline,
-      ),
+      foreground: SafeContractsVisual.muted,
+      background: SafeContractsVisual.backgroundRaised,
+      border: SafeContractsVisual.outline,
+    ),
   };
 }

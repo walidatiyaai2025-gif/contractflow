@@ -157,7 +157,7 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
                 itemCount: page.items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final item = page.items[index];
                   return _FollowUpCard(
@@ -172,8 +172,9 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
           _FollowUpPaging(
             page: page,
             loading: _loading,
-            onPrevious:
-                page.page > 1 ? () => unawaited(_load(page.page - 1)) : null,
+            onPrevious: page.page > 1
+                ? () => unawaited(_load(page.page - 1))
+                : null,
             onNext: page.hasMore && page.page < 5
                 ? () => unawaited(_load(page.page + 1))
                 : null,
@@ -208,8 +209,9 @@ final class _FollowUpCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(SafeContractsVisual.compactRadius),
+            borderRadius: BorderRadius.circular(
+              SafeContractsVisual.compactRadius,
+            ),
             border: Border.all(color: urgency.color.withValues(alpha: 0.28)),
             boxShadow: const [
               BoxShadow(
@@ -243,27 +245,27 @@ final class _FollowUpCard extends StatelessWidget {
                           item.reference ?? l10n.paymentNumber(item.paymentId),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: SafeContractsVisual.ink,
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: SafeContractsVisual.ink,
+                                fontWeight: FontWeight.w900,
+                              ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           l10n.contractNumber(item.contractId),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: SafeContractsVisual.muted,
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: SafeContractsVisual.muted),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: urgency.softColor,
                       borderRadius: BorderRadius.circular(99),
@@ -301,8 +303,10 @@ final class _FollowUpCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: SafeContractsVisual.backgroundRaised,
                   borderRadius: BorderRadius.circular(13),
@@ -315,12 +319,8 @@ final class _FollowUpCard extends StatelessWidget {
                         children: [
                           Text(
                             l10n.t('Remaining'),
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  color: SafeContractsVisual.muted,
-                                ),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: SafeContractsVisual.muted),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -331,9 +331,7 @@ final class _FollowUpCard extends StatelessWidget {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   color: urgency.color,
                                   fontWeight: FontWeight.w900,
@@ -381,32 +379,32 @@ final class _FollowUpMeta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-        decoration: BoxDecoration(
-          color: SafeContractsVisual.navySoft.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(99),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: SafeContractsVisual.navy),
-            const SizedBox(width: 5),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 175),
-              child: Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: SafeContractsVisual.navy,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    decoration: BoxDecoration(
+      color: SafeContractsVisual.navySoft.withValues(alpha: 0.55),
+      borderRadius: BorderRadius.circular(99),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: SafeContractsVisual.navy),
+        const SizedBox(width: 5),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 175),
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: SafeContractsVisual.navy,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
             ),
-          ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 final class FollowUpHistoryScreen extends StatefulWidget {
@@ -497,9 +495,9 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
       );
     } on Object catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -525,79 +523,79 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
       body: _loading
           ? const _FollowUpsLoading(history: true)
           : _error != null
-              ? _FollowUpState(
-                  icon: Icons.error_outline_rounded,
-                  title: l10n.isArabic
-                      ? 'تعذر تحميل سجل المتابعة'
-                      : 'Unable to load history',
-                  message: l10n.rawMessage(_error!),
-                  actionLabel: l10n.t('Retry'),
-                  onAction: () => unawaited(_load()),
-                )
-              : SafeContractsBackdrop(
-                  child: RefreshIndicator(
-                    onRefresh: _load,
-                    color: SafeContractsVisual.navy,
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-                      children: [
-                        SafeContractsPremiumHeader(
-                          title: widget.title,
-                          subtitle: l10n.isArabic
-                              ? 'سجل المتابعة التشغيلي للدفعة'
-                              : 'Operational follow-up history',
-                          leading: Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(13),
-                            ),
-                            child: const Icon(
-                              Icons.timeline_rounded,
-                              color: Colors.white,
-                            ),
-                          ),
+          ? _FollowUpState(
+              icon: Icons.error_outline_rounded,
+              title: l10n.isArabic
+                  ? 'تعذر تحميل سجل المتابعة'
+                  : 'Unable to load history',
+              message: l10n.rawMessage(_error!),
+              actionLabel: l10n.t('Retry'),
+              onAction: () => unawaited(_load()),
+            )
+          : SafeContractsBackdrop(
+              child: RefreshIndicator(
+                onRefresh: _load,
+                color: SafeContractsVisual.navy,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                  children: [
+                    SafeContractsPremiumHeader(
+                      title: widget.title,
+                      subtitle: l10n.isArabic
+                          ? 'سجل المتابعة التشغيلي للدفعة'
+                          : 'Operational follow-up history',
+                      leading: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(13),
                         ),
-                        const SizedBox(height: 16),
-                        if (_history.isEmpty)
-                          _FollowUpState(
-                            icon: Icons.history_toggle_off_rounded,
-                            title: l10n.t('No follow-up history yet.'),
-                            message: widget.canManage
-                                ? (l10n.isArabic
-                                    ? 'يمكنك إضافة أول إجراء متابعة لهذه الدفعة.'
-                                    : 'You can add the first follow-up action for this payment.')
-                                : (l10n.isArabic
-                                    ? 'لا توجد إجراءات مسجلة ضمن صلاحياتك.'
-                                    : 'No authorized follow-up actions are recorded.'),
-                            actionLabel: widget.canManage
-                                ? l10n.t('Add follow-up')
-                                : null,
-                            onAction: widget.canManage
-                                ? () => unawaited(_record())
-                                : null,
-                            embedded: true,
-                          )
-                        else ...[
-                          SafeContractsSectionTitle(
-                            title: l10n.isArabic ? 'السجل الزمني' : 'Timeline',
-                            subtitle: l10n.isArabic
-                                ? 'الأحدث أولاً كما يعيده الخادم'
-                                : 'Newest first, as returned by the server',
-                          ),
-                          const SizedBox(height: 10),
-                          for (var index = 0; index < _history.length; index++)
-                            _HistoryCard(
-                              item: _history[index],
-                              isLast: index == _history.length - 1,
-                            ),
-                        ],
-                      ],
+                        child: const Icon(
+                          Icons.timeline_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    if (_history.isEmpty)
+                      _FollowUpState(
+                        icon: Icons.history_toggle_off_rounded,
+                        title: l10n.t('No follow-up history yet.'),
+                        message: widget.canManage
+                            ? (l10n.isArabic
+                                  ? 'يمكنك إضافة أول إجراء متابعة لهذه الدفعة.'
+                                  : 'You can add the first follow-up action for this payment.')
+                            : (l10n.isArabic
+                                  ? 'لا توجد إجراءات مسجلة ضمن صلاحياتك.'
+                                  : 'No authorized follow-up actions are recorded.'),
+                        actionLabel: widget.canManage
+                            ? l10n.t('Add follow-up')
+                            : null,
+                        onAction: widget.canManage
+                            ? () => unawaited(_record())
+                            : null,
+                        embedded: true,
+                      )
+                    else ...[
+                      SafeContractsSectionTitle(
+                        title: l10n.isArabic ? 'السجل الزمني' : 'Timeline',
+                        subtitle: l10n.isArabic
+                            ? 'الأحدث أولاً كما يعيده الخادم'
+                            : 'Newest first, as returned by the server',
+                      ),
+                      const SizedBox(height: 10),
+                      for (var index = 0; index < _history.length; index++)
+                        _HistoryCard(
+                          item: _history[index],
+                          isLast: index == _history.length - 1,
+                        ),
+                    ],
+                  ],
                 ),
+              ),
+            ),
       floatingActionButton: widget.canManage && !_loading && _error == null
           ? FloatingActionButton.extended(
               onPressed: () => unawaited(_record()),
@@ -661,18 +659,18 @@ final class _HistoryCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           l10n.status(item.state),
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    color: visual.color,
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: visual.color,
+                                fontWeight: FontWeight.w900,
+                              ),
                         ),
                       ),
                       Text(
                         item.createdAt,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: SafeContractsVisual.muted,
-                            ),
+                          color: SafeContractsVisual.muted,
+                        ),
                       ),
                     ],
                   ),
@@ -713,13 +711,13 @@ final class _HistoryValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 17, color: SafeContractsVisual.muted),
-          const SizedBox(width: 7),
-          Expanded(child: Text(text)),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, size: 17, color: SafeContractsVisual.muted),
+      const SizedBox(width: 7),
+      Expanded(child: Text(text)),
+    ],
+  );
 }
 
 final class _FollowUpInput {
@@ -830,8 +828,8 @@ final class _FollowUpDialogState extends State<_FollowUpDialog> {
                     ? 'اختر إجراءً مدعومًا فعليًا. لا يتم إنشاء إجراءات اتصال أو بريد غير مدعومة من الخادم.'
                     : 'Choose a supported server action. Unsupported call, message, or email actions are not fabricated.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SafeContractsVisual.muted,
-                    ),
+                  color: SafeContractsVisual.muted,
+                ),
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -968,27 +966,28 @@ final class _FollowUpsLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeContractsBackdrop(
-        child: ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: history ? 4 : 5,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, index) => Container(
-            height: history ? 96 : 132,
-            decoration: BoxDecoration(
-              color: SafeContractsVisual.surface,
-              borderRadius:
-                  BorderRadius.circular(SafeContractsVisual.compactRadius),
-              border: Border.all(color: SafeContractsVisual.outline),
-            ),
-            child: const Center(
-              child: SizedBox(
-                width: 28,
-                child: LinearProgressIndicator(minHeight: 2),
-              ),
-            ),
+    child: ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: history ? 4 : 5,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) => Container(
+        height: history ? 96 : 132,
+        decoration: BoxDecoration(
+          color: SafeContractsVisual.surface,
+          borderRadius: BorderRadius.circular(
+            SafeContractsVisual.compactRadius,
+          ),
+          border: Border.all(color: SafeContractsVisual.outline),
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 28,
+            child: LinearProgressIndicator(minHeight: 2),
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 final class _FollowUpState extends StatelessWidget {
@@ -1028,24 +1027,21 @@ final class _FollowUpState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: SafeContractsVisual.muted,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: SafeContractsVisual.muted),
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 14),
-            FilledButton.tonal(
-              onPressed: onAction,
-              child: Text(actionLabel!),
-            ),
+            FilledButton.tonal(onPressed: onAction, child: Text(actionLabel!)),
           ],
         ],
       ),
@@ -1134,40 +1130,40 @@ _FollowUpVisual _historyVisual(String state) {
   final normalized = state.trim().toLowerCase();
   return switch (normalized) {
     'escalate' => const _FollowUpVisual(
-        icon: Icons.priority_high_rounded,
-        color: SafeContractsVisual.redDeep,
-        softColor: SafeContractsVisual.redSoft,
-        arabicLabel: 'تصعيد',
-        englishLabel: 'Escalate',
-      ),
+      icon: Icons.priority_high_rounded,
+      color: SafeContractsVisual.redDeep,
+      softColor: SafeContractsVisual.redSoft,
+      arabicLabel: 'تصعيد',
+      englishLabel: 'Escalate',
+    ),
     'issue' => const _FollowUpVisual(
-        icon: Icons.report_problem_outlined,
-        color: SafeContractsVisual.red,
-        softColor: SafeContractsVisual.redSoft,
-        arabicLabel: 'مشكلة',
-        englishLabel: 'Issue',
-      ),
+      icon: Icons.report_problem_outlined,
+      color: SafeContractsVisual.red,
+      softColor: SafeContractsVisual.redSoft,
+      arabicLabel: 'مشكلة',
+      englishLabel: 'Issue',
+    ),
     'promise' => const _FollowUpVisual(
-        icon: Icons.handshake_outlined,
-        color: SafeContractsVisual.greenDeep,
-        softColor: SafeContractsVisual.greenSoft,
-        arabicLabel: 'وعد',
-        englishLabel: 'Promise',
-      ),
+      icon: Icons.handshake_outlined,
+      color: SafeContractsVisual.greenDeep,
+      softColor: SafeContractsVisual.greenSoft,
+      arabicLabel: 'وعد',
+      englishLabel: 'Promise',
+    ),
     'defer' => const _FollowUpVisual(
-        icon: Icons.snooze_rounded,
-        color: SafeContractsVisual.roseGoldDark,
-        softColor: SafeContractsVisual.roseGoldSoft,
-        arabicLabel: 'تأجيل',
-        englishLabel: 'Defer',
-      ),
+      icon: Icons.snooze_rounded,
+      color: SafeContractsVisual.roseGoldDark,
+      softColor: SafeContractsVisual.roseGoldSoft,
+      arabicLabel: 'تأجيل',
+      englishLabel: 'Defer',
+    ),
     _ => const _FollowUpVisual(
-        icon: Icons.notes_rounded,
-        color: SafeContractsVisual.navy,
-        softColor: SafeContractsVisual.navySoft,
-        arabicLabel: 'ملاحظة',
-        englishLabel: 'Note',
-      ),
+      icon: Icons.notes_rounded,
+      color: SafeContractsVisual.navy,
+      softColor: SafeContractsVisual.navySoft,
+      arabicLabel: 'ملاحظة',
+      englishLabel: 'Note',
+    ),
   };
 }
 

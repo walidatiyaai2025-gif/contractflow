@@ -74,8 +74,10 @@ final class _PremiumContractDetailsScreenState
         },
       );
       finance = List<FinanceSummaryRow>.unmodifiable(
-        apiObjectList(envelope.data, 'contract_finance.data')
-            .map(FinanceSummaryRow.fromData),
+        apiObjectList(
+          envelope.data,
+          'contract_finance.data',
+        ).map(FinanceSummaryRow.fromData),
       );
     } on SafeContractsApiException catch (error) {
       if (error.statusCode != 403) rethrow;
@@ -163,10 +165,7 @@ final class _PremiumContractBundle {
 }
 
 final class _PremiumContractBody extends StatelessWidget {
-  const _PremiumContractBody({
-    required this.bundle,
-    required this.onRefresh,
-  });
+  const _PremiumContractBody({required this.bundle, required this.onRefresh});
 
   final _PremiumContractBundle bundle;
   final Future<void> Function() onRefresh;
@@ -359,8 +358,8 @@ final class _ContractHero extends StatelessWidget {
                       Text(
                         ar ? 'تقدم مدة العقد' : 'Term progress',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: SafeContractsVisual.muted,
-                            ),
+                          color: SafeContractsVisual.muted,
+                        ),
                       ),
                       const Spacer(),
                       Text(
@@ -405,7 +404,7 @@ final class _HeroImage extends StatelessWidget {
     return Image.network(
       url,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => const _NeutralHeroPlaceholder(),
+      errorBuilder: (_, _, _) => const _NeutralHeroPlaceholder(),
     );
   }
 }
@@ -422,7 +421,7 @@ final class _NeutralHeroPlaceholder extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             SafeContractsVisual.navySoft,
-            SafeContractsVisual.surfaceWarm
+            SafeContractsVisual.surfaceWarm,
           ],
         ),
       ),
@@ -482,9 +481,9 @@ final class _HeroMetric extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SafeContractsVisual.muted,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: SafeContractsVisual.muted),
           ),
           const SizedBox(height: 3),
           Text(
@@ -493,9 +492,9 @@ final class _HeroMetric extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: SafeContractsVisual.navy,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: SafeContractsVisual.navy,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),
@@ -512,8 +511,9 @@ final class _SummaryTab extends StatelessWidget {
     final ar = context.scL10n.isArabic;
     final contract = bundle.contract;
     final paid = bundle.payments.where((item) => item.status == 'paid').length;
-    final overdue =
-        bundle.payments.where((item) => item.status == 'overdue').length;
+    final overdue = bundle.payments
+        .where((item) => item.status == 'overdue')
+        .length;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 80),
@@ -601,9 +601,7 @@ final class _SummaryTab extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 14),
-        SafeContractsSectionTitle(
-          title: ar ? 'الفترة' : 'Term',
-        ),
+        SafeContractsSectionTitle(title: ar ? 'الفترة' : 'Term'),
         const SizedBox(height: 8),
         SafeContractsSurface(
           elevated: false,
@@ -661,7 +659,7 @@ final class _PaymentsTab extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 80),
       itemCount: payments.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 9),
+      separatorBuilder: (_, _) => const SizedBox(height: 9),
       itemBuilder: (context, index) {
         final payment = payments[index];
         return SafeContractsSurface(
@@ -685,9 +683,7 @@ final class _PaymentsTab extends StatelessWidget {
                           ar
                               ? 'دفعة ${payment.sequenceNo}'
                               : 'Payment ${payment.sequenceNo}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
+                          style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                         _StatusPill(status: payment.status),
@@ -697,15 +693,15 @@ final class _PaymentsTab extends StatelessWidget {
                     Text(
                       '${ar ? 'الاستحقاق' : 'Due'}: ${payment.dueDate}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SafeContractsVisual.muted,
-                          ),
+                        color: SafeContractsVisual.muted,
+                      ),
                     ),
                     if (payment.expectedPaymentDate != null)
                       Text(
                         '${ar ? 'المتوقع' : 'Expected'}: ${payment.expectedPaymentDate}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SafeContractsVisual.muted,
-                            ),
+                          color: SafeContractsVisual.muted,
+                        ),
                       ),
                     if (payment.reference != null)
                       Text(
@@ -733,8 +729,8 @@ final class _PaymentsTab extends StatelessWidget {
                       '${ar ? 'متبقي' : 'Left'} ${_money(payment.remainingAmount, currencyCode)}',
                       textAlign: TextAlign.end,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: SafeContractsVisual.muted,
-                          ),
+                        color: SafeContractsVisual.muted,
+                      ),
                     ),
                   ],
                 ),
@@ -763,11 +759,11 @@ final class _AttachmentsTab extends StatelessWidget {
           _Notice(
             text: media?.usesCompanyLogo == true
                 ? (ar
-                    ? 'لا توجد مرفقات؛ يتم استخدام شعار الشركة كصورة افتراضية للعقد.'
-                    : 'No attachments; the company logo is used as the contract fallback image.')
+                      ? 'لا توجد مرفقات؛ يتم استخدام شعار الشركة كصورة افتراضية للعقد.'
+                      : 'No attachments; the company logo is used as the contract fallback image.')
                 : (ar
-                    ? 'لا توجد مرفقات متاحة لهذا العقد.'
-                    : 'No attachments are available for this contract.'),
+                      ? 'لا توجد مرفقات متاحة لهذا العقد.'
+                      : 'No attachments are available for this contract.'),
           ),
         ],
       );
@@ -776,7 +772,7 @@ final class _AttachmentsTab extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 80),
       itemCount: attachments.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 9),
+      separatorBuilder: (_, _) => const SizedBox(height: 9),
       itemBuilder: (context, index) {
         final item = attachments[index];
         return SafeContractsSurface(
@@ -819,8 +815,8 @@ final class _AttachmentsTab extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SafeContractsVisual.muted,
-                          ),
+                        color: SafeContractsVisual.muted,
+                      ),
                     ),
                   ],
                 ),
@@ -924,7 +920,7 @@ final class _DetailsTab extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 80),
       itemCount: rows.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final row = rows[index];
         return SafeContractsSurface(
@@ -949,8 +945,8 @@ final class _DetailsTab extends StatelessWidget {
                     Text(
                       row.label,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: SafeContractsVisual.muted,
-                          ),
+                        color: SafeContractsVisual.muted,
+                      ),
                     ),
                     Text(
                       row.value,
@@ -983,9 +979,9 @@ final class _SummaryMetric extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SafeContractsVisual.muted,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: SafeContractsVisual.muted),
           ),
           const SizedBox(height: 2),
           Text(
@@ -1042,8 +1038,8 @@ final class _PaymentIcon extends StatelessWidget {
     final icon = normalized == 'paid'
         ? Icons.check_circle_outline_rounded
         : normalized == 'overdue'
-            ? Icons.warning_amber_rounded
-            : Icons.schedule_rounded;
+        ? Icons.warning_amber_rounded
+        : Icons.schedule_rounded;
     return Container(
       width: 42,
       height: 42,
@@ -1129,10 +1125,7 @@ final class _TabHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Material(
-      color: SafeContractsVisual.background,
-      child: tabBar,
-    );
+    return Material(color: SafeContractsVisual.background, child: tabBar);
   }
 
   @override

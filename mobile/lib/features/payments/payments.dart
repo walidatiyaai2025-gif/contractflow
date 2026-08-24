@@ -278,8 +278,8 @@ final class PaymentsRepository {
         'amount': normalizedAmount,
         'collection_date': normalizedDate,
         'payment_method_id': paymentMethodId,
-        if (normalizedReference != null) 'reference': normalizedReference,
-        if (proofMediaId != null) 'proof_media_id': proofMediaId,
+        'reference': ?normalizedReference,
+        'proof_media_id': ?proofMediaId,
       },
     );
     final receipt = CollectionReceipt.fromData(envelope.data);

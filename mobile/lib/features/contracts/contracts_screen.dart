@@ -659,7 +659,7 @@ final class _ContractsContent extends StatelessWidget {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(14, 2, 14, 12),
                     itemCount: contracts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 9),
+                    separatorBuilder: (_, _) => const SizedBox(height: 9),
                     itemBuilder: (context, index) => _ContractCard(
                       contract: contracts[index],
                       media: mediaFor(contracts[index].id),
@@ -893,7 +893,7 @@ final class _ContractThumbnail extends StatelessWidget {
         Image.network(
           url,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const _NeutralContractPlaceholder(),
+          errorBuilder: (_, _, _) => const _NeutralContractPlaceholder(),
         ),
         if (logoFallback)
           PositionedDirectional(
