@@ -12,6 +12,7 @@ enum MobileDestination {
   collections,
   followUps,
   notifications,
+  reports,
   export,
   profile,
 }
@@ -67,6 +68,9 @@ final class MobileNavigationPolicy {
       ]);
       if (config.features.pushNotifications) {
         destinations.add(MobileDestination.notifications);
+      }
+      if (session.can(viewReportsCapability)) {
+        destinations.add(MobileDestination.reports);
       }
       if (config.features.excelExport &&
           session.can(viewReportsCapability) &&
