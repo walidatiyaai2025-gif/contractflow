@@ -108,6 +108,25 @@ void main() {
           languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
         );
 
+        final overviewTitle =
+            languageCode == 'ar' ? 'أحدث النشاطات' : 'Recent activity';
+        await tester.fling(
+          find.text(overviewTitle),
+          Offset(languageCode == 'ar' ? 360 : -360, 0),
+          900,
+        );
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(
+          controller.selectedTab,
+          DashboardTab.payments,
+          reason: 'swipe language=$languageCode width=$width',
+        );
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'swipe language=$languageCode width=$width',
+        );
+
         controller.selectTab(DashboardTab.payments);
         await tester.pump(const Duration(milliseconds: 200));
         expect(
