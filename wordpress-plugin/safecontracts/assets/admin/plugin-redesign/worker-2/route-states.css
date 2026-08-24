@@ -167,12 +167,13 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
     max-width: none;
   }
 
-  /* In RTL the financial table's final action column is the far-left column.
-   * Keep that control surface pinned to the visible edge of the dedicated
-   * horizontal scroller so Open/Edit/Delete remain reachable at 390px without
-   * turning table width into document-level overflow. */
+  /* In RTL the final action column is the far-left column. Keep the control
+   * surface pinned to the visible edge of the dedicated scroller on routes
+   * with row actions so authorized controls remain reachable at 390px. */
   body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat th:last-child,
-  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat td:last-child {
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat td:last-child,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll table.widefat th:last-child,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll table.widefat td:last-child {
     position: sticky;
     left: 0;
     z-index: 3;
@@ -181,11 +182,13 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
     background: #fffdfb !important;
     box-shadow: 8px 0 12px -10px rgba(11, 41, 69, .45);
   }
-  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat thead th:last-child {
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat thead th:last-child,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll table.widefat thead th:last-child {
     z-index: 4;
     background: #f2e7dc !important;
   }
-  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions {
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions {
     display: grid;
     grid-template-columns: 1fr;
     gap: 6px;
@@ -193,7 +196,10 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
   }
   body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions .button,
   body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions form,
-  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions form .button {
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions form .button,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions .button,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions form,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions form .button {
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
