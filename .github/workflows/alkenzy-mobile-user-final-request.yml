@@ -34,15 +34,15 @@ jobs:
               echo "head=$(git rev-parse HEAD)"
               echo "exit=$rc"
               echo "--- apply ---"
-              tail -n 160 /tmp/alkenzy-apply.log 2>/dev/null || true
+              tail -n 180 /tmp/alkenzy-apply.log 2>/dev/null || true
               echo "--- pubget ---"
-              tail -n 160 /tmp/alkenzy-pubget.log 2>/dev/null || true
+              tail -n 180 /tmp/alkenzy-pubget.log 2>/dev/null || true
               echo "--- analyze ---"
-              tail -n 220 /tmp/alkenzy-analyze.log 2>/dev/null || true
+              tail -n 240 /tmp/alkenzy-analyze.log 2>/dev/null || true
               echo "--- tests ---"
-              tail -n 260 /tmp/alkenzy-tests.log 2>/dev/null || true
+              tail -n 280 /tmp/alkenzy-tests.log 2>/dev/null || true
               echo "--- android ---"
-              tail -n 220 /tmp/alkenzy-android.log 2>/dev/null || true
+              tail -n 240 /tmp/alkenzy-android.log 2>/dev/null || true
             } > .github/ALKENZY_USER_FINAL_FAILURE.txt
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -52,6 +52,18 @@ jobs:
             exit "$rc"
           }
           trap fail ERR
+
+          stage=normalize-patch
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/alkenzy_mobile_user_final_patch.py')
+          text = p.read_text()
+          old = '    "  @override\\n  Widget build(BuildContext context) {\\n",\n    "  Future<void> _offerBiometricEnrollment() async {\\n"'
+          new = '    "  @override\\n  Widget build(BuildContext context) {\\n    final l10n = context.scL10n;\\n",\n    "  Future<void> _offerBiometricEnrollment() async {\\n"'
+          if old not in text:
+              raise SystemExit('Unable to normalize login state build marker.')
+          p.write_text(text.replace(old, new, 1))
+          PY
 
           stage=apply
           python3 scripts/alkenzy_mobile_user_final_patch.py 2>&1 | tee /tmp/alkenzy-apply.log
