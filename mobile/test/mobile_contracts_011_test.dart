@@ -147,7 +147,9 @@ void main() {
     await tester.pump();
 
     expect(openedContractId, 70);
-    expect(transport.requests, hasLength(1));
+    expect(transport.requests, hasLength(2));
+    expect(transport.requests.first.uri.path, endsWith('/contracts'));
+    expect(transport.requests.last.uri.path, endsWith('/contracts/70/media'));
     controller.dispose();
   });
 }
