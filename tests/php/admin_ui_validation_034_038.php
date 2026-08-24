@@ -77,7 +77,8 @@ sc_p6v6_expect(InvalidArgumentException::class, fn () => NotificationRule::norma
 
 // SC-P6-037 — Firebase settings use the stronger system-settings boundary.
 $firebaseSource = file_get_contents((string) (new ReflectionClass(FirebaseSettingsPage::class))->getFileName()) ?: '';
-sc_p6v6_assert(substr_count($firebaseSource, 'Capabilities::MANAGE_SYSTEM') >= 3, 'SC-P6-037 Firebase registration/read/write require system capability');
+sc_p6v6_assert(substr_count($firebaseSource, 'Capabilities::MANAGE_SYSTEM') >= 2, 'SC-P6-037 Firebase registration and shared authorization helper require system capability');
+sc_p6v6_assert(substr_count($firebaseSource, 'self::assertManage();') >= 6, 'SC-P6-037 Firebase read/write actions consistently pass through the system-capability guard');
 sc_p6v6_assert(str_contains($firebaseSource, 'check_admin_referer') && str_contains($firebaseSource, 'savePublic') && str_contains($firebaseSource, 'saveCredentialReference'), 'SC-P6-037 Firebase writes retain nonce and constrained APIs');
 sc_p6v6_assert(! str_contains($firebaseSource, "\$_POST['service_account_json']") && ! str_contains($firebaseSource, "\$_POST['private_key']") && ! str_contains($firebaseSource, "\$_POST['access_token']"), 'SC-P6-037 page has no raw credential/token input');
 $firebase = new FirebaseSettings();
