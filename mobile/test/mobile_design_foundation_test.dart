@@ -129,7 +129,8 @@ void main() {
         expect(find.byKey(const Key('loginSubmit')), findsOneWidget);
         expect(
           Directionality.of(
-              tester.element(find.byKey(const Key('loginSubmit')))),
+            tester.element(find.byKey(const Key('loginSubmit'))),
+          ),
           languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
         );
         expect(
@@ -150,6 +151,10 @@ ApiTransportResponse _unauthenticatedHandler(Uri uri) {
       body: jsonEncode(<String, Object?>{
         'code': 'safecontracts_authentication_required',
         'message': 'Authentication required.',
+        'data': <String, Object?>{
+          'status': 401,
+          'api_version': 'v1',
+        },
       }),
     );
   }
@@ -160,6 +165,10 @@ ApiTransportResponse _unauthenticatedHandler(Uri uri) {
       body: jsonEncode(<String, Object?>{
         'code': 'mobile_landing_unavailable',
         'message': 'Unavailable.',
+        'data': <String, Object?>{
+          'status': 503,
+          'api_version': 'v1',
+        },
       }),
     );
   }
