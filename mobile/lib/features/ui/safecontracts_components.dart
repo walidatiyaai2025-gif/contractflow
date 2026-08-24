@@ -211,7 +211,8 @@ final class SafeContractsButton extends StatelessWidget {
           )
         else if (icon != null)
           Icon(icon, size: SafeContractsIconSizes.sm),
-        if (loading || icon != null) const SizedBox(width: SafeContractsSpacing.xs),
+        if (loading || icon != null)
+          const SizedBox(width: SafeContractsSpacing.xs),
         Flexible(
           child: Text(
             label,
@@ -284,7 +285,8 @@ final class SafeContractsStatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: SafeContractsIconSizes.xs, color: colors.foreground),
+            Icon(icon,
+                size: SafeContractsIconSizes.xs, color: colors.foreground),
             const SizedBox(width: SafeContractsSpacing.xxs),
           ],
           Flexible(
@@ -563,7 +565,8 @@ final class SafeContractsDrawer<T> extends StatelessWidget {
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(SafeContractsRadii.md),
+                      borderRadius:
+                          BorderRadius.circular(SafeContractsRadii.md),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.10),
                       ),
@@ -582,19 +585,21 @@ final class SafeContractsDrawer<T> extends StatelessWidget {
                           SafeContractsBrand.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           workspaceLabel,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SafeContractsVisual.champagne,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: SafeContractsVisual.champagne,
+                                  ),
                         ),
                       ],
                     ),
@@ -615,7 +620,8 @@ final class SafeContractsDrawer<T> extends StatelessWidget {
                     selected: isSelected,
                     onTap: () => onSelected(item.value),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(SafeContractsRadii.md),
+                      borderRadius:
+                          BorderRadius.circular(SafeContractsRadii.md),
                     ),
                     selectedTileColor:
                         SafeContractsVisual.roseGold.withValues(alpha: 0.16),
@@ -871,13 +877,17 @@ SafeContractsStatusColors _statusColors(
   SafeContractsStatusTone? tone,
   String? status,
 ) {
-  final resolvedTone = tone ?? switch (status?.trim().toLowerCase()) {
-    'paid' || 'completed' || 'active' => SafeContractsStatusTone.success,
-    'overdue' || 'cancelled' || 'error' => SafeContractsStatusTone.danger,
-    'due' || 'due_soon' || 'partially_paid' => SafeContractsStatusTone.warning,
-    'pending' || 'processing' => SafeContractsStatusTone.info,
-    _ => SafeContractsStatusTone.neutral,
-  };
+  final resolvedTone = tone ??
+      switch (status?.trim().toLowerCase()) {
+        'paid' || 'completed' || 'active' => SafeContractsStatusTone.success,
+        'overdue' || 'cancelled' || 'error' => SafeContractsStatusTone.danger,
+        'due' ||
+        'due_soon' ||
+        'partially_paid' =>
+          SafeContractsStatusTone.warning,
+        'pending' || 'processing' => SafeContractsStatusTone.info,
+        _ => SafeContractsStatusTone.neutral,
+      };
   return switch (resolvedTone) {
     SafeContractsStatusTone.success => SafeContractsStatusColors(
         foreground: SafeContractsVisual.greenDeep,

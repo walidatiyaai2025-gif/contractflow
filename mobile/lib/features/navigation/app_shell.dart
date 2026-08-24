@@ -190,9 +190,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       backgroundColor: SafeContractsVisual.background,
       appBar: _buildAppBar(l10n),
       drawer: SafeContractsDrawer<MobileDestination>(
-        workspaceLabel: l10n.isArabic
-            ? 'مساحة العمل التنفيذية'
-            : 'Executive workspace',
+        workspaceLabel:
+            l10n.isArabic ? 'مساحة العمل التنفيذية' : 'Executive workspace',
         items: widget.policy.destinations
             .map(
               (destination) => SafeContractsDrawerItem<MobileDestination>(
