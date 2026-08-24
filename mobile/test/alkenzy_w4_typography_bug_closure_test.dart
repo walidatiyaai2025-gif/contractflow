@@ -6,7 +6,8 @@ import 'package:safecontracts_mobile/features/ui/safecontracts_design.dart';
 import 'package:safecontracts_mobile/features/ui/safecontracts_tokens.dart';
 
 void main() {
-  test('B055 central typography scale is applied to Arabic and English theme', () {
+  test('B055 central typography scale is applied to Arabic and English theme',
+      () {
     final source = File(
       'lib/features/ui/safecontracts_theme.dart',
     ).readAsStringSync();
