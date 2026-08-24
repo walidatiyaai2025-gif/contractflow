@@ -32,7 +32,13 @@ jobs:
           fail() {
             rc=$?
             set +e
-            printf 'stage=%s\nhead=%s\nexit=%s\n' "$stage" "$(git rev-parse HEAD)" "$rc" > .github/ALKENZY_GLOBAL_LIST_FAILURE.txt
+            {
+              printf 'stage=%s\nhead=%s\nexit=%s\n' "$stage" "$(git rev-parse HEAD)" "$rc"
+              if [ -f /tmp/alkenzy_global_apply.log ]; then
+                printf '%s\n' '--- apply log ---'
+                tail -40 /tmp/alkenzy_global_apply.log
+              fi
+            } > .github/ALKENZY_GLOBAL_LIST_FAILURE.txt
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add .github/ALKENZY_GLOBAL_LIST_FAILURE.txt
@@ -62,7 +68,7 @@ jobs:
           python3 -m py_compile /tmp/alkenzy_global_list_closure.py
 
           stage=apply-production
-          python3 /tmp/alkenzy_global_list_closure.py
+          python3 /tmp/alkenzy_global_list_closure.py > /tmp/alkenzy_global_apply.log 2>&1 || { cat /tmp/alkenzy_global_apply.log; false; }
 
           stage=php
           bash scripts/test-php.sh
