@@ -73,8 +73,8 @@ final class ActiveUsersPage
                 </div>
             </div>
             <?php AdminSummaryCards::render([
-                ['label' => __('Active on app', 'safecontracts'), 'value' => $appActive, 'detail' => __('Seen in the last 5 minutes', 'safecontracts')],
-                ['label' => __('Active on dashboard', 'safecontracts'), 'value' => $adminActive, 'detail' => __('Seen in the last 5 minutes', 'safecontracts')],
+                ['label' => self::text('Active on app', 'نشط على التطبيق'), 'value' => $appActive, 'detail' => __('Seen in the last 5 minutes', 'safecontracts')],
+                ['label' => self::text('Active on dashboard', 'نشط على لوحة التحكم'), 'value' => $adminActive, 'detail' => __('Seen in the last 5 minutes', 'safecontracts')],
                 ['label' => self::text('Recently active anywhere', 'نشط مؤخرًا في أي واجهة'), 'value' => $either],
                 ['label' => __('Safe Contracts users', 'safecontracts'), 'value' => count($allUsers)],
             ]); ?>
