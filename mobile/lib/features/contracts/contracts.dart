@@ -106,6 +106,14 @@ final class ContractsFilters {
         status: value,
       );
 
+  int get activeCount {
+    var count = 0;
+    if (counterpartyType != null && counterpartyType!.isNotEmpty) count++;
+    if (customerId != null) count++;
+    if (status != null && status!.isNotEmpty) count++;
+    return count;
+  }
+
   void validate() {
     if (customerId != null && customerId! <= 0) {
       throw ArgumentError.value(customerId, 'customerId', 'Invalid customer.');
@@ -288,6 +296,8 @@ final class ContractPage {
     required this.contracts,
     required this.page,
     required this.perPage,
+    required this.total,
+    required this.totalPages,
     required this.sort,
     required this.order,
     required this.hasMore,
@@ -298,6 +308,8 @@ final class ContractPage {
   final List<SafeContractsContract> contracts;
   final int page;
   final int perPage;
+  final int total;
+  final int totalPages;
   final String sort;
   final String order;
   final bool hasMore;
@@ -315,19 +327,47 @@ final class ContractPage {
       }
     }
     final meta = envelope.meta;
-    final page = _boundedInt(meta['page'], 'meta.page', minimum: 1, maximum: 5);
-    final perPage = _boundedInt(
-      meta['per_page'],
-      'meta.per_page',
-      minimum: 1,
-      maximum: 100,
-    );
     final boundedWindow = _boundedInt(
       meta['bounded_window'],
       'meta.bounded_window',
       minimum: 1,
       maximum: 500,
     );
+    final perPage = _boundedInt(
+      meta['per_page'],
+      'meta.per_page',
+      minimum: 1,
+      maximum: 100,
+    );
+    final maxPageForPageSize = (1000000 ~/ perPage) + 1;
+    final page = _boundedInt(
+      meta['page'],
+      'meta.page',
+      minimum: 1,
+      maximum: maxPageForPageSize,
+    );
+    final total = _boundedInt(
+      meta['total'],
+      'meta.total',
+      minimum: 0,
+      maximum: 1000000000,
+    );
+    final totalPages = _boundedInt(
+      meta['total_pages'],
+      'meta.total_pages',
+      minimum: 1,
+      maximum: 1000000000,
+    );
+    final expectedTotalPages =
+        total == 0 ? 1 : ((total + perPage - 1) ~/ perPage);
+    if (totalPages != expectedTotalPages) {
+      throw const FormatException(
+          'Contract pagination metadata is inconsistent.');
+    }
+    if (page > totalPages && total > 0) {
+      throw const FormatException(
+          'Contract page exceeds authoritative total pages.');
+    }
     final sort = _requiredText(meta['sort'], 'meta.sort');
     if (!ContractSortOption.values.any((option) => option.field == sort)) {
       throw const FormatException('Contract sort metadata is invalid.');
@@ -340,13 +380,20 @@ final class ContractPage {
     if (scope != null && scope != 'all' && scope != 'assigned') {
       throw const FormatException('Contract scope metadata is invalid.');
     }
+    final hasMore = _boolish(meta['has_more'], 'meta.has_more');
+    if (hasMore != (page < totalPages)) {
+      throw const FormatException(
+          'Contract has_more metadata is inconsistent.');
+    }
     return ContractPage(
       contracts: List<SafeContractsContract>.unmodifiable(contracts),
       page: page,
       perPage: perPage,
+      total: total,
+      totalPages: totalPages,
       sort: sort,
       order: order,
-      hasMore: _boolish(meta['has_more'], 'meta.has_more'),
+      hasMore: hasMore,
       boundedWindow: boundedWindow,
       scope: scope,
     );
@@ -363,15 +410,21 @@ final class ContractsRepository {
     required int perPage,
     required ContractsFilters filters,
     required ContractSortOption sort,
+    String search = '',
   }) async {
-    if (page < 1 || page > 5) {
-      throw ArgumentError('Contract page must be between 1 and 5.');
-    }
     if (perPage < 1 || perPage > 100) {
       throw ArgumentError('Contract page size must be between 1 and 100.');
     }
+    if (page < 1 || (page - 1) * perPage > 1000000) {
+      throw ArgumentError(
+          'Contract page exceeds the bounded server query window.');
+    }
     if (!ContractSortOption.values.contains(sort)) {
       throw ArgumentError('Unsupported contract sort.');
+    }
+    final normalizedSearch = search.trim();
+    if (normalizedSearch.length > 100) {
+      throw ArgumentError('Contract search must not exceed 100 characters.');
     }
     filters.validate();
     final query = filters.toQuery()
@@ -380,6 +433,7 @@ final class ContractsRepository {
         'per_page': '$perPage',
         'sort': sort.field,
         'order': sort.order,
+        if (normalizedSearch.isNotEmpty) 'search': normalizedSearch,
       });
     final envelope = await client.get('contracts', query: query);
     return ContractPage.fromEnvelope(envelope);
@@ -452,18 +506,24 @@ final class ContractsController extends ChangeNotifier {
   ContractPage? currentPage;
   ContractsFilters filters = const ContractsFilters();
   ContractSortOption sort = ContractSortOption.newest;
+  String searchQuery = '';
   String? errorMessage;
   ContractDetailLoadState detailState = ContractDetailLoadState.idle;
   int? selectedContractId;
   SafeContractsContract? selectedContract;
   String? detailErrorMessage;
   bool mutationInFlight = false;
+  bool _pageRequestInFlight = false;
+
+  bool get pageRequestInFlight => _pageRequestInFlight;
+  int get activeFilterCount => filters.activeCount;
 
   Future<void> ensureLoaded() async {
     if (state == ContractsLoadState.idle) await loadPage(1);
   }
 
   Future<void> loadPage(int page) async {
+    if (_pageRequestInFlight) return;
     if (!canAccess) {
       currentPage = null;
       errorMessage = 'Contract access is not authorized for this session.';
@@ -471,8 +531,9 @@ final class ContractsController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (page < 1 || page > 5) return;
-    currentPage = null;
+    if (page < 1 || (page - 1) * pageSize > 1000000) return;
+    _pageRequestInFlight = true;
+    final previousPage = currentPage;
     state = ContractsLoadState.loading;
     errorMessage = null;
     notifyListeners();
@@ -482,51 +543,70 @@ final class ContractsController extends ChangeNotifier {
         perPage: pageSize,
         filters: filters,
         sort: sort,
+        search: searchQuery,
       );
       state = ContractsLoadState.ready;
     } on SafeContractsApiException catch (error) {
-      currentPage = null;
+      currentPage = previousPage;
       errorMessage = error.message;
       state = ContractsLoadState.error;
     } on Object catch (error) {
-      currentPage = null;
+      currentPage = previousPage;
       errorMessage = error.toString();
       state = ContractsLoadState.error;
+    } finally {
+      _pageRequestInFlight = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   Future<void> refresh() => loadPage(currentPage?.page ?? 1);
 
   Future<void> refreshSilently() async {
-    if (!canAccess) return;
+    if (!canAccess || _pageRequestInFlight) return;
     try {
       currentPage = await repository.loadPage(
         page: currentPage?.page ?? 1,
         perPage: pageSize,
         filters: filters,
         sort: sort,
+        search: searchQuery,
       );
       state = ContractsLoadState.ready;
       errorMessage = null;
+      notifyListeners();
     } on Object {
       // Keep the last authorized snapshot on silent refresh failure.
     }
   }
 
   Future<void> previousPage() async {
+    if (_pageRequestInFlight) return;
     final page = currentPage?.page ?? 1;
     if (page > 1) await loadPage(page - 1);
   }
 
   Future<void> nextPage() async {
+    if (_pageRequestInFlight) return;
     final value = currentPage;
-    if (value != null && value.hasMore && value.page < 5) {
+    if (value != null && value.hasMore && value.page < value.totalPages) {
       await loadPage(value.page + 1);
     }
   }
 
+  Future<void> selectSearch(String value) async {
+    if (_pageRequestInFlight) return;
+    final normalized = value.trim();
+    if (normalized.length > 100) {
+      throw ArgumentError.value(value, 'value', 'Search is too long.');
+    }
+    if (searchQuery == normalized && currentPage != null) return;
+    searchQuery = normalized;
+    await loadPage(1);
+  }
+
   Future<void> selectCustomer(int? customerId) async {
+    if (_pageRequestInFlight) return;
     if (customerId != null && customerId <= 0) {
       throw ArgumentError.value(customerId, 'customerId', 'Invalid customer.');
     }
@@ -535,6 +615,7 @@ final class ContractsController extends ChangeNotifier {
   }
 
   Future<void> selectCounterpartyType(String? value) async {
+    if (_pageRequestInFlight) return;
     final normalized = value?.trim().toLowerCase();
     if (normalized != null &&
         normalized.isNotEmpty &&
@@ -552,6 +633,7 @@ final class ContractsController extends ChangeNotifier {
   }
 
   Future<void> selectStatus(String? status) async {
+    if (_pageRequestInFlight) return;
     final normalized = status?.trim().toLowerCase();
     if (normalized != null &&
         normalized.isNotEmpty &&
@@ -568,7 +650,14 @@ final class ContractsController extends ChangeNotifier {
     await loadPage(1);
   }
 
+  Future<void> clearFilters() async {
+    if (_pageRequestInFlight || filters.activeCount == 0) return;
+    filters = const ContractsFilters();
+    await loadPage(1);
+  }
+
   Future<void> selectSort(ContractSortOption nextSort) async {
+    if (_pageRequestInFlight) return;
     if (!ContractSortOption.values.contains(nextSort)) {
       throw ArgumentError.value(nextSort, 'nextSort', 'Unsupported sort.');
     }

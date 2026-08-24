@@ -123,7 +123,9 @@ sc_p10v_assert(! str_contains($mobileSources, 'double.parse(') && ! str_contains
 sc_p10v_expect(InvalidArgumentException::class, static fn () => ApiAbuseGuard::safeParams(new WP_REST_Request(['scope' => 'all']), ['customer_id']), 'P10-020 unknown query field cannot widen scope');
 sc_p10v_expect(InvalidArgumentException::class, static fn () => ApiAbuseGuard::safeParams(new WP_REST_Request(['customer_id' => ['7', '8']]), ['customer_id']), 'P10-020 parameter pollution is rejected');
 sc_p10v_expect(InvalidArgumentException::class, static fn () => ApiAbuseGuard::safeParams(new WP_REST_Request(['status' => str_repeat('x', ApiAbuseGuard::MAX_STRING_BYTES + 1)]), ['status']), 'P10-020 oversized scalar input is rejected');
-sc_p10v_expect(InvalidArgumentException::class, static fn () => ApiListQuery::parse(new WP_REST_Request(['page' => '6']), [], ['id'], 'id'), 'P10-020 list requests cannot escape bounded backend window');
+$deepPage = ApiListQuery::parse(new WP_REST_Request(['page' => '6', 'per_page' => '100']), [], ['id'], 'id');
+sc_p10v_assert(($deepPage['page'] ?? 0) === 6 && ($deepPage['per_page'] ?? 0) === 100, 'P10-020 deep pages remain available inside the bounded query-offset window');
+sc_p10v_expect(InvalidArgumentException::class, static fn () => ApiListQuery::parse(new WP_REST_Request(['page' => '10002', 'per_page' => '100']), [], ['id'], 'id'), 'P10-020 list requests cannot escape bounded query-offset window');
 $genericFailure = RequestGuard::failure(new RuntimeException('INTERNAL-DETAIL-MUST-NOT-LEAK'));
 sc_p10v_assert($genericFailure instanceof WP_Error && ($genericFailure->data['status'] ?? 0) === 500, 'P10-020 internal exception maps to generic server envelope');
 sc_p10v_assert(! str_contains($genericFailure->message, 'INTERNAL-DETAIL-MUST-NOT-LEAK'), 'P10-020 internal exception details are not exposed');
