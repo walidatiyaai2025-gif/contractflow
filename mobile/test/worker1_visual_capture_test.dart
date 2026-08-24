@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/app.dart';
 import 'package:safecontracts_mobile/core/api/api_client.dart';
@@ -129,11 +130,14 @@ void main() {
     );
 
     await tester.pumpWidget(
-      SafeContractsApp(
-        environment: environment,
-        client: client,
-        tokenStore: tokenStore,
-        languageCode: 'ar',
+      RepaintBoundary(
+        key: const Key('worker1Capture'),
+        child: SafeContractsApp(
+          environment: environment,
+          client: client,
+          tokenStore: tokenStore,
+          languageCode: 'ar',
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -172,9 +176,10 @@ void main() {
 }
 
 Future<void> _capture(WidgetTester tester, String name) async {
-  final ui.Image image = await tester.binding.renderView.toImage(
-    pixelRatio: 0.75,
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const Key('worker1Capture')),
   );
+  final ui.Image image = await boundary.toImage(pixelRatio: 0.75);
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   final bytes = data!.buffer.asUint8List();
   // Intentionally emitted only by this temporary visual-QA test.
