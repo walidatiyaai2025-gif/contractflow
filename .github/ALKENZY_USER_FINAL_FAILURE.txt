@@ -1,8 +1,8 @@
 stage=apply
-head=7daad9093a9f4f13ce185b6b2b2feea5bfe19a44
+head=6890121d2dc2e82dd68a8bccbba3533dda2a3150
 exit=1
 --- apply ---
-FAIL mobile/lib/features/ui/safecontracts_theme.dart: expected one marker, found 2: '        backgroundColor: SafeContractsVisual.navy,'
+FAIL mobile/lib/features/ui/safecontracts_theme.dart: expected one marker, found 2: '          foregroundColor: SafeContractsVisual.navy,'
 --- pubget ---
 --- analyze ---
 --- tests ---
