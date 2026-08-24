@@ -44,7 +44,7 @@ async function formForAction(action) {
 async function submitAndWait(form) {
   await Promise.all([
     page.waitForNavigation({waitUntil: 'domcontentloaded'}),
-    form.evaluate((node) => node.requestSubmit()),
+    form.evaluate((node) => node.submit()),
   ]);
 }
 
