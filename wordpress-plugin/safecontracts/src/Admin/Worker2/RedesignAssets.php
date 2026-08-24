@@ -10,12 +10,13 @@ use SafeContracts\Admin\AdminShell;
  * Worker #2 route-scoped presentation assets.
  *
  * The shared AdminShell remains Lead-owned. This registrar is intentionally
- * called from a Worker #2-owned page registration and only enqueues the
- * stylesheet for the seven frozen Worker #2 routes.
+ * called from a Worker #2-owned page registration and only enqueues assets for
+ * the seven frozen Worker #2 routes.
  */
 final class RedesignAssets
 {
     public const STYLE_HANDLE = 'safecontracts-plugin-redesign-worker-2';
+    public const SCRIPT_HANDLE = 'safecontracts-plugin-redesign-worker-2-ui';
 
     /** @var list<string> */
     private const SLUGS = [
@@ -52,6 +53,13 @@ final class RedesignAssets
             SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-2/finance-operations.css',
             [AdminShell::PREMIUM_STYLE_HANDLE],
             SAFECONTRACTS_VERSION
+        );
+        wp_enqueue_script(
+            self::SCRIPT_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-2/finance-operations.js',
+            [],
+            SAFECONTRACTS_VERSION,
+            true
         );
     }
 }
