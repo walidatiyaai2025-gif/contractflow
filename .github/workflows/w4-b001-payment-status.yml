@@ -26,6 +26,22 @@ jobs:
           cache: true
       - name: Apply B001 authoritative status patch
         run: python3 scripts/w4_b001_payment_status.py
+      - name: Preserve compact server-authority copy contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('mobile/lib/features/payments/payments_screen.dart')
+          text = path.read_text()
+          old = 'Server values are shown as received; mobile does not recalculate them.'
+          new = 'Dates, balances and status are server-authoritative. Mobile does not recalculate them.'
+          if text.count(old) != 1:
+              raise SystemExit('server-authority copy target not unique')
+          path.write_text(text.replace(old, new, 1))
+          test = Path('mobile/test/alkenzy_w4_density_bug_closure_test.dart')
+          test_text = test.read_text().replace(old, new)
+          test.write_text(test_text)
+          PY
       - name: Validate full PHP foundation
         run: bash scripts/test-php.sh
       - name: Resolve Flutter dependencies
