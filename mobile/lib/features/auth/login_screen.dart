@@ -67,11 +67,10 @@ final class _SafeContractsLoginScreenState
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     if (_bootstrapping) {
-      return SafeContractsSplash(
+      return _BlockingBootstrapSplash(
         label: l10n.t('Loading'),
         environmentLabel:
             l10n.isArabic ? 'تجهيز مساحة العمل' : 'Preparing workspace',
-        blockBack: true,
       );
     }
 
@@ -272,7 +271,8 @@ final class _SafeContractsLoginScreenState
                                     color: SafeContractsVisual.champagne,
                                   ),
                                   const SizedBox(
-                                      width: SafeContractsSpacing.xs),
+                                    width: SafeContractsSpacing.xs,
+                                  ),
                                   Flexible(
                                     child: Text(
                                       l10n.isArabic
@@ -300,6 +300,28 @@ final class _SafeContractsLoginScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+final class _BlockingBootstrapSplash extends StatelessWidget {
+  const _BlockingBootstrapSplash({
+    required this.label,
+    required this.environmentLabel,
+  });
+
+  final String label;
+  final String environmentLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: SafeContractsSplash(
+        label: label,
+        environmentLabel: environmentLabel,
+        blockBack: true,
       ),
     );
   }
