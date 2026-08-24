@@ -281,14 +281,14 @@ final class _CustomerBody extends StatelessWidget {
         message: context.scL10n.rawMessage(
           controller.errorMessage ?? 'Unable to load customers.',
         ),
-        action: () => unawaited(controller.loadPage(1)),
+        action: () => controller.loadPage(1),
       );
     }
     if (page == null) {
       return _StateMessage(
         icon: Icons.people_outline_rounded,
         message: context.scL10n.t('Customers are not loaded yet.'),
-        action: () => unawaited(controller.loadPage(1)),
+        action: () => controller.loadPage(1),
       );
     }
 
@@ -409,7 +409,8 @@ final class _CustomerCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
+            borderRadius:
+                BorderRadius.circular(SafeContractsVisual.compactRadius),
             border: Border.all(
               color: selected
                   ? SafeContractsVisual.roseGold
@@ -471,7 +472,6 @@ final class _CustomerCard extends StatelessWidget {
               const SizedBox(width: 3),
               const Icon(
                 Icons.chevron_right_rounded,
-                matchTextDirection: true,
                 color: SafeContractsVisual.muted,
               ),
             ],
@@ -525,7 +525,7 @@ final class _CustomerDetailState extends State<_CustomerDetail> {
         message: context.scL10n.rawMessage(
           controller.detailErrorMessage ?? 'Unable to load customer.',
         ),
-        action: () => unawaited(controller.openCustomer(id)),
+        action: () => controller.openCustomer(id),
       );
     }
     final customer = controller.selectedCustomer;
@@ -543,7 +543,6 @@ final class _CustomerDetailState extends State<_CustomerDetail> {
               onPressed: controller.closeCustomer,
               icon: const Icon(
                 Icons.arrow_back_rounded,
-                matchTextDirection: true,
               ),
               label: Text(context.scL10n.isArabic ? 'العملاء' : 'Customers'),
             ),
@@ -669,9 +668,21 @@ final class _ContactPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final ar = context.scL10n.isArabic;
     final entries = <({IconData icon, String label, String? value})>[
-      (icon: Icons.person_outline, label: ar ? 'جهة الاتصال' : 'Contact', value: customer.contactName),
-      (icon: Icons.phone_outlined, label: ar ? 'الهاتف' : 'Phone', value: customer.phone),
-      (icon: Icons.email_outlined, label: ar ? 'البريد' : 'Email', value: customer.email),
+      (
+        icon: Icons.person_outline,
+        label: ar ? 'جهة الاتصال' : 'Contact',
+        value: customer.contactName
+      ),
+      (
+        icon: Icons.phone_outlined,
+        label: ar ? 'الهاتف' : 'Phone',
+        value: customer.phone
+      ),
+      (
+        icon: Icons.email_outlined,
+        label: ar ? 'البريد' : 'Email',
+        value: customer.email
+      ),
     ];
     return SafeContractsSurface(
       elevated: false,
@@ -736,7 +747,8 @@ final class _ContactRow extends StatelessWidget {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(context.scL10n.isArabic ? 'تم النسخ.' : 'Copied.'),
+                    content:
+                        Text(context.scL10n.isArabic ? 'تم النسخ.' : 'Copied.'),
                   ),
                 );
               },
@@ -775,7 +787,8 @@ final class _BusinessSnapshot extends StatelessWidget {
                 : 'Financial summary is outside this session’s permissions.',
           )
         else if (value.finance.isEmpty)
-          _InlineNotice(text: ar ? 'لا توجد أرصدة حالية.' : 'No current balances.')
+          _InlineNotice(
+              text: ar ? 'لا توجد أرصدة حالية.' : 'No current balances.')
         else
           ...value.finance.map(
             (row) => _FinanceCard(
@@ -788,18 +801,25 @@ final class _BusinessSnapshot extends StatelessWidget {
           ),
         const SizedBox(height: 14),
         _SectionLabel(
-          title: ar ? 'العقود (${value.contracts.length})' : 'Contracts (${value.contracts.length})',
+          title: ar
+              ? 'العقود (${value.contracts.length})'
+              : 'Contracts (${value.contracts.length})',
         ),
         if (value.contracts.isEmpty)
           _InlineNotice(text: ar ? 'لا توجد عقود.' : 'No contracts.')
         else
-          ...value.contracts.take(5).map((contract) => _MiniContract(contract: contract)),
+          ...value.contracts
+              .take(5)
+              .map((contract) => _MiniContract(contract: contract)),
         const SizedBox(height: 14),
         _SectionLabel(
-          title: supplier ? (ar ? 'دفعات قادمة' : 'Upcoming payments') : (ar ? 'المستحقات' : 'Receivables'),
+          title: supplier
+              ? (ar ? 'دفعات قادمة' : 'Upcoming payments')
+              : (ar ? 'المستحقات' : 'Receivables'),
         ),
         if (pending.isEmpty)
-          _InlineNotice(text: ar ? 'لا توجد دفعات معلقة.' : 'No pending payments.')
+          _InlineNotice(
+              text: ar ? 'لا توجد دفعات معلقة.' : 'No pending payments.')
         else
           ...pending.map(
             (payment) => _PaymentLine(
@@ -812,11 +832,12 @@ final class _BusinessSnapshot extends StatelessWidget {
         const SizedBox(height: 14),
         _SectionLabel(title: ar ? 'النشاط الأخير' : 'Recent activity'),
         if (value.activity.isEmpty)
-          _InlineNotice(text: ar ? 'لا توجد تحصيلات مسجلة.' : 'No settlement activity.')
+          _InlineNotice(
+              text: ar ? 'لا توجد تحصيلات مسجلة.' : 'No settlement activity.')
         else
           ...value.activity.take(5).map(
-            (activity) => _ActivityLine(activity: activity),
-          ),
+                (activity) => _ActivityLine(activity: activity),
+              ),
       ],
     );
   }
@@ -843,15 +864,20 @@ final class _FinanceCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: SafeContractsSurface(
         elevated: false,
-        accent: supplier ? SafeContractsVisual.amber : SafeContractsVisual.green,
+        accent:
+            supplier ? SafeContractsVisual.amber : SafeContractsVisual.green,
         padding: const EdgeInsets.all(12),
         child: Wrap(
           spacing: 16,
           runSpacing: 8,
           children: [
             _Metric(label: ar ? 'العملة' : 'Currency', value: currency),
-            _Metric(label: ar ? 'القائم' : 'Outstanding', value: _money(outstanding, currency)),
-            _Metric(label: ar ? 'المتأخر' : 'Overdue', value: _money(overdue, currency)),
+            _Metric(
+                label: ar ? 'القائم' : 'Outstanding',
+                value: _money(outstanding, currency)),
+            _Metric(
+                label: ar ? 'المتأخر' : 'Overdue',
+                value: _money(overdue, currency)),
             _Metric(label: ar ? 'عدد الدفعات' : 'Obligations', value: '$count'),
           ],
         ),
@@ -877,21 +903,27 @@ final class _MiniContract extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.description_outlined, color: SafeContractsVisual.navy),
+            const Icon(Icons.description_outlined,
+                color: SafeContractsVisual.navy),
             const SizedBox(width: 9),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(contract.contractNumber, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  Text(contract.contractNumber,
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
                   Text(
                     <String>[
                       if (contract.endDate != null) contract.endDate!,
-                      if (contract.baseValue != null) _money(contract.baseValue!, contract.currencyCode),
+                      if (contract.baseValue != null)
+                        _money(contract.baseValue!, contract.currencyCode),
                     ].join(' • '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: SafeContractsVisual.muted),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: SafeContractsVisual.muted),
                   ),
                 ],
               ),
@@ -933,14 +965,20 @@ final class _PaymentLine extends StatelessWidget {
               color: safeContractsStatusSoftColor(status),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Text('$sequence', style: const TextStyle(fontWeight: FontWeight.w900)),
+            child: Text('$sequence',
+                style: const TextStyle(fontWeight: FontWeight.w900)),
           ),
           const SizedBox(width: 9),
-          Expanded(child: Text(dueDate, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(
+              child:
+                  Text(dueDate, maxLines: 1, overflow: TextOverflow.ellipsis)),
           const SizedBox(width: 8),
-          Text(_compactNumber(amount), style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(_compactNumber(amount),
+              style: const TextStyle(fontWeight: FontWeight.w900)),
           const SizedBox(width: 8),
-          _StatusBadge(label: context.scL10n.status(status), color: safeContractsStatusColor(status)),
+          _StatusBadge(
+              label: context.scL10n.status(status),
+              color: safeContractsStatusColor(status)),
         ],
       ),
     );
@@ -956,7 +994,8 @@ final class _ActivityLine extends StatelessWidget {
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.receipt_long_outlined, color: SafeContractsVisual.green),
+      leading: const Icon(Icons.receipt_long_outlined,
+          color: SafeContractsVisual.green),
       title: Text(_money(activity.amount, activity.currencyCode)),
       subtitle: Text(
         <String>[
@@ -1043,30 +1082,44 @@ final class _CustomerEditorState extends State<_CustomerEditor> {
               TextFormField(
                 controller: _name,
                 maxLength: 191,
-                decoration: InputDecoration(labelText: ar ? 'اسم العميل *' : 'Customer name *'),
+                decoration: InputDecoration(
+                    labelText: ar ? 'اسم العميل *' : 'Customer name *'),
                 validator: (value) => value == null || value.trim().isEmpty
                     ? (ar ? 'اسم العميل مطلوب.' : 'Customer name is required.')
                     : null,
               ),
               const SizedBox(height: 10),
-              TextField(controller: _code, decoration: InputDecoration(labelText: ar ? 'الكود الداخلي' : 'Internal code')),
+              TextField(
+                  controller: _code,
+                  decoration: InputDecoration(
+                      labelText: ar ? 'الكود الداخلي' : 'Internal code')),
               const SizedBox(height: 10),
-              TextField(controller: _contact, decoration: InputDecoration(labelText: ar ? 'جهة الاتصال' : 'Contact name')),
+              TextField(
+                  controller: _contact,
+                  decoration: InputDecoration(
+                      labelText: ar ? 'جهة الاتصال' : 'Contact name')),
               const SizedBox(height: 10),
               TextFormField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(labelText: ar ? 'البريد الإلكتروني' : 'Email'),
+                decoration: InputDecoration(
+                    labelText: ar ? 'البريد الإلكتروني' : 'Email'),
                 validator: (value) {
                   final text = value?.trim() ?? '';
                   if (text.isNotEmpty && !text.contains('@')) {
-                    return ar ? 'البريد الإلكتروني غير صحيح.' : 'Enter a valid email.';
+                    return ar
+                        ? 'البريد الإلكتروني غير صحيح.'
+                        : 'Enter a valid email.';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 10),
-              TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: ar ? 'الهاتف' : 'Phone')),
+              TextField(
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  decoration:
+                      InputDecoration(labelText: ar ? 'الهاتف' : 'Phone')),
               if (!editing) ...[
                 const SizedBox(height: 10),
                 TextField(
@@ -1074,7 +1127,8 @@ final class _CustomerEditorState extends State<_CustomerEditor> {
                   minLines: 2,
                   maxLines: 4,
                   maxLength: 5000,
-                  decoration: InputDecoration(labelText: ar ? 'ملاحظات' : 'Notes'),
+                  decoration:
+                      InputDecoration(labelText: ar ? 'ملاحظات' : 'Notes'),
                 ),
               ],
               SwitchListTile.adaptive(
@@ -1135,14 +1189,21 @@ final class _Pagination extends StatelessWidget {
           alignment: WrapAlignment.center,
           children: [
             OutlinedButton.icon(
-              onPressed: busy || page.page <= 1 ? null : () => unawaited(onPrevious()),
-              icon: const Icon(Icons.chevron_left_rounded, matchTextDirection: true),
+              onPressed:
+                  busy || page.page <= 1 ? null : () => unawaited(onPrevious()),
+              icon: const Icon(
+                Icons.chevron_left_rounded,
+              ),
               label: Text(context.scL10n.t('Previous')),
             ),
             Text(context.scL10n.pageShown(page.page, page.customers.length)),
             OutlinedButton.icon(
-              onPressed: busy || !page.hasMore || page.page >= 5 ? null : () => unawaited(onNext()),
-              icon: const Icon(Icons.chevron_right_rounded, matchTextDirection: true),
+              onPressed: busy || !page.hasMore || page.page >= 5
+                  ? null
+                  : () => unawaited(onNext()),
+              icon: const Icon(
+                Icons.chevron_right_rounded,
+              ),
               label: Text(context.scL10n.t('Next')),
             ),
           ],
@@ -1165,13 +1226,16 @@ final class _CountBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
-      child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+      child: Text(value,
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w900)),
     );
   }
 }
 
 final class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.label, required this.color, this.dark = false});
+  const _StatusBadge(
+      {required this.label, required this.color, this.dark = false});
   final String label;
   final Color color;
   final bool dark;
@@ -1181,7 +1245,9 @@ final class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: dark ? color.withValues(alpha: 0.28) : color.withValues(alpha: 0.11),
+        color: dark
+            ? color.withValues(alpha: 0.28)
+            : color.withValues(alpha: 0.11),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -1223,9 +1289,16 @@ final class _Metric extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: SafeContractsVisual.muted)),
+          Text(label,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(color: SafeContractsVisual.muted)),
           const SizedBox(height: 2),
-          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -1277,7 +1350,8 @@ final class _InlineNotice extends StatelessWidget {
         color: SafeContractsVisual.navySoft,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(text, style: const TextStyle(color: SafeContractsVisual.navyDeep)),
+      child: Text(text,
+          style: const TextStyle(color: SafeContractsVisual.navyDeep)),
     );
   }
 }
@@ -1292,5 +1366,7 @@ String _compactNumber(String raw) {
 
 String _money(String raw, String currency) {
   final value = _compactNumber(raw);
-  return currency == 'UNSET' || currency.trim().isEmpty ? value : '$value $currency';
+  return currency == 'UNSET' || currency.trim().isEmpty
+      ? value
+      : '$value $currency';
 }

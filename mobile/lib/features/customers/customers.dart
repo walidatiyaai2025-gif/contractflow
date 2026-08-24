@@ -304,7 +304,8 @@ final class CustomersController extends ChangeNotifier {
     if (!canAccess || id <= 0) {
       selectedCustomerId = id > 0 ? id : null;
       selectedCustomer = null;
-      detailErrorMessage = 'Customer access is not authorized or ID is invalid.';
+      detailErrorMessage =
+          'Customer access is not authorized or ID is invalid.';
       detailState = CustomerDetailLoadState.error;
       notifyListeners();
       return;
@@ -404,7 +405,8 @@ String _requiredText(Object? value, String field) {
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
-    throw const FormatException('Customer text field must be a string or null.');
+    throw const FormatException(
+        'Customer text field must be a string or null.');
   }
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;

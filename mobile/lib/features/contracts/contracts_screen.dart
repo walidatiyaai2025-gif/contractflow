@@ -583,7 +583,8 @@ final class _ContractCard extends StatelessWidget {
                         ],
                       ),
                       const Spacer(),
-                      if (contract.startDate != null || contract.endDate != null)
+                      if (contract.startDate != null ||
+                          contract.endDate != null)
                         Text(
                           <String>[
                             if (contract.startDate != null)
@@ -593,9 +594,10 @@ final class _ContractCard extends StatelessWidget {
                           ].join(' • '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: SafeContractsVisual.muted,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: SafeContractsVisual.muted,
+                                  ),
                         ),
                       if (progress != null) ...[
                         const SizedBox(height: 7),
@@ -672,7 +674,10 @@ final class _NeutralContractPlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [SafeContractsVisual.navySoft, SafeContractsVisual.surfaceWarm],
+          colors: [
+            SafeContractsVisual.navySoft,
+            SafeContractsVisual.surfaceWarm
+          ],
         ),
       ),
       child: const Center(
@@ -687,7 +692,8 @@ final class _NeutralContractPlaceholder extends StatelessWidget {
 }
 
 final class _ContractCreateSheet extends StatefulWidget {
-  const _ContractCreateSheet({required this.controller, required this.customers});
+  const _ContractCreateSheet(
+      {required this.controller, required this.customers});
   final ContractsController controller;
   final List<CustomerOption> customers;
 
@@ -847,14 +853,17 @@ final class _ContractCreateSheetState extends State<_ContractCreateSheet> {
               const SizedBox(height: 10),
               TextFormField(
                 controller: _value,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: ar ? 'قيمة العقد *' : 'Contract value *',
                 ),
                 validator: (value) {
                   final parsed = num.tryParse(value?.trim() ?? '');
                   return parsed == null || parsed <= 0
-                      ? (ar ? 'أدخل قيمة أكبر من صفر.' : 'Enter a value greater than zero.')
+                      ? (ar
+                          ? 'أدخل قيمة أكبر من صفر.'
+                          : 'Enter a value greater than zero.')
                       : null;
                 },
               ),
@@ -882,7 +891,8 @@ final class _ContractCreateSheetState extends State<_ContractCreateSheet> {
                 minLines: 2,
                 maxLines: 4,
                 maxLength: 5000,
-                decoration: InputDecoration(labelText: ar ? 'ملاحظات' : 'Notes'),
+                decoration:
+                    InputDecoration(labelText: ar ? 'ملاحظات' : 'Notes'),
               ),
               const SizedBox(height: 10),
               FilledButton.icon(
@@ -938,7 +948,6 @@ final class _Pagination extends StatelessWidget {
                   : () => unawaited(controller.previousPage()),
               icon: const Icon(
                 Icons.chevron_left_rounded,
-                matchTextDirection: true,
               ),
               label: Text(context.scL10n.t('Previous')),
             ),
@@ -949,7 +958,6 @@ final class _Pagination extends StatelessWidget {
                   : () => unawaited(controller.nextPage()),
               icon: const Icon(
                 Icons.chevron_right_rounded,
-                matchTextDirection: true,
               ),
               label: Text(context.scL10n.t('Next')),
             ),
@@ -985,7 +993,8 @@ final class _StatusFilter extends StatelessWidget {
 }
 
 final class _Choice extends StatelessWidget {
-  const _Choice({required this.label, required this.selected, required this.onTap});
+  const _Choice(
+      {required this.label, required this.selected, required this.onTap});
   final String label;
   final bool selected;
   final VoidCallback? onTap;
@@ -1019,14 +1028,18 @@ final class _StatusPill extends StatelessWidget {
         context.scL10n.status(status),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800),
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800),
       ),
     );
   }
 }
 
 final class _InfoPill extends StatelessWidget {
-  const _InfoPill({required this.icon, required this.label, this.color = SafeContractsVisual.navy});
+  const _InfoPill(
+      {required this.icon,
+      required this.label,
+      this.color = SafeContractsVisual.navy});
   final IconData icon;
   final String label;
   final Color color;
@@ -1050,7 +1063,8 @@ final class _InfoPill extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                  color: color, fontSize: 11, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -1072,7 +1086,9 @@ final class _HeaderBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
-      child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+      child: Text(value,
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w900)),
     );
   }
 }
@@ -1133,5 +1149,7 @@ String _compactNumber(String raw) {
 
 String _money(String raw, String currency) {
   final value = _compactNumber(raw);
-  return currency == 'UNSET' || currency.trim().isEmpty ? value : '$value $currency';
+  return currency == 'UNSET' || currency.trim().isEmpty
+      ? value
+      : '$value $currency';
 }

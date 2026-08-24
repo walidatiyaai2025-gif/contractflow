@@ -420,7 +420,10 @@ final class _NeutralHeroPlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [SafeContractsVisual.navySoft, SafeContractsVisual.surfaceWarm],
+          colors: [
+            SafeContractsVisual.navySoft,
+            SafeContractsVisual.surfaceWarm
+          ],
         ),
       ),
       child: Center(
@@ -1187,5 +1190,7 @@ String _compactNumber(String raw) {
 
 String _money(String raw, String currency) {
   final value = _compactNumber(raw);
-  return currency == 'UNSET' || currency.trim().isEmpty ? value : '$value $currency';
+  return currency == 'UNSET' || currency.trim().isEmpty
+      ? value
+      : '$value $currency';
 }

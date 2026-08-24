@@ -387,7 +387,9 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         SafeContractsSectionTitle(
-                          title: ar ? 'البيانات القابلة للتعديل' : 'Editable fields',
+                          title: ar
+                              ? 'البيانات القابلة للتعديل'
+                              : 'Editable fields',
                           subtitle: ar
                               ? 'يتم إرسال الحقول المدعومة فقط إلى الخادم.'
                               : 'Only server-supported fields are submitted.',
@@ -399,7 +401,8 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                           maxLength: 100,
                           textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
-                            labelText: ar ? 'رقم / اسم العقد *' : 'Contract number *',
+                            labelText:
+                                ar ? 'رقم / اسم العقد *' : 'Contract number *',
                             prefixIcon: const Icon(Icons.tag_rounded),
                           ),
                         ),
@@ -408,7 +411,8 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                           decoration: BoxDecoration(
                             color: SafeContractsVisual.backgroundRaised,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: SafeContractsVisual.outline),
+                            border:
+                                Border.all(color: SafeContractsVisual.outline),
                           ),
                           child: SwitchListTile.adaptive(
                             value: _updateDates,
@@ -425,8 +429,11 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                               color: SafeContractsVisual.navy,
                             ),
                             title: Text(
-                              ar ? 'تحديث تاريخي البداية والنهاية' : 'Update start/end dates',
-                              style: const TextStyle(fontWeight: FontWeight.w800),
+                              ar
+                                  ? 'تحديث تاريخي البداية والنهاية'
+                                  : 'Update start/end dates',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800),
                             ),
                             subtitle: Text(
                               ar
@@ -484,14 +491,17 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                                   )
                                 : const Icon(Icons.save_outlined),
                             label: Text(
-                              ar ? 'حفظ الحقول المدعومة' : 'Save supported fields',
+                              ar
+                                  ? 'حفظ الحقول المدعومة'
+                                  : 'Save supported fields',
                             ),
                           ),
                         ],
                       ],
                     ),
                   ),
-                  if (_editController.canAssignAccountant || loadingAccountants) ...[
+                  if (_editController.canAssignAccountant ||
+                      loadingAccountants) ...[
                     const SizedBox(height: 12),
                     SafeContractsSurface(
                       padding: const EdgeInsets.all(14),
@@ -499,7 +509,8 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           SafeContractsSectionTitle(
-                            title: ar ? 'مسؤول العقد' : 'Responsible accountant',
+                            title:
+                                ar ? 'مسؤول العقد' : 'Responsible accountant',
                             subtitle: ar
                                 ? 'التعيين مستقل ويخضع لصلاحية الخادم والتدقيق.'
                                 : 'Assignment is independently server-authorized and audited.',
@@ -523,7 +534,9 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                               initialValue: _accountantId,
                               isExpanded: true,
                               decoration: InputDecoration(
-                                labelText: ar ? 'المحاسب المسؤول' : 'Responsible accountant',
+                                labelText: ar
+                                    ? 'المحاسب المسؤول'
+                                    : 'Responsible accountant',
                                 prefixIcon: const Icon(Icons.badge_outlined),
                               ),
                               items: _editController.accountants
@@ -556,7 +569,9 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
                                     )
                                   : const Icon(Icons.assignment_ind_outlined),
                               label: Text(
-                                ar ? 'تعيين المسؤول' : 'Assign responsible accountant',
+                                ar
+                                    ? 'تعيين المسؤول'
+                                    : 'Assign responsible accountant',
                               ),
                             ),
                           ],
@@ -864,8 +879,7 @@ bool _validNullableDate(String? value) {
       parsed.day == int.parse(match.group(3)!);
 }
 
-String _isoDate(DateTime value) =>
-    '${value.year.toString().padLeft(4, '0')}-'
+String _isoDate(DateTime value) => '${value.year.toString().padLeft(4, '0')}-'
     '${value.month.toString().padLeft(2, '0')}-'
     '${value.day.toString().padLeft(2, '0')}';
 

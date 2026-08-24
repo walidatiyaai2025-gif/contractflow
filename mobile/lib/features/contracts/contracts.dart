@@ -78,8 +78,8 @@ final class ContractsFilters {
   ContractsFilters withCustomer(int? value) => ContractsFilters(
         customerId: value,
         counterpartyType: value == null ? counterpartyType : 'customer',
-        counterpartyId: value ??
-            (counterpartyType == 'customer' ? counterpartyId : null),
+        counterpartyId:
+            value ?? (counterpartyType == 'customer' ? counterpartyId : null),
         status: status,
       );
 
@@ -539,7 +539,8 @@ final class ContractsController extends ChangeNotifier {
     if (normalized != null &&
         normalized.isNotEmpty &&
         !_supportedCounterpartyTypes.contains(normalized)) {
-      throw ArgumentError.value(value, 'value', 'Unsupported counterparty type.');
+      throw ArgumentError.value(
+          value, 'value', 'Unsupported counterparty type.');
     }
     filters = filters.withCounterpartyType(
       normalized == null || normalized.isEmpty ? null : normalized,
@@ -691,7 +692,8 @@ String _requiredText(Object? value, String field) {
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
-    throw const FormatException('Optional contract text must be string or null.');
+    throw const FormatException(
+        'Optional contract text must be string or null.');
   }
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;

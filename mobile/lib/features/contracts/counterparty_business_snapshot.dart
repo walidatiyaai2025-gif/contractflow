@@ -23,7 +23,8 @@ final class CounterpartyActivity {
     return CounterpartyActivity(
       amount: _moneyText(data['amount'], 'counterparty_activity.amount'),
       currencyCode: _currency(data['currency_code']),
-      date: _requiredText(data['collection_date'], 'counterparty_activity.date'),
+      date:
+          _requiredText(data['collection_date'], 'counterparty_activity.date'),
       reference: _optionalText(data['reference']),
       contractNumber: _optionalText(data['contract_number']),
     );
@@ -111,8 +112,7 @@ final class CounterpartyBusinessSnapshotRepository {
         query: <String, String>{
           'counterparty_type': type,
           'counterparty_id': '$counterpartyId',
-          'financial_direction':
-              type == 'supplier' ? 'payable' : 'receivable',
+          'financial_direction': type == 'supplier' ? 'payable' : 'receivable',
           'page': '1',
           'per_page': '100',
           'sort': 'financial_direction',
