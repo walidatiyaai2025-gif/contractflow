@@ -19,13 +19,15 @@
     max-inline-size: 100%;
   }
 
-  /* SC-013/SC-014: in RTL the final actions column sits at the far-left edge
+  /* SC-013..SC-015: in RTL the final actions column sits at the far-left edge
    * of a deliberately wide table. Keep that control surface reachable while
-   * the rest of the directory remains horizontally scrollable. */
+   * the rest of each register remains horizontally scrollable. */
   .safecontracts-customers .safecontracts-worker1__table-scroll table.widefat th:last-child,
   .safecontracts-customers .safecontracts-worker1__table-scroll table.widefat td:last-child,
   .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat th:last-child,
-  .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat td:last-child {
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat td:last-child,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll table.widefat th:last-child,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll table.widefat td:last-child {
     position: sticky;
     left: 0;
     z-index: 3;
@@ -37,13 +39,15 @@
   }
 
   .safecontracts-customers .safecontracts-worker1__table-scroll table.widefat thead th:last-child,
-  .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat thead th:last-child {
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat thead th:last-child,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll table.widefat thead th:last-child {
     z-index: 4;
     background: #f2e7dc !important;
   }
 
   .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions,
-  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions {
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
@@ -55,7 +59,10 @@
   .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form .button,
   .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions .button,
   .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form,
-  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form .button {
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form .button,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions .button,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form,
+  .safecontracts-contracts .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form .button {
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
