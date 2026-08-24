@@ -1,8 +1,8 @@
 stage=apply
-head=6e7f71b1230b39433a3a62275223bd6ca7b60ad1
+head=94f2882bd3c558a7f71bc818822aa7124b0c64e2
 exit=1
 --- apply ---
-FAIL mobile/lib/features/auth/login_screen.dart: expected one marker, found 6: '  @override\n  Widget build(BuildContext context) {\n'
+FAIL mobile/lib/features/auth/login_screen.dart: expected one marker, found 2: '  @override\n  Widget build(BuildContext context) {\n    final l10n = context.scL10n;\n'
 --- pubget ---
 --- analyze ---
 --- tests ---
