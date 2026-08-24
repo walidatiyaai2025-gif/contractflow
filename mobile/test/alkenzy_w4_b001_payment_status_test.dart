@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/features/payments/payments.dart';
 
 void main() {
-  test('B001 Flutter consumes server-authoritative payment status unchanged', () {
+  test('B001 Flutter consumes server-authoritative payment status unchanged',
+      () {
     final payment = SafeContractsPayment.fromData(<String, Object?>{
       'id': 7001,
       'contract_id': 501,
