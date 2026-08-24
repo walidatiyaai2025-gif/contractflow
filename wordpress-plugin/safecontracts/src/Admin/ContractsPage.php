@@ -337,38 +337,42 @@ final class ContractsPage
                 <section class="safecontracts-worker1__panel">
                     <div class="safecontracts-worker1__panel-head"><div><h2><?php echo esc_html(self::text('Contract register')); ?></h2><p><?php echo esc_html(self::text('Customer AR and supplier AP contracts stay explicitly separated')); ?></p></div><span class="safecontracts-worker1__count"><?php echo esc_html((string) $totalRows); ?></span></div>
                     <div class="safecontracts-worker1__panel-body--flush">
-                        <?php if ($pageRows === []) : ?>
-                            <div class="safecontracts-worker1__empty"><span class="safecontracts-worker1__empty-mark" aria-hidden="true">+</span><h3><?php echo esc_html(self::text('No contracts match the selected filters', 'لا توجد عقود مطابقة للفلاتر المحددة')); ?></h3><p><?php echo esc_html(self::text('Clear one or more filters, or create a contract if you have permission.')); ?></p></div>
+                        <?php if ($contracts !== []) : ?>
+                            <?php if ($pageRows === []) : ?>
+                                <div class="safecontracts-worker1__empty"><span class="safecontracts-worker1__empty-mark" aria-hidden="true">+</span><h3><?php echo esc_html(self::text('No contracts match the selected filters', 'لا توجد عقود مطابقة للفلاتر المحددة')); ?></h3><p><?php echo esc_html(self::text('Clear one or more filters, or create a contract if you have permission.')); ?></p></div>
+                            <?php else : ?>
+                                <div class="safecontracts-worker1__table-scroll">
+                                    <table class="widefat striped">
+                                        <thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th><th><?php echo esc_html__('Direction', 'safecontracts'); ?></th><th><?php echo esc_html__('Currency', 'safecontracts'); ?></th><th><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th><th><?php echo esc_html__('Scheduled total', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead>
+                                        <tbody>
+                                        <?php foreach ($pageRows as $contract) : ?>
+                                            <?php
+                                            $contractId = (int) ($contract['id'] ?? 0);
+                                            $accountantId = (int) ($contract['accountant_user_id'] ?? 0);
+                                            $direction = (string) ($contract['financial_direction'] ?? FinancialDirection::RECEIVABLE);
+                                            $directionClass = $direction === FinancialDirection::PAYABLE ? 'payable' : 'receivable';
+                                            $scheduledTotal = $scheduledTotals[$contractId] ?? '0.0000';
+                                            $addPaymentUrl = add_query_arg(['page' => PaymentsPage::SLUG, 'contract_id' => $contractId], admin_url('admin.php'));
+                                            ?>
+                                            <tr>
+                                                <td><div class="safecontracts-worker1__primary-cell"><a href="<?php echo esc_url(self::contractUrl($contractId, $filters, $search, $currentPage, 'overview')); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><span class="safecontracts-worker1__secondary"><?php echo esc_html((string) ($contract['start_date'] ?: self::text('No start date'))); ?></span></div></td>
+                                                <td><div class="safecontracts-worker1__primary-cell"><strong><?php echo esc_html((string) ($contract['counterparty_name'] ?? '')); ?></strong><span class="safecontracts-worker1__secondary"><?php echo esc_html(self::counterpartyTypeLabel((string) ($contract['counterparty_type'] ?? ''))); ?></span></div></td>
+                                                <td><span class="safecontracts-worker1__status safecontracts-worker1__status--<?php echo esc_attr($directionClass); ?>"><?php echo esc_html(self::directionLabel($direction)); ?></span></td>
+                                                <td><?php echo esc_html((string) ($contract['currency_code'] ?: '—')); ?></td>
+                                                <td><?php echo $accountantId > 0 ? esc_html($accountantLabels[$accountantId] ?? __('Assigned user unavailable', 'safecontracts')) : '<span class="safecontracts-worker1__status safecontracts-worker1__status--warning">' . esc_html__('Unassigned', 'safecontracts') . '</span>'; ?></td>
+                                                <td><span class="safecontracts-worker1__status"><?php echo esc_html(self::statusLabel((string) $contract['status'])); ?></span></td>
+                                                <td><?php echo esc_html(self::money($contract['base_value'], (string) ($contract['currency_code'] ?? ''))); ?></td>
+                                                <td><strong><?php echo esc_html(self::money($scheduledTotal, (string) ($contract['currency_code'] ?? ''))); ?></strong></td>
+                                                <td><div class="safecontracts-dashboard-table-actions"><a class="button button-small" href="<?php echo esc_url(self::contractUrl($contractId, $filters, $search, $currentPage, 'overview')); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_PAYMENTS)) : ?><a class="button button-small safecontracts-payment-action safecontracts-payment-action--<?php echo esc_attr($directionClass); ?>" href="<?php echo esc_url($addPaymentUrl); ?>"><?php echo esc_html__('Add payment', 'safecontracts'); ?></a><?php endif; ?><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_SYSTEM)) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr(self::text('Archive this contract from active operations? Payments, collections, history and audit evidence will be preserved.')); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contractId); ?>"><?php wp_nonce_field(self::DELETE_ACTION . '_' . $contractId); ?><button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button></form><?php endif; ?></div></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <?php self::renderPagination($currentPage, $totalPages, $totalRows, $filters, $search, $selectedId, $tab); ?>
+                            <?php endif; ?>
                         <?php else : ?>
-                            <div class="safecontracts-worker1__table-scroll">
-                                <table class="widefat striped">
-                                    <thead><tr><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th><th><?php echo esc_html__('Direction', 'safecontracts'); ?></th><th><?php echo esc_html__('Currency', 'safecontracts'); ?></th><th><?php echo esc_html__('Responsible accountant', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Base value', 'safecontracts'); ?></th><th><?php echo esc_html__('Scheduled total', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead>
-                                    <tbody>
-                                    <?php foreach ($pageRows as $contract) : ?>
-                                        <?php
-                                        $contractId = (int) ($contract['id'] ?? 0);
-                                        $accountantId = (int) ($contract['accountant_user_id'] ?? 0);
-                                        $direction = (string) ($contract['financial_direction'] ?? FinancialDirection::RECEIVABLE);
-                                        $directionClass = $direction === FinancialDirection::PAYABLE ? 'payable' : 'receivable';
-                                        $scheduledTotal = $scheduledTotals[$contractId] ?? '0.0000';
-                                        $addPaymentUrl = add_query_arg(['page' => PaymentsPage::SLUG, 'contract_id' => $contractId], admin_url('admin.php'));
-                                        ?>
-                                        <tr>
-                                            <td><div class="safecontracts-worker1__primary-cell"><a href="<?php echo esc_url(self::contractUrl($contractId, $filters, $search, $currentPage, 'overview')); ?>"><?php echo esc_html((string) $contract['contract_number']); ?></a><span class="safecontracts-worker1__secondary"><?php echo esc_html((string) ($contract['start_date'] ?: self::text('No start date'))); ?></span></div></td>
-                                            <td><div class="safecontracts-worker1__primary-cell"><strong><?php echo esc_html((string) ($contract['counterparty_name'] ?? '')); ?></strong><span class="safecontracts-worker1__secondary"><?php echo esc_html(self::counterpartyTypeLabel((string) ($contract['counterparty_type'] ?? ''))); ?></span></div></td>
-                                            <td><span class="safecontracts-worker1__status safecontracts-worker1__status--<?php echo esc_attr($directionClass); ?>"><?php echo esc_html(self::directionLabel($direction)); ?></span></td>
-                                            <td><?php echo esc_html((string) ($contract['currency_code'] ?: '—')); ?></td>
-                                            <td><?php echo $accountantId > 0 ? esc_html($accountantLabels[$accountantId] ?? __('Assigned user unavailable', 'safecontracts')) : '<span class="safecontracts-worker1__status safecontracts-worker1__status--warning">' . esc_html__('Unassigned', 'safecontracts') . '</span>'; ?></td>
-                                            <td><span class="safecontracts-worker1__status"><?php echo esc_html(self::statusLabel((string) $contract['status'])); ?></span></td>
-                                            <td><?php echo esc_html(self::money($contract['base_value'], (string) ($contract['currency_code'] ?? ''))); ?></td>
-                                            <td><strong><?php echo esc_html(self::money($scheduledTotal, (string) ($contract['currency_code'] ?? ''))); ?></strong></td>
-                                            <td><div class="safecontracts-dashboard-table-actions"><a class="button button-small" href="<?php echo esc_url(self::contractUrl($contractId, $filters, $search, $currentPage, 'overview')); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_PAYMENTS)) : ?><a class="button button-small safecontracts-payment-action safecontracts-payment-action--<?php echo esc_attr($directionClass); ?>" href="<?php echo esc_url($addPaymentUrl); ?>"><?php echo esc_html__('Add payment', 'safecontracts'); ?></a><?php endif; ?><?php if (empty($contract['is_archived']) && current_user_can(Capabilities::MANAGE_SYSTEM)) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr(self::text('Archive this contract from active operations? Payments, collections, history and audit evidence will be preserved.')); ?>"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><input type="hidden" name="contract_id" value="<?php echo esc_attr((string) $contractId); ?>"><?php wp_nonce_field(self::DELETE_ACTION . '_' . $contractId); ?><button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button></form><?php endif; ?></div></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <?php self::renderPagination($currentPage, $totalPages, $totalRows, $filters, $search, $selectedId, $tab); ?>
+                            <div class="safecontracts-worker1__empty"><span class="safecontracts-worker1__empty-mark" aria-hidden="true">+</span><h3><?php echo esc_html(self::text('No contracts match the selected filters', 'لا توجد عقود مطابقة للفلاتر المحددة')); ?></h3><p><?php echo esc_html(self::text('Clear one or more filters, or create a contract if you have permission.')); ?></p></div>
                         <?php endif; ?>
                     </div>
                 </section>
