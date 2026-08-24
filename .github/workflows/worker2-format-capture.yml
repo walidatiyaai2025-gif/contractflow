@@ -1,24 +1,21 @@
-name: Worker2 Format Capture
+name: Worker2 Validate And Capture
 
 on:
-  push:
+  pull_request:
     branches:
-      - mobile-redesign/customers-suppliers-contracts
+      - feat/alkenzy-mobile-reference-redesign
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  capture:
-    if: github.actor != 'github-actions[bot]'
+  validate:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: mobile-redesign/customers-suppliers-contracts
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -36,25 +33,22 @@ jobs:
             lib/features/customers/customers.dart \
             lib/features/customers/customers_screen.dart \
             lib/features/suppliers/suppliers_screen.dart
-      - name: Commit formatter output
-        working-directory: .
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add -- \
-            mobile/lib/features/contracts/contract_edit_screen.dart \
-            mobile/lib/features/contracts/contracts.dart \
-            mobile/lib/features/contracts/contracts_screen.dart \
-            mobile/lib/features/contracts/counterparty_business_snapshot.dart \
-            mobile/lib/features/contracts/premium_contract_details_screen.dart \
-            mobile/lib/features/customers/customers.dart \
-            mobile/lib/features/customers/customers_screen.dart \
+      - name: Upload formatter output
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker2-formatted-sources
+          path: |
+            mobile/lib/features/contracts/contract_edit_screen.dart
+            mobile/lib/features/contracts/contracts.dart
+            mobile/lib/features/contracts/contracts_screen.dart
+            mobile/lib/features/contracts/counterparty_business_snapshot.dart
+            mobile/lib/features/contracts/premium_contract_details_screen.dart
+            mobile/lib/features/customers/customers.dart
+            mobile/lib/features/customers/customers_screen.dart
             mobile/lib/features/suppliers/suppliers_screen.dart
-          if git diff --cached --quiet; then
-            echo 'Worker 2 sources already match dart format.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'style(mobile): format Worker 2 sources'
-          git push origin HEAD:mobile-redesign/customers-suppliers-contracts
+          if-no-files-found: error
+          retention-days: 1
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
