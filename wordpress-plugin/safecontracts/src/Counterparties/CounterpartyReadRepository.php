@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Counterparties;
 
 use DomainException;
+use InvalidArgumentException;
 use SafeContracts\Admin\DashboardFilters;
 use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
@@ -35,6 +36,86 @@ final class CounterpartyReadRepository
                 WHERE " . implode(' AND ', $where) . '
                 ORDER BY c.updated_at DESC, c.id DESC LIMIT 500';
         return $this->rows($wpdb->get_results($sql, ARRAY_A));
+    }
+
+    /**
+     * Server-authoritative contract pagination. Each request executes one
+     * bounded COUNT plus one bounded LIMIT/OFFSET query; the full dataset is
+     * never materialized in PHP before paging.
+     *
+     * @return array{rows:list<array<string,mixed>>,total:int}
+     */
+    public function contractPage(
+        array $filters,
+        string $search,
+        string $sort,
+        string $order,
+        int $page,
+        int $perPage
+    ): array {
+        global $wpdb;
+        if ($page < 1 || $perPage < 1 || $perPage > 100) {
+            throw new InvalidArgumentException('Contract pagination is outside the allowed range.');
+        }
+        $offset = ($page - 1) * $perPage;
+        if ($offset > 1000000) {
+            throw new InvalidArgumentException('Contract pagination offset is outside the bounded query window.');
+        }
+
+        $sortColumns = [
+            'id' => 'c.id',
+            'contract_number' => 'c.contract_number',
+            'customer_name' => 'customer_name',
+            'counterparty_name' => 'counterparty_name',
+            'financial_direction' => 'c.financial_direction',
+            'currency_code' => 'c.currency_code',
+            'status' => 'c.status',
+            'start_date' => 'c.start_date',
+            'end_date' => 'c.end_date',
+        ];
+        if (! array_key_exists($sort, $sortColumns)) {
+            throw new InvalidArgumentException('Contract sort is not supported.');
+        }
+        $direction = strtolower($order);
+        if (! in_array($direction, ['asc', 'desc'], true)) {
+            throw new InvalidArgumentException('Contract sort order is invalid.');
+        }
+
+        $f = DashboardFilters::normalize($filters);
+        [$where, $args] = $this->contractPageWhere($f, $search);
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $customers = $wpdb->prefix . 'safecontracts_customers';
+        $suppliers = $wpdb->prefix . 'safecontracts_suppliers';
+        $joins = "LEFT JOIN {$customers} cu ON c.counterparty_type = 'customer' AND cu.id = c.counterparty_id\n"
+            . "LEFT JOIN {$suppliers} su ON c.counterparty_type = 'supplier' AND su.id = c.counterparty_id";
+        $whereSql = implode(' AND ', $where);
+
+        $countSql = "SELECT COUNT(c.id) AS total\n"
+            . "FROM {$contracts} c\n{$joins}\nWHERE {$whereSql}";
+        if ($args !== []) {
+            $countSql = $wpdb->prepare($countSql, ...$args);
+        }
+        $countRows = $this->rows($wpdb->get_results($countSql, ARRAY_A));
+        $total = max(0, (int) ($countRows[0]['total'] ?? 0));
+
+        $orderColumn = $sortColumns[$sort];
+        $sql = "SELECT c.id, c.contract_number, c.customer_id,\n"
+            . "       c.counterparty_type, c.counterparty_id,\n"
+            . "       CASE WHEN c.counterparty_type = 'customer' THEN cu.name ELSE su.name END AS counterparty_name,\n"
+            . "       CASE WHEN c.counterparty_type = 'customer' THEN cu.name ELSE NULL END AS customer_name,\n"
+            . "       CASE WHEN c.counterparty_type = 'supplier' THEN su.id ELSE NULL END AS supplier_id,\n"
+            . "       CASE WHEN c.counterparty_type = 'supplier' THEN su.name ELSE NULL END AS supplier_name,\n"
+            . "       c.financial_direction, c.currency_code, c.accountant_user_id,\n"
+            . "       c.status, c.start_date, c.end_date, c.base_value, c.notes, c.is_archived, c.created_at, c.updated_at\n"
+            . "FROM {$contracts} c\n{$joins}\nWHERE {$whereSql}\n"
+            . 'ORDER BY ' . $orderColumn . ' ' . strtoupper($direction)
+            . ($orderColumn === 'c.id' ? '' : ', c.id ' . strtoupper($direction))
+            . " LIMIT %d OFFSET %d";
+        $pageArgs = [...$args, $perPage, $offset];
+        $sql = $wpdb->prepare($sql, ...$pageArgs);
+        $rows = $this->rows($wpdb->get_results($sql, ARRAY_A));
+
+        return ['rows' => $rows, 'total' => $total];
     }
 
     /** @return list<array<string,mixed>> */
@@ -226,6 +307,64 @@ final class CounterpartyReadRepository
             }
         }
         return $result;
+    /** @return array{0:list<string>,1:list<int|string>} */
+    private function contractPageWhere(array $filters, string $search): array
+    {
+        if (! current_user_can(Capabilities::ACCESS)) {
+            throw new DomainException('SafeContracts counterparty data requires access capability.');
+        }
+        $where = ['1 = 1', 'c.is_archived = 0'];
+        $args = [];
+        if (current_user_can(Capabilities::VIEW_ALL)) {
+            if ($filters['accountant_user_id'] > 0) {
+                $where[] = 'c.accountant_user_id = %d';
+                $args[] = (int) $filters['accountant_user_id'];
+            }
+        } else {
+            if (! current_user_can(Capabilities::VIEW_ASSIGNED)) {
+                throw new DomainException('SafeContracts counterparty data is outside the current user scope.');
+            }
+            $where[] = 'c.accountant_user_id = %d';
+            $args[] = get_current_user_id();
+        }
+        if ($filters['customer_id'] > 0) {
+            $where[] = 'c.customer_id = %d';
+            $args[] = (int) $filters['customer_id'];
+        }
+        if ($filters['counterparty_type'] !== '') {
+            $where[] = 'c.counterparty_type = %s';
+            $args[] = (string) $filters['counterparty_type'];
+        }
+        if ($filters['counterparty_id'] > 0) {
+            $where[] = 'c.counterparty_id = %d';
+            $args[] = (int) $filters['counterparty_id'];
+        }
+        if ($filters['contract_id'] > 0) {
+            $where[] = 'c.id = %d';
+            $args[] = (int) $filters['contract_id'];
+        }
+        if ($filters['financial_direction'] !== '') {
+            $where[] = 'c.financial_direction = %s';
+            $args[] = (string) $filters['financial_direction'];
+        }
+        if ($filters['currency_code'] !== '') {
+            $where[] = 'c.currency_code = %s';
+            $args[] = (string) $filters['currency_code'];
+        }
+        if ($filters['status'] !== '') {
+            $where[] = 'c.status = %s';
+            $args[] = (string) $filters['status'];
+        }
+        $needle = trim($search);
+        if ($needle !== '') {
+            if (strlen($needle) > 100) {
+                throw new InvalidArgumentException('Contract search must not exceed 100 characters.');
+            }
+            $like = '%' . addcslashes($needle, "\\%_") . '%';
+            $where[] = '(c.contract_number LIKE %s OR cu.name LIKE %s OR su.name LIKE %s OR c.currency_code LIKE %s OR c.status LIKE %s)';
+            array_push($args, $like, $like, $like, $like, $like);
+        }
+        return [$where, $args];
     }
 
     /** @return list<array<string,mixed>> */

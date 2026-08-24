@@ -60,9 +60,13 @@ sc_p8_016_expect(InvalidArgumentException::class, static fn () => ApiListQuery::
 sc_p8_016_expect(InvalidArgumentException::class, static fn () => ApiListQuery::parse(
     new WP_REST_Request(['order' => 'drop table']), [], ['id'], 'id'
 ), 'SC-P8-016 invalid order token is rejected');
+$deepPage = ApiListQuery::parse(
+    new WP_REST_Request(['page' => '600', 'per_page' => '1']), [], ['id'], 'id'
+);
+sc_p8_016_assert($deepPage['page'] === 600 && $deepPage['per_page'] === 1, 'SC-P8-016 server paging can move beyond the legacy 500-row materialization window');
 sc_p8_016_expect(InvalidArgumentException::class, static fn () => ApiListQuery::parse(
-    new WP_REST_Request(['page' => '6']), [], ['id'], 'id'
-), 'SC-P8-016 page cannot exceed bounded read window');
+    new WP_REST_Request(['page' => '10002', 'per_page' => '100']), [], ['id'], 'id'
+), 'SC-P8-016 page offset remains bounded against abusive deep scans');
 sc_p8_016_expect(InvalidArgumentException::class, static fn () => ApiListQuery::parse(
     new WP_REST_Request(['per_page' => '101']), [], ['id'], 'id'
 ), 'SC-P8-016 per_page cannot exceed 100');
