@@ -50,8 +50,6 @@ final class AdminNavigationGroups
                 continue;
             }
 
-            // Keep WordPress authorization authoritative. Group pages only
-            // expose leaves the current user is already allowed to open.
             if ($capability === '' || ! current_user_can($capability)) {
                 continue;
             }
@@ -65,18 +63,9 @@ final class AdminNavigationGroups
         }
 
         /*
-         * Do not remove registered leaf submenu rows here.
-         *
-         * WordPress core uses the live $submenu structure when resolving the
-         * parent and registered hook for admin.php?page=... access. Removing a
-         * leaf with remove_submenu_page() can therefore make an otherwise
-         * authorized plugin screen fail user_can_access_admin_page(). The leaf
-         * rows stay registered for routing/security and are hidden visually by
-         * printSidebarStyles() instead.
+         * Keep the registered leaf submenu rows in WordPress' authorization
+         * structure. Hiding them visually must never weaken core route checks.
          */
-
-        // WordPress creates a duplicate first submenu for the top-level page.
-        // Keep it, but present it with the clear business label Dashboard.
         if (isset($submenu[$parent][0]) && is_array($submenu[$parent][0])) {
             $submenu[$parent][0][0] = __('Dashboard', 'safecontracts');
         }
@@ -95,8 +84,8 @@ final class AdminNavigationGroups
 
     /**
      * Keep leaf submenu rows in WordPress' authorization structure but hide
-     * their sidebar links. The grouped entries remain visible because their
-     * URLs use page=safecontracts plus safecontracts_group, not page=safecontracts-*.
+     * their sidebar links. Grouped entries remain visible because their URLs
+     * use page=safecontracts plus safecontracts_group.
      */
     public static function printSidebarStyles(): void
     {
@@ -137,22 +126,25 @@ final class AdminNavigationGroups
         $items = self::$groupItems[$group] ?? [];
         ?>
         <section class="safecontracts-navigation-group" aria-labelledby="safecontracts-navigation-group-title">
-            <div class="safecontracts-section-heading">
+            <div class="safecontracts-section-heading safecontracts-page-heading">
                 <div>
-                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Grouped navigation', 'safecontracts'); ?></p>
-                    <h2 id="safecontracts-navigation-group-title"><?php echo esc_html($definition['title']); ?></h2>
-                    <p><?php echo esc_html($definition['description']); ?></p>
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Safe Contracts workspace', 'safecontracts'); ?></p>
+                    <h1 id="safecontracts-navigation-group-title"><?php echo esc_html($definition['title']); ?></h1>
+                    <p class="description"><?php echo esc_html($definition['description']); ?></p>
                 </div>
             </div>
 
             <?php if ($items === []) : ?>
-                <div class="notice notice-info inline"><p><?php echo esc_html__('No pages in this section are available to your current role.', 'safecontracts'); ?></p></div>
+                <div class="safecontracts-navigation-group__empty" role="status">
+                    <?php echo esc_html__('No pages in this section are available to your current role.', 'safecontracts'); ?>
+                </div>
             <?php else : ?>
-                <div class="safecontracts-summary-cards safecontracts-navigation-group__cards">
+                <div class="safecontracts-navigation-group__cards">
                     <?php foreach ($items as $item) : ?>
-                        <article class="safecontracts-summary-card safecontracts-navigation-group__card">
-                            <span class="safecontracts-summary-card__label"><?php echo esc_html($definition['title']); ?></span>
-                            <strong class="safecontracts-summary-card__value safecontracts-navigation-group__title"><?php echo esc_html($item['title']); ?></strong>
+                        <article class="safecontracts-navigation-group__card">
+                            <span class="safecontracts-navigation-group__card-icon dashicons <?php echo esc_attr(self::iconForSlug($item['slug'])); ?>" aria-hidden="true"></span>
+                            <h2 class="safecontracts-navigation-group__title"><?php echo esc_html($item['title']); ?></h2>
+                            <p class="safecontracts-navigation-group__description"><?php echo esc_html(self::itemDescription($item['title'])); ?></p>
                             <a class="button button-primary" href="<?php echo esc_url(add_query_arg(['page' => $item['slug']], admin_url('admin.php'))); ?>">
                                 <?php echo esc_html__('Open', 'safecontracts'); ?>
                             </a>
@@ -242,7 +234,7 @@ final class AdminNavigationGroups
             ],
             'system' => [
                 'title' => __('Settings & Integrations', 'safecontracts'),
-                'description' => __('Organization settings, Firebase, mobile configuration and translations.', 'safecontracts'),
+                'description' => __('Organization settings, email delivery, Firebase, mobile configuration, translations and diagnostics.', 'safecontracts'),
             ],
             'help' => [
                 'title' => __('User Guide', 'safecontracts'),
@@ -258,6 +250,39 @@ final class AdminNavigationGroups
     private static function groupUrl(string $group): string
     {
         return 'admin.php?page=' . AdminShell::SLUG . '&' . self::QUERY_KEY . '=' . rawurlencode($group);
+    }
+
+    private static function itemDescription(string $title): string
+    {
+        return sprintf(
+            /* translators: %s is the authorized SafeContracts page title. */
+            __('Open %s with the permissions assigned to your WordPress account.', 'safecontracts'),
+            $title
+        );
+    }
+
+    private static function iconForSlug(string $slug): string
+    {
+        $slug = sanitize_key($slug);
+        if (str_contains($slug, 'customer')) { return 'dashicons-groups'; }
+        if (str_contains($slug, 'supplier')) { return 'dashicons-store'; }
+        if (str_contains($slug, 'contract')) { return 'dashicons-media-document'; }
+        if (str_contains($slug, 'payment')) { return 'dashicons-money-alt'; }
+        if (str_contains($slug, 'collection')) { return 'dashicons-chart-line'; }
+        if (str_contains($slug, 'finance')) { return 'dashicons-chart-area'; }
+        if (str_contains($slug, 'report')) { return 'dashicons-media-spreadsheet'; }
+        if (str_contains($slug, 'follow')) { return 'dashicons-update'; }
+        if (str_contains($slug, 'archive')) { return 'dashicons-archive'; }
+        if (str_contains($slug, 'import')) { return 'dashicons-upload'; }
+        if (str_contains($slug, 'notification')) { return 'dashicons-bell'; }
+        if (str_contains($slug, 'users')) { return 'dashicons-admin-users'; }
+        if (str_contains($slug, 'firebase')) { return 'dashicons-cloud'; }
+        if (str_contains($slug, 'mobile')) { return 'dashicons-smartphone'; }
+        if (str_contains($slug, 'translation')) { return 'dashicons-translation'; }
+        if (str_contains($slug, 'runtime')) { return 'dashicons-admin-tools'; }
+        if (str_contains($slug, 'settings')) { return 'dashicons-admin-generic'; }
+        if (str_contains($slug, 'guide')) { return 'dashicons-editor-help'; }
+        return 'dashicons-screenoptions';
     }
 
     /** @param list<string> $needles */
