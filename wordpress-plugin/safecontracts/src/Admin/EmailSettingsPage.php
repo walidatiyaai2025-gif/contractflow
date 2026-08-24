@@ -64,6 +64,33 @@ final class EmailSettingsPage
             : '';
         $enabled = ! empty($settings['enabled']);
         ?>
+        <style id="safecontracts-email-settings-responsive">
+            @media (max-width: 782px) {
+                .safecontracts-email-settings .safecontracts-split-layout {
+                    display: grid !important;
+                    grid-template-columns: minmax(0, 1fr) !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                }
+                .safecontracts-email-settings .safecontracts-split-layout > *,
+                .safecontracts-email-settings .safecontracts-settings-card,
+                .safecontracts-email-settings .safecontracts-settings-card form,
+                .safecontracts-email-settings .safecontracts-settings-card p,
+                .safecontracts-email-settings .safecontracts-settings-card label {
+                    min-width: 0 !important;
+                    max-width: 100% !important;
+                    box-sizing: border-box !important;
+                }
+                .safecontracts-email-settings .safecontracts-settings-card input.widefat {
+                    display: block !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    max-width: 100% !important;
+                    box-sizing: border-box !important;
+                    margin-top: 6px !important;
+                }
+            }
+        </style>
         <div class="wrap safecontracts-settings safecontracts-email-settings" dir="auto">
             <div class="safecontracts-section-heading">
                 <div>
