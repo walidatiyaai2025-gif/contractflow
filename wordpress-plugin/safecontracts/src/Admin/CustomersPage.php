@@ -18,6 +18,7 @@ final class CustomersPage
 
     public static function register(): void
     {
+        Worker1Assets::register();
         add_submenu_page(
             AdminShell::SLUG,
             __('Customers', 'safecontracts'),
@@ -130,8 +131,6 @@ final class CustomersPage
         $pageRows = array_slice($customers, ($currentPage - 1) * self::PAGE_SIZE, self::PAGE_SIZE);
         $status = self::queryKey('safecontracts_status');
         $canManage = current_user_can(Capabilities::MANAGE_REFERENCE_DATA);
-
-        self::renderStylesheet();
         ?>
         <div class="wrap safecontracts-settings safecontracts-customers safecontracts-worker1" dir="auto">
             <header class="safecontracts-worker1__header">
@@ -281,15 +280,6 @@ final class CustomersPage
             </div>
         </div>
         <?php
-    }
-
-    private static function renderStylesheet(): void
-    {
-        $version = defined('SAFECONTRACTS_VERSION') ? SAFECONTRACTS_VERSION : '0.3.2';
-        $url = defined('SAFECONTRACTS_URL') ? SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-1/parties-contracts.css' : '';
-        if ($url !== '') {
-            ?><link class="safecontracts-worker1__stylesheet-marker" rel="stylesheet" href="<?php echo esc_url(add_query_arg('ver', $version, $url)); ?>"><?php
-        }
     }
 
     private static function queryText(string $key): string
