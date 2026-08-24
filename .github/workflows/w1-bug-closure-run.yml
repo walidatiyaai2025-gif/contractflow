@@ -1,16 +1,16 @@
 name: W1 Bug Closure Execute
 
 on:
-  pull_request:
+  push:
     branches:
-      - feat/alkenzy-mobile-reference-redesign
+      - bugfix/alkenzy-register-w1-customer-navigation
 
 permissions:
   contents: write
 
 jobs:
   execute:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
