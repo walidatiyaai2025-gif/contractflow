@@ -14,7 +14,7 @@ void main() {
               child: SizedBox(
                 width: 320,
                 child: AlkenzyReferenceFeatureTile(
-                  icon: Icons.contract_outlined,
+                  icon: Icons.description_outlined,
                   title: 'إدارة العقود بسهولة',
                   description:
                       'أنشئ العقود وتابع حالتها من البداية حتى الإغلاق دون فقدان بيانات النظام.',
@@ -29,7 +29,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('إدارة العقود بسهولة'), findsOneWidget);
-    expect(find.byIcon(Icons.contract_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.description_outlined), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
