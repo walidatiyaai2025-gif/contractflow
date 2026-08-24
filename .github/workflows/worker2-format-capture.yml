@@ -6,7 +6,7 @@ on:
       - feat/alkenzy-mobile-reference-redesign
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate:
@@ -16,6 +16,9 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -62,6 +65,30 @@ jobs:
             lib/features/customers/customers.dart \
             lib/features/customers/customers_screen.dart \
             lib/features/suppliers/suppliers_screen.dart
+      - name: Persist corrected sources on worker branch
+        working-directory: .
+        shell: bash
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            mobile/lib/features/contracts/contract_edit_screen.dart \
+            mobile/lib/features/contracts/contracts.dart \
+            mobile/lib/features/contracts/contracts_screen.dart \
+            mobile/lib/features/contracts/counterparty_business_snapshot.dart \
+            mobile/lib/features/contracts/premium_contract_details_screen.dart \
+            mobile/lib/features/customers/customers.dart \
+            mobile/lib/features/customers/customers_screen.dart \
+            mobile/lib/features/suppliers/suppliers_screen.dart
+          if git diff --cached --quiet; then
+            echo "Worker 2 sources already corrected."
+          else
+            git commit -m "style(mobile): apply worker2 analyzer and formatter corrections"
+            git push origin "HEAD:${HEAD_REF}"
+          fi
       - name: Upload corrected formatter output
         uses: actions/upload-artifact@v4
         with:
