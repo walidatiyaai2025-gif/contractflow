@@ -1,0 +1,99 @@
+name: W1 Reconcile Latest Integration
+
+on:
+  push:
+    branches:
+      - bugfix/alkenzy-register-w1-customer-navigation
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bugfix/alkenzy-register-w1-customer-navigation
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Preserve and normalize W1 patch generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp scripts/w1_bug_closure_patch.py /tmp/w1_bug_closure_patch.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/w1_bug_closure_patch.py')
+          text = p.read_text()
+          text = text.replace(
+              'next_text, count = re.subn(pattern, replacement, text, count=1, flags=flags)',
+              'next_text, count = re.subn(pattern, lambda _: replacement, text, count=1, flags=flags)',
+          )
+          text = text.replace('destination == this.selected', 'destination == selected')
+          bad_edit = '"label: Text(context.scL10n.t(\'Edit\')),' + chr(10) + '",'
+          text = text.replace(bad_edit, '"label: Text(context.scL10n.t(\'Edit\')),\\n",')
+          text = text.replace(
+              r": '$fallback\n${rawError.trim()}';",
+              r": '$fallback\\n${rawError.trim()}';",
+          )
+          p.write_text(text)
+          PY
+          python3 -m py_compile /tmp/w1_bug_closure_patch.py
+      - name: Reset working tree to latest integrated base
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/alkenzy-mobile-reference-redesign
+          git reset --hard origin/feat/alkenzy-mobile-reference-redesign
+      - name: Apply W1 owned production fixes
+        run: python3 /tmp/w1_bug_closure_patch.py
+      - name: Resolve Flutter dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Canonical format
+        working-directory: mobile
+        run: dart format lib test
+      - name: Analyze Flutter
+        working-directory: mobile
+        run: flutter analyze
+      - name: Run normative Flutter suite
+        working-directory: mobile
+        shell: bash
+        run: |
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
+      - name: Capture W1 AR EN width matrix
+        working-directory: mobile
+        shell: bash
+        run: |
+          test -f test/worker1_visual_capture_test.dart
+          for language in ar en; do
+            for width in 320 360 375 390 412 430; do
+              flutter test test/worker1_visual_capture_test.dart \
+                --dart-define=W1_CAPTURE_WIDTH="$width" \
+                --dart-define=W1_CAPTURE_LANG="$language"
+            done
+          done
+      - name: Commit reconciled W1 production closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/w1-reconcile-latest-integration.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(w1): apply customer navigation closure on integrated base"
+          git push --force-with-lease origin HEAD:bugfix/alkenzy-register-w1-customer-navigation
+      - name: Upload responsive QA evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-w1-responsive-evidence
+          path: mobile/build/w1-bug-closure/*.png
+          if-no-files-found: error
+          retention-days: 14
