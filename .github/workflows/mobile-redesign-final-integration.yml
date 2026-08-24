@@ -1,0 +1,246 @@
+name: Mobile Redesign Final Integration
+
+on:
+  push:
+    branches:
+      - feat/alkenzy-mobile-reference-redesign
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-mobile-reference-redesign
+          fetch-depth: 0
+      - name: Fetch redesign workers
+        run: |
+          git fetch origin \
+            mobile-redesign/foundation-auth-navigation \
+            mobile-redesign/payments-finance-operations
+      - name: Integrate Worker 3 completed scope
+        run: |
+          git checkout origin/mobile-redesign/payments-finance-operations -- \
+            mobile/lib/features/export/mobile_excel_export_screen.dart \
+            mobile/lib/features/finance/finance_screen.dart \
+            mobile/lib/features/followups/followups_screen.dart \
+            mobile/lib/features/help/mobile_user_guide_screen.dart \
+            mobile/lib/features/notifications/notifications_screen.dart \
+            mobile/lib/features/payments/collection_entry_dialog.dart \
+            mobile/lib/features/payments/payments.dart \
+            mobile/lib/features/payments/payments_screen.dart \
+            mobile/lib/features/profile/profile_identity_sections.dart \
+            mobile/lib/features/profile/profile_screen.dart
+      - name: Integrate Worker 1 completed non-business scope
+        run: |
+          git checkout origin/mobile-redesign/foundation-auth-navigation -- \
+            mobile/lib/app.dart \
+            mobile/lib/features/auth/login_screen.dart \
+            mobile/lib/features/navigation/app_shell.dart \
+            mobile/lib/features/ui/safecontracts_components.dart \
+            mobile/lib/features/ui/safecontracts_form.dart \
+            mobile/lib/features/ui/safecontracts_splash.dart \
+            mobile/lib/features/ui/safecontracts_theme.dart \
+            mobile/lib/features/ui/safecontracts_tokens.dart \
+            mobile/lib/features/ui/safecontracts_ui.dart \
+            mobile/lib/features/welcome/company_welcome_screen.dart \
+            mobile/test/mobile_design_foundation_test.dart \
+            mobile/test/worker1_visual_capture_test.dart
+      - name: Reconcile PR 624 business routes and Dashboard Two
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          shell_path = Path('mobile/lib/features/navigation/app_shell.dart')
+          shell = shell_path.read_text()
+
+          def replace_once(old: str, new: str) -> None:
+              global shell
+              count = shell.count(old)
+              if count != 1:
+                  raise SystemExit(f'app_shell expected one match, found {count}: {old[:100]!r}')
+              shell = shell.replace(old, new, 1)
+
+          replace_once(
+              "import '../contracts/contracts_screen.dart';\n",
+              "import '../contracts/contracts_screen.dart';\nimport '../contracts/premium_contract_details_screen.dart';\n",
+          )
+          replace_once(
+              "import '../dashboard/dashboard_models.dart';\n",
+              "import '../dashboard/dashboard_models.dart';\nimport '../dashboard/dashboard_two_screen.dart';\n",
+          )
+          replace_once(
+              """        case MobileDestination.dashboard:
+          await widget.dashboardController.refreshSilently();
+          shellSnapshotChanged = true;
+          break;
+""",
+              """        case MobileDestination.dashboard:
+        case MobileDestination.dashboardTwo:
+          await widget.dashboardController.refreshSilently();
+          shellSnapshotChanged = true;
+          break;
+""",
+          )
+          replace_once(
+              """      MobileDestination.customers => CustomersScreen(
+          controller: widget.customersController,
+        ),
+""",
+              """      MobileDestination.dashboardTwo => DashboardTwoScreen(
+          controller: widget.dashboardController,
+          currency: widget.config.currency,
+          onOpenPayments:
+              widget.policy.destinations.contains(MobileDestination.payments)
+                  ? () => _selectDestination(MobileDestination.payments)
+                  : null,
+          onOpenContract: _openContract,
+        ),
+      MobileDestination.customers => CustomersScreen(
+          controller: widget.customersController,
+        ),
+""",
+          )
+          replace_once(
+              """  void _openContract(int contractId) {
+    final canOpenContractEditor = widget.contractsController.canEditContract ||
+        widget.session.can('safecontracts_assign_contracts');
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ContractDetailsScreen(
+          controller: widget.contractsController,
+          contractId: contractId,
+          currency: widget.config.currency,
+          onEditContract: canOpenContractEditor ? _openContractEdit : null,
+        ),
+      ),
+    );
+  }
+
+""",
+              """  void _openContract(int contractId) {
+    final canOpenContractEditor = widget.contractsController.canEditContract ||
+        widget.session.can('safecontracts_assign_contracts');
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => PremiumContractDetailsScreen(
+          repository: ContractsRepository(
+            widget.contractsController.repository.client,
+          ),
+          contractId: contractId,
+          currency: widget.config.currency,
+          onEditContract: canOpenContractEditor
+              ? () => _openContractEdit(contractId)
+              : null,
+          onOpenLegacy: () => _openLegacyContract(contractId),
+        ),
+      ),
+    );
+  }
+
+  void _openLegacyContract(int contractId) {
+    final canOpenContractEditor = widget.contractsController.canEditContract ||
+        widget.session.can('safecontracts_assign_contracts');
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ContractDetailsScreen(
+          controller: widget.contractsController,
+          contractId: contractId,
+          currency: widget.config.currency,
+          onEditContract: canOpenContractEditor ? _openContractEdit : null,
+        ),
+      ),
+    );
+  }
+
+""",
+          )
+          replace_once(
+              """String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
+  return l10n.t(switch (destination) {
+    MobileDestination.dashboard => 'Dashboard',
+""",
+              """String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
+  if (destination == MobileDestination.dashboardTwo) {
+    return l10n.isArabic ? 'لوحة تحكم اتنين' : 'Dashboard Two';
+  }
+  return l10n.t(switch (destination) {
+    MobileDestination.dashboard => 'Dashboard',
+    MobileDestination.dashboardTwo => 'Dashboard Two',
+""",
+          )
+          replace_once(
+              """  return switch (destination) {
+    MobileDestination.dashboard => Icons.home_outlined,
+    MobileDestination.customers => Icons.people_alt_outlined,
+""",
+              """  return switch (destination) {
+    MobileDestination.dashboard => Icons.home_outlined,
+    MobileDestination.dashboardTwo => Icons.dashboard_customize_outlined,
+    MobileDestination.customers => Icons.people_alt_outlined,
+""",
+          )
+          replace_once(
+              """  return switch (destination) {
+    MobileDestination.dashboard => Icons.home_rounded,
+    MobileDestination.customers => Icons.people_alt_rounded,
+""",
+              """  return switch (destination) {
+    MobileDestination.dashboard => Icons.home_rounded,
+    MobileDestination.dashboardTwo => Icons.dashboard_customize_rounded,
+    MobileDestination.customers => Icons.people_alt_rounded,
+""",
+          )
+          shell_path.write_text(shell)
+
+          help_path = Path('mobile/lib/features/help/mobile_user_guide_screen.dart')
+          help_text = help_path.read_text()
+          if 'MobileDestination.dashboardTwo => const _GuideEntry(' not in help_text:
+              marker = """    MobileDestination.customers => const _GuideEntry(
+"""
+              insert = """    MobileDestination.dashboardTwo => const _GuideEntry(
+        destination: MobileDestination.dashboardTwo,
+        title: 'Dashboard Two',
+        icon: Icons.dashboard_customize_rounded,
+        purpose:
+            'Dashboard Two provides the premium executive view across customer and supplier contracts using the same authorized server data.',
+        steps: <String>[
+          'Review the all-contract total, contract mix and financial pulse for the current scope.',
+          'Open recent contract activity to use the premium contract details view with payments and attachments.',
+        ],
+      ),
+"""
+              if marker not in help_text:
+                  raise SystemExit('help guide customer marker missing')
+              help_text = help_text.replace(marker, insert + marker, 1)
+              help_path.write_text(help_text)
+          PY
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Full Flutter quality gates
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+          git diff --check
+          flutter analyze
+          flutter test
+      - name: Commit integrated Worker 1 and Worker 3 scope
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/lib mobile/test
+          if git diff --cached --quiet; then
+            echo "No integration changes required."
+          else
+            git commit -m "feat(mobile): integrate redesign workers 1 and 3"
+            git push origin HEAD:feat/alkenzy-mobile-reference-redesign
+          fi
