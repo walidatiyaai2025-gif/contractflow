@@ -27,6 +27,11 @@
     table.parentNode.insertBefore(wrapper, table);
     wrapper.appendChild(table);
     table.dir = rtl ? 'rtl' : 'ltr';
+    if (rtl) {
+      requestAnimationFrame(() => {
+        wrapper.scrollLeft = wrapper.scrollWidth;
+      });
+    }
   });
 
   // WordPress renders these routes synchronously. Convert a genuinely empty
