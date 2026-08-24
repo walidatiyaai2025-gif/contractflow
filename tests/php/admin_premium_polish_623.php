@@ -31,15 +31,15 @@ $saved = $landing->save([
 ]);
 
 $checks = [
-    ($saved['brand_name'] ?? null) === 'Alkenzy Premium' => 'custom landing brand was not persisted',
-    ($saved['headline']['ar'] ?? null) === 'عنوان تجريبي' => 'Arabic landing headline was not persisted',
-    ($saved['headline']['en'] ?? null) === 'Test headline' => 'English landing headline was not persisted',
-    ($saved['experience_years'] ?? null) === 14 => 'experience years were not persisted',
-    ($saved['services'][0]['title']['en'] ?? null) === 'Custom strategy' => 'landing service content was not persisted',
-    ($saved['contact']['phones'][0] ?? null) === '+20 100 123 4567' => 'landing phone was not persisted',
-    ($saved['sign_in_label']['ar'] ?? null) === 'دخول الآن' => 'landing CTA was not persisted',
+    [($saved['brand_name'] ?? null) === 'Alkenzy Premium', 'custom landing brand was not persisted'],
+    [($saved['headline']['ar'] ?? null) === 'عنوان تجريبي', 'Arabic landing headline was not persisted'],
+    [($saved['headline']['en'] ?? null) === 'Test headline', 'English landing headline was not persisted'],
+    [($saved['experience_years'] ?? null) === 14, 'experience years were not persisted'],
+    [($saved['services'][0]['title']['en'] ?? null) === 'Custom strategy', 'landing service content was not persisted'],
+    [($saved['contact']['phones'][0] ?? null) === '+20 100 123 4567', 'landing phone was not persisted'],
+    [($saved['sign_in_label']['ar'] ?? null) === 'دخول الآن', 'landing CTA was not persisted'],
 ];
-foreach ($checks as $ok => $message) {
+foreach ($checks as [$ok, $message]) {
     if (! $ok) {
         fwrite(STDERR, 'FAIL: ' . $message . ".\n");
         exit(1);
