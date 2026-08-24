@@ -20,6 +20,8 @@ const _supportedContractFilterStatuses = <String>{
   'cancelled',
 };
 
+const _supportedCounterpartyTypes = <String>{'customer', 'supplier'};
+
 final class ContractSortOption {
   const ContractSortOption({
     required this.label,
@@ -61,19 +63,72 @@ final class ContractSortOption {
 }
 
 final class ContractsFilters {
-  const ContractsFilters({this.customerId, this.status});
+  const ContractsFilters({
+    this.customerId,
+    this.counterpartyType,
+    this.counterpartyId,
+    this.status,
+  });
 
   final int? customerId;
+  final String? counterpartyType;
+  final int? counterpartyId;
   final String? status;
 
-  ContractsFilters withCustomer(int? value) =>
-      ContractsFilters(customerId: value, status: status);
-  ContractsFilters withStatus(String? value) =>
-      ContractsFilters(customerId: customerId, status: value);
+  ContractsFilters withCustomer(int? value) => ContractsFilters(
+        customerId: value,
+        counterpartyType: value == null ? counterpartyType : 'customer',
+        counterpartyId: value ??
+            (counterpartyType == 'customer' ? counterpartyId : null),
+        status: status,
+      );
+
+  ContractsFilters withCounterpartyType(String? value) => ContractsFilters(
+        counterpartyType: value,
+        status: status,
+      );
+
+  ContractsFilters withCounterparty({
+    required String type,
+    required int id,
+  }) =>
+      ContractsFilters(
+        customerId: type == 'customer' ? id : null,
+        counterpartyType: type,
+        counterpartyId: id,
+        status: status,
+      );
+
+  ContractsFilters withStatus(String? value) => ContractsFilters(
+        customerId: customerId,
+        counterpartyType: counterpartyType,
+        counterpartyId: counterpartyId,
+        status: value,
+      );
 
   void validate() {
     if (customerId != null && customerId! <= 0) {
       throw ArgumentError.value(customerId, 'customerId', 'Invalid customer.');
+    }
+    if (counterpartyType != null &&
+        !_supportedCounterpartyTypes.contains(counterpartyType)) {
+      throw ArgumentError.value(
+        counterpartyType,
+        'counterpartyType',
+        'Unsupported counterparty type.',
+      );
+    }
+    if (counterpartyId != null && counterpartyId! <= 0) {
+      throw ArgumentError.value(
+        counterpartyId,
+        'counterpartyId',
+        'Invalid counterparty.',
+      );
+    }
+    if (customerId != null &&
+        counterpartyType != null &&
+        counterpartyType != 'customer') {
+      throw ArgumentError('Customer filter conflicts with counterparty type.');
     }
     if (status != null &&
         status!.isNotEmpty &&
@@ -90,9 +145,42 @@ final class ContractsFilters {
     validate();
     return <String, String>{
       if (customerId != null) 'customer_id': '$customerId',
+      if (counterpartyType != null) 'counterparty_type': counterpartyType!,
+      if (counterpartyId != null) 'counterparty_id': '$counterpartyId',
       if (status != null && status!.isNotEmpty) 'status': status!,
     };
   }
+}
+
+final class ContractDraft {
+  const ContractDraft({
+    required this.contractNumber,
+    required this.counterpartyType,
+    required this.counterpartyId,
+    required this.baseValue,
+    this.currencyCode,
+    this.accountantUserId,
+    this.notes,
+  });
+
+  final String contractNumber;
+  final String counterpartyType;
+  final int counterpartyId;
+  final String baseValue;
+  final String? currencyCode;
+  final int? accountantUserId;
+  final String? notes;
+
+  Map<String, Object?> toPayload() => <String, Object?>{
+        'contract_number': contractNumber.trim(),
+        'counterparty_type': counterpartyType.trim().toLowerCase(),
+        'counterparty_id': counterpartyId,
+        'base_value': baseValue.trim(),
+        if (_payloadText(currencyCode) != null)
+          'currency_code': _payloadText(currencyCode)!.toUpperCase(),
+        if (accountantUserId != null) 'accountant_user_id': accountantUserId,
+        if (_payloadText(notes) != null) 'notes': _payloadText(notes),
+      };
 }
 
 final class SafeContractsContract {
@@ -143,7 +231,7 @@ final class SafeContractsContract {
     );
     final type = _optionalText(data['counterparty_type'])?.toLowerCase() ??
         (legacyCustomerId != null ? 'customer' : '');
-    if (type != 'customer' && type != 'supplier') {
+    if (!_supportedCounterpartyTypes.contains(type)) {
       throw const FormatException('contract.counterparty_type is invalid.');
     }
     final counterpartyId = _optionalPositiveInt(
@@ -171,10 +259,8 @@ final class SafeContractsContract {
 
     return SafeContractsContract(
       id: _positiveInt(data['id'], 'contract.id'),
-      contractNumber: _requiredText(
-        data['contract_number'],
-        'contract.contract_number',
-      ),
+      contractNumber:
+          _requiredText(data['contract_number'], 'contract.contract_number'),
       customerId:
           type == 'customer' ? (legacyCustomerId ?? counterpartyId) : null,
       customerName: _optionalText(data['customer_name']),
@@ -188,7 +274,7 @@ final class SafeContractsContract {
         data['accountant_user_id'],
         'contract.accountant_user_id',
       ),
-      status: _requiredText(data['status'], 'contract.status'),
+      status: _requiredText(data['status'], 'contract.status').toLowerCase(),
       startDate: _optionalIsoDate(data['start_date'], 'contract.start_date'),
       endDate: _optionalIsoDate(data['end_date'], 'contract.end_date'),
       baseValue: _optionalMoneyText(data['base_value'], 'contract.base_value'),
@@ -302,7 +388,46 @@ final class ContractsRepository {
   Future<SafeContractsContract> loadContract(int id) async {
     if (id <= 0) throw ArgumentError('Contract ID must be positive.');
     final envelope = await client.get('contracts/$id');
-    return SafeContractsContract.fromData(envelope.data);
+    final contract = SafeContractsContract.fromData(envelope.data);
+    if (contract.id != id) {
+      throw const FormatException('Contract detail ID does not match request.');
+    }
+    return contract;
+  }
+
+  Future<SafeContractsContract> create(ContractDraft draft) async {
+    _validateDraft(draft);
+    final envelope = await client.post('contracts', body: draft.toPayload());
+    final data = apiObjectMap(envelope.data, 'contract_create');
+    final id = _positiveInt(data['id'], 'contract_create.id');
+    return loadContract(id);
+  }
+
+  void _validateDraft(ContractDraft draft) {
+    final number = draft.contractNumber.trim();
+    if (number.isEmpty || number.length > 100) {
+      throw ArgumentError(
+        'Contract number is required and must not exceed 100 characters.',
+      );
+    }
+    final type = draft.counterpartyType.trim().toLowerCase();
+    if (!_supportedCounterpartyTypes.contains(type)) {
+      throw ArgumentError('Contract counterparty type is invalid.');
+    }
+    if (draft.counterpartyId <= 0) {
+      throw ArgumentError('Contract counterparty is required.');
+    }
+    final value = num.tryParse(draft.baseValue.trim());
+    if (value == null || value <= 0) {
+      throw ArgumentError('Contract base value must be greater than zero.');
+    }
+    final currency = _payloadText(draft.currencyCode)?.toUpperCase();
+    if (currency != null && !RegExp(r'^[A-Z]{3}$').hasMatch(currency)) {
+      throw ArgumentError('Contract currency must be a 3-letter code.');
+    }
+    if (draft.accountantUserId != null && draft.accountantUserId! <= 0) {
+      throw ArgumentError('Accountant ID must be positive.');
+    }
   }
 }
 
@@ -312,6 +437,7 @@ final class ContractsController extends ChangeNotifier {
     required int pageSize,
     required this.canAccess,
     required this.canEditContract,
+    this.canCreateContract = false,
   }) : pageSize = pageSize.clamp(1, 100).toInt();
 
   static const supportedContractStatuses = _supportedContractFilterStatuses;
@@ -320,6 +446,7 @@ final class ContractsController extends ChangeNotifier {
   final int pageSize;
   final bool canAccess;
   final bool canEditContract;
+  final bool canCreateContract;
 
   ContractsLoadState state = ContractsLoadState.idle;
   ContractPage? currentPage;
@@ -330,6 +457,7 @@ final class ContractsController extends ChangeNotifier {
   int? selectedContractId;
   SafeContractsContract? selectedContract;
   String? detailErrorMessage;
+  bool mutationInFlight = false;
 
   Future<void> ensureLoaded() async {
     if (state == ContractsLoadState.idle) await loadPage(1);
@@ -406,6 +534,19 @@ final class ContractsController extends ChangeNotifier {
     await loadPage(1);
   }
 
+  Future<void> selectCounterpartyType(String? value) async {
+    final normalized = value?.trim().toLowerCase();
+    if (normalized != null &&
+        normalized.isNotEmpty &&
+        !_supportedCounterpartyTypes.contains(normalized)) {
+      throw ArgumentError.value(value, 'value', 'Unsupported counterparty type.');
+    }
+    filters = filters.withCounterpartyType(
+      normalized == null || normalized.isEmpty ? null : normalized,
+    );
+    await loadPage(1);
+  }
+
   Future<void> selectStatus(String? status) async {
     final normalized = status?.trim().toLowerCase();
     if (normalized != null &&
@@ -430,6 +571,23 @@ final class ContractsController extends ChangeNotifier {
     if (identical(sort, nextSort) && currentPage != null) return;
     sort = nextSort;
     await loadPage(1);
+  }
+
+  Future<SafeContractsContract> createContract(ContractDraft draft) async {
+    if (!canCreateContract) {
+      throw StateError('Contract creation is not authorized.');
+    }
+    mutationInFlight = true;
+    notifyListeners();
+    try {
+      final contract = await repository.create(draft);
+      await loadPage(1);
+      await openContract(contract.id);
+      return contract;
+    } finally {
+      mutationInFlight = false;
+      notifyListeners();
+    }
   }
 
   Future<void> openContract(int id) async {
@@ -503,7 +661,7 @@ int _positiveInt(Object? value, String field) {
 }
 
 int? _optionalPositiveInt(Object? value, String field) {
-  if (value == null || value == '') return null;
+  if (value == null || value == '' || value == 0 || value == '0') return null;
   return _positiveInt(value, field);
 }
 
@@ -525,61 +683,51 @@ int _boundedInt(
 }
 
 String _requiredText(Object? value, String field) {
-  if (value is! String || value.trim().isEmpty) {
-    throw FormatException('$field must be a non-empty string.');
-  }
-  final normalized = value.trim();
-  if (normalized.length > 256) throw FormatException('$field is too long.');
-  return normalized;
+  if (value is String && value.trim().isNotEmpty) return value.trim();
+  if (value is num) return value.toString();
+  throw FormatException('$field must be a non-empty string.');
 }
 
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
-    throw const FormatException('Contract text field must be string or null.');
+    throw const FormatException('Optional contract text must be string or null.');
   }
   final normalized = value.trim();
-  if (normalized.length > 256) {
-    throw const FormatException('Contract text field is too long.');
-  }
   return normalized.isEmpty ? null : normalized;
+}
+
+String? _payloadText(String? value) {
+  final normalized = value?.trim();
+  return normalized == null || normalized.isEmpty ? null : normalized;
 }
 
 String? _optionalIsoDate(Object? value, String field) {
   final text = _optionalText(value);
   if (text == null) return null;
-  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(text);
-  if (match == null) throw FormatException('$field must use YYYY-MM-DD.');
-  final parsed = DateTime.tryParse(text);
-  if (parsed == null ||
-      parsed.year != int.parse(match.group(1)!) ||
-      parsed.month != int.parse(match.group(2)!) ||
-      parsed.day != int.parse(match.group(3)!)) {
-    throw FormatException('$field is invalid.');
+  if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text)) {
+    throw FormatException('$field must be YYYY-MM-DD.');
   }
   return text;
 }
 
 String? _optionalMoneyText(Object? value, String field) {
   if (value == null || value == '') return null;
-  if (value is! String) {
-    throw FormatException('$field must be an exact server money string.');
+  final text = switch (value) {
+    final String value => value.trim(),
+    final num value => value.toString(),
+    _ => '',
+  };
+  if (text.isEmpty || !RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
   }
-  final normalized = value.trim();
-  if (!RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(normalized)) {
-    throw FormatException('$field is invalid.');
-  }
-  return normalized;
+  return text;
 }
 
 bool _boolish(Object? value, String field) {
   return switch (value) {
-    true => true,
-    false => false,
-    1 => true,
-    0 => false,
-    '1' => true,
-    '0' => false,
+    true || 1 || '1' => true,
+    false || 0 || '0' => false,
     _ => throw FormatException('$field must be boolean-like.'),
   };
 }
