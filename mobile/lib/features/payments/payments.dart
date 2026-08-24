@@ -353,7 +353,8 @@ String _moneyText(Object? value, String field) {
 
 String _financialDirection(Object? value) {
   if (value == null || value == '') return 'receivable';
-  final direction = _requiredText(value, 'payment.financial_direction').toLowerCase();
+  final direction =
+      _requiredText(value, 'payment.financial_direction').toLowerCase();
   if (direction != 'receivable' && direction != 'payable') {
     throw const FormatException('payment.financial_direction is invalid.');
   }
