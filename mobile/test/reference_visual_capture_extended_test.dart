@@ -240,11 +240,14 @@ ApiTransportResponse _page(
   required String sort,
   required String order,
 }) {
+  final total = data is List<Object?> ? data.length : 0;
   return _okWithMeta(data, <String, Object?>{
     'api_version': 'v1',
     'scope': 'assigned',
     'page': 1,
     'per_page': 25,
+    'total': total,
+    'total_pages': total == 0 ? 1 : ((total + 24) ~/ 25),
     'sort': sort,
     'order': order,
     'has_more': false,
