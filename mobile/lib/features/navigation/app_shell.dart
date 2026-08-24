@@ -9,6 +9,7 @@ import '../contracts/contract_details_screen.dart';
 import '../contracts/contract_edit_screen.dart';
 import '../contracts/contracts.dart';
 import '../contracts/contracts_screen.dart';
+import '../contracts/premium_contract_details_screen.dart';
 import '../customers/customers.dart';
 import '../customers/customers_screen.dart';
 import '../dashboard/dashboard_context_screen.dart';
@@ -522,6 +523,26 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 
   void _openContract(int contractId) {
+    final canOpenContractEditor = widget.contractsController.canEditContract ||
+        widget.session.can('safecontracts_assign_contracts');
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => PremiumContractDetailsScreen(
+          repository: ContractsRepository(
+            widget.contractsController.repository.client,
+          ),
+          contractId: contractId,
+          currency: widget.config.currency,
+          onEditContract: canOpenContractEditor
+              ? () => _openContractEdit(contractId)
+              : null,
+          onOpenLegacy: () => _openLegacyContract(contractId),
+        ),
+      ),
+    );
+  }
+
+  void _openLegacyContract(int contractId) {
     final canOpenContractEditor = widget.contractsController.canEditContract ||
         widget.session.can('safecontracts_assign_contracts');
     Navigator.of(context).push(
