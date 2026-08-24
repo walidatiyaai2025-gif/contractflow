@@ -26,6 +26,7 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
+          import re
           from pathlib import Path
 
           paths = [
@@ -35,8 +36,7 @@ jobs:
           ]
           for path in paths:
               text = path.read_text()
-              text = text.replace(',\n                matchTextDirection: true', '')
-              text = text.replace(',\n                  matchTextDirection: true', '')
+              text = re.sub(r',\n\s*matchTextDirection:\s*true', '', text)
               path.write_text(text)
 
           customer = Path('lib/features/customers/customers_screen.dart')
