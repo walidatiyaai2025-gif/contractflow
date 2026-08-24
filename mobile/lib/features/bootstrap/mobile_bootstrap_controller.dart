@@ -21,6 +21,7 @@ final class MobileBootstrapController extends ChangeNotifier {
 
   static const customerCreateCapability = 'safecontracts_create_customers';
   static const customerEditCapability = 'safecontracts_edit_customers';
+  static const contractCreateCapability = 'safecontracts_create_contracts';
   static const contractEditCapability = 'safecontracts_edit_contracts';
   static const supplierCreateCapability = 'safecontracts_create_suppliers';
   static const supplierEditCapability = 'safecontracts_edit_suppliers';
@@ -106,6 +107,8 @@ final class MobileBootstrapController extends ChangeNotifier {
         repository: ContractsRepository(client),
         pageSize: config.defaultPageSize,
         canAccess: canAccessContracts,
+        canCreateContract:
+            canAccessContracts && session.can(contractCreateCapability),
         canEditContract:
             canAccessContracts && session.can(contractEditCapability),
       );
