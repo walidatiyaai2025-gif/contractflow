@@ -75,6 +75,24 @@ jobs:
           mkdir -p mobile/lib/core/widgets
           python3 /tmp/alkenzy_global_list_closure.py > /tmp/alkenzy_global_apply.log 2>&1 || { cat /tmp/alkenzy_global_apply.log; false; }
 
+          stage=align-notification-regression
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tests/php/rest_mobile_notifications_020_025.php')
+          text = p.read_text()
+          old = "$GLOBALS['sc_test_result_queue'] = [[$notificationRow]];"
+          new = "$GLOBALS['sc_test_result_queue'] = [[['total' => '1']], [$notificationRow]];"
+          if text.count(old) != 2:
+              raise SystemExit(f'expected two notification inbox fixtures, found {text.count(old)}')
+          text = text.replace(old, new)
+          old_page = "$badPage = NotificationsController::index(new WP_REST_Request(['page' => '6']));"
+          new_page = "$badPage = NotificationsController::index(new WP_REST_Request(['page' => '40002']));"
+          if text.count(old_page) != 1:
+              raise SystemExit('old notification abuse page fixture missing')
+          text = text.replace(old_page, new_page, 1)
+          p.write_text(text)
+          PY
+
           stage=php
           bash scripts/test-php.sh > /tmp/alkenzy_global_php.log 2>&1 || { cat /tmp/alkenzy_global_php.log; false; }
 
