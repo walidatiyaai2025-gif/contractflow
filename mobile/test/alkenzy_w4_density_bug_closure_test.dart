@@ -37,6 +37,8 @@ void main() {
         payment, contains('Theme.of(context).textTheme.bodyMedium?.copyWith('));
     expect(payment, contains('_PaymentMoneyAmount('));
     expect(payment, contains('SafeContractsTypography.viewportScale'));
+    expect(payment,
+        contains('fontSize: SafeContractsTypography.labelLarge * scale'));
     expect(payment, contains('Dates and values from the server'));
     expect(
         payment,
@@ -44,6 +46,7 @@ void main() {
             'Server values are shown as received; mobile does not recalculate them.'));
 
     expect(theme, contains('titleTextStyle: textTheme.titleLarge?.copyWith('));
+    expect(theme, contains('foregroundColor: Colors.white'));
     expect(theme, contains('SafeContractsTypography.labelSmall'));
     expect(design,
         contains('SafeContractsTypography.headlineSmall * viewportScale'));
