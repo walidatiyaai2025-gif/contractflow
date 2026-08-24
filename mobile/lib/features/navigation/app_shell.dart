@@ -154,6 +154,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           shellSnapshotChanged = true;
           break;
         case MobileDestination.payments:
+        case MobileDestination.collections:
         case MobileDestination.followUps:
           if (mounted) {
             setState(() => _liveRefreshRevision++);
@@ -245,7 +246,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
         ),
       ),
       drawer: NavigationDrawer(
-        backgroundColor: SafeContractsVisual.surface,
+        backgroundColor: SafeContractsVisual.navyDeep,
         selectedIndex: widget.policy.destinations.indexOf(_selected),
         onDestinationSelected: (index) {
           final destination = widget.policy.destinations[index];
@@ -353,7 +354,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               tooltip: l10n.isArabic ? 'إضافة جديدة' : 'Quick add',
               onPressed: () => unawaited(_showQuickAdd(quickAdds)),
             ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: bottomDestinations.isEmpty
           ? null
           : _SafeContractsBottomNavigation(
@@ -413,6 +414,16 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           onOpenContract: _openContract,
         ),
       MobileDestination.payments => PaymentsScreen(
+          repository: PaymentsRepository(apiClient),
+          pageSize: widget.config.defaultPageSize,
+          filters: widget.dashboardController.filters,
+          currency: widget.config.currency,
+          canManagePayments:
+              widget.session.can('safecontracts_manage_payments'),
+          canEnterCollection: widget.policy.canEnterCollection,
+          refreshRevision: _liveRefreshRevision,
+        ),
+      MobileDestination.collections => PaymentsScreen(
           repository: PaymentsRepository(apiClient),
           pageSize: widget.config.defaultPageSize,
           filters: widget.dashboardController.filters,

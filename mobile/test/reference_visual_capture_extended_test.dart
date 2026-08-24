@@ -199,12 +199,15 @@ ApiTransportResponse _handler(Uri uri) {
     return _page(<Object?>[
       <String, Object?>{
         'id': 8,
-        'name': 'شركة الخليج للتوريدات',
         'internal_code': 'S-008',
+        'legal_name': 'شركة الخليج للتوريدات',
+        'trading_name': 'الخليج للتوريدات',
         'contact_name': 'سالم حسن',
         'email': 'supplier@example.com',
         'phone': '+96550000008',
-        'is_active': true,
+        'default_currency': 'KWD',
+        'status': 'active',
+        'is_archived': false,
       },
     ], sort: 'name', order: 'asc');
   }
