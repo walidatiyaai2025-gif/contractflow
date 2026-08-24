@@ -17,7 +17,7 @@ final class MobileAuthRepository {
   Future<void> login({
     required String username,
     required String password,
-    bool rememberMe = true,
+    bool rememberMe = false,
   }) async {
     final normalizedUsername = username.trim();
     if (normalizedUsername.isEmpty || normalizedUsername.length > 254) {
@@ -76,7 +76,7 @@ final class MobileLoginController extends ChangeNotifier {
   final MobileAuthRepository repository;
   MobileLoginState state = MobileLoginState.idle;
   String? errorMessage;
-  bool rememberMe = true;
+  bool rememberMe = false;
 
   void setRememberMe(bool value) {
     if (rememberMe == value) return;
@@ -124,10 +124,6 @@ final class MobileLoginController extends ChangeNotifier {
 
   Future<void> persistForBiometricLogin() async {
     await repository.persistCurrentSession();
-    if (!rememberMe) {
-      rememberMe = true;
-      notifyListeners();
-    }
   }
 
   void resetError() {
