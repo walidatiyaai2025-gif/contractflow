@@ -171,10 +171,14 @@ final class ImportExecutionService
 
         $contract = $this->lookup->contract((string) $data['contract_number']);
         if ($contract === null) {
+            if ($data['contract_base_value'] === null) {
+                throw new DomainException('New contract import requires a contract base value.');
+            }
             $contractId = $this->contracts->create([
                 'contract_number' => $data['contract_number'],
                 'customer_id' => $customerId,
                 'accountant_user_id' => $data['accountant_user_id'],
+                'base_value' => $data['contract_base_value'],
                 'notes' => '',
             ]);
             $this->applyContractFields($contractId, $data, true);
@@ -237,7 +241,7 @@ final class ImportExecutionService
         if ($data['contract_start_date'] !== null || $data['contract_end_date'] !== null) {
             $this->contracts->updateDates($contractId, $data['contract_start_date'], $data['contract_end_date']);
         }
-        if ($data['contract_base_value'] !== null) {
+        if (! $newContract && $data['contract_base_value'] !== null) {
             $this->contracts->updateBaseValue($contractId, $data['contract_base_value']);
         }
         if (! $newContract && $data['accountant_user_id'] !== null) {

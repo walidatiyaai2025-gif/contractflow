@@ -1,0 +1,138 @@
+name: Worker 2 Functional QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'wordpress-plugin/safecontracts/**'
+      - 'tests/plugin-redesign-visual-qa/**'
+      - '.github/workflows/worker2-functional-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker2-functional-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-wordpress-worker2-functional:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: visualqa-root
+          MYSQL_DATABASE: visualqa_wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pvisualqa-root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      WP_DIR: /tmp/alkenzy-worker2-wp
+      SC_QA_BASE_URL: http://127.0.0.1:8889
+      SC_QA_USER: visual-admin
+      SC_QA_PASSWORD: VisualQa-Only-2026!
+      SC_QA_OUTPUT: visual-qa-artifacts
+    steps:
+      - name: Checkout QA overlay
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP and WP-CLI
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mysqli, zip
+          tools: wp-cli
+          ini-file: production
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install real WordPress and SafeContracts
+        shell: bash
+        run: |
+          rm -rf "$WP_DIR"
+          mkdir -p "$WP_DIR"
+          wp core download --path="$WP_DIR" --locale=en_US --force
+          wp config create \
+            --path="$WP_DIR" \
+            --dbname=visualqa_wordpress \
+            --dbuser=root \
+            --dbpass=visualqa-root \
+            --dbhost=127.0.0.1:3306 \
+            --skip-check
+          wp core install \
+            --path="$WP_DIR" \
+            --url="$SC_QA_BASE_URL" \
+            --title='ALKENZY ADV Worker 2 Functional QA' \
+            --admin_user="$SC_QA_USER" \
+            --admin_password="$SC_QA_PASSWORD" \
+            --admin_email=visual-admin@example.test \
+            --skip-email
+          rm -rf "$WP_DIR/wp-content/plugins/safecontracts"
+          ln -s "$GITHUB_WORKSPACE/wordpress-plugin/safecontracts" "$WP_DIR/wp-content/plugins/safecontracts"
+          wp plugin activate safecontracts --path="$WP_DIR"
+
+      - name: Verify import persistence migration
+        shell: bash
+        run: |
+          prefix=$(wp db prefix --path="$WP_DIR")
+          wp db query "SHOW TABLES LIKE '${prefix}safecontracts_import_errors';" --path="$WP_DIR" | grep -q safecontracts_import_errors
+          wp db query "SHOW COLUMNS FROM ${prefix}safecontracts_import_errors LIKE 'row_number';" --path="$WP_DIR" | grep -q row_number
+
+      - name: Seed real domain fixtures
+        shell: bash
+        run: |
+          wp eval-file "$GITHUB_WORKSPACE/tests/plugin-redesign-visual-qa/seed.php" --path="$WP_DIR"
+          wp eval-file "$GITHUB_WORKSPACE/tests/plugin-redesign-visual-qa/worker2-functional-fixture.php" --path="$WP_DIR"
+
+      - name: Start authenticated WordPress runtime
+        shell: bash
+        run: |
+          nohup php -S 127.0.0.1:8889 -t "$WP_DIR" > /tmp/worker2-functional-wp.log 2>&1 &
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent "$SC_QA_BASE_URL/wp-login.php" >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/worker2-functional-wp.log || true
+          exit 1
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps chromium
+
+      - name: Execute Worker 2 authenticated functional acceptance
+        run: node tests/plugin-redesign-visual-qa/worker2-functional.mjs
+
+      - name: Preserve functional diagnostics
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p visual-qa-artifacts/_functional
+          cp /tmp/worker2-functional-wp.log visual-qa-artifacts/_functional/php-server.log 2>/dev/null || true
+          wp plugin status safecontracts --path="$WP_DIR" > visual-qa-artifacts/_functional/plugin-status.txt 2>&1 || true
+          wp core version --path="$WP_DIR" > visual-qa-artifacts/_functional/wordpress-version.txt 2>&1 || true
+          php -m > visual-qa-artifacts/_functional/php-modules.txt 2>&1 || true
+
+      - name: Upload Worker 2 functional evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker2-functional-qa-${{ github.sha }}
+          path: visual-qa-artifacts/_functional/
+          if-no-files-found: error
+          retention-days: 30
