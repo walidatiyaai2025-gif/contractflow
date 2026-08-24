@@ -26,13 +26,16 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import textwrap
 
           source = Path('.github/workflows/w1-bug-closure-patch.yml').read_text()
           marker = "          python3 - <<'PY'\n"
           start = source.index(marker) + len(marker)
           end = source.index("\n          PY\n", start)
-          code = textwrap.dedent(source[start:end])
+          lines = source[start:end].splitlines()
+          code = '\n'.join(
+              line[10:] if line.startswith('          ') else line
+              for line in lines
+          ) + '\n'
           exec(compile(code, 'w1-bug-closure-patch', 'exec'))
           PY
       - name: Resolve dependencies
