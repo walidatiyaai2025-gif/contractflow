@@ -15,7 +15,8 @@ import 'fake_api_transport.dart';
 const _captureKey = Key('referenceCaptureBoundary');
 
 void main() {
-  testWidgets('captures REF01 welcome and login implementation', (tester) async {
+  testWidgets('captures REF01 welcome and login implementation',
+      (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(390, 844));
 
@@ -115,8 +116,10 @@ ApiTransportResponse _unauthenticatedHandler(Uri uri) {
         'ar': 'تخطيط وتنفيذ وتأثير قابل للقياس',
       },
       'summary': <String, String>{
-        'en': 'Manage contracts, payments, collections and reports in one place.',
-        'ar': 'منصة متكاملة لإدارة العقود والمدفوعات والتحصيلات والتقارير في مكان واحد.',
+        'en':
+            'Manage contracts, payments, collections and reports in one place.',
+        'ar':
+            'منصة متكاملة لإدارة العقود والمدفوعات والتحصيلات والتقارير في مكان واحد.',
       },
       'experience_years': 10,
       'services': <Object?>[
