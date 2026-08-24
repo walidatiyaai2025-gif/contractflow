@@ -111,6 +111,73 @@
     cell.appendChild(empty);
   });
 
+  // Client pagination is presentation-only: every authorized server row stays
+  // in the DOM, no totals are recomputed, and no financial data is fabricated.
+  const pageSize = 25;
+  root.querySelectorAll('.safecontracts-table-card table.widefat').forEach((table) => {
+    const tbody = table.tBodies[0];
+    if (!tbody) {
+      return;
+    }
+    const rows = Array.from(tbody.rows).filter((row) => !row.classList.contains('safecontracts-w2-empty-row'));
+    if (rows.length <= pageSize) {
+      return;
+    }
+
+    let current = 1;
+    const pages = Math.ceil(rows.length / pageSize);
+    const nav = document.createElement('nav');
+    nav.className = 'safecontracts-w2-pagination';
+    nav.setAttribute('aria-label', text('Table pagination', 'ترقيم صفحات الجدول'));
+
+    const previous = document.createElement('button');
+    previous.type = 'button';
+    previous.className = 'button button-small';
+    previous.textContent = text('Previous', 'السابق');
+
+    const position = document.createElement('span');
+    position.className = 'safecontracts-w2-pagination__position';
+    position.setAttribute('aria-live', 'polite');
+
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.className = 'button button-small';
+    next.textContent = text('Next', 'التالي');
+
+    const render = () => {
+      const start = (current - 1) * pageSize;
+      const end = start + pageSize;
+      rows.forEach((row, index) => {
+        row.hidden = index < start || index >= end;
+      });
+      previous.disabled = current === 1;
+      next.disabled = current === pages;
+      position.textContent = text(
+        `Page ${current} of ${pages} · ${rows.length} rows`,
+        `صفحة ${current} من ${pages} · ${rows.length} صف`
+      );
+    };
+
+    previous.addEventListener('click', () => {
+      if (current > 1) {
+        current -= 1;
+        render();
+        table.scrollIntoView({block: 'nearest'});
+      }
+    });
+    next.addEventListener('click', () => {
+      if (current < pages) {
+        current += 1;
+        render();
+        table.scrollIntoView({block: 'nearest'});
+      }
+    });
+
+    nav.append(previous, position, next);
+    table.insertAdjacentElement('afterend', nav);
+    render();
+  });
+
   // Follow-up operations are fixed by the backend. Progressive disclosure only
   // hides irrelevant date inputs; it does not create new actions or mutations.
   if (page === 'safecontracts-followups') {
