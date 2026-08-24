@@ -320,7 +320,7 @@ final class ContractsPage
 
             <?php if ($canAssignContracts && $unassignedCount > 0 && $accountants !== []) : ?>
                 <section class="safecontracts-worker1__panel" style="margin-bottom:16px;">
-                    <div class="safecontracts-worker1__panel-head"><div><h2><?php echo esc_html(self::text('Assign visible unassigned contracts')); ?></h2><p><?php echo esc_html(self::text('Assignment never overwrites contracts that became assigned before submission.')); ?></p></div><span class="safecontracts-worker1__count"><?php echo esc_html((string) $unassignedCount); ?></span></div>
+                    <div class="safecontracts-worker1__panel-head"><div><h2><?php echo esc_html(self::text('Assign existing unassigned contracts')); ?></h2><p><?php echo esc_html(self::text('Assignment never overwrites contracts that became assigned before submission.')); ?></p></div><span class="safecontracts-worker1__count"><?php echo esc_html((string) $unassignedCount); ?></span></div>
                     <div class="safecontracts-worker1__panel-body">
                         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="safecontracts-worker1__filter-grid">
                             <input type="hidden" name="action" value="<?php echo esc_attr(self::BULK_ASSIGN_ACTION); ?>">
@@ -611,7 +611,7 @@ final class ContractsPage
             'Customer contracts · owed to us' => 'عقود العملاء · مستحقة لنا',
             'Supplier contracts · owed by us' => 'عقود الموردين · مستحقة علينا',
             'Needs responsible accountant' => 'تحتاج إلى محاسب مسؤول',
-            'Assign visible unassigned contracts' => 'تعيين العقود الظاهرة غير المسندة',
+            'Assign existing unassigned contracts' => 'تعيين العقود الحالية غير المسندة',
             'Assignment never overwrites contracts that became assigned before submission.' => 'لا يستبدل التعيين العقود التي تم إسنادها قبل إرسال الطلب.',
             'Contract register' => 'سجل العقود',
             'Customer AR and supplier AP contracts stay explicitly separated' => 'تظل عقود العملاء المستحقة لنا منفصلة بوضوح عن عقود الموردين المستحقة علينا',
