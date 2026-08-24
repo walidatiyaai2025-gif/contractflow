@@ -266,6 +266,75 @@ final class _CompactIcon extends StatelessWidget {
   }
 }
 
+// Compatibility primitives retained for legacy device/push widgets. They are
+// no longer mounted by ProfileScreen, so the compact end-user Profile remains
+// focused on identity, language, logout, and the User Guide.
+final class ProfileTileIcon extends StatelessWidget {
+  const ProfileTileIcon(
+    this.icon, {
+    this.background = SafeContractsVisual.navySoft,
+    this.foreground = SafeContractsVisual.navy,
+    super.key,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(icon, color: foreground, size: 22),
+    );
+  }
+}
+
+final class ProfilePill extends StatelessWidget {
+  const ProfilePill({
+    required this.icon,
+    required this.text,
+    this.background = SafeContractsVisual.navySoft,
+    this.foreground = SafeContractsVisual.navy,
+    super.key,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: icon == Icons.circle ? 8 : 14, color: foreground),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 String _profileName(BuildContext context, SafeContractsSession session) {
   final displayName = session.displayName?.trim();
   if (displayName != null && displayName.isNotEmpty) return displayName;
