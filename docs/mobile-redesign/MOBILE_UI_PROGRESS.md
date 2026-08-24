@@ -40,5 +40,6 @@ The matrix/progress documents were bootstrapped additively by Worker 1. The lock
 
 - Source edits: complete for Worker 1 scope.
 - Automated tests added: yes.
-- `dart format`, `flutter analyze`, `flutter test`: pending GitHub CI on the focused PR; failures must be fixed before handoff.
+- `dart format lib test`: applied successfully with Flutter stable 3.47.1 on GitHub Actions; the temporary formatter workflow removed itself and is not part of the PR diff.
+- `flutter analyze`, `flutter test`: focused PR Quality Gates rerun pending on the formatted head; failures must be fixed before handoff.
 - Exact reference screenshot comparison: blocked only by missing locked reference files on `main`; do not report this item as verified until the references are available.
