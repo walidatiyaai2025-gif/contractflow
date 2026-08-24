@@ -21,7 +21,7 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Normalize temporary patch literal
+      - name: Normalize temporary patch literals
         shell: bash
         run: |
           python3 - <<'PY'
@@ -32,7 +32,12 @@ jobs:
           good = '"label: Text(context.scL10n.t(\'Edit\')),\\n",'
           if text.count(bad) != 1:
               raise SystemExit('temporary Edit literal repair target not unique')
-          path.write_text(text.replace(bad, good, 1))
+          text = text.replace(bad, good, 1)
+          old_sub = 'next_text, count = re.subn(pattern, replacement, text, count=1, flags=flags)'
+          new_sub = 'next_text, count = re.subn(pattern, lambda _: replacement, text, count=1, flags=flags)'
+          if text.count(old_sub) != 1:
+              raise SystemExit('sub_once literal-preservation target not unique')
+          path.write_text(text.replace(old_sub, new_sub, 1))
           PY
           python3 -m py_compile scripts/w1_bug_closure_patch.py
       - name: Apply whitespace-stable Worker 1 closure patch
