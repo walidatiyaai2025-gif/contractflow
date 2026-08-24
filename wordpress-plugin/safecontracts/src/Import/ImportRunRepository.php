@@ -204,7 +204,7 @@ final class ImportRunRepository
         $limit = max(1, min(1000, $limit));
         $table = $wpdb->prefix . 'safecontracts_import_errors';
         $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, import_run_id, `row_number`, field_name, error_code, message, created_at FROM {$table} WHERE import_run_id = %d ORDER BY `row_number` ASC, id ASC LIMIT {$limit}",
+            "SELECT id, import_run_id, `row_number` AS row_number, field_name, error_code, message, created_at FROM {$table} WHERE import_run_id = %d ORDER BY `row_number` ASC, id ASC LIMIT {$limit}",
             $runId
         ), ARRAY_A);
         return is_array($rows) ? array_values($rows) : [];

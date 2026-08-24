@@ -44,9 +44,8 @@ final class Migration0012Import implements Migration
             KEY actor_created (created_by, created_at, id)
         ) {$charset};");
 
-        // ROW_NUMBER is reserved by MySQL 8 window functions. Keep the
-        // historical column name for compatibility, but quote it everywhere
-        // so a fresh real WordPress/MySQL installation can create the table.
+        // Stable index contract: KEY run_row (import_run_id, row_number, id).
+        // row_number is quoted in executable SQL because ROW_NUMBER is reserved in MySQL 8.
         dbDelta("CREATE TABLE {$errors} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             import_run_id bigint(20) unsigned NOT NULL,
