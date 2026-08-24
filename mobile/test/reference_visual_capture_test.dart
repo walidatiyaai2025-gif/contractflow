@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:safecontracts_mobile/app.dart';
 import 'package:safecontracts_mobile/core/api/api_client.dart';
 import 'package:safecontracts_mobile/core/api/api_transport.dart';
@@ -15,6 +16,13 @@ import 'fake_api_transport.dart';
 const _captureKey = Key('referenceCaptureBoundary');
 
 void main() {
+  setUpAll(() {
+    GoogleFonts.config.allowRuntimeFetching = false;
+  });
+  tearDownAll(() {
+    GoogleFonts.config.allowRuntimeFetching = true;
+  });
+
   testWidgets('captures REF01 welcome and login implementation',
       (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -117,7 +125,8 @@ Future<void> _capture(WidgetTester tester, String name) async {
     }
   });
   if (encoded == null) throw StateError('Unable to capture $name.');
-  final directory = Directory('build/reference-captures')..createSync(
+  final directory = Directory('build/reference-captures')
+    ..createSync(
       recursive: true,
     );
   File('${directory.path}/$name.png').writeAsBytesSync(encoded, flush: true);
