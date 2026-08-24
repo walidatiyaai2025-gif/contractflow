@@ -111,7 +111,9 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
     if (_error != null && _page == null) {
       return _FollowUpState(
         icon: Icons.cloud_off_outlined,
-        title: l10n.isArabic ? 'تعذر تحميل المتابعات' : 'Unable to load follow-ups',
+        title: l10n.isArabic
+            ? 'تعذر تحميل المتابعات'
+            : 'Unable to load follow-ups',
         message: l10n.rawMessage(_error!),
         actionLabel: l10n.t('Retry'),
         onAction: () => unawaited(_load(_pageNumber)),
@@ -128,7 +130,9 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
           children: [
             _FollowUpState(
               icon: Icons.task_alt_rounded,
-              title: l10n.isArabic ? 'لا توجد متابعات معلقة' : 'Nothing needs follow-up',
+              title: l10n.isArabic
+                  ? 'لا توجد متابعات معلقة'
+                  : 'Nothing needs follow-up',
               message: l10n.t(
                 'No follow-up items match the authorized filters.',
               ),
@@ -168,9 +172,8 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
           _FollowUpPaging(
             page: page,
             loading: _loading,
-            onPrevious: page.page > 1
-                ? () => unawaited(_load(page.page - 1))
-                : null,
+            onPrevious:
+                page.page > 1 ? () => unawaited(_load(page.page - 1)) : null,
             onNext: page.hasMore && page.page < 5
                 ? () => unawaited(_load(page.page + 1))
                 : null,
@@ -240,17 +243,19 @@ final class _FollowUpCard extends StatelessWidget {
                           item.reference ?? l10n.paymentNumber(item.paymentId),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: SafeContractsVisual.ink,
-                                fontWeight: FontWeight.w900,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: SafeContractsVisual.ink,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           l10n.contractNumber(item.contractId),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SafeContractsVisual.muted,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: SafeContractsVisual.muted,
+                                  ),
                         ),
                       ],
                     ),
@@ -296,7 +301,8 @@ final class _FollowUpCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: SafeContractsVisual.backgroundRaised,
                   borderRadius: BorderRadius.circular(13),
@@ -309,7 +315,10 @@ final class _FollowUpCard extends StatelessWidget {
                         children: [
                           Text(
                             l10n.t('Remaining'),
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
                                   color: SafeContractsVisual.muted,
                                 ),
                           ),
@@ -322,7 +331,10 @@ final class _FollowUpCard extends StatelessWidget {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
                                   color: urgency.color,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -576,9 +588,7 @@ final class _FollowUpHistoryScreenState extends State<FollowUpHistoryScreen> {
                                 : 'Newest first, as returned by the server',
                           ),
                           const SizedBox(height: 10),
-                          for (var index = 0;
-                              index < _history.length;
-                              index++)
+                          for (var index = 0; index < _history.length; index++)
                             _HistoryCard(
                               item: _history[index],
                               isLast: index == _history.length - 1,
@@ -651,10 +661,11 @@ final class _HistoryCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           l10n.status(item.state),
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                color: visual.color,
-                                fontWeight: FontWeight.w900,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: visual.color,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                         ),
                       ),
                       Text(
