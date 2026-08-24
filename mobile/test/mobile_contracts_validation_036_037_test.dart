@@ -50,6 +50,18 @@ void main() {
       );
     });
 
+    test('rejects inconsistent authoritative pagination metadata', () {
+      expect(
+        () => ContractPage.fromEnvelope(
+          ApiEnvelope(
+            data: <Object?>[_contractData()],
+            meta: <String, Object?>{..._pageMeta(), 'total_pages': 2},
+          ),
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('invalid filter is rejected before any request', () async {
       final harness = SafeContractsTestHarness(
         (uri) => SafeContractsTestHarness.ok(<Object?>[], meta: _pageMeta()),
@@ -151,6 +163,8 @@ Map<String, Object?> _pageMeta() {
     'scope': 'assigned',
     'page': 1,
     'per_page': 25,
+    'total': 1,
+    'total_pages': 1,
     'sort': 'id',
     'order': 'desc',
     'bounded_window': 500,

@@ -80,7 +80,7 @@ sc_p8v_final_assert(count($GLOBALS['sc_test_read_queries']) === $readsBefore && 
 
 // SC-P8-021 — Accountant scope validation; caller filter cannot widen assigned scope.
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_ASSIGNED => true];
-$GLOBALS['sc_test_result_queue'] = [[[
+$GLOBALS['sc_test_result_queue'] = [[['total' => '1']], [[
     'id' => '11', 'contract_number' => 'SC-11', 'customer_id' => '7', 'customer_name' => 'Acme',
     'accountant_user_id' => '42', 'status' => 'active', 'start_date' => '2026-01-01', 'end_date' => '2026-12-31',
     'base_value' => '100.0000', 'notes' => 'hidden', 'is_archived' => '0',
@@ -126,7 +126,7 @@ sc_p8v_final_assert(($options->data['meta']['customer_id'] ?? 0) === 7 && ($opti
 sc_p8v_final_assert(str_contains($optionsSql, 'c.customer_id = 7') && str_contains($optionsSql, 'c.accountant_user_id = 42'), 'SC-P8-023 dependent contract lookup preserves customer plus accountant scope');
 
 // SC-P8-024 — Contract endpoint validation.
-$GLOBALS['sc_test_result_queue'] = [[[
+$GLOBALS['sc_test_result_queue'] = [[['total' => '1']], [[
     'id' => '11', 'contract_number' => 'SC-11', 'customer_id' => '7', 'customer_name' => 'Acme',
     'accountant_user_id' => '42', 'status' => 'active', 'start_date' => '2026-01-01', 'end_date' => '2026-12-31',
     'base_value' => '100.0000', 'notes' => 'SECRET CONTRACT NOTE', 'is_archived' => '0',

@@ -15,6 +15,8 @@ use WP_REST_Request;
 
 final class ApiRequest
 {
+    private const MAX_LIST_OFFSET = 1000000;
+
     /** @return array<string,mixed> */
     public static function params(WP_REST_Request $request): array
     {
@@ -95,9 +97,20 @@ final class ApiRequest
     public static function pagination(WP_REST_Request $request): array
     {
         $params = self::params($request);
+        $perPage = array_key_exists('per_page', $params)
+            ? self::boundedInt($params['per_page'], 'per_page', 1, 100)
+            : 50;
+        $maxPage = intdiv(self::MAX_LIST_OFFSET, $perPage) + 1;
+        $page = array_key_exists('page', $params)
+            ? self::boundedInt($params['page'], 'page', 1, $maxPage)
+            : 1;
+        $offset = ($page - 1) * $perPage;
+        if ($offset > self::MAX_LIST_OFFSET) {
+            throw new InvalidArgumentException('page is outside the bounded server query window.');
+        }
         return [
-            'page' => array_key_exists('page', $params) ? self::boundedInt($params['page'], 'page', 1, 5) : 1,
-            'per_page' => array_key_exists('per_page', $params) ? self::boundedInt($params['per_page'], 'per_page', 1, 100) : 50,
+            'page' => $page,
+            'per_page' => $perPage,
         ];
     }
 
@@ -119,7 +132,7 @@ final class ApiRequest
         if (! is_string($params[$field])) {
             throw new InvalidArgumentException("{$field} must be a string.");
         }
-        $value = strtolower(trim($params[$field]));
+        $value = strtolower(trim((string) $params[$field]));
         if (! in_array($value, $allowed, true)) {
             throw new InvalidArgumentException("{$field} is not supported.");
         }
