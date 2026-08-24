@@ -94,29 +94,29 @@ final class TranslationsPage
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Translation management', 'safecontracts'); ?></p>
                     <h1><?php echo esc_html__('Translations', 'safecontracts'); ?></h1>
-                    <p><?php echo esc_html__('Edit real SafeContracts Arabic and English wording while preserving technical source keys and existing save/reset behavior.', 'safecontracts'); ?></p>
+                    <p><?php echo esc_html(self::text('Edit real SafeContracts Arabic and English wording while preserving technical source keys and existing save/reset behavior.', 'عدّل نصوص SafeContracts العربية والإنجليزية الفعلية مع الحفاظ على مفاتيح المصدر التقنية وسلوك الحفظ وإعادة الضبط الحالي.')); ?></p>
                 </div>
             </div>
             <?php if ($status === 'translations_saved') : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html__('Translations saved.', 'safecontracts'); ?></p></div><?php endif; ?>
-            <?php if ($status === 'translations_reset') : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html__('Selected translation overrides were reset to built-in defaults.', 'safecontracts'); ?></p></div><?php endif; ?>
+            <?php if ($status === 'translations_reset') : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html(self::text('Selected translation overrides were reset to built-in defaults.', 'تمت إعادة تعديلات الترجمة المحددة إلى القيم الافتراضية المضمنة.')); ?></p></div><?php endif; ?>
 
             <?php AdminSummaryCards::render([
-                ['label' => __('Translation entries', 'safecontracts'), 'value' => count($allCatalog)],
+                ['label' => self::text('Translation entries', 'مدخلات الترجمة'), 'value' => count($allCatalog)],
                 ['label' => __('English overrides', 'safecontracts'), 'value' => $englishOverrides],
                 ['label' => __('Arabic overrides', 'safecontracts'), 'value' => $arabicOverrides],
-                ['label' => __('Search results', 'safecontracts'), 'value' => count($catalog)],
+                ['label' => self::text('Search results', 'نتائج البحث'), 'value' => count($catalog)],
             ]); ?>
 
             <section class="safecontracts-admin-card safecontracts-settings-card">
                 <form method="get" class="safecontracts-filter-bar">
                     <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
                     <label><?php echo esc_html__('Search translations', 'safecontracts'); ?>
-                        <input type="search" name="translation_search" value="<?php echo esc_attr($search); ?>" placeholder="<?php echo esc_attr__('Source key, Arabic text or surface', 'safecontracts'); ?>">
+                        <input type="search" name="translation_search" value="<?php echo esc_attr($search); ?>" placeholder="<?php echo esc_attr(self::text('Source key, Arabic text or surface', 'مفتاح المصدر أو النص العربي أو الواجهة')); ?>">
                     </label>
                     <button class="button button-primary" type="submit"><?php echo esc_html__('Search translations', 'safecontracts'); ?></button>
-                    <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Clear', 'safecontracts'); ?></a>
+                    <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html(self::text('Clear', 'مسح')); ?></a>
                 </form>
-                <p class="description"><?php echo esc_html__('Leave an override empty to use the built-in default. Technical source keys remain LTR even inside Arabic admin pages.', 'safecontracts'); ?></p>
+                <p class="description"><?php echo esc_html(self::text('Leave an override empty to use the built-in default. Technical source keys remain LTR even inside Arabic admin pages.', 'اترك التعديل فارغًا لاستخدام القيمة الافتراضية المضمنة. تظل مفاتيح المصدر التقنية باتجاه LTR حتى داخل صفحات الإدارة العربية.')); ?></p>
             </section>
 
             <section class="safecontracts-admin-card safecontracts-table-card">
@@ -125,7 +125,7 @@ final class TranslationsPage
                     <input type="hidden" name="translation_search" value="<?php echo esc_attr($search); ?>">
                     <?php wp_nonce_field(self::SAVE_ACTION); ?>
                     <?php if ($catalog === []) : ?>
-                        <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('No matching translations', 'safecontracts'); ?></h2><p><?php echo esc_html__('No translation entries match this search.', 'safecontracts'); ?></p></div></div>
+                        <div class="safecontracts-section-heading"><div><h2><?php echo esc_html(self::text('No matching translations', 'لا توجد ترجمات مطابقة')); ?></h2><p><?php echo esc_html__('No translation entries match this search.', 'safecontracts'); ?></p></div></div>
                     <?php else : ?>
                         <div class="safecontracts-translations__table-wrap">
                             <table class="widefat striped safecontracts-translations__table">
@@ -200,5 +200,10 @@ final class TranslationsPage
         }
         unset($row);
         return $catalog;
+    }
+
+    private static function text(string $english, string $arabic): string
+    {
+        return TranslationCatalog::currentLanguage() === 'ar' ? $arabic : __($english, 'safecontracts');
     }
 }
