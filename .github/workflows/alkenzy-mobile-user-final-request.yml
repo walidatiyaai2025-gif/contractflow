@@ -6,11 +6,10 @@ on:
       - feat/alkenzy-mobile-user-final-request
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate-build:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,32 +20,12 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Apply canonical lint cleanup
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          python3 scripts/alkenzy_mobile_final_lint_fix.py
-          cd mobile
-          flutter pub get
-          dart format \
-            lib/features/contracts/contracts.dart \
-            lib/features/contracts/contracts_screen.dart \
-            lib/features/contracts/premium_contract_details_screen.dart \
-            lib/features/customers/customers_screen.dart \
-            lib/features/followups/followups.dart \
-            lib/features/followups/followups_screen.dart \
-            lib/features/payments/payments.dart \
-            lib/features/payments/payments_screen.dart \
-            lib/features/records/mobile_record_editor_screen.dart \
-            lib/features/suppliers/suppliers_screen.dart \
-            lib/features/ui/safecontracts_components.dart
-          cd ..
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mobile/lib
-          git diff --cached --check
-          git commit -m "fix(mobile): clear final analyzer infos"
-          git push origin HEAD:feat/alkenzy-mobile-user-final-request
+      - name: Dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Format
+        working-directory: mobile
+        run: dart format --output=none --set-exit-if-changed lib test
       - name: Analyze
         working-directory: mobile
         run: flutter analyze
@@ -55,15 +34,15 @@ jobs:
         run: flutter test
       - name: Prepare Android host
         run: bash scripts/bootstrap_android.sh
-      - name: Build final APK
+      - name: Build final release APK
         working-directory: mobile
         run: >-
-          flutter build apk --debug
+          flutter build apk --release
           --dart-define=SC_ENV=production
           --dart-define=SC_API_BASE_URL=https://sys.alkenzy.com/wp-json/safecontracts/v1/
       - name: Upload final APK
         uses: actions/upload-artifact@v4
         with:
           name: alkenzy-adv-final-user-request-apk
-          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
