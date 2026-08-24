@@ -79,14 +79,14 @@ final class DashboardScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                 ],
-                _CompactSummary(
-                  kpis: overview.kpis,
-                  currency: currency,
-                ),
+                _CompactSummary(kpis: overview.kpis, currency: currency),
                 const SizedBox(height: 8),
-                _CompactKpiRow(
-                  kpis: overview.kpis,
-                  currency: currency,
+                SizedBox(
+                  height: 70,
+                  child: _CompactKpiRow(
+                    kpis: overview.kpis,
+                    currency: currency,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 _GlobalPeriodFilter(controller: controller),
@@ -136,7 +136,7 @@ final class _CompactSummary extends StatelessWidget {
                 collected: collected,
                 overdue: overdue,
               ),
-              child: Center(
+              child: const Center(
                 child: Icon(
                   Icons.account_balance_wallet_outlined,
                   size: 23,
@@ -324,7 +324,6 @@ final class _CompactKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
       decoration: BoxDecoration(
         color: SafeContractsVisual.surface,
@@ -778,10 +777,23 @@ final class _PaymentFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     final busy = controller.state == DashboardLoadState.loading;
-    final currentStatus = controller.filters.status;
-    const quickStatuses = <String>['', 'due', 'overdue', 'paid'];
-    final dropdownValue =
-        quickStatuses.contains(currentStatus ?? '') ? currentStatus ?? '' : '';
+    final currentStatus = controller.filters.status ?? '';
+    const orderedStatuses = <String>[
+      '',
+      'draft',
+      'active',
+      'upcoming',
+      'due_soon',
+      'due',
+      'overdue',
+      'partially_paid',
+      'paid',
+      'completed',
+      'cancelled',
+    ];
+    final dropdownValue = orderedStatuses.contains(currentStatus)
+        ? currentStatus
+        : '';
     final advancedCount = (controller.filters.customerId == null ? 0 : 1) +
         (controller.filters.contractId == null ? 0 : 1);
     return SafeContractsSurface(
@@ -815,7 +827,9 @@ final class _PaymentFilterBar extends StatelessWidget {
                             ? null
                             : (value) => unawaited(
                                   controller.selectStatus(
-                                    value == null || value.isEmpty ? null : value,
+                                    value == null || value.isEmpty
+                                        ? null
+                                        : value,
                                   ),
                                 ),
                         style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -827,21 +841,18 @@ final class _PaymentFilterBar extends StatelessWidget {
                           DropdownMenuItem(
                             value: '',
                             child: Text(
-                              _copy(l10n, 'Quick filter: All', 'فلتر سريع: الكل'),
+                              _copy(
+                                l10n,
+                                'Quick filter: All',
+                                'فلتر سريع: الكل',
+                              ),
                             ),
                           ),
-                          DropdownMenuItem(
-                            value: 'due',
-                            child: Text(l10n.status('due')),
-                          ),
-                          DropdownMenuItem(
-                            value: 'overdue',
-                            child: Text(l10n.status('overdue')),
-                          ),
-                          DropdownMenuItem(
-                            value: 'paid',
-                            child: Text(l10n.status('paid')),
-                          ),
+                          for (final status in orderedStatuses.skip(1))
+                            DropdownMenuItem(
+                              value: status,
+                              child: Text(l10n.status(status)),
+                            ),
                         ],
                       ),
                     ),
@@ -878,7 +889,10 @@ final class _PaymentFilterBar extends StatelessWidget {
                         'Filters ($advancedCount)',
                         'فلاتر ($advancedCount)',
                       ),
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
