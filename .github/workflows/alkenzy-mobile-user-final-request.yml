@@ -28,6 +28,7 @@ jobs:
           python3 scripts/alkenzy_mobile_final_prepare.py pre
           python3 scripts/alkenzy_mobile_user_final_patch.py
           python3 scripts/alkenzy_mobile_final_prepare.py post
+          git restore .github/workflows/quality-gates.yml
           cd mobile
           flutter pub get
           dart format \
@@ -49,7 +50,7 @@ jobs:
           cd ..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mobile scripts/bootstrap_android.sh .github/workflows/quality-gates.yml
+          git add mobile scripts/bootstrap_android.sh
           git diff --cached --check
           git commit -m "feat(mobile): materialize biometric reports printing themes and sidebar"
           git push origin HEAD:feat/alkenzy-mobile-user-final-request
