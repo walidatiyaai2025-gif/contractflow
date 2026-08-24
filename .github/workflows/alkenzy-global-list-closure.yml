@@ -24,11 +24,29 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Preserve closure patch and reset to latest integration
+      - name: Preserve and normalize closure patch
         shell: bash
         run: |
+          set -euo pipefail
           cp scripts/alkenzy_global_list_closure.py /tmp/alkenzy_global_list_closure.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/alkenzy_global_list_closure.py')
+          text = p.read_text()
+          text = text.replace(
+              'contains("\'total_pages\' => $totalPages")',
+              'contains(r"\'total_pages\' => $totalPages")',
+          )
+          text = text.replace(
+              'contains("\'has_more\' => $page < $totalPages")',
+              'contains(r"\'has_more\' => $page < $totalPages")',
+          )
+          p.write_text(text)
+          PY
           python3 -m py_compile /tmp/alkenzy_global_list_closure.py
+      - name: Reset to latest integration
+        shell: bash
+        run: |
           git fetch origin feat/alkenzy-mobile-reference-redesign
           git reset --hard origin/feat/alkenzy-mobile-reference-redesign
       - name: Apply global list closure
