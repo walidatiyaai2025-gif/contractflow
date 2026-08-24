@@ -57,6 +57,38 @@ final class MobileLandingService {
   }
 }
 
+final class MobileLandingImage {
+  const MobileLandingImage({
+    required this.id,
+    required this.url,
+    required this.alt,
+  });
+
+  final int id;
+  final String url;
+  final String alt;
+
+  factory MobileLandingImage.fromJson(Object? value, int index) {
+    final map = apiObjectMap(value, 'images[$index]');
+    final id = _int(map['id'], 'images[$index].id');
+    if (id < 1) {
+      throw FormatException('images[$index].id is invalid.');
+    }
+    final url = _requiredText(map['url'], 'images[$index].url', 2048);
+    final uri = Uri.tryParse(url);
+    if (uri == null ||
+        !uri.hasAuthority ||
+        (uri.scheme != 'https' && uri.scheme != 'http')) {
+      throw FormatException('images[$index].url is invalid.');
+    }
+    final altValue = map['alt'];
+    if (altValue is! String || altValue.trim().length > 180) {
+      throw FormatException('images[$index].alt is invalid.');
+    }
+    return MobileLandingImage(id: id, url: url, alt: altValue.trim());
+  }
+}
+
 final class MobileLandingContent {
   const MobileLandingContent({
     required this.brandName,
@@ -68,6 +100,7 @@ final class MobileLandingContent {
     required this.services,
     required this.phones,
     required this.officeAddress,
+    required this.images,
     required this.signInLabel,
     required this.learnMoreLabel,
   });
@@ -81,6 +114,7 @@ final class MobileLandingContent {
   final List<MobileLandingService> services;
   final List<String> phones;
   final LandingLocalizedText officeAddress;
+  final List<MobileLandingImage> images;
   final LandingLocalizedText signInLabel;
   final LandingLocalizedText learnMoreLabel;
 
@@ -130,6 +164,22 @@ final class MobileLandingContent {
       throw const FormatException('experience_years is out of range.');
     }
 
+    final imageValues = map['images'] == null
+        ? const <Object?>[]
+        : apiObjectList(map['images'], 'images');
+    if (imageValues.length > 6) {
+      throw const FormatException('Mobile landing images are out of range.');
+    }
+    final images = <MobileLandingImage>[];
+    final imageIds = <int>{};
+    for (var index = 0; index < imageValues.length; index++) {
+      final image = MobileLandingImage.fromJson(imageValues[index], index);
+      if (!imageIds.add(image.id)) {
+        throw const FormatException('Mobile landing image IDs must be unique.');
+      }
+      images.add(image);
+    }
+
     return MobileLandingContent(
       brandName: _requiredText(map['brand_name'], 'brand_name', 80),
       agencyName: LandingLocalizedText.fromJson(
@@ -160,6 +210,7 @@ final class MobileLandingContent {
         'contact.office_address',
         maximumLength: 240,
       ),
+      images: List<MobileLandingImage>.unmodifiable(images),
       signInLabel: LandingLocalizedText.fromJson(
         map['sign_in_label'],
         'sign_in_label',
@@ -243,6 +294,7 @@ final class MobileLandingContent {
       en: '57 Khatam Al-Morselin, Giza',
       ar: '57 خاتم المرسلين، الجيزة',
     ),
+    images: <MobileLandingImage>[],
     signInLabel: LandingLocalizedText(
       en: 'Sign in',
       ar: 'تسجيل الدخول',

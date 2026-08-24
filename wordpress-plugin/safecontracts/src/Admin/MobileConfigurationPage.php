@@ -14,10 +14,45 @@ final class MobileConfigurationPage
 {
     public const SLUG = 'safecontracts-mobile-configuration';
     public const SAVE_ACTION = 'safecontracts_save_mobile_configuration';
+    public const LANDING_MEDIA_STYLE_HANDLE = 'safecontracts-mobile-landing-media';
+    public const LANDING_MEDIA_SCRIPT_HANDLE = 'safecontracts-mobile-landing-media';
+
+    private static bool $landingMediaAssetsRegistered = false;
 
     public static function register(): void
     {
+        if (! self::$landingMediaAssetsRegistered) {
+            self::$landingMediaAssetsRegistered = true;
+            add_action('admin_enqueue_scripts', [self::class, 'enqueueLandingMediaAssets'], 40);
+        }
+
         add_submenu_page(AdminShell::SLUG, __('Mobile Configuration', 'safecontracts'), __('Mobile Configuration', 'safecontracts'), Capabilities::MANAGE_SYSTEM, self::SLUG, [self::class, 'render']);
+    }
+
+    public static function enqueueLandingMediaAssets(): void
+    {
+        if (sanitize_key((string) ($_GET['page'] ?? '')) !== self::SLUG) {
+            return;
+        }
+
+        wp_enqueue_style(
+            self::LANDING_MEDIA_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-3/mobile-landing-media.css',
+            [AdminShell::REDESIGN_PRIMITIVES_STYLE_HANDLE],
+            SAFECONTRACTS_VERSION
+        );
+        if (! current_user_can('upload_files')) {
+            return;
+        }
+
+        wp_enqueue_media();
+        wp_enqueue_script(
+            self::LANDING_MEDIA_SCRIPT_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-3/mobile-landing-media.js',
+            ['media-editor'],
+            SAFECONTRACTS_VERSION,
+            true
+        );
     }
 
     public static function handleSave(): void
@@ -35,7 +70,12 @@ final class MobileConfigurationPage
                 'push_notifications_enabled' => isset($_POST['push_notifications_enabled']),
                 'collection_entry_enabled' => isset($_POST['collection_entry_enabled']),
             ]);
-            (new MobileLandingContent())->save(self::landingInput($_POST));
+            $landingContent = new MobileLandingContent();
+            $landingInput = self::landingInput($_POST);
+            if (! current_user_can('upload_files')) {
+                $landingInput['image_ids'] = $landingContent->selectedImageIds();
+            }
+            $landingContent->save($landingInput);
         } catch (Throwable $error) {
             unset($error);
             $status = 'invalid';
@@ -52,7 +92,10 @@ final class MobileConfigurationPage
         $config = (new MobileConfiguration())->read();
         $status = isset($_GET['safecontracts_status']) && is_scalar($_GET['safecontracts_status']) ? sanitize_key((string) $_GET['safecontracts_status']) : '';
         $enabledFeatures = (int) ! empty($config['excel_export_enabled']) + (int) ! empty($config['push_notifications_enabled']) + (int) ! empty($config['collection_entry_enabled']);
-        $landing = (new MobileLandingContent())->read();
+        $landingContent = new MobileLandingContent();
+        $landing = $landingContent->read();
+        $imageIds = $landingContent->selectedImageIds();
+        $images = is_array($landing['images'] ?? null) ? $landing['images'] : [];
         $phones = is_array($landing['contact']['phones'] ?? null) ? $landing['contact']['phones'] : [];
         $services = is_array($landing['services'] ?? null) ? $landing['services'] : [];
         ?>
@@ -102,6 +145,8 @@ final class MobileConfigurationPage
                         </div>
                     </div>
                     <p class="safecontracts-landing-editor__hint"><?php echo esc_html__('Arabic and English values are stored together. The app shows the matching language the next time its landing content is refreshed.', 'safecontracts'); ?></p>
+
+                    <?php self::landingMediaEditor($imageIds, $images); ?>
 
                     <div class="safecontracts-landing-editor__grid">
                         <?php self::textField('landing_brand_name', __('Brand name', 'safecontracts'), (string) ($landing['brand_name'] ?? ''), 80, true); ?>
@@ -184,9 +229,94 @@ final class MobileConfigurationPage
                 $post['landing_phone_4'] ?? '',
             ],
             'office_address' => ['ar' => $post['landing_address_ar'] ?? '', 'en' => $post['landing_address_en'] ?? ''],
+            'image_ids' => $post['landing_image_ids'] ?? '',
             'sign_in_label' => ['ar' => $post['landing_sign_in_ar'] ?? '', 'en' => $post['landing_sign_in_en'] ?? ''],
             'learn_more_label' => ['ar' => $post['landing_learn_more_ar'] ?? '', 'en' => $post['landing_learn_more_en'] ?? ''],
         ];
+    }
+
+    /**
+     * @param list<int> $imageIds
+     * @param list<mixed> $images
+     */
+    private static function landingMediaEditor(array $imageIds, array $images): void
+    {
+        $imagesById = [];
+        foreach ($images as $image) {
+            if (! is_array($image) || ! isset($image['id'])) {
+                continue;
+            }
+            $imagesById[(int) $image['id']] = $image;
+        }
+        $canManageMedia = current_user_can('upload_files');
+        ?>
+        <section
+            class="safecontracts-landing-media"
+            data-mobile-landing-media
+            data-max-images="6"
+            data-frame-title="<?php echo esc_attr(self::text('Choose landing page images', 'اختر صور صفحة البداية')); ?>"
+            data-frame-button="<?php echo esc_attr(self::text('Use selected images', 'استخدم الصور المحددة')); ?>"
+            data-limit-message="<?php echo esc_attr(self::text('You can publish up to 6 landing images.', 'يمكنك نشر 6 صور كحد أقصى في صفحة البداية.')); ?>"
+            data-media-id-label="<?php echo esc_attr(self::text('Media ID', 'رقم الوسائط')); ?>"
+            data-added-message="<?php echo esc_attr(self::text('Added %d image(s).', 'تمت إضافة %d صورة.')); ?>"
+        >
+            <div class="safecontracts-landing-media__head">
+                <div>
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html(self::text('Landing gallery', 'معرض صفحة البداية')); ?></p>
+                    <h3><?php echo esc_html(self::text('Mobile landing page images', 'صور لاندنج الموبايل')); ?></h3>
+                    <p><?php echo esc_html(self::text('Upload or choose up to 6 images from WordPress Media. Their order here is the same order shown in the mobile carousel.', 'ارفع أو اختر حتى 6 صور من مكتبة وسائط WordPress. الترتيب هنا هو نفسه الذي سيظهر في عرض الموبايل.')); ?></p>
+                </div>
+                <button type="button" class="button button-secondary safecontracts-landing-media__choose" data-landing-media-choose<?php disabled(! $canManageMedia); ?>>
+                    <span class="dashicons dashicons-format-gallery" aria-hidden="true"></span>
+                    <?php echo esc_html(self::text('Upload / choose images', 'رفع / اختيار صور')); ?>
+                </button>
+            </div>
+            <?php if (! $canManageMedia) : ?>
+                <p class="notice notice-warning inline"><strong><?php echo esc_html(self::text('Media permission required:', 'مطلوب صلاحية الوسائط:')); ?></strong> <?php echo esc_html(self::text('Your account can edit mobile text but cannot change WordPress Media selections.', 'يمكن لحسابك تعديل نصوص الموبايل ولكن لا يمكنه تغيير اختيارات مكتبة وسائط WordPress.')); ?></p>
+            <?php endif; ?>
+            <p class="safecontracts-landing-media__recommendation">
+                <?php echo esc_html(self::text('Recommended: landscape WebP or JPEG, at least 1600×900. WordPress supplies the optimized mobile size.', 'المقترح: صور أفقية WebP أو JPEG بمقاس 1600×900 على الأقل، وWordPress يرسل المقاس المناسب للموبايل.')); ?>
+            </p>
+            <input type="hidden" name="landing_image_ids" value="<?php echo esc_attr(implode(',', $imageIds)); ?>" data-landing-media-input>
+            <div class="safecontracts-landing-media__grid" data-landing-media-list>
+                <?php foreach ($imageIds as $id) : ?>
+                    <?php $image = $imagesById[$id] ?? null; if (! is_array($image)) { continue; } ?>
+                    <article class="safecontracts-landing-media__item" data-landing-media-item data-id="<?php echo esc_attr((string) $id); ?>">
+                        <img src="<?php echo esc_url((string) ($image['url'] ?? '')); ?>" alt="<?php echo esc_attr((string) ($image['alt'] ?? '')); ?>">
+                        <div class="safecontracts-landing-media__item-meta">
+                            <strong data-landing-media-name><?php echo esc_html((string) ($image['alt'] ?? '') ?: sprintf(self::text('Landing image #%d', 'صورة اللاندنج #%d'), $id)); ?></strong>
+                            <span><?php echo esc_html(sprintf(self::text('Media ID: %d', 'رقم الوسائط: %d'), $id)); ?></span>
+                        </div>
+                        <div class="safecontracts-landing-media__item-actions">
+                            <button type="button" class="button" data-landing-media-up aria-label="<?php echo esc_attr(self::text('Move image earlier', 'حرك الصورة للأمام')); ?>">↑</button>
+                            <button type="button" class="button" data-landing-media-down aria-label="<?php echo esc_attr(self::text('Move image later', 'حرك الصورة للخلف')); ?>">↓</button>
+                            <button type="button" class="button safecontracts-landing-media__remove" data-landing-media-remove><?php echo esc_html(self::text('Remove', 'حذف')); ?></button>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+            <div class="safecontracts-landing-media__empty" data-landing-media-empty<?php echo $imagesById !== [] ? ' hidden' : ''; ?>>
+                <span class="dashicons dashicons-format-image" aria-hidden="true"></span>
+                <strong><?php echo esc_html(self::text('No landing images selected yet', 'لم يتم اختيار صور للاندنج بعد')); ?></strong>
+                <p><?php echo esc_html(self::text('The app keeps the branded fallback until you publish images.', 'سيستمر التطبيق في عرض الشاشة الافتراضية حتى تنشر صورًا.')); ?></p>
+            </div>
+            <p class="screen-reader-text" aria-live="polite" data-landing-media-status></p>
+            <template data-landing-media-template>
+                <article class="safecontracts-landing-media__item" data-landing-media-item data-id="">
+                    <img src="" alt="">
+                    <div class="safecontracts-landing-media__item-meta">
+                        <strong data-landing-media-name></strong>
+                        <span data-landing-media-id></span>
+                    </div>
+                    <div class="safecontracts-landing-media__item-actions">
+                        <button type="button" class="button" data-landing-media-up aria-label="<?php echo esc_attr(self::text('Move image earlier', 'حرك الصورة للأمام')); ?>">↑</button>
+                        <button type="button" class="button" data-landing-media-down aria-label="<?php echo esc_attr(self::text('Move image later', 'حرك الصورة للخلف')); ?>">↓</button>
+                        <button type="button" class="button safecontracts-landing-media__remove" data-landing-media-remove><?php echo esc_html(self::text('Remove', 'حذف')); ?></button>
+                    </div>
+                </article>
+            </template>
+        </section>
+        <?php
     }
 
     private static function textField(string $name, string $label, string $value, int $maxLength, bool $full = false): void

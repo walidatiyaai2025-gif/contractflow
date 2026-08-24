@@ -177,6 +177,18 @@ ApiTransportResponse _unauthenticatedHandler(Uri uri) {
           'ar': 'مكتب الأعمال',
         },
       },
+      'images': <Object?>[
+        <String, Object?>{
+          'id': 17,
+          'url': 'https://example.test/uploads/alkenzy-campaign-1.webp',
+          'alt': 'حملة إعلانية للكنزي',
+        },
+        <String, Object?>{
+          'id': 21,
+          'url': 'https://example.test/uploads/alkenzy-campaign-2.webp',
+          'alt': 'إعلانات طرقية ومطبوعات',
+        },
+      ],
       'sign_in_label': <String, String>{
         'en': 'Sign in',
         'ar': 'تسجيل الدخول',

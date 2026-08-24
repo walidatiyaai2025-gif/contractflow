@@ -38,18 +38,6 @@ final class AdminPremiumDashboardEnhancements
         $actions = self::actions();
         ?>
         <?php if ($actions !== []) : ?>
-            <nav class="safecontracts-premium-actions" id="safecontracts-premium-actions" aria-label="<?php echo esc_attr__('Dashboard actions', 'safecontracts'); ?>">
-                <?php foreach ($actions as $action) : ?>
-                    <a class="safecontracts-premium-action safecontracts-premium-action--<?php echo esc_attr($action['tone']); ?>" href="<?php echo esc_url($action['url']); ?>">
-                        <span class="safecontracts-premium-action__icon" aria-hidden="true"><span class="dashicons <?php echo esc_attr($action['icon']); ?>"></span></span>
-                        <span class="safecontracts-premium-action__copy">
-                            <strong><?php echo esc_html($action['label']); ?></strong>
-                            <small><?php echo esc_html($action['description']); ?></small>
-                        </span>
-                    </a>
-                <?php endforeach; ?>
-            </nav>
-
             <div class="safecontracts-premium-fab" id="safecontracts-premium-fab">
                 <div class="safecontracts-premium-fab__menu" id="safecontracts-premium-fab-menu">
                     <?php foreach ($actions as $action) : ?>
@@ -70,11 +58,6 @@ final class AdminPremiumDashboardEnhancements
             const dashboard = document.querySelector('.safecontracts-dashboard-v2');
             if (!dashboard || dashboard.dataset.premiumEnhanced === '1') return;
             dashboard.dataset.premiumEnhanced = '1';
-
-            const toolbar = document.getElementById('safecontracts-premium-actions');
-            if (toolbar) {
-                dashboard.prepend(toolbar);
-            }
 
             const filter = dashboard.querySelector('.safecontracts-dashboard-v2__filters');
             if (filter && !filter.querySelector('[name="month"]')) {
