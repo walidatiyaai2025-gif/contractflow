@@ -42,6 +42,16 @@
         'تعذر إكمال عكس التسوية ولم يتم افتراض نجاح العملية.'
       ]
     },
+    'safecontracts-followups': {
+      saved: [
+        'Follow-up action recorded in the append-only history.',
+        'تم تسجيل إجراء المتابعة في السجل الإضافي غير القابل لإعادة الكتابة.'
+      ],
+      invalid: [
+        'Follow-up action was not saved. Review the selected action and required fields.',
+        'لم يتم حفظ إجراء المتابعة. راجع الإجراء المختار والحقول المطلوبة.'
+      ]
+    },
     'safecontracts-imports': {
       uploaded: [
         'Workbook uploaded to private staging. Review discovery and mapping before execution.',
@@ -89,9 +99,9 @@
     appendNotice(status.includes('failed') || status.includes('invalid') ? 'error' : 'success', text(message[0], message[1]));
   }
 
-  // A synchronous WordPress screen has no separate client-side loading state.
-  // For tables that are actually rendered with zero server rows, provide an
-  // accessible empty row instead of leaving a visually blank panel.
+  // WordPress renders these routes synchronously. If the server rendered a
+  // table with zero rows, turn that genuinely empty tbody into an accessible
+  // empty state instead of manufacturing placeholder records.
   root.querySelectorAll('.safecontracts-table-card table.widefat').forEach((table) => {
     const tbody = table.tBodies[0];
     if (!tbody || tbody.rows.length !== 0) {
@@ -111,8 +121,8 @@
     cell.appendChild(empty);
   });
 
-  // Client pagination is presentation-only: every authorized server row stays
-  // in the DOM, no totals are recomputed, and no financial data is fabricated.
+  // Client pagination is presentation-only. Every authorized server row stays
+  // in the DOM and no monetary value, total, status or direction is recomputed.
   const pageSize = 25;
   root.querySelectorAll('.safecontracts-table-card table.widefat').forEach((table) => {
     const tbody = table.tBodies[0];
