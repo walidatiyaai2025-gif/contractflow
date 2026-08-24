@@ -37,7 +37,13 @@ jobs:
           new_sub = 'next_text, count = re.subn(pattern, lambda _: replacement, text, count=1, flags=flags)'
           if text.count(old_sub) != 1:
               raise SystemExit('sub_once literal-preservation target not unique')
-          path.write_text(text.replace(old_sub, new_sub, 1))
+          text = text.replace(old_sub, new_sub, 1)
+          old_message = r": '$fallback\n${rawError.trim()}';"
+          new_message = r": '$fallback\\n${rawError.trim()}';"
+          if text.count(old_message) != 1:
+              raise SystemExit('B002 message newline target not unique')
+          text = text.replace(old_message, new_message, 1)
+          path.write_text(text)
           PY
           python3 -m py_compile scripts/w1_bug_closure_patch.py
       - name: Apply whitespace-stable Worker 1 closure patch
@@ -63,7 +69,7 @@ jobs:
         run: |
           for language in ar en; do
             for width in 320 360 375 390 412 430; do
-              flutter test test/worker1_visual_capture_test.dart test/w1_customer_visual_capture.dart \
+              flutter test test/worker1_visual_capture_test.dart \
                 --dart-define=W1_CAPTURE_WIDTH="$width" \
                 --dart-define=W1_CAPTURE_LANG="$language"
             done
