@@ -69,11 +69,21 @@ jobs:
           if old not in text:
               raise SystemExit('Unable to normalize unique login state build marker.')
           text = text.replace(old, new, 1)
-          old_theme = 'replace_once(path, "        backgroundColor: SafeContractsVisual.navy,", "        backgroundColor: palette.primary,")'
-          new_theme = 'write(path, read(path).replace("        backgroundColor: SafeContractsVisual.navy,", "        backgroundColor: palette.primary,", 1))'
-          if old_theme not in text:
-              raise SystemExit('Unable to normalize app bar palette marker.')
-          p.write_text(text.replace(old_theme, new_theme, 1))
+          replacements = [
+              (
+                  'replace_once(path, "        backgroundColor: SafeContractsVisual.navy,", "        backgroundColor: palette.primary,")',
+                  'write(path, read(path).replace("        backgroundColor: SafeContractsVisual.navy,", "        backgroundColor: palette.primary,", 1))',
+              ),
+              (
+                  'replace_once(path, "          foregroundColor: SafeContractsVisual.navy,", "          foregroundColor: palette.primary,")',
+                  'write(path, read(path).replace("          foregroundColor: SafeContractsVisual.navy,", "          foregroundColor: palette.primary,", 1))',
+              ),
+          ]
+          for old_marker, new_marker in replacements:
+              if old_marker not in text:
+                  raise SystemExit(f'Unable to normalize theme marker: {old_marker}')
+              text = text.replace(old_marker, new_marker, 1)
+          p.write_text(text)
           PY
 
           stage=apply
