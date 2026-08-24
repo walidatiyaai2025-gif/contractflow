@@ -58,10 +58,16 @@ jobs:
           from pathlib import Path
           p = Path('scripts/alkenzy_mobile_user_final_patch.py')
           text = p.read_text()
-          old = '    "  @override\\n  Widget build(BuildContext context) {\\n",\n    "  Future<void> _offerBiometricEnrollment() async {\\n"'
-          new = '    "  @override\\n  Widget build(BuildContext context) {\\n    final l10n = context.scL10n;\\n",\n    "  Future<void> _offerBiometricEnrollment() async {\\n"'
+          old = '''insert_before(
+              path,
+              "  @override\\n  Widget build(BuildContext context) {\\n",
+              "  Future<void> _offerBiometricEnrollment() async {\\n"'''
+          new = '''insert_before(
+              path,
+              "  @override\\n  Widget build(BuildContext context) {\\n    final l10n = context.scL10n;\\n    if (_bootstrapping) {\\n",
+              "  Future<void> _offerBiometricEnrollment() async {\\n"'''
           if old not in text:
-              raise SystemExit('Unable to normalize login state build marker.')
+              raise SystemExit('Unable to normalize unique login state build marker.')
           p.write_text(text.replace(old, new, 1))
           PY
 
