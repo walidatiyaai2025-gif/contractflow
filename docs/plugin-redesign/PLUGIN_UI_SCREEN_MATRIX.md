@@ -24,13 +24,13 @@
 | SC-014 | Suppliers | `safecontracts-suppliers` | `SuppliersPage::render()` | REGISTERED | **WORKER-1** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-015 | Contracts | `safecontracts-contracts` | `ContractsPage::render()` | REGISTERED | **WORKER-1** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-016 | Archive | `safecontracts-archive` | `ArchivePage::render()` | REGISTERED | **WORKER-1** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-017 | Payments | `safecontracts-payments` | `PaymentsPage::render()` | REGISTERED | **WORKER-2** | REF_005 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-018 | Collections / Settlements | `safecontracts-collections` | `CollectionsPage::render()` | REGISTERED | **WORKER-2** | REF_005 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-019 | Follow-ups | `safecontracts-followups` | `FollowUpsPage::render()` | REGISTERED | **WORKER-2** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-020 | Finance | `safecontracts-finance` | `FinancePage::render()` | REGISTERED | **WORKER-2** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-021 | Reports | `safecontracts-reports` | `ReportsPage::render()` | REGISTERED | **WORKER-2** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-022 | Imports | `safecontracts-imports` | `ImportsPage::render()` | REGISTERED | **WORKER-2** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-023 | Payment Methods | `safecontracts-payment-methods` | `PaymentMethodsPage::render()` | REGISTERED | **WORKER-2** | REF_005 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
+| SC-017 | Payments | `safecontracts-payments` | `PaymentsPage::render()` | REGISTERED | **WORKER-2** | REF_005 | IMPLEMENTED | NO | NO | NO | NO | — | #635 | NO |
+| SC-018 | Collections / Settlements | `safecontracts-collections` | `CollectionsPage::render()` | REGISTERED | **WORKER-2** | REF_005 | IMPLEMENTED | NO | NO | NO | NO | — | #635 | NO |
+| SC-019 | Follow-ups | `safecontracts-followups` | `FollowUpsPage::render()` | REGISTERED | **WORKER-2** | REF_001 | IMPLEMENTED | NO | NO | NO | NO | — | #635 | NO |
+| SC-020 | Finance | `safecontracts-finance` | `FinancePage::render()` | REGISTERED | **WORKER-2** | REF_001 | IMPLEMENTED | NO | NO | NO | NO | — | #635 | NO |
+| SC-021 | Reports | `safecontracts-reports` | `ReportsPage::render()` | REGISTERED | **WORKER-2** | REF_001 | IMPLEMENTED | NO | NO | NO | NO | — | #635 | NO |
+| SC-022 | Imports | `safecontracts-imports` | `ImportsPage::render()` | REGISTERED | **WORKER-2** | REF_002 | IMPLEMENTED | NO | NO | NO | NO | — | #635 | NO |
+| SC-023 | Payment Methods | `safecontracts-payment-methods` | `PaymentMethodsPage::render()` | REGISTERED | **WORKER-2** | REF_005 | IMPLEMENTED | NO | NO | NO | NO | — | #635 | NO |
 | SC-024 | Notification Center | `safecontracts-notification-center` | `NotificationCenterPage::render()` | REGISTERED | **WORKER-3** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-025 | Notification Delivery Activity | `safecontracts-notifications` | `NotificationsPage::render()` | REGISTERED | **WORKER-3** | REF_006 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-026 | Notification Schedule | `safecontracts-notification-schedule` | `NotificationSchedulePage::render()` | REGISTERED | **WORKER-3** | REF_006 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
