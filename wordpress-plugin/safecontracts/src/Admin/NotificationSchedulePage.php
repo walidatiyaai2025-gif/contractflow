@@ -82,6 +82,88 @@ final class NotificationSchedulePage
         $failed = self::countStates($rows, ['failed']);
         $sent = self::countStates($rows, ['sent']);
         ?>
+        <style id="safecontracts-notification-schedule-responsive">
+            @media (max-width: 1100px) {
+                .safecontracts-notification-schedule .safecontracts-table-card {
+                    overflow: visible !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table {
+                    display: block !important;
+                    min-width: 0 !important;
+                    width: 100% !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table thead {
+                    position: absolute !important;
+                    width: 1px !important;
+                    height: 1px !important;
+                    padding: 0 !important;
+                    margin: -1px !important;
+                    overflow: hidden !important;
+                    clip: rect(0, 0, 0, 0) !important;
+                    white-space: nowrap !important;
+                    border: 0 !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table tbody,
+                .safecontracts-notification-schedule .safecontracts-schedule-table tr,
+                .safecontracts-notification-schedule .safecontracts-schedule-table td {
+                    display: block !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    max-width: 100% !important;
+                    box-sizing: border-box !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table tbody {
+                    padding: 0 10px 10px !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table tbody tr {
+                    margin: 0 0 12px !important;
+                    border: 1px solid #e4d8ce !important;
+                    border-radius: 12px !important;
+                    overflow: hidden !important;
+                    background: #fff !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table tbody td {
+                    display: grid !important;
+                    grid-template-columns: minmax(110px, .35fr) minmax(0, 1fr) !important;
+                    gap: 10px !important;
+                    align-items: start !important;
+                    border-bottom: 1px solid #f0e7df !important;
+                    overflow-wrap: anywhere !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table tbody td::before {
+                    content: attr(data-label);
+                    color: #6d737b;
+                    font-size: 11px;
+                    font-weight: 800;
+                    line-height: 1.5;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table tbody td:last-child {
+                    border-bottom: 0 !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table tbody td form {
+                    min-width: 0 !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-table tbody td .button {
+                    width: auto !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    white-space: normal !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-empty {
+                    display: block !important;
+                }
+                .safecontracts-notification-schedule .safecontracts-schedule-empty::before {
+                    display: none !important;
+                }
+            }
+            @media (max-width: 480px) {
+                .safecontracts-notification-schedule .safecontracts-schedule-table tbody td {
+                    grid-template-columns: minmax(0, 1fr) !important;
+                }
+            }
+        </style>
         <div class="wrap safecontracts-settings safecontracts-notification-schedule" dir="auto">
             <div class="safecontracts-section-heading">
                 <div>
@@ -122,18 +204,18 @@ final class NotificationSchedulePage
 
             <section class="safecontracts-admin-card safecontracts-table-card">
                 <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Actual scheduled notifications', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html(self::text('State, attempts and error codes below are backend values, not presentation guesses.', 'الحالة والمحاولات ورموز الأخطاء أدناه قيم فعلية من الخادم وليست تخمينات من الواجهة.')); ?></p></div></div>
-                <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Scheduled', 'safecontracts'); ?></th><th><?php echo esc_html__('Notification', 'safecontracts'); ?></th><th><?php echo esc_html__('Recipients / result', 'safecontracts'); ?></th><th><?php echo esc_html__('Sent via', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Last attempt', 'safecontracts'); ?></th><th><?php echo esc_html__('Action', 'safecontracts'); ?></th></tr></thead><tbody>
-                    <?php if ($rows === []) : ?><tr><td colspan="7"><?php echo esc_html__('No scheduled notifications match this period and status.', 'safecontracts'); ?></td></tr><?php endif; ?>
+                <table class="widefat striped safecontracts-schedule-table"><thead><tr><th><?php echo esc_html__('Scheduled', 'safecontracts'); ?></th><th><?php echo esc_html__('Notification', 'safecontracts'); ?></th><th><?php echo esc_html__('Recipients / result', 'safecontracts'); ?></th><th><?php echo esc_html__('Sent via', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Last attempt', 'safecontracts'); ?></th><th><?php echo esc_html__('Action', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <?php if ($rows === []) : ?><tr><td class="safecontracts-schedule-empty" colspan="7"><?php echo esc_html__('No scheduled notifications match this period and status.', 'safecontracts'); ?></td></tr><?php endif; ?>
                     <?php foreach ($rows as $row) : ?>
                         <?php $outcomes = $deliveries->outcomesForOccurrence((int) $row['rule_id'], (int) $row['payment_id'], (string) $row['scheduled_date'], (int) $row['attempt_no']); $recipientIds = is_array($row['recipient_ids'] ?? null) ? $row['recipient_ids'] : []; $rowState = sanitize_key((string) ($row['status'] ?? '')); ?>
                         <tr>
-                            <td><strong><?php echo esc_html(self::localTime((string) $row['scheduled_for'])); ?></strong><br><small><?php echo esc_html__('Local/site time', 'safecontracts'); ?></small></td>
-                            <td><strong><?php echo esc_html((string) ($row['rule_name'] ?? $row['rule_code'] ?? '')); ?></strong><br><?php echo esc_html__('Contract', 'safecontracts'); ?>: <code dir="ltr"><?php echo esc_html((string) ($row['contract_number'] ?? '')); ?></code><br><?php echo esc_html__('Customer', 'safecontracts'); ?>: <?php echo esc_html((string) ($row['customer_name'] ?? '')); ?><br><?php echo esc_html__('Payment', 'safecontracts'); ?>: #<?php echo esc_html((string) $row['payment_id']); ?><?php if (! empty($row['payment_reference'])) : ?> · <?php echo esc_html((string) $row['payment_reference']); ?><?php endif; ?><br><small><?php echo esc_html__('Rule attempt', 'safecontracts'); ?>: <?php echo esc_html((string) $row['attempt_no']); ?></small></td>
-                            <td><?php self::renderRecipients($recipientIds, $outcomes); ?></td>
-                            <td><strong><?php echo esc_html(self::channelLabel((string) ($row['channel'] ?? 'push'))); ?></strong><br><small><?php echo esc_html(self::channelDetail((string) ($row['channel'] ?? 'push'))); ?></small></td>
-                            <td><span class="safecontracts-state-chip <?php echo esc_attr(self::stateClass($rowState)); ?>"><?php echo esc_html(self::stateLabel($rowState)); ?></span><br><small><?php echo esc_html(sprintf(__('Sent %d / Failed %d / Recipients %d', 'safecontracts'), (int) $row['sent_count'], (int) $row['failed_count'], (int) $row['recipient_count'])); ?></small><?php if (! empty($row['last_error_code'])) : ?><br><code dir="ltr"><?php echo esc_html((string) $row['last_error_code']); ?></code><?php endif; ?></td>
-                            <td><?php echo ! empty($row['last_attempt_at']) ? esc_html(self::localTime((string) $row['last_attempt_at'])) : '—'; ?><?php if ((int) $row['manual_attempts'] > 0) : ?><br><small><?php echo esc_html(sprintf(__('Manual attempts: %d', 'safecontracts'), (int) $row['manual_attempts'])); ?></small><?php endif; ?></td>
-                            <td><?php if ($rowState === 'processing') : ?><button class="button" disabled><?php echo esc_html__('Sending…', 'safecontracts'); ?></button><?php else : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('<?php echo esc_js(__('Send this notification now using the current rule, recipients and configured delivery channels?', 'safecontracts')); ?>');"><input type="hidden" name="action" value="<?php echo esc_attr(self::MANUAL_SEND_ACTION); ?>"><input type="hidden" name="schedule_id" value="<?php echo esc_attr((string) $row['id']); ?>"><?php wp_nonce_field(self::MANUAL_SEND_ACTION . '_' . (int) $row['id']); ?><button type="submit" class="button button-secondary"><?php echo esc_html($rowState === 'sent' ? __('Resend manually', 'safecontracts') : __('Send manually', 'safecontracts')); ?></button></form><?php endif; ?></td>
+                            <td data-label="<?php echo esc_attr__('Scheduled', 'safecontracts'); ?>"><strong><?php echo esc_html(self::localTime((string) $row['scheduled_for'])); ?></strong><br><small><?php echo esc_html__('Local/site time', 'safecontracts'); ?></small></td>
+                            <td data-label="<?php echo esc_attr__('Notification', 'safecontracts'); ?>"><strong><?php echo esc_html((string) ($row['rule_name'] ?? $row['rule_code'] ?? '')); ?></strong><br><?php echo esc_html__('Contract', 'safecontracts'); ?>: <code dir="ltr"><?php echo esc_html((string) ($row['contract_number'] ?? '')); ?></code><br><?php echo esc_html__('Customer', 'safecontracts'); ?>: <?php echo esc_html((string) ($row['customer_name'] ?? '')); ?><br><?php echo esc_html__('Payment', 'safecontracts'); ?>: #<?php echo esc_html((string) $row['payment_id']); ?><?php if (! empty($row['payment_reference'])) : ?> · <?php echo esc_html((string) $row['payment_reference']); ?><?php endif; ?><br><small><?php echo esc_html__('Rule attempt', 'safecontracts'); ?>: <?php echo esc_html((string) $row['attempt_no']); ?></small></td>
+                            <td data-label="<?php echo esc_attr__('Recipients / result', 'safecontracts'); ?>"><?php self::renderRecipients($recipientIds, $outcomes); ?></td>
+                            <td data-label="<?php echo esc_attr__('Sent via', 'safecontracts'); ?>"><strong><?php echo esc_html(self::channelLabel((string) ($row['channel'] ?? 'push'))); ?></strong><br><small><?php echo esc_html(self::channelDetail((string) ($row['channel'] ?? 'push'))); ?></small></td>
+                            <td data-label="<?php echo esc_attr__('State', 'safecontracts'); ?>"><span class="safecontracts-state-chip <?php echo esc_attr(self::stateClass($rowState)); ?>"><?php echo esc_html(self::stateLabel($rowState)); ?></span><br><small><?php echo esc_html(sprintf(__('Sent %d / Failed %d / Recipients %d', 'safecontracts'), (int) $row['sent_count'], (int) $row['failed_count'], (int) $row['recipient_count'])); ?></small><?php if (! empty($row['last_error_code'])) : ?><br><code dir="ltr"><?php echo esc_html((string) $row['last_error_code']); ?></code><?php endif; ?></td>
+                            <td data-label="<?php echo esc_attr__('Last attempt', 'safecontracts'); ?>"><?php echo ! empty($row['last_attempt_at']) ? esc_html(self::localTime((string) $row['last_attempt_at'])) : '—'; ?><?php if ((int) $row['manual_attempts'] > 0) : ?><br><small><?php echo esc_html(sprintf(__('Manual attempts: %d', 'safecontracts'), (int) $row['manual_attempts'])); ?></small><?php endif; ?></td>
+                            <td data-label="<?php echo esc_attr__('Action', 'safecontracts'); ?>"><?php if ($rowState === 'processing') : ?><button class="button" disabled><?php echo esc_html__('Sending…', 'safecontracts'); ?></button><?php else : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('<?php echo esc_js(__('Send this notification now using the current rule, recipients and configured delivery channels?', 'safecontracts')); ?>');"><input type="hidden" name="action" value="<?php echo esc_attr(self::MANUAL_SEND_ACTION); ?>"><input type="hidden" name="schedule_id" value="<?php echo esc_attr((string) $row['id']); ?>"><?php wp_nonce_field(self::MANUAL_SEND_ACTION . '_' . (int) $row['id']); ?><button type="submit" class="button button-secondary"><?php echo esc_html($rowState === 'sent' ? __('Resend manually', 'safecontracts') : __('Send manually', 'safecontracts')); ?></button></form><?php endif; ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody></table>
