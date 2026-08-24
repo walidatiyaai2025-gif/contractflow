@@ -1,0 +1,166 @@
+name: Mobile Extend Reference Capture
+
+on:
+  push:
+    branches:
+      - feat/alkenzy-mobile-reference-redesign
+
+permissions:
+  contents: write
+
+jobs:
+  extend-capture:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-mobile-reference-redesign
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Add REF03-REF06 deterministic capture surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('mobile/test/reference_visual_capture_test.dart')
+          text = path.read_text()
+          marker = """  testWidgets('captures REF02 authenticated dashboard implementation', (\n"""
+          if marker not in text:
+              raise SystemExit('capture marker missing')
+          if "captures REF03 through REF06 authenticated implementation surfaces" not in text:
+              insert_at = text.index("}\n\nFuture<void> _pumpBounded")
+              block = r'''
+
+  testWidgets('captures REF03 through REF06 authenticated implementation surfaces', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+
+    final environment = AppEnvironment.fromValues(
+      name: 'local',
+      apiBaseUrl: 'http://127.0.0.1:8080/wp-json/safecontracts/v1/',
+    );
+    final client = SafeContractsApiClient(
+      environment: environment,
+      transport: FakeApiTransport(_authenticatedHandler),
+    );
+
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: _captureKey,
+        child: SafeContractsApp(
+          environment: environment,
+          client: client,
+          languageCode: 'ar',
+        ),
+      ),
+    );
+    await _pumpBounded(tester, cycles: 24);
+
+    await _captureDrawerDestination(tester, 2, 'REF03_customers_ar_390');
+    await _captureDrawerDestination(tester, 3, 'REF03_suppliers_ar_390');
+    await _captureDrawerDestination(tester, 4, 'REF04_contracts_ar_390');
+    await _captureDrawerDestination(tester, 5, 'REF05_payments_ar_390');
+    await _captureDrawerDestination(tester, 6, 'REF05_finance_ar_390');
+    await _captureDrawerDestination(tester, 8, 'REF05_followups_ar_390');
+    await _captureDrawerDestination(tester, 9, 'REF06_notifications_ar_390');
+    await _captureDrawerDestination(tester, 10, 'REF06_export_ar_390');
+    await _captureDrawerDestination(tester, 11, 'REF06_profile_ar_390');
+
+    await _disposeCapturedApp(tester);
+  });
+'''
+              text = text[:insert_at] + block + text[insert_at:]
+
+          helper_marker = "Future<void> _disposeCapturedApp(WidgetTester tester) async {"
+          if "Future<void> _captureDrawerDestination" not in text:
+              helper = r'''
+Future<void> _captureDrawerDestination(
+  WidgetTester tester,
+  int index,
+  String name,
+) async {
+  final scaffold = find.byWidgetPredicate(
+    (widget) => widget is Scaffold && widget.drawer != null,
+  );
+  expect(scaffold, findsOneWidget);
+  tester.state<ScaffoldState>(scaffold).openDrawer();
+  await _pumpBounded(tester, cycles: 8);
+  final destinations = find.byType(NavigationDrawerDestination);
+  expect(destinations, findsAtLeastNWidgets(index + 1));
+  await tester.tap(destinations.at(index));
+  await _pumpBounded(tester, cycles: 16);
+  await _capture(tester, name);
+}
+
+'''
+              text = text.replace(helper_marker, helper + helper_marker, 1)
+
+          caps_old = """        'safecontracts_export_reports': true,\n"""
+          caps_new = """        'safecontracts_export_reports': true,\n        'safecontracts_view_suppliers': true,\n        'safecontracts_view_payables': true,\n        'safecontracts_view_receivables': true,\n        'safecontracts_manage_collections': true,\n        'safecontracts_manage_followups': true,\n        'safecontracts_manage_payments': true,\n        'safecontracts_create_customers': true,\n        'safecontracts_create_contracts': true,\n        'safecontracts_create_payments': true,\n"""
+          text = text.replace(caps_old, caps_new, 1)
+          text = text.replace("'push_notifications': false,", "'push_notifications': true,", 1)
+          text = text.replace("'collection_entry': false,", "'collection_entry': true,", 1)
+
+          old_tail = """  if (uri.path.endsWith('/contracts') ||\n      uri.path.endsWith('/payments') ||\n      uri.path.endsWith('/collections') ||\n      uri.path.endsWith('/followups')) {\n    return _ok(<Object?>[]);\n  }\n  return _error(404, 'not_found');\n}\n"""
+          new_tail = """  if (uri.path.endsWith('/finance/overview')) {\n    return _ok(<String, Object?>{\n      'directions': <Object?>['receivable', 'payable'],\n      'summary': <Object?>[],\n      'aging': <Object?>[],\n      'cash_flow': <Object?>[],\n      'action_center': <Object?>[],\n      'work_queue_preview': <Object?>[],\n    });\n  }\n  if (uri.path.endsWith('/finance/obligations')) {\n    return _ok(<Object?>[]);\n  }\n  if (uri.path.endsWith('/customers')) {\n    return _page(<Object?>[\n      <String, Object?>{\n        'id': 7,\n        'name': 'مؤسسة الرواد للتجارة',\n        'internal_code': 'C-007',\n        'contact_name': 'أحمد علي',\n        'email': 'customer@example.com',\n        'phone': '+96550000007',\n        'is_active': true,\n      },\n    ], sort: 'name', order: 'asc');\n  }\n  if (uri.path.endsWith('/suppliers')) {\n    return _page(<Object?>[\n      <String, Object?>{\n        'id': 8,\n        'name': 'شركة الخليج للتوريدات',\n        'internal_code': 'S-008',\n        'contact_name': 'سالم حسن',\n        'email': 'supplier@example.com',\n        'phone': '+96550000008',\n        'is_active': true,\n      },\n    ], sort: 'name', order: 'asc');\n  }\n  if (uri.path.endsWith('/contracts')) {\n    return _page(<Object?>[], sort: 'id', order: 'desc');\n  }\n  if (uri.path.endsWith('/payments')) {\n    return _page(<Object?>[], sort: 'due_date', order: 'asc');\n  }\n  if (uri.path.endsWith('/collections')) {\n    return _page(<Object?>[], sort: 'id', order: 'desc');\n  }\n  if (uri.path.endsWith('/followups')) {\n    return _page(<Object?>[], sort: 'id', order: 'desc');\n  }\n  if (uri.path.endsWith('/notifications')) {\n    return _page(<Object?>[], sort: 'id', order: 'desc');\n  }\n  if (uri.path.endsWith('/devices')) {\n    return _ok(<Object?>[]);\n  }\n  return _error(404, 'not_found');\n}\n"""
+          if old_tail not in text:
+              raise SystemExit('authenticated handler tail missing')
+          text = text.replace(old_tail, new_tail, 1)
+
+          ok_marker = "ApiTransportResponse _ok(Object? data) {"
+          if "ApiTransportResponse _page(" not in text:
+              page_helper = r'''ApiTransportResponse _page(
+  Object? data, {
+  required String sort,
+  required String order,
+}) {
+  return ApiTransportResponse(
+    statusCode: 200,
+    headers: const <String, String>{'content-type': 'application/json'},
+    body: jsonEncode(<String, Object?>{
+      'data': data,
+      'meta': <String, Object?>{
+        'api_version': 'v1',
+        'scope': 'assigned',
+        'page': 1,
+        'per_page': 25,
+        'sort': sort,
+        'order': order,
+        'has_more': false,
+        'bounded_window': 500,
+      },
+    }),
+  );
+}
+
+'''
+              text = text.replace(ok_marker, page_helper + ok_marker, 1)
+
+          path.write_text(text)
+          PY
+      - name: Validate extended capture
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format test/reference_visual_capture_test.dart
+          flutter analyze
+          flutter test test/reference_visual_capture_test.dart
+      - name: Commit extended capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/test/reference_visual_capture_test.dart
+          if ! git diff --cached --quiet; then
+            git commit -m 'test(mobile): capture all locked-reference groups'
+            git push origin HEAD:feat/alkenzy-mobile-reference-redesign
+          fi
