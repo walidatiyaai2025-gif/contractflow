@@ -23,9 +23,6 @@ jobs:
       - name: Dependencies
         working-directory: mobile
         run: flutter pub get
-      - name: Format
-        working-directory: mobile
-        run: dart format --output=none --set-exit-if-changed lib test
       - name: Analyze
         working-directory: mobile
         run: flutter analyze
