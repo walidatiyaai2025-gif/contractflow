@@ -126,7 +126,12 @@ jobs:
             --skip-email
           rm -rf "$WP_DIR/wp-content/plugins/safecontracts"
           ln -s "$GITHUB_WORKSPACE/wordpress-plugin/safecontracts" "$WP_DIR/wp-content/plugins/safecontracts"
-          wp plugin activate safecontracts --path="$WP_DIR"
+          set -o pipefail
+          wp plugin activate safecontracts --path="$WP_DIR" 2>&1 | tee /tmp/safecontracts-activation.log
+          if grep -Fq 'WordPress database error' /tmp/safecontracts-activation.log; then
+            echo 'SafeContracts activation emitted a WordPress database error; real-runtime acceptance cannot continue.' >&2
+            exit 1
+          fi
 
       - name: Enable conditional recovery route in test runtime only
         shell: bash
@@ -197,6 +202,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p visual-qa-artifacts/_runtime
+          cp /tmp/safecontracts-activation.log visual-qa-artifacts/_runtime/plugin-activation.log 2>/dev/null || true
           cp /tmp/safecontracts-visual-wp.log visual-qa-artifacts/_runtime/php-server.log 2>/dev/null || true
           wp plugin status safecontracts --path="$WP_DIR" > visual-qa-artifacts/_runtime/plugin-status.txt 2>&1 || true
           wp core version --path="$WP_DIR" > visual-qa-artifacts/_runtime/wordpress-version.txt 2>&1 || true
