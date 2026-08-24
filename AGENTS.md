@@ -19,6 +19,28 @@ These instructions apply to every contributor, coding agent, release operator an
 - Preserve existing API behavior, permissions, business rules, fields and workflows while changing presentation.
 - Update the screen matrix and progress document before handing unfinished redesign work to another contributor.
 
+## Mandatory ALKENZY ADV 101-item bug closure constitution
+
+For the current ALKENZY ADV mobile closure pass, every Lead, Worker, QA agent and automation that changes or validates mobile behavior MUST read and obey, in this order:
+
+1. `AGENTS.md`
+2. `docs/mobile-redesign/ALKENZY_ADV_BUG_CLOSURE_CONSTITUTION.md`
+3. `docs/mobile-redesign/ALKENZY_ADV_BUG_UX_REGISTER_2026-08-24.md`
+4. `docs/mobile-redesign/MOBILE_UI_REFERENCE.md`
+5. `docs/mobile-redesign/MOBILE_UI_SCREEN_MATRIX.md`
+6. `docs/mobile-redesign/MOBILE_UI_PROGRESS.md`
+
+The bug register is frozen at **101 items (P0=5, P1=71, P2=25)** for this pass. The constitution owns the no-overlap Worker assignment, P0-first order, status flags, acceptance requirements and final zero-items gate.
+
+Rules:
+
+- Do not start mobile bug work without first identifying the exact owned Bug IDs from the constitution.
+- Do not take another Worker’s Bug IDs unless the Lead explicitly reassigns them in the ledger.
+- Do not close a functional bug with a visual-only patch.
+- Do not use `[CLOSED]` without QA PASS on the integrated exact head.
+- Preserve server-authoritative finance, permissions, API contracts and existing business semantics.
+- Do not introduce unrelated features during this closure pass.
+
 ## Mandatory quality gate
 
 No build, package, APK or plugin ZIP may be called **verified**, **release**, or **production-ready** unless the exact functional source candidate has passed all required SafeContracts Quality Gates:
