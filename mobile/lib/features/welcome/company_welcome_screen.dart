@@ -374,8 +374,7 @@ final class _LandingImageGallery extends StatefulWidget {
   final String languageCode;
 
   @override
-  State<_LandingImageGallery> createState() =>
-      _LandingImageGalleryState();
+  State<_LandingImageGallery> createState() => _LandingImageGalleryState();
 }
 
 final class _LandingImageGalleryState extends State<_LandingImageGallery> {
