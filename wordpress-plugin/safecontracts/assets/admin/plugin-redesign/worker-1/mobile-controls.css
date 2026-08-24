@@ -1,0 +1,9 @@
+/* Worker #1 responsive control hardening for SC-013..SC-016. */
+@media (max-width: 782px) {
+  .safecontracts-worker1 input[type="file"] {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+}
