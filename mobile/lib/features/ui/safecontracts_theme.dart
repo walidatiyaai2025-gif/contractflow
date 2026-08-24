@@ -7,9 +7,8 @@ import 'safecontracts_tokens.dart';
 abstract final class SafeContractsTheme {
   static ThemeData build(String languageCode) {
     final isArabic = languageCode.trim().toLowerCase().startsWith('ar');
-    final baseTextTheme = isArabic
-        ? GoogleFonts.cairoTextTheme()
-        : GoogleFonts.interTextTheme();
+    final baseTextTheme =
+        isArabic ? GoogleFonts.cairoTextTheme() : GoogleFonts.interTextTheme();
     final fontFamily = isArabic
         ? GoogleFonts.cairo().fontFamily
         : GoogleFonts.inter().fontFamily;
