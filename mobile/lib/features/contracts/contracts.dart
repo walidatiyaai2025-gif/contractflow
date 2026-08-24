@@ -271,7 +271,7 @@ final class SafeContractsContract {
       financialDirection: direction,
       currencyCode: currency,
       accountantUserId: _optionalPositiveInt(
-        data['accountant_user_id',
+        data['accountant_user_id'],
         'contract.accountant_user_id',
       ),
       status: _requiredText(data['status'], 'contract.status').toLowerCase(),
@@ -370,7 +370,7 @@ final class ContractsRepository {
     if (perPage < 1 || perPage > 100) {
       throw ArgumentError('Contract page size must be between 1 and 100.');
     }
-    if (!BontractSortOption.values.contains(sort)) {
+    if (!ContractSortOption.values.contains(sort)) {
       throw ArgumentError('Unsupported contract sort.');
     }
     filters.validate();
@@ -448,7 +448,7 @@ final class ContractsController extends ChangeNotifier {
   final bool canEditContract;
   final bool canCreateContract;
 
- ContractsLoadState state = ContractsLoadState.idle;
+  ContractsLoadState state = ContractsLoadState.idle;
   ContractPage? currentPage;
   ContractsFilters filters = const ContractsFilters();
   ContractSortOption sort = ContractSortOption.newest;
@@ -471,6 +471,8 @@ final class ContractsController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (page < 1 || page > 5) return;
+    currentPage = null;
     state = ContractsLoadState.loading;
     errorMessage = null;
     notifyListeners();
@@ -538,7 +540,10 @@ final class ContractsController extends ChangeNotifier {
         normalized.isNotEmpty &&
         !_supportedCounterpartyTypes.contains(normalized)) {
       throw ArgumentError.value(
-        value, 'value', 'Unsupported counterparty type.');
+        value,
+        'value',
+        'Unsupported counterparty type.',
+      );
     }
     filters = filters.withCounterpartyType(
       normalized == null || normalized.isEmpty ? null : normalized,
@@ -691,7 +696,8 @@ String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
     throw const FormatException(
-        'Optional contract text must be string or null.');
+      'Optional contract text must be string or null.',
+    );
   }
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;
@@ -707,6 +713,13 @@ String? _optionalIsoDate(Object? value, String field) {
   if (text == null) return null;
   if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text)) {
     throw FormatException('$field must be YYYY-MM-DD.');
+  }
+  final parts = text.split('-').map(int.parse).toList(growable: false);
+  final parsed = DateTime.utc(parts[0], parts[1], parts[2]);
+  if (parsed.year != parts[0] ||
+      parsed.month != parts[1] ||
+      parsed.day != parts[2]) {
+    throw FormatException('$field must be a real calendar date.');
   }
   return text;
 }
