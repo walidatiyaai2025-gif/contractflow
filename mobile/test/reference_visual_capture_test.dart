@@ -39,14 +39,16 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
-    await _capture(tester, 'REF01_welcome_ar_390');
+    await _pumpBounded(tester);
 
     final signIn = find.byKey(const Key('companyWelcomeSignIn'));
     expect(signIn, findsOneWidget);
+    await _capture(tester, 'REF01_welcome_ar_390');
+
     await tester.ensureVisible(signIn);
     await tester.tap(signIn);
-    await tester.pumpAndSettle();
+    await _pumpBounded(tester);
+    expect(find.byType(TextFormField), findsNWidgets(2));
     await _capture(tester, 'REF01_login_ar_390');
   });
 
@@ -75,9 +77,20 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await _pumpBounded(tester, cycles: 24);
+    expect(find.byType(AppBar), findsOneWidget);
     await _capture(tester, 'REF02_dashboard_ar_390');
   });
+}
+
+Future<void> _pumpBounded(
+  WidgetTester tester, {
+  int cycles = 12,
+}) async {
+  await tester.pump();
+  for (var index = 0; index < cycles; index++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }
 
 Future<void> _capture(WidgetTester tester, String name) async {
