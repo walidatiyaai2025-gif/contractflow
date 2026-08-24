@@ -45,6 +45,40 @@ abstract final class SafeContractsControlSizes {
   static const touchTarget = 44.0;
 }
 
+/// Central compact typography scale for the ALKENZY ADV mobile UI.
+///
+/// Payment Details and shared primitives consume these semantic sizes through
+/// [SafeContractsTheme], avoiding per-screen font-size overrides. The scale is
+/// intentionally denser than Material defaults while preserving clear visual
+/// hierarchy and minimum readable body/label sizes.
+abstract final class SafeContractsTypography {
+  static const displayLarge = 32.0;
+  static const displayMedium = 30.0;
+  static const displaySmall = 28.0;
+
+  static const headlineLarge = 25.0;
+  static const headlineMedium = 22.0;
+  static const headlineSmall = 19.0;
+
+  static const titleLarge = 18.0;
+  static const titleMedium = 16.0;
+  static const titleSmall = 14.0;
+
+  static const bodyLarge = 15.0;
+  static const bodyMedium = 13.5;
+  static const bodySmall = 12.0;
+
+  static const labelLarge = 13.0;
+  static const labelMedium = 12.0;
+  static const labelSmall = 10.5;
+
+  static const displayHeight = 1.14;
+  static const headlineHeight = 1.18;
+  static const titleHeight = 1.22;
+  static const bodyHeight = 1.38;
+  static const labelHeight = 1.22;
+}
+
 abstract final class SafeContractsShadows {
   static const card = <BoxShadow>[
     BoxShadow(
