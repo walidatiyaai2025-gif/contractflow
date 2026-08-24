@@ -132,11 +132,17 @@ jobs:
           text = fixture.read_text()
           old = "$GLOBALS['sc_test_result_queue'] = [[[\n    'id' => '11', 'contract_number' => 'SC-11'"
           new = "$GLOBALS['sc_test_result_queue'] = [[['total' => '1']], [[\n    'id' => '11', 'contract_number' => 'SC-11'"
-          count = text.count(old)
-          if count == 2:
-              text = text.replace(old, new)
-          elif count != 0:
-              raise SystemExit(f'unexpected contract fixture count={count}')
+          for start_marker, end_marker in [
+              ('// SC-P8-021', '// SC-P8-022'),
+              ('// SC-P8-024', '// SC-P8-025'),
+          ]:
+              a = text.index(start_marker)
+              b = text.index(end_marker, a)
+              section = text[a:b]
+              if section.count(old) != 1:
+                  raise SystemExit(f'{start_marker}: expected one contract fixture, found {section.count(old)}')
+              section = section.replace(old, new, 1)
+              text = text[:a] + section + text[b:]
           fixture.write_text(text)
 
           test_script = Path('scripts/test-php.sh')
