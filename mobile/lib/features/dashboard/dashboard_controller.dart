@@ -6,6 +6,8 @@ import 'dashboard_repository.dart';
 
 enum DashboardLoadState { idle, loading, ready, error }
 
+enum DashboardTab { overview, payments, contracts, collections }
+
 final class DashboardController extends ChangeNotifier {
   DashboardController({
     required this.repository,
@@ -24,12 +26,60 @@ final class DashboardController extends ChangeNotifier {
   String? selectedContractNumber;
   String? errorMessage;
 
+  DashboardTab selectedTab = DashboardTab.overview;
+  int? selectedYear;
+  int? selectedMonth;
+
   Future<void> load() async {
     await _reload(clearExisting: true);
   }
 
   Future<void> refresh() async {
     await _reload();
+  }
+
+  void selectTab(DashboardTab tab) {
+    if (selectedTab == tab) return;
+    selectedTab = tab;
+    notifyListeners();
+  }
+
+  Future<void> selectPeriod({int? year, int? month}) async {
+    if (year == null) {
+      if (month != null) {
+        throw ArgumentError.value(
+          month,
+          'month',
+          'A month requires a selected year.',
+        );
+      }
+      selectedYear = null;
+      selectedMonth = null;
+      filters = filters.withDueRange(null, null);
+      await _reload(
+        contractOptions: availableContracts,
+        clearExisting: true,
+      );
+      return;
+    }
+    if (year < 2000 || year > 2100) {
+      throw ArgumentError.value(year, 'year', 'Unsupported dashboard year.');
+    }
+    if (month != null && (month < 1 || month > 12)) {
+      throw ArgumentError.value(month, 'month', 'Month must be 1 through 12.');
+    }
+
+    final fromMonth = month ?? 1;
+    final toMonth = month ?? 12;
+    final from = _isoDate(DateTime(year, fromMonth, 1));
+    final to = _isoDate(DateTime(year, toMonth + 1, 0));
+    selectedYear = year;
+    selectedMonth = month;
+    filters = filters.withDueRange(from, to);
+    await _reload(
+      contractOptions: availableContracts,
+      clearExisting: true,
+    );
   }
 
   Future<void> selectCustomer(int? customerId) async {
@@ -104,6 +154,9 @@ final class DashboardController extends ChangeNotifier {
     final candidate = filters.withDueRange(from, to);
     candidate.validate();
     filters = candidate;
+    final derived = _periodFromDueRange(from, to);
+    selectedYear = derived.$1;
+    selectedMonth = derived.$2;
     await _reload(
       contractOptions: availableContracts,
       clearExisting: true,
@@ -160,6 +213,30 @@ final class DashboardController extends ChangeNotifier {
     }
     notifyListeners();
   }
+}
+
+String _isoDate(DateTime value) =>
+    '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+
+(int?, int?) _periodFromDueRange(String? from, String? to) {
+  if (from == null || to == null) return (null, null);
+  final start = DateTime.tryParse(from);
+  final end = DateTime.tryParse(to);
+  if (start == null || end == null || start.year != end.year) {
+    return (null, null);
+  }
+  if (start.month == 1 &&
+      start.day == 1 &&
+      end.month == 12 &&
+      end.day == 31) {
+    return (start.year, null);
+  }
+  if (start.month == end.month &&
+      start.day == 1 &&
+      end.day == DateTime(start.year, start.month + 1, 0).day) {
+    return (start.year, start.month);
+  }
+  return (null, null);
 }
 
 extension _DashboardFirstOrNull<T> on Iterable<T> {
