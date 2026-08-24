@@ -151,6 +151,101 @@ final class NotificationSettingsPage
         $selectedRecipients = is_array($selected['recipient_roles'] ?? null) ? $selected['recipient_roles'] : [];
         $selectedEscalations = is_array($selected['escalation_roles'] ?? null) ? $selected['escalation_roles'] : [];
         ?>
+        <style id="safecontracts-notification-settings-responsive">
+            @media (max-width: 782px) {
+                .safecontracts-notification-settings .safecontracts-split-layout {
+                    display: grid !important;
+                    grid-template-columns: minmax(0, 1fr) !important;
+                }
+                .safecontracts-notification-settings .safecontracts-split-layout > * {
+                    min-width: 0 !important;
+                    width: auto !important;
+                }
+                .safecontracts-notification-settings .safecontracts-settings-card .widefat {
+                    min-width: 0 !important;
+                    width: 100% !important;
+                }
+                .safecontracts-notification-settings .safecontracts-table-card {
+                    overflow: visible !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-table {
+                    display: block !important;
+                    min-width: 0 !important;
+                    width: 100% !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-table thead {
+                    position: absolute !important;
+                    width: 1px !important;
+                    height: 1px !important;
+                    padding: 0 !important;
+                    margin: -1px !important;
+                    overflow: hidden !important;
+                    clip: rect(0, 0, 0, 0) !important;
+                    white-space: nowrap !important;
+                    border: 0 !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-table tbody,
+                .safecontracts-notification-settings .safecontracts-rule-table tr,
+                .safecontracts-notification-settings .safecontracts-rule-table td {
+                    display: block !important;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    box-sizing: border-box !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-table tbody {
+                    padding: 0 10px 10px !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-table tbody tr {
+                    margin: 0 0 10px !important;
+                    border: 1px solid #e4d8ce !important;
+                    border-radius: 12px !important;
+                    overflow: hidden !important;
+                    background: #fff !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-table tbody td {
+                    display: grid !important;
+                    grid-template-columns: minmax(90px, .4fr) minmax(0, 1fr) !important;
+                    gap: 8px !important;
+                    align-items: start !important;
+                    border-bottom: 1px solid #f0e7df !important;
+                    overflow-wrap: anywhere !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-table tbody td::before {
+                    content: attr(data-label);
+                    color: #6d737b;
+                    font-size: 11px;
+                    font-weight: 800;
+                    line-height: 1.5;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-table tbody td:last-child {
+                    border-bottom: 0 !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-actions {
+                    display: flex !important;
+                    flex-wrap: wrap !important;
+                    gap: 6px !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-actions::before {
+                    flex: 1 0 100% !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-actions > form {
+                    display: inline-flex !important;
+                    margin: 0 !important;
+                    max-width: 100% !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-actions .button {
+                    width: auto !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-empty {
+                    display: block !important;
+                }
+                .safecontracts-notification-settings .safecontracts-rule-empty::before {
+                    display: none !important;
+                }
+            }
+        </style>
         <div class="wrap safecontracts-settings safecontracts-notification-settings" dir="auto">
             <div class="safecontracts-section-heading">
                 <div>
@@ -177,17 +272,17 @@ final class NotificationSettingsPage
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Rules', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html__('Editing, activation and deletion use the existing schedule reconciliation path.', 'safecontracts'); ?></p></div></div>
-                    <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Rule', 'safecontracts'); ?></th><th><?php echo esc_html__('Trigger', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('Channels', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
-                    <?php if ($visibleRules === []) : ?><tr><td colspan="6"><?php echo esc_html__('No notification rules match the selected filters.', 'safecontracts'); ?></td></tr><?php endif; ?>
+                    <table class="widefat striped safecontracts-rule-table"><thead><tr><th><?php echo esc_html__('Rule', 'safecontracts'); ?></th><th><?php echo esc_html__('Trigger', 'safecontracts'); ?></th><th><?php echo esc_html__('Template', 'safecontracts'); ?></th><th><?php echo esc_html__('Channels', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <?php if ($visibleRules === []) : ?><tr><td class="safecontracts-rule-empty" colspan="6"><?php echo esc_html__('No notification rules match the selected filters.', 'safecontracts'); ?></td></tr><?php endif; ?>
                     <?php foreach ($visibleRules as $rule) : ?>
                         <?php $channels = array_values(array_filter([! empty($rule['push_enabled']) ? 'Push' : '', ! empty($rule['email_enabled']) ? 'Email' : ''])); $active = ! empty($rule['is_active']); ?>
                         <tr>
-                            <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'rule' => $rule['code']], admin_url('admin.php'))); ?>"><code dir="ltr"><?php echo esc_html((string) $rule['code']); ?></code></a><br><strong><?php echo esc_html((string) $rule['name']); ?></strong></td>
-                            <td><?php echo esc_html(self::triggerLabel((string) $rule['trigger_type'])); ?></td>
-                            <td><code dir="ltr"><?php echo esc_html((string) $rule['template_code']); ?></code></td>
-                            <td><?php echo esc_html($channels !== [] ? implode(' + ', $channels) : __('None', 'safecontracts')); ?></td>
-                            <td><span class="safecontracts-state-chip <?php echo $active ? 'is-success' : 'is-warning'; ?>"><?php echo $active ? esc_html__('Active', 'safecontracts') : esc_html__('Disabled', 'safecontracts'); ?></span></td>
-                            <td>
+                            <td data-label="<?php echo esc_attr__('Rule', 'safecontracts'); ?>"><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'rule' => $rule['code']], admin_url('admin.php'))); ?>"><code dir="ltr"><?php echo esc_html((string) $rule['code']); ?></code></a><br><strong><?php echo esc_html((string) $rule['name']); ?></strong></td>
+                            <td data-label="<?php echo esc_attr__('Trigger', 'safecontracts'); ?>"><?php echo esc_html(self::triggerLabel((string) $rule['trigger_type'])); ?></td>
+                            <td data-label="<?php echo esc_attr__('Template', 'safecontracts'); ?>"><code dir="ltr"><?php echo esc_html((string) $rule['template_code']); ?></code></td>
+                            <td data-label="<?php echo esc_attr__('Channels', 'safecontracts'); ?>"><?php echo esc_html($channels !== [] ? implode(' + ', $channels) : __('None', 'safecontracts')); ?></td>
+                            <td data-label="<?php echo esc_attr__('State', 'safecontracts'); ?>"><span class="safecontracts-state-chip <?php echo $active ? 'is-success' : 'is-warning'; ?>"><?php echo $active ? esc_html__('Active', 'safecontracts') : esc_html__('Disabled', 'safecontracts'); ?></span></td>
+                            <td class="safecontracts-rule-actions" data-label="<?php echo esc_attr__('Actions', 'safecontracts'); ?>">
                                 <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'rule' => $rule['code']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Edit', 'safecontracts'); ?></a>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin:0 4px;"><input type="hidden" name="action" value="<?php echo esc_attr(self::TOGGLE_ACTION); ?>"><input type="hidden" name="code" value="<?php echo esc_attr((string) $rule['code']); ?>"><?php wp_nonce_field(self::TOGGLE_ACTION); ?><button class="button button-small" type="submit"><?php echo $active ? esc_html__('Deactivate', 'safecontracts') : esc_html__('Activate', 'safecontracts'); ?></button></form>
                                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin:0;" onsubmit="return confirm('<?php echo esc_js(__('Delete this notification rule and all of its scheduled occurrences? Delivery history already sent by the transport is not erased.', 'safecontracts')); ?>');"><input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>"><input type="hidden" name="code" value="<?php echo esc_attr((string) $rule['code']); ?>"><?php wp_nonce_field(self::DELETE_ACTION); ?><button class="button button-small safecontracts-delete-button" type="submit"><?php echo esc_html__('Delete', 'safecontracts'); ?></button></form>
