@@ -19,6 +19,7 @@ final class SuppliersPage
 
     public static function register(): void
     {
+        Worker1Assets::register();
         add_submenu_page(
             AdminShell::SLUG,
             __('Suppliers', 'safecontracts'),
@@ -161,8 +162,6 @@ final class SuppliersPage
         $currentPage = min($totalPages, max(1, (int) ($_GET['supplier_page'] ?? 1)));
         $pageRows = array_slice($suppliers, ($currentPage - 1) * self::PAGE_SIZE, self::PAGE_SIZE);
         $showEditor = ($selected === null && $canCreate) || ($selected !== null && ($canEdit || ! empty($selected['is_archived'])));
-
-        self::renderStylesheet();
         ?>
         <div class="wrap safecontracts-settings safecontracts-suppliers safecontracts-worker1" dir="auto">
             <header class="safecontracts-worker1__header">
@@ -302,15 +301,6 @@ final class SuppliersPage
     private static function statusLabel(string $status): string
     {
         return TranslationCatalog::text(ucwords(str_replace('_', ' ', $status)));
-    }
-
-    private static function renderStylesheet(): void
-    {
-        $version = defined('SAFECONTRACTS_VERSION') ? SAFECONTRACTS_VERSION : '0.3.2';
-        $url = defined('SAFECONTRACTS_URL') ? SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-1/parties-contracts.css' : '';
-        if ($url !== '') {
-            ?><link class="safecontracts-worker1__stylesheet-marker" rel="stylesheet" href="<?php echo esc_url(add_query_arg('ver', $version, $url)); ?>"><?php
-        }
     }
 
     private static function queryText(string $key): string
