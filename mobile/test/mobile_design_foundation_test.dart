@@ -65,10 +65,10 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.rtl,
-        child: MaterialApp(
-          home: Scaffold(
+      MaterialApp(
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
             bottomNavigationBar: SafeContractsBottomNavigation<int>(
               items: const <SafeContractsNavigationItem<int>>[
                 SafeContractsNavigationItem<int>(
