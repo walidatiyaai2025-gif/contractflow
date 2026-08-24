@@ -14,8 +14,13 @@ final class BiometricAuthService {
   final LocalAuthentication _localAuthentication;
   final FlutterSecureStorage _storage;
 
-  Future<bool> isEnabled() async =>
-      (await _storage.read(key: _biometricEnabledKey)) == 'true';
+  Future<bool> isEnabled() async {
+    try {
+      return (await _storage.read(key: _biometricEnabledKey)) == 'true';
+    } on Object {
+      return false;
+    }
+  }
 
   Future<void> setEnabled(bool value) => _storage.write(
         key: _biometricEnabledKey,
@@ -41,10 +46,12 @@ final class BiometricAuthService {
   }) async {
     try {
       if (!await isAvailable()) {
-        return const BiometricAuthResult(
+        return BiometricAuthResult(
           success: false,
           unavailable: true,
-          message: 'Biometric authentication is not available on this device.',
+          message: isArabic
+              ? 'البصمة غير متاحة على هذا الجهاز.'
+              : 'Biometric authentication is not available on this device.',
         );
       }
       final authenticated = await _localAuthentication.authenticate(
