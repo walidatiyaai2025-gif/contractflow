@@ -164,8 +164,6 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           await widget.dashboardController.refreshSilently();
           shellSnapshotChanged = true;
           break;
-        case MobileDestination.collections:
-          break;
       }
       if (shellSnapshotChanged && mounted) {
         setState(() {});
@@ -460,7 +458,6 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           onLanguageChanged: widget.onLanguageChanged,
           onClearSession: widget.onClearSession,
         ),
-      _ => _PlannedDestination(destination: _selected),
     };
   }
 
@@ -876,28 +873,6 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
               );
             }).toList(growable: false),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-final class _PlannedDestination extends StatelessWidget {
-  const _PlannedDestination({required this.destination});
-
-  final MobileDestination destination;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          l10n.isArabic
-              ? 'تم السماح بالتنقل إلى ${_label(l10n, destination)}. شاشة الموبايل المخصصة لها تُنفذ ضمن مهمة خارطة الطريق المقابلة.'
-              : '${_label(l10n, destination)} navigation is authorized. Its dedicated mobile screen is implemented in the corresponding roadmap task.',
-          textAlign: TextAlign.center,
         ),
       ),
     );
