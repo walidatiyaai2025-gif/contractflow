@@ -128,7 +128,8 @@ void main() {
 
         expect(find.byKey(const Key('loginSubmit')), findsOneWidget);
         expect(
-          Directionality.of(tester.element(find.byKey(const Key('loginSubmit')))),
+          Directionality.of(
+              tester.element(find.byKey(const Key('loginSubmit')))),
           languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
         );
         expect(
