@@ -21,6 +21,8 @@ final class FeatureArabicDefaults
         'Base contract value' => 'القيمة الأساسية للعقد',
         'The base value is the original contractual amount before additions, discounts or other financial adjustments.' => 'القيمة الأساسية هي القيمة الأصلية للعقد قبل الإضافات أو الخصومات أو أي تعديلات مالية أخرى.',
         'Contract files' => 'ملفات العقد',
+        'Contract image:' => 'صورة العقد:',
+        'Uploading an image is optional. The first contract image is used as the cover in the premium mobile contract page; when no image exists, the company logo is used automatically.' => 'رفع صورة للعقد اختياري. تُستخدم أول صورة مرفوعة للعقد كغلاف في صفحة العقد الجديدة بالموبايل، وإذا لم توجد صورة يتم استخدام شعار الشركة تلقائياً.',
         'Contract attachments' => 'مرفقات العقد',
         'Add contract files' => 'إضافة ملفات للعقد',
         'Contract attachments were updated.' => 'تم تحديث مرفقات العقد.',
@@ -93,6 +95,16 @@ final class FeatureArabicDefaults
         'Email notification' => 'إشعار بالبريد الإلكتروني',
         'In-app / push notification' => 'إشعار داخل التطبيق / دفع',
         'No notification rules are configured yet.' => 'لا توجد قواعد إشعارات مهيأة حتى الآن.',
+        'Add contract' => 'إضافة عقد',
+        'Add supplier' => 'إضافة مورد',
+        'All months' => 'كل الشهور',
+        'All visible contract types in the selected period.' => 'كل أنواع العقود الظاهرة ضمن الفترة المحددة.',
+        'Cash flow' => 'التدفق المالي',
+        'Contract portfolio' => 'محفظة العقود',
+        'Expected inflows and outflows from the current finance scope.' => 'التدفقات الداخلة والخارجة المتوقعة ضمن نطاق المالية الحالي.',
+        'Month' => 'الشهر',
+        'Quick add' => 'إضافة سريعة',
+        'Unable to load contract media.' => 'تعذر تحميل وسائط العقد.',
     ];
 
     public static function register(): void

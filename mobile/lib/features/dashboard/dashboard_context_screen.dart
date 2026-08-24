@@ -26,21 +26,12 @@ final class DashboardContextScreen extends StatelessWidget {
       builder: (context, child) {
         final entity = _selectedEntity(controller);
         final contract = _selectedContract(controller);
-        final overview = controller.overview;
         return Column(
           children: [
-            if (overview != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _PremiumDashboardOverview(
-                  kpis: overview.kpis,
-                  currency: currency,
-                ),
-              ),
             if (entity != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _EntityContextBanner(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                child: _CompactEntityContext(
                   entityName: entity,
                   contractNumber: contract,
                 ),
@@ -99,145 +90,8 @@ final class DashboardContextScreen extends StatelessWidget {
   }
 }
 
-final class _PremiumDashboardOverview extends StatelessWidget {
-  const _PremiumDashboardOverview({
-    required this.kpis,
-    required this.currency,
-  });
-
-  final DashboardKpis kpis;
-  final MobileCurrencyConfig currency;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final scheduled = double.tryParse(kpis.scheduledTotal) ?? 0;
-    final collected = double.tryParse(kpis.collectedTotal) ?? 0;
-    final completion =
-        scheduled <= 0 ? 0.0 : (collected / scheduled).clamp(0, 1);
-    final completionPercent = (completion * 100).round();
-
-    return Column(
-      children: [
-        SafeContractsPremiumHeader(
-          title: l10n.isArabic
-              ? 'نظرة عامة على الأداء المالي'
-              : 'Financial performance overview',
-          subtitle: l10n.isArabic
-              ? 'ملخص تنفيذي سريع للعقود والدفعات والتحصيلات الحالية.'
-              : 'A concise executive view of current contracts, payments and collections.',
-          leading: const Icon(
-            Icons.insights_rounded,
-            color: SafeContractsVisual.roseGoldSoft,
-            size: 30,
-          ),
-          trailing: _ProgressBadge(
-            percent: completionPercent,
-            label: l10n.isArabic ? 'التحصيل' : 'collected',
-          ),
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final columns = width >= 720 ? 4 : 2;
-            final gap = 10.0;
-            final cardWidth = (width - (gap * (columns - 1))) / columns;
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                SizedBox(
-                  width: cardWidth,
-                  child: SafeContractsMetricCard(
-                    label: l10n.isArabic ? 'إجمالي العقود' : 'Total contracts',
-                    value: '${kpis.contractCount}',
-                    icon: Icons.folder_copy_outlined,
-                    accent: SafeContractsVisual.champagne,
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  child: SafeContractsMetricCard(
-                    label: l10n.isArabic ? 'المجدول' : 'Scheduled',
-                    value: l10n.money(kpis.scheduledTotal, currency),
-                    icon: Icons.calendar_month_outlined,
-                    accent: SafeContractsVisual.navy,
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  child: SafeContractsMetricCard(
-                    label: l10n.isArabic ? 'المحصل' : 'Collected',
-                    value: l10n.money(kpis.collectedTotal, currency),
-                    icon: Icons.south_west_rounded,
-                    accent: SafeContractsVisual.green,
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  child: SafeContractsMetricCard(
-                    label: l10n.isArabic ? 'المتبقي' : 'Remaining',
-                    value: l10n.money(kpis.remainingTotal, currency),
-                    icon: Icons.schedule_rounded,
-                    accent: SafeContractsVisual.roseGold,
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-final class _ProgressBadge extends StatelessWidget {
-  const _ProgressBadge({required this.percent, required this.label});
-
-  final int percent;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 66,
-      height: 66,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: SafeContractsVisual.roseGold, width: 5),
-        color: Colors.white.withValues(alpha: 0.08),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$percent%',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.72),
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _EntityContextBanner extends StatelessWidget {
-  const _EntityContextBanner({
+final class _CompactEntityContext extends StatelessWidget {
+  const _CompactEntityContext({
     required this.entityName,
     required this.contractNumber,
   });
@@ -250,58 +104,65 @@ final class _EntityContextBanner extends StatelessWidget {
     final l10n = context.scL10n;
     final isArabic = l10n.isArabic;
     return SafeContractsSurface(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      accent: SafeContractsVisual.roseGold,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      elevated: false,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               color: SafeContractsVisual.roseGoldSoft,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.business_rounded,
+              size: 17,
               color: SafeContractsVisual.navy,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   isArabic ? 'بيانات الجهة' : 'Dashboard entity',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: SafeContractsVisual.muted,
+                        fontSize: 9,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  entityName,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: SafeContractsVisual.navy,
-                        fontWeight: FontWeight.w900,
-                      ),
+                Semantics(
+                  label: isArabic
+                      ? 'كل الأرقام والمؤشرات أدناه مفلترة لهذه الجهة.'
+                      : 'All figures and indicators below are filtered for this entity.',
+                  child: Text(
+                    entityName,
+                    maxLines: 2,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: SafeContractsVisual.navy,
+                          fontSize: 11,
+                          height: 1.15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                  ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  contractNumber == null
-                      ? (isArabic
-                          ? 'كل الأرقام والمؤشرات أدناه مفلترة لهذه الجهة.'
-                          : 'All figures and indicators below are filtered for this entity.')
-                      : (isArabic
-                          ? 'العقد: $contractNumber · كل البيانات أدناه ضمن هذا النطاق.'
-                          : 'Contract: $contractNumber · all data below uses this scope.'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SafeContractsVisual.muted,
-                      ),
-                ),
+                if (contractNumber != null)
+                  Text(
+                    isArabic
+                        ? 'العقد: $contractNumber'
+                        : 'Contract: $contractNumber',
+                    maxLines: 2,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: SafeContractsVisual.muted,
+                          fontSize: 8.5,
+                          height: 1.1,
+                        ),
+                  ),
               ],
             ),
           ),

@@ -73,12 +73,12 @@ void main() {
 
       const ar = SafeContractsLocalizations(Locale('ar'));
       const en = SafeContractsLocalizations(Locale('en'));
-      expect(ar.money('100.0000', config.currency), '100.00 د.ك');
-      expect(en.money('100.0000', config.currency), 'د.ك 100.00');
+      expect(ar.money('100.0000', config.currency), '100 د.ك');
+      expect(en.money('100.0000', config.currency), 'د.ك 100');
       expect(en.money('12.3456', config.currency), 'د.ك 12.35');
       expect(en.money('12.3449', config.currency), 'د.ك 12.34');
-      expect(en.money('7', config.currency), 'د.ك 7.00');
-      expect(en.money('-0.0049', config.currency), 'د.ك 0.00');
+      expect(en.money('7', config.currency), 'د.ك 7');
+      expect(en.money('-0.0049', config.currency), 'د.ك 0');
 
       final collectionSource =
           File('lib/features/payments/collection_entry_dialog.dart')
@@ -94,22 +94,25 @@ void main() {
     },
   );
 
-  test(
-    'SC-MOBILE-053 dashboard uses lifecycle visual hierarchy with real data',
-    () {
-      final source = File('lib/features/dashboard/dashboard_screen.dart')
-          .readAsStringSync();
+  test('SC-MOBILE-053 dashboard uses compact server-backed tab hierarchy', () {
+    final source =
+        File('lib/features/dashboard/dashboard_screen.dart').readAsStringSync();
 
-      expect(source, contains('FilterChip'));
-      expect(source, contains('_PaymentLifecycleOverview'));
-      expect(source, contains('_LifecycleRingPainter'));
-      expect(source, contains('CustomPaint'));
-      expect(source, contains('_PaymentPipeline'));
-      expect(source, contains('SingleChildScrollView'));
-      expect(source, contains('_RecentActivity'));
-      expect(source, contains('l10n.money'));
-      expect(source, contains('DashboardKpis'));
-      expect(source, contains('DashboardRecord'));
-    },
-  );
+    expect(source, contains('DropdownButton<String>'));
+    expect(source, contains('_CompactFinancialRingPainter'));
+    expect(source, contains('CustomPaint'));
+    expect(source, contains('_DashboardTabs'));
+    expect(source, contains('DashboardTab.overview'));
+    expect(source, contains('DashboardTab.payments'));
+    expect(source, contains('DashboardTab.contracts'));
+    expect(source, contains('DashboardTab.collections'));
+    expect(source, contains('_TabSwipeRegion'));
+    expect(source, contains('_OverviewTab'));
+    expect(source, contains('l10n.money'));
+    expect(source, contains('DashboardKpis'));
+    expect(source, contains('DashboardRecord'));
+    expect(source, isNot(contains('FilterChip')));
+    expect(source, isNot(contains('_PaymentPipeline')));
+    expect(source, isNot(contains('SingleChildScrollView')));
+  });
 }

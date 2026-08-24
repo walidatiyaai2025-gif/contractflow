@@ -11,6 +11,7 @@ use SafeContracts\Collections\CollectionReadRepository;
 use SafeContracts\Counterparties\CounterpartyReadRepository;
 use SafeContracts\FollowUps\FollowUpService;
 use SafeContracts\Payments\PaymentRepository;
+use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
 use Throwable;
 use WP_Error;
@@ -93,13 +94,41 @@ final class DataController
         return self::guard(function () use ($request): WP_REST_Response {
             $query = ApiListQuery::parse(
                 $request,
-                ['customer_id', 'counterparty_type', 'counterparty_id', 'financial_direction', 'currency_code', 'contract_id', 'accountant_user_id', 'status'],
+                ['customer_id', 'counterparty_type', 'counterparty_id', 'financial_direction', 'currency_code', 'contract_id', 'accountant_user_id', 'status', 'search'],
                 ['id', 'contract_number', 'customer_name', 'counterparty_name', 'financial_direction', 'currency_code', 'status', 'start_date', 'end_date'],
                 'id',
                 'desc'
             );
-            $rows = array_map([self::class, 'contractView'], (new CounterpartyReadRepository())->contracts($query['filters']));
-            return self::page($rows, $query);
+            $params = ApiRequest::params($request);
+            $search = ApiAbuseGuard::optionalString($params, 'search', '', 100);
+            $page = (new CounterpartyReadRepository())->contractPage(
+                $query['filters'],
+                $search,
+                $query['sort'],
+                $query['order'],
+                $query['page'],
+                $query['per_page']
+            );
+            $total = (int) $page['total'];
+            $totalPages = max(1, (int) ceil($total / $query['per_page']));
+            if ($total > 0 && $query['page'] > $totalPages) {
+                throw new InvalidArgumentException('Requested contract page exceeds the available pages.');
+            }
+            $items = array_map([self::class, 'contractView'], $page['rows']);
+            return ApiResponse::ok($items, [
+                'scope' => ApiScope::mode(),
+                'page' => $query['page'],
+                'per_page' => $query['per_page'],
+                'total' => $total,
+                'total_pages' => $totalPages,
+                'sort' => $query['sort'],
+                'order' => $query['order'],
+                'search' => $search,
+                'returned' => count($items),
+                'available_in_bounded_read' => count($items),
+                'bounded_window' => $query['per_page'],
+                'has_more' => $query['page'] < $totalPages,
+            ]);
         });
     }
 
@@ -133,6 +162,11 @@ final class DataController
                 return ApiResponse::notFound('Payment');
             }
             ApiScope::assertAccountant($row['accountant_user_id']);
+            $row['status'] = PaymentStatus::authoritative(
+                $row['due_date'] ?? '',
+                $row['paid_amount'] ?? '0.0000',
+                $row['remaining_amount'] ?? '0.0000'
+            );
             return ApiResponse::ok(self::paymentView($row));
         });
     }
@@ -240,23 +274,45 @@ final class DataController
         }
     }
 
-    /** @param list<array<string,mixed>> $rows @param array{page:int,per_page:int,sort:string,order:string} $query */
+    /** @param list<array<string,mixed>> $rows @param array{page:int,per_page:int,sort:string,order:string,search?:string} $query */
     private static function page(array $rows, array $query): WP_REST_Response
     {
         $rows = ApiListQuery::sortRows($rows, $query['sort'], $query['order']);
+        $total = count($rows);
+        $totalPages = max(1, (int) ceil($total / $query['per_page']));
         $offset = ($query['page'] - 1) * $query['per_page'];
         $items = array_slice($rows, $offset, $query['per_page']);
         return ApiResponse::ok($items, [
             'scope' => ApiScope::mode(),
             'page' => $query['page'],
             'per_page' => $query['per_page'],
+            'total' => $total,
+            'total_pages' => $totalPages,
             'sort' => $query['sort'],
             'order' => $query['order'],
+            'search' => (string) ($query['search'] ?? ''),
             'returned' => count($items),
-            'available_in_bounded_read' => count($rows),
+            'available_in_bounded_read' => $total,
             'bounded_window' => ApiListQuery::BOUNDED_WINDOW,
-            'has_more' => ($offset + count($items)) < count($rows),
+            'has_more' => $query['page'] < $totalPages,
         ]);
+    }
+
+    /** @param list<array<string,mixed>> $rows @return list<array<string,mixed>> */
+    private static function filterContractsBySearch(array $rows, string $search): array
+    {
+        $needle = strtolower(trim($search));
+        return array_values(array_filter($rows, static function (array $row) use ($needle): bool {
+            $haystack = strtolower(implode(' ', [
+                (string) ($row['contract_number'] ?? ''),
+                (string) ($row['counterparty_name'] ?? ''),
+                (string) ($row['customer_name'] ?? ''),
+                (string) ($row['supplier_name'] ?? ''),
+                (string) ($row['currency_code'] ?? ''),
+                (string) ($row['status'] ?? ''),
+            ]));
+            return str_contains($haystack, $needle);
+        }));
     }
 
     /** @param list<array<string,mixed>> $rows @param array<string,mixed> $filters @return list<array<string,mixed>> */

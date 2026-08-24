@@ -19,6 +19,7 @@ final class AdminShell
     public const FINANCIAL_STYLE_HANDLE = 'safecontracts-admin-financial-v3';
     public const CONTRACT_TREE_STYLE_HANDLE = 'safecontracts-contract-payment-tree';
     public const PREMIUM_STYLE_HANDLE = 'safecontracts-admin-premium';
+    public const POLISH_STYLE_HANDLE = 'safecontracts-admin-polish';
     public const REDESIGN_TOKENS_STYLE_HANDLE = 'safecontracts-plugin-redesign-tokens';
     public const REDESIGN_PRIMITIVES_STYLE_HANDLE = 'safecontracts-plugin-redesign-primitives';
     public const REDESIGN_SUMMARY_CARDS_STYLE_HANDLE = 'safecontracts-plugin-redesign-summary-cards';
@@ -53,11 +54,12 @@ final class AdminShell
         wp_enqueue_style(self::FINANCIAL_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-financial-v3.css', [self::UX_STYLE_HANDLE], SAFECONTRACTS_VERSION);
         wp_enqueue_style(self::CONTRACT_TREE_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/contract-payment-tree.css', [self::FINANCIAL_STYLE_HANDLE], SAFECONTRACTS_VERSION);
         wp_enqueue_style(self::PREMIUM_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-premium.css', [self::CONTRACT_TREE_STYLE_HANDLE], SAFECONTRACTS_VERSION);
+        wp_enqueue_style(self::POLISH_STYLE_HANDLE, SAFECONTRACTS_URL . 'assets/admin/safecontracts-admin-polish.css', [self::PREMIUM_STYLE_HANDLE], SAFECONTRACTS_VERSION);
 
         wp_enqueue_style(
             self::REDESIGN_TOKENS_STYLE_HANDLE,
             SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/tokens.css',
-            [self::PREMIUM_STYLE_HANDLE],
+            [self::POLISH_STYLE_HANDLE],
             SAFECONTRACTS_VERSION
         );
         wp_enqueue_style(
@@ -84,6 +86,15 @@ final class AdminShell
             [self::REDESIGN_NAVIGATION_STYLE_HANDLE],
             SAFECONTRACTS_VERSION
         );
+
+        if (function_exists('wp_add_inline_style')) {
+            wp_add_inline_style(
+                self::POLISH_STYLE_HANDLE,
+                '.safecontracts-admin-shell__hero,.safecontracts-summary-injector,.safecontracts-admin-shell__identity-proof{display:none!important}' .
+                '.safecontracts-admin-shell__content{padding-top:0!important}' .
+                '.safecontracts-settings select[multiple]{min-height:150px}'
+            );
+        }
     }
 
     public static function isSafeContractsPage(): bool
@@ -108,7 +119,6 @@ final class AdminShell
         </div>
         <?php
     }
-
     private static function renderDashboardHeader(): void
     {
         ?>

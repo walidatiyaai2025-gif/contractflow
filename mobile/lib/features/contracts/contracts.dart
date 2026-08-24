@@ -20,6 +20,8 @@ const _supportedContractFilterStatuses = <String>{
   'cancelled',
 };
 
+const _supportedCounterpartyTypes = <String>{'customer', 'supplier'};
+
 final class ContractSortOption {
   const ContractSortOption({
     required this.label,
@@ -61,19 +63,80 @@ final class ContractSortOption {
 }
 
 final class ContractsFilters {
-  const ContractsFilters({this.customerId, this.status});
+  const ContractsFilters({
+    this.customerId,
+    this.counterpartyType,
+    this.counterpartyId,
+    this.status,
+  });
 
   final int? customerId;
+  final String? counterpartyType;
+  final int? counterpartyId;
   final String? status;
 
-  ContractsFilters withCustomer(int? value) =>
-      ContractsFilters(customerId: value, status: status);
-  ContractsFilters withStatus(String? value) =>
-      ContractsFilters(customerId: customerId, status: value);
+  ContractsFilters withCustomer(int? value) => ContractsFilters(
+        customerId: value,
+        counterpartyType: value == null ? counterpartyType : 'customer',
+        counterpartyId:
+            value ?? (counterpartyType == 'customer' ? counterpartyId : null),
+        status: status,
+      );
+
+  ContractsFilters withCounterpartyType(String? value) => ContractsFilters(
+        counterpartyType: value,
+        status: status,
+      );
+
+  ContractsFilters withCounterparty({
+    required String type,
+    required int id,
+  }) =>
+      ContractsFilters(
+        customerId: type == 'customer' ? id : null,
+        counterpartyType: type,
+        counterpartyId: id,
+        status: status,
+      );
+
+  ContractsFilters withStatus(String? value) => ContractsFilters(
+        customerId: customerId,
+        counterpartyType: counterpartyType,
+        counterpartyId: counterpartyId,
+        status: value,
+      );
+
+  int get activeCount {
+    var count = 0;
+    if (counterpartyType != null && counterpartyType!.isNotEmpty) count++;
+    if (customerId != null) count++;
+    if (status != null && status!.isNotEmpty) count++;
+    return count;
+  }
 
   void validate() {
     if (customerId != null && customerId! <= 0) {
       throw ArgumentError.value(customerId, 'customerId', 'Invalid customer.');
+    }
+    if (counterpartyType != null &&
+        !_supportedCounterpartyTypes.contains(counterpartyType)) {
+      throw ArgumentError.value(
+        counterpartyType,
+        'counterpartyType',
+        'Unsupported counterparty type.',
+      );
+    }
+    if (counterpartyId != null && counterpartyId! <= 0) {
+      throw ArgumentError.value(
+        counterpartyId,
+        'counterpartyId',
+        'Invalid counterparty.',
+      );
+    }
+    if (customerId != null &&
+        counterpartyType != null &&
+        counterpartyType != 'customer') {
+      throw ArgumentError('Customer filter conflicts with counterparty type.');
     }
     if (status != null &&
         status!.isNotEmpty &&
@@ -90,9 +153,42 @@ final class ContractsFilters {
     validate();
     return <String, String>{
       if (customerId != null) 'customer_id': '$customerId',
+      if (counterpartyType != null) 'counterparty_type': counterpartyType!,
+      if (counterpartyId != null) 'counterparty_id': '$counterpartyId',
       if (status != null && status!.isNotEmpty) 'status': status!,
     };
   }
+}
+
+final class ContractDraft {
+  const ContractDraft({
+    required this.contractNumber,
+    required this.counterpartyType,
+    required this.counterpartyId,
+    required this.baseValue,
+    this.currencyCode,
+    this.accountantUserId,
+    this.notes,
+  });
+
+  final String contractNumber;
+  final String counterpartyType;
+  final int counterpartyId;
+  final String baseValue;
+  final String? currencyCode;
+  final int? accountantUserId;
+  final String? notes;
+
+  Map<String, Object?> toPayload() => <String, Object?>{
+        'contract_number': contractNumber.trim(),
+        'counterparty_type': counterpartyType.trim().toLowerCase(),
+        'counterparty_id': counterpartyId,
+        'base_value': baseValue.trim(),
+        if (_payloadText(currencyCode) != null)
+          'currency_code': _payloadText(currencyCode)!.toUpperCase(),
+        if (accountantUserId != null) 'accountant_user_id': accountantUserId,
+        if (_payloadText(notes) != null) 'notes': _payloadText(notes),
+      };
 }
 
 final class SafeContractsContract {
@@ -143,7 +239,7 @@ final class SafeContractsContract {
     );
     final type = _optionalText(data['counterparty_type'])?.toLowerCase() ??
         (legacyCustomerId != null ? 'customer' : '');
-    if (type != 'customer' && type != 'supplier') {
+    if (!_supportedCounterpartyTypes.contains(type)) {
       throw const FormatException('contract.counterparty_type is invalid.');
     }
     final counterpartyId = _optionalPositiveInt(
@@ -171,10 +267,8 @@ final class SafeContractsContract {
 
     return SafeContractsContract(
       id: _positiveInt(data['id'], 'contract.id'),
-      contractNumber: _requiredText(
-        data['contract_number'],
-        'contract.contract_number',
-      ),
+      contractNumber:
+          _requiredText(data['contract_number'], 'contract.contract_number'),
       customerId:
           type == 'customer' ? (legacyCustomerId ?? counterpartyId) : null,
       customerName: _optionalText(data['customer_name']),
@@ -188,7 +282,7 @@ final class SafeContractsContract {
         data['accountant_user_id'],
         'contract.accountant_user_id',
       ),
-      status: _requiredText(data['status'], 'contract.status'),
+      status: _requiredText(data['status'], 'contract.status').toLowerCase(),
       startDate: _optionalIsoDate(data['start_date'], 'contract.start_date'),
       endDate: _optionalIsoDate(data['end_date'], 'contract.end_date'),
       baseValue: _optionalMoneyText(data['base_value'], 'contract.base_value'),
@@ -202,6 +296,8 @@ final class ContractPage {
     required this.contracts,
     required this.page,
     required this.perPage,
+    required this.total,
+    required this.totalPages,
     required this.sort,
     required this.order,
     required this.hasMore,
@@ -212,6 +308,8 @@ final class ContractPage {
   final List<SafeContractsContract> contracts;
   final int page;
   final int perPage;
+  final int total;
+  final int totalPages;
   final String sort;
   final String order;
   final bool hasMore;
@@ -229,19 +327,47 @@ final class ContractPage {
       }
     }
     final meta = envelope.meta;
-    final page = _boundedInt(meta['page'], 'meta.page', minimum: 1, maximum: 5);
-    final perPage = _boundedInt(
-      meta['per_page'],
-      'meta.per_page',
-      minimum: 1,
-      maximum: 100,
-    );
     final boundedWindow = _boundedInt(
       meta['bounded_window'],
       'meta.bounded_window',
       minimum: 1,
       maximum: 500,
     );
+    final perPage = _boundedInt(
+      meta['per_page'],
+      'meta.per_page',
+      minimum: 1,
+      maximum: 100,
+    );
+    final maxPageForPageSize = (1000000 ~/ perPage) + 1;
+    final page = _boundedInt(
+      meta['page'],
+      'meta.page',
+      minimum: 1,
+      maximum: maxPageForPageSize,
+    );
+    final total = _boundedInt(
+      meta['total'],
+      'meta.total',
+      minimum: 0,
+      maximum: 1000000000,
+    );
+    final totalPages = _boundedInt(
+      meta['total_pages'],
+      'meta.total_pages',
+      minimum: 1,
+      maximum: 1000000000,
+    );
+    final expectedTotalPages =
+        total == 0 ? 1 : ((total + perPage - 1) ~/ perPage);
+    if (totalPages != expectedTotalPages) {
+      throw const FormatException(
+          'Contract pagination metadata is inconsistent.');
+    }
+    if (page > totalPages && total > 0) {
+      throw const FormatException(
+          'Contract page exceeds authoritative total pages.');
+    }
     final sort = _requiredText(meta['sort'], 'meta.sort');
     if (!ContractSortOption.values.any((option) => option.field == sort)) {
       throw const FormatException('Contract sort metadata is invalid.');
@@ -254,13 +380,20 @@ final class ContractPage {
     if (scope != null && scope != 'all' && scope != 'assigned') {
       throw const FormatException('Contract scope metadata is invalid.');
     }
+    final hasMore = _boolish(meta['has_more'], 'meta.has_more');
+    if (hasMore != (page < totalPages)) {
+      throw const FormatException(
+          'Contract has_more metadata is inconsistent.');
+    }
     return ContractPage(
       contracts: List<SafeContractsContract>.unmodifiable(contracts),
       page: page,
       perPage: perPage,
+      total: total,
+      totalPages: totalPages,
       sort: sort,
       order: order,
-      hasMore: _boolish(meta['has_more'], 'meta.has_more'),
+      hasMore: hasMore,
       boundedWindow: boundedWindow,
       scope: scope,
     );
@@ -277,15 +410,21 @@ final class ContractsRepository {
     required int perPage,
     required ContractsFilters filters,
     required ContractSortOption sort,
+    String search = '',
   }) async {
-    if (page < 1 || page > 5) {
-      throw ArgumentError('Contract page must be between 1 and 5.');
-    }
     if (perPage < 1 || perPage > 100) {
       throw ArgumentError('Contract page size must be between 1 and 100.');
     }
+    if (page < 1 || (page - 1) * perPage > 1000000) {
+      throw ArgumentError(
+          'Contract page exceeds the bounded server query window.');
+    }
     if (!ContractSortOption.values.contains(sort)) {
       throw ArgumentError('Unsupported contract sort.');
+    }
+    final normalizedSearch = search.trim();
+    if (normalizedSearch.length > 100) {
+      throw ArgumentError('Contract search must not exceed 100 characters.');
     }
     filters.validate();
     final query = filters.toQuery()
@@ -294,6 +433,7 @@ final class ContractsRepository {
         'per_page': '$perPage',
         'sort': sort.field,
         'order': sort.order,
+        if (normalizedSearch.isNotEmpty) 'search': normalizedSearch,
       });
     final envelope = await client.get('contracts', query: query);
     return ContractPage.fromEnvelope(envelope);
@@ -302,7 +442,46 @@ final class ContractsRepository {
   Future<SafeContractsContract> loadContract(int id) async {
     if (id <= 0) throw ArgumentError('Contract ID must be positive.');
     final envelope = await client.get('contracts/$id');
-    return SafeContractsContract.fromData(envelope.data);
+    final contract = SafeContractsContract.fromData(envelope.data);
+    if (contract.id != id) {
+      throw const FormatException('Contract detail ID does not match request.');
+    }
+    return contract;
+  }
+
+  Future<SafeContractsContract> create(ContractDraft draft) async {
+    _validateDraft(draft);
+    final envelope = await client.post('contracts', body: draft.toPayload());
+    final data = apiObjectMap(envelope.data, 'contract_create');
+    final id = _positiveInt(data['id'], 'contract_create.id');
+    return loadContract(id);
+  }
+
+  void _validateDraft(ContractDraft draft) {
+    final number = draft.contractNumber.trim();
+    if (number.isEmpty || number.length > 100) {
+      throw ArgumentError(
+        'Contract number is required and must not exceed 100 characters.',
+      );
+    }
+    final type = draft.counterpartyType.trim().toLowerCase();
+    if (!_supportedCounterpartyTypes.contains(type)) {
+      throw ArgumentError('Contract counterparty type is invalid.');
+    }
+    if (draft.counterpartyId <= 0) {
+      throw ArgumentError('Contract counterparty is required.');
+    }
+    final value = num.tryParse(draft.baseValue.trim());
+    if (value == null || value <= 0) {
+      throw ArgumentError('Contract base value must be greater than zero.');
+    }
+    final currency = _payloadText(draft.currencyCode)?.toUpperCase();
+    if (currency != null && !RegExp(r'^[A-Z]{3}$').hasMatch(currency)) {
+      throw ArgumentError('Contract currency must be a 3-letter code.');
+    }
+    if (draft.accountantUserId != null && draft.accountantUserId! <= 0) {
+      throw ArgumentError('Accountant ID must be positive.');
+    }
   }
 }
 
@@ -312,6 +491,7 @@ final class ContractsController extends ChangeNotifier {
     required int pageSize,
     required this.canAccess,
     required this.canEditContract,
+    this.canCreateContract = false,
   }) : pageSize = pageSize.clamp(1, 100).toInt();
 
   static const supportedContractStatuses = _supportedContractFilterStatuses;
@@ -320,22 +500,30 @@ final class ContractsController extends ChangeNotifier {
   final int pageSize;
   final bool canAccess;
   final bool canEditContract;
+  final bool canCreateContract;
 
   ContractsLoadState state = ContractsLoadState.idle;
   ContractPage? currentPage;
   ContractsFilters filters = const ContractsFilters();
   ContractSortOption sort = ContractSortOption.newest;
+  String searchQuery = '';
   String? errorMessage;
   ContractDetailLoadState detailState = ContractDetailLoadState.idle;
   int? selectedContractId;
   SafeContractsContract? selectedContract;
   String? detailErrorMessage;
+  bool mutationInFlight = false;
+  bool _pageRequestInFlight = false;
+
+  bool get pageRequestInFlight => _pageRequestInFlight;
+  int get activeFilterCount => filters.activeCount;
 
   Future<void> ensureLoaded() async {
     if (state == ContractsLoadState.idle) await loadPage(1);
   }
 
   Future<void> loadPage(int page) async {
+    if (_pageRequestInFlight) return;
     if (!canAccess) {
       currentPage = null;
       errorMessage = 'Contract access is not authorized for this session.';
@@ -343,8 +531,9 @@ final class ContractsController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (page < 1 || page > 5) return;
-    currentPage = null;
+    if (page < 1 || (page - 1) * pageSize > 1000000) return;
+    _pageRequestInFlight = true;
+    final previousPage = currentPage;
     state = ContractsLoadState.loading;
     errorMessage = null;
     notifyListeners();
@@ -354,51 +543,70 @@ final class ContractsController extends ChangeNotifier {
         perPage: pageSize,
         filters: filters,
         sort: sort,
+        search: searchQuery,
       );
       state = ContractsLoadState.ready;
     } on SafeContractsApiException catch (error) {
-      currentPage = null;
+      currentPage = previousPage;
       errorMessage = error.message;
       state = ContractsLoadState.error;
     } on Object catch (error) {
-      currentPage = null;
+      currentPage = previousPage;
       errorMessage = error.toString();
       state = ContractsLoadState.error;
+    } finally {
+      _pageRequestInFlight = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   Future<void> refresh() => loadPage(currentPage?.page ?? 1);
 
   Future<void> refreshSilently() async {
-    if (!canAccess) return;
+    if (!canAccess || _pageRequestInFlight) return;
     try {
       currentPage = await repository.loadPage(
         page: currentPage?.page ?? 1,
         perPage: pageSize,
         filters: filters,
         sort: sort,
+        search: searchQuery,
       );
       state = ContractsLoadState.ready;
       errorMessage = null;
+      notifyListeners();
     } on Object {
       // Keep the last authorized snapshot on silent refresh failure.
     }
   }
 
   Future<void> previousPage() async {
+    if (_pageRequestInFlight) return;
     final page = currentPage?.page ?? 1;
     if (page > 1) await loadPage(page - 1);
   }
 
   Future<void> nextPage() async {
+    if (_pageRequestInFlight) return;
     final value = currentPage;
-    if (value != null && value.hasMore && value.page < 5) {
+    if (value != null && value.hasMore && value.page < value.totalPages) {
       await loadPage(value.page + 1);
     }
   }
 
+  Future<void> selectSearch(String value) async {
+    if (_pageRequestInFlight) return;
+    final normalized = value.trim();
+    if (normalized.length > 100) {
+      throw ArgumentError.value(value, 'value', 'Search is too long.');
+    }
+    if (searchQuery == normalized && currentPage != null) return;
+    searchQuery = normalized;
+    await loadPage(1);
+  }
+
   Future<void> selectCustomer(int? customerId) async {
+    if (_pageRequestInFlight) return;
     if (customerId != null && customerId <= 0) {
       throw ArgumentError.value(customerId, 'customerId', 'Invalid customer.');
     }
@@ -406,7 +614,26 @@ final class ContractsController extends ChangeNotifier {
     await loadPage(1);
   }
 
+  Future<void> selectCounterpartyType(String? value) async {
+    if (_pageRequestInFlight) return;
+    final normalized = value?.trim().toLowerCase();
+    if (normalized != null &&
+        normalized.isNotEmpty &&
+        !_supportedCounterpartyTypes.contains(normalized)) {
+      throw ArgumentError.value(
+        value,
+        'value',
+        'Unsupported counterparty type.',
+      );
+    }
+    filters = filters.withCounterpartyType(
+      normalized == null || normalized.isEmpty ? null : normalized,
+    );
+    await loadPage(1);
+  }
+
   Future<void> selectStatus(String? status) async {
+    if (_pageRequestInFlight) return;
     final normalized = status?.trim().toLowerCase();
     if (normalized != null &&
         normalized.isNotEmpty &&
@@ -423,13 +650,37 @@ final class ContractsController extends ChangeNotifier {
     await loadPage(1);
   }
 
+  Future<void> clearFilters() async {
+    if (_pageRequestInFlight || filters.activeCount == 0) return;
+    filters = const ContractsFilters();
+    await loadPage(1);
+  }
+
   Future<void> selectSort(ContractSortOption nextSort) async {
+    if (_pageRequestInFlight) return;
     if (!ContractSortOption.values.contains(nextSort)) {
       throw ArgumentError.value(nextSort, 'nextSort', 'Unsupported sort.');
     }
     if (identical(sort, nextSort) && currentPage != null) return;
     sort = nextSort;
     await loadPage(1);
+  }
+
+  Future<SafeContractsContract> createContract(ContractDraft draft) async {
+    if (!canCreateContract) {
+      throw StateError('Contract creation is not authorized.');
+    }
+    mutationInFlight = true;
+    notifyListeners();
+    try {
+      final contract = await repository.create(draft);
+      await loadPage(1);
+      await openContract(contract.id);
+      return contract;
+    } finally {
+      mutationInFlight = false;
+      notifyListeners();
+    }
   }
 
   Future<void> openContract(int id) async {
@@ -503,7 +754,7 @@ int _positiveInt(Object? value, String field) {
 }
 
 int? _optionalPositiveInt(Object? value, String field) {
-  if (value == null || value == '') return null;
+  if (value == null || value == '' || value == 0 || value == '0') return null;
   return _positiveInt(value, field);
 }
 
@@ -525,37 +776,39 @@ int _boundedInt(
 }
 
 String _requiredText(Object? value, String field) {
-  if (value is! String || value.trim().isEmpty) {
-    throw FormatException('$field must be a non-empty string.');
-  }
-  final normalized = value.trim();
-  if (normalized.length > 256) throw FormatException('$field is too long.');
-  return normalized;
+  if (value is String && value.trim().isNotEmpty) return value.trim();
+  if (value is num) return value.toString();
+  throw FormatException('$field must be a non-empty string.');
 }
 
 String? _optionalText(Object? value) {
   if (value == null) return null;
   if (value is! String) {
-    throw const FormatException('Contract text field must be string or null.');
+    throw const FormatException(
+      'Optional contract text must be string or null.',
+    );
   }
   final normalized = value.trim();
-  if (normalized.length > 256) {
-    throw const FormatException('Contract text field is too long.');
-  }
   return normalized.isEmpty ? null : normalized;
+}
+
+String? _payloadText(String? value) {
+  final normalized = value?.trim();
+  return normalized == null || normalized.isEmpty ? null : normalized;
 }
 
 String? _optionalIsoDate(Object? value, String field) {
   final text = _optionalText(value);
   if (text == null) return null;
-  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(text);
-  if (match == null) throw FormatException('$field must use YYYY-MM-DD.');
-  final parsed = DateTime.tryParse(text);
-  if (parsed == null ||
-      parsed.year != int.parse(match.group(1)!) ||
-      parsed.month != int.parse(match.group(2)!) ||
-      parsed.day != int.parse(match.group(3)!)) {
-    throw FormatException('$field is invalid.');
+  if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text)) {
+    throw FormatException('$field must be YYYY-MM-DD.');
+  }
+  final parts = text.split('-').map(int.parse).toList(growable: false);
+  final parsed = DateTime.utc(parts[0], parts[1], parts[2]);
+  if (parsed.year != parts[0] ||
+      parsed.month != parts[1] ||
+      parsed.day != parts[2]) {
+    throw FormatException('$field must be a real calendar date.');
   }
   return text;
 }
@@ -563,23 +816,19 @@ String? _optionalIsoDate(Object? value, String field) {
 String? _optionalMoneyText(Object? value, String field) {
   if (value == null || value == '') return null;
   if (value is! String) {
-    throw FormatException('$field must be an exact server money string.');
+    throw FormatException('$field must be an exact decimal money string.');
   }
-  final normalized = value.trim();
-  if (!RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(normalized)) {
-    throw FormatException('$field is invalid.');
+  final text = value.trim();
+  if (text.isEmpty || !RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
   }
-  return normalized;
+  return text;
 }
 
 bool _boolish(Object? value, String field) {
   return switch (value) {
-    true => true,
-    false => false,
-    1 => true,
-    0 => false,
-    '1' => true,
-    '0' => false,
+    true || 1 || '1' => true,
+    false || 0 || '0' => false,
     _ => throw FormatException('$field must be boolean-like.'),
   };
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
-import '../config/mobile_config.dart';
 import '../session/session_controller.dart';
 import '../ui/safecontracts_design.dart';
 
@@ -36,81 +35,55 @@ final class ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeContractsSurface(
-      padding: const EdgeInsets.all(20),
+    final name = _profileName(context, session);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: SafeContractsVisual.premiumHeaderGradient,
+        borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22092944),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
       child: Row(
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const SafeContractsBrandMark(size: 72, borderRadius: 22),
-              PositionedDirectional(
-                end: -2,
-                bottom: -2,
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: SafeContractsVisual.green,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: SafeContractsVisual.surface,
-                      width: 3,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.check_rounded,
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
+          _ProfileAvatar(session: session),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   profileCopy(context, 'My profile', 'ملفي الشخصي'),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: SafeContractsVisual.ink,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.68),
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
                         fontWeight: FontWeight.w900,
                       ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
-                  profileCopy(
-                    context,
-                    'User #${session.userId}',
-                    'المستخدم #${session.userId}',
-                  ),
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: SafeContractsVisual.muted,
-                        fontWeight: FontWeight.w600,
+                  profileAccountDescription(context, session.scope),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.78),
+                        height: 1.3,
                       ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ProfilePill(
-                      icon: Icons.shield_outlined,
-                      text: profileScopeLabel(context, session.scope),
-                    ),
-                    ProfilePill(
-                      icon: Icons.circle,
-                      text: profileCopy(
-                        context,
-                        'Active session',
-                        'جلسة نشطة',
-                      ),
-                      background: SafeContractsVisual.greenSoft,
-                      foreground: SafeContractsVisual.green,
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -121,175 +94,104 @@ final class ProfileHero extends StatelessWidget {
   }
 }
 
-final class ProfilePreferences extends StatelessWidget {
-  const ProfilePreferences({
-    required this.config,
+final class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.session});
+
+  final SafeContractsSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = session.avatarUrl;
+    return Container(
+      width: 58,
+      height: 58,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.14),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.22),
+        ),
+      ),
+      child: ClipOval(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const ColoredBox(
+              color: SafeContractsVisual.surface,
+              child: Center(
+                child: SafeContractsBrandMark(size: 42, borderRadius: 12),
+              ),
+            ),
+            if (avatarUrl != null)
+              Image.network(
+                avatarUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox.shrink(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class ProfileLanguageControl extends StatelessWidget {
+  const ProfileLanguageControl({
     required this.languageCode,
     required this.onLanguageChanged,
     super.key,
   });
 
-  final SafeContractsMobileConfig config;
   final String languageCode;
   final ValueChanged<String> onLanguageChanged;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final code = config.currency.code.isEmpty
-        ? l10n.t('Not configured')
-        : config.currency.code;
-    final symbol = config.currency.symbol.isEmpty
-        ? l10n.t('Not configured')
-        : config.currency.symbol;
-
+    final normalized = languageCode.trim().toLowerCase() == 'ar' ? 'ar' : 'en';
     return SafeContractsSurface(
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const ProfileTileIcon(Icons.translate_rounded),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  key: ValueKey(languageCode),
-                  initialValue: languageCode,
-                  decoration: InputDecoration(labelText: l10n.t('Language')),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'ar',
-                      child: Text(l10n.t('Arabic')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'en',
-                      child: Text(l10n.t('English')),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) onLanguageChanged(value);
-                  },
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 28),
-          ProfileInfoRow(
-            icon: Icons.currency_exchange_rounded,
-            label: l10n.t('Currency'),
-            value: '$code  •  $symbol',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class ProfileAccount extends StatelessWidget {
-  const ProfileAccount({
-    required this.session,
-    required this.config,
-    super.key,
-  });
-
-  final SafeContractsSession session;
-  final SafeContractsMobileConfig config;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    return SafeContractsSurface(
-      child: Column(
-        children: [
-          ProfileInfoRow(
-            icon: Icons.badge_outlined,
-            label: l10n.t('User ID'),
-            value: '${session.userId}',
-          ),
-          const Divider(height: 24),
-          ProfileInfoRow(
-            icon: Icons.data_object_rounded,
-            label: l10n.t('Data scope'),
-            value: profileScopeLabel(context, session.scope),
-          ),
-          const Divider(height: 24),
-          ProfileInfoRow(
-            icon: Icons.view_list_outlined,
-            label: l10n.t('Default page size'),
-            value: '${config.defaultPageSize}',
-          ),
-          if (config.supportText.isNotEmpty) ...[
-            const Divider(height: 24),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const ProfileTileIcon(
-                  Icons.support_agent_rounded,
-                  background: SafeContractsVisual.amberSoft,
-                  foreground: SafeContractsVisual.amber,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    config.supportText,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: SafeContractsVisual.ink,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-final class ProfileLocalSession extends StatelessWidget {
-  const ProfileLocalSession({required this.onClearSession, super.key});
-
-  final VoidCallback onClearSession;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    return SafeContractsSurface(
+      elevated: false,
+      padding: const EdgeInsets.all(12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const ProfileTileIcon(
-            Icons.phonelink_erase_rounded,
-            background: SafeContractsVisual.redSoft,
-            foreground: SafeContractsVisual.red,
-          ),
-          const SizedBox(width: 12),
+          const _CompactIcon(Icons.translate_rounded),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  profileCopy(context, 'Local session', 'الجلسة المحلية'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  profileCopy(context, 'Language', 'اللغة'),
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: SafeContractsVisual.ink,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  profileCopy(
-                    context,
-                    'Clear saved session data when you need to sign in again.',
-                    'امسح بيانات الجلسة عند الحاجة لتسجيل الدخول من جديد.',
+                const SizedBox(height: 7),
+                SegmentedButton<String>(
+                  segments: const <ButtonSegment<String>>[
+                    ButtonSegment<String>(
+                      value: 'ar',
+                      label: Text('العربية'),
+                    ),
+                    ButtonSegment<String>(
+                      value: 'en',
+                      label: Text('English'),
+                    ),
+                  ],
+                  selected: <String>{normalized},
+                  showSelectedIcon: false,
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SafeContractsVisual.muted,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.tonalIcon(
-                  onPressed: onClearSession,
-                  icon: const Icon(Icons.logout_rounded),
-                  label: Text(l10n.t('Clear local session state')),
+                  onSelectionChanged: (selection) {
+                    if (selection.isEmpty) return;
+                    final next = selection.first;
+                    if (next != normalized) onLanguageChanged(next);
+                  },
                 ),
               ],
             ),
@@ -300,6 +202,73 @@ final class ProfileLocalSession extends StatelessWidget {
   }
 }
 
+final class ProfilePrimaryActions extends StatelessWidget {
+  const ProfilePrimaryActions({
+    required this.onLogout,
+    required this.onUserGuide,
+    super.key,
+  });
+
+  final VoidCallback onLogout;
+  final VoidCallback onUserGuide;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeContractsSurface(
+      elevated: false,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: const Key('profileLogoutButton'),
+              onPressed: onLogout,
+              style: FilledButton.styleFrom(
+                backgroundColor: SafeContractsVisual.red,
+                foregroundColor: Colors.white,
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.logout_rounded, size: 19),
+              label: Text(profileCopy(context, 'Log out', 'تسجيل الخروج')),
+            ),
+          ),
+          TextButton.icon(
+            key: const Key('profileUserGuideButton'),
+            onPressed: onUserGuide,
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            icon: const Icon(Icons.help_outline_rounded, size: 18),
+            label: Text(profileCopy(context, 'User Guide', 'دليل المستخدم')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _CompactIcon extends StatelessWidget {
+  const _CompactIcon(this.icon);
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: SafeContractsVisual.navySoft,
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: Icon(icon, color: SafeContractsVisual.navy, size: 19),
+    );
+  }
+}
+
+// Compatibility primitives retained for legacy device/push widgets. They are
+// no longer mounted by ProfileScreen, so the compact end-user Profile remains
+// focused on identity, language, logout, and the User Guide.
 final class ProfileTileIcon extends StatelessWidget {
   const ProfileTileIcon(
     this.icon, {
@@ -322,49 +291,6 @@ final class ProfileTileIcon extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(icon, color: foreground, size: 22),
-    );
-  }
-}
-
-final class ProfileInfoRow extends StatelessWidget {
-  const ProfileInfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    super.key,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        ProfileTileIcon(icon),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SafeContractsVisual.muted,
-                    ),
-              ),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: SafeContractsVisual.ink,
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -409,17 +335,39 @@ final class ProfilePill extends StatelessWidget {
   }
 }
 
-String profileCopy(BuildContext context, String english, String arabic) {
-  return context.scL10n.isArabic ? arabic : english;
+String _profileName(BuildContext context, SafeContractsSession session) {
+  final displayName = session.displayName?.trim();
+  if (displayName != null && displayName.isNotEmpty) return displayName;
+  return profileCopy(
+    context,
+    'User #${session.userId}',
+    'المستخدم #${session.userId}',
+  );
 }
 
-String profileScopeLabel(BuildContext context, SafeContractsDataScope scope) {
-  final arabic = context.scL10n.isArabic;
+String profileAccountDescription(
+  BuildContext context,
+  SafeContractsDataScope scope,
+) {
   return switch (scope) {
-    SafeContractsDataScope.all => arabic ? 'نطاق كامل' : 'Full scope',
-    SafeContractsDataScope.assigned =>
-      arabic ? 'السجلات المسندة' : 'Assigned records',
-    SafeContractsDataScope.none =>
-      arabic ? 'بدون نطاق بيانات' : 'No data scope',
+    SafeContractsDataScope.all => profileCopy(
+        context,
+        'Access to all contract records.',
+        'يمكنه الوصول إلى جميع سجلات العقود.',
+      ),
+    SafeContractsDataScope.assigned => profileCopy(
+        context,
+        'Access is limited to assigned records.',
+        'الوصول مقتصر على السجلات المسندة إليه.',
+      ),
+    SafeContractsDataScope.none => profileCopy(
+        context,
+        'No contract records are assigned to this account.',
+        'لا توجد سجلات عقود مسندة إلى هذا الحساب.',
+      ),
   };
+}
+
+String profileCopy(BuildContext context, String english, String arabic) {
+  return context.scL10n.isArabic ? arabic : english;
 }

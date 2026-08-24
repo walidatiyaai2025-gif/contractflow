@@ -9,11 +9,13 @@ import '../contracts/contract_details_screen.dart';
 import '../contracts/contract_edit_screen.dart';
 import '../contracts/contracts.dart';
 import '../contracts/contracts_screen.dart';
+import '../contracts/premium_contract_details_screen.dart';
 import '../customers/customers.dart';
 import '../customers/customers_screen.dart';
 import '../dashboard/dashboard_context_screen.dart';
 import '../dashboard/dashboard_controller.dart';
 import '../dashboard/dashboard_models.dart';
+import '../dashboard/dashboard_two_screen.dart';
 import '../export/mobile_excel_export.dart';
 import '../export/mobile_excel_export_screen.dart';
 import '../finance/finance.dart';
@@ -123,6 +125,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     try {
       switch (_selected) {
         case MobileDestination.dashboard:
+        case MobileDestination.dashboardTwo:
           await widget.dashboardController.refreshSilently();
           shellSnapshotChanged = true;
           break;
@@ -151,6 +154,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           shellSnapshotChanged = true;
           break;
         case MobileDestination.payments:
+        case MobileDestination.collections:
         case MobileDestination.followUps:
           if (mounted) {
             setState(() => _liveRefreshRevision++);
@@ -159,8 +163,6 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
         case MobileDestination.export:
           await widget.dashboardController.refreshSilently();
           shellSnapshotChanged = true;
-          break;
-        case MobileDestination.collections:
           break;
       }
       if (shellSnapshotChanged && mounted) {
@@ -242,7 +244,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
         ),
       ),
       drawer: NavigationDrawer(
-        backgroundColor: SafeContractsVisual.surface,
+        backgroundColor: SafeContractsVisual.navyDeep,
         selectedIndex: widget.policy.destinations.indexOf(_selected),
         onDestinationSelected: (index) {
           final destination = widget.policy.destinations[index];
@@ -350,7 +352,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               tooltip: l10n.isArabic ? 'إضافة جديدة' : 'Quick add',
               onPressed: () => unawaited(_showQuickAdd(quickAdds)),
             ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: bottomDestinations.isEmpty
           ? null
           : _SafeContractsBottomNavigation(
@@ -387,6 +389,15 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                   ? () => _selectDestination(MobileDestination.payments)
                   : null,
         ),
+      MobileDestination.dashboardTwo => DashboardTwoScreen(
+          controller: widget.dashboardController,
+          currency: widget.config.currency,
+          onOpenPayments:
+              widget.policy.destinations.contains(MobileDestination.payments)
+                  ? () => _selectDestination(MobileDestination.payments)
+                  : null,
+          onOpenContract: _openContract,
+        ),
       MobileDestination.customers => CustomersScreen(
           controller: widget.customersController,
         ),
@@ -401,6 +412,16 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           onOpenContract: _openContract,
         ),
       MobileDestination.payments => PaymentsScreen(
+          repository: PaymentsRepository(apiClient),
+          pageSize: widget.config.defaultPageSize,
+          filters: widget.dashboardController.filters,
+          currency: widget.config.currency,
+          canManagePayments:
+              widget.session.can('safecontracts_manage_payments'),
+          canEnterCollection: widget.policy.canEnterCollection,
+          refreshRevision: _liveRefreshRevision,
+        ),
+      MobileDestination.collections => PaymentsScreen(
           repository: PaymentsRepository(apiClient),
           pageSize: widget.config.defaultPageSize,
           filters: widget.dashboardController.filters,
@@ -437,7 +458,6 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           onLanguageChanged: widget.onLanguageChanged,
           onClearSession: widget.onClearSession,
         ),
-      _ => _PlannedDestination(destination: _selected),
     };
   }
 
@@ -511,6 +531,26 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 
   void _openContract(int contractId) {
+    final canOpenContractEditor = widget.contractsController.canEditContract ||
+        widget.session.can('safecontracts_assign_contracts');
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => PremiumContractDetailsScreen(
+          repository: ContractsRepository(
+            widget.contractsController.repository.client,
+          ),
+          contractId: contractId,
+          currency: widget.config.currency,
+          onEditContract: canOpenContractEditor
+              ? () => _openContractEdit(contractId)
+              : null,
+          onOpenLegacy: () => _openLegacyContract(contractId),
+        ),
+      ),
+    );
+  }
+
+  void _openLegacyContract(int contractId) {
     final canOpenContractEditor = widget.contractsController.canEditContract ||
         widget.session.can('safecontracts_assign_contracts');
     Navigator.of(context).push(
@@ -839,31 +879,13 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
   }
 }
 
-final class _PlannedDestination extends StatelessWidget {
-  const _PlannedDestination({required this.destination});
-
-  final MobileDestination destination;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          l10n.isArabic
-              ? 'تم السماح بالتنقل إلى ${_label(l10n, destination)}. شاشة الموبايل المخصصة لها تُنفذ ضمن مهمة خارطة الطريق المقابلة.'
-              : '${_label(l10n, destination)} navigation is authorized. Its dedicated mobile screen is implemented in the corresponding roadmap task.',
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-}
-
 String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
+  if (destination == MobileDestination.dashboardTwo) {
+    return l10n.isArabic ? 'لوحة تحكم اتنين' : 'Dashboard Two';
+  }
   return l10n.t(switch (destination) {
     MobileDestination.dashboard => 'Dashboard',
+    MobileDestination.dashboardTwo => 'Dashboard Two',
     MobileDestination.customers => 'Customers',
     MobileDestination.suppliers => 'Suppliers',
     MobileDestination.contracts => 'Contracts',
@@ -880,6 +902,7 @@ String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
 IconData _icon(MobileDestination destination) {
   return switch (destination) {
     MobileDestination.dashboard => Icons.home_rounded,
+    MobileDestination.dashboardTwo => Icons.dashboard_customize_outlined,
     MobileDestination.customers => Icons.people_alt_outlined,
     MobileDestination.suppliers => Icons.local_shipping_outlined,
     MobileDestination.contracts => Icons.folder_copy_outlined,

@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'safecontracts_tokens.dart';
+
 abstract final class SafeContractsVisual {
   static const background = Color(0xFFF4EFE7);
   static const backgroundRaised = Color(0xFFF9F5EF);
@@ -92,6 +94,9 @@ final class SafeContractsPremiumHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final viewportScale = SafeContractsTypography.viewportScale(
+      MediaQuery.sizeOf(context).width,
+    );
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(
@@ -127,6 +132,9 @@ final class SafeContractsPremiumHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.titleLarge?.copyWith(
                     color: Colors.white,
+                    fontSize:
+                        SafeContractsTypography.titleLarge * viewportScale,
+                    height: SafeContractsTypography.titleHeight,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.3,
                   ),
@@ -139,7 +147,9 @@ final class SafeContractsPremiumHeader extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.bodySmall?.copyWith(
                       color: Colors.white.withValues(alpha: 0.78),
-                      height: 1.45,
+                      fontSize:
+                          SafeContractsTypography.bodySmall * viewportScale,
+                      height: SafeContractsTypography.bodyHeight,
                     ),
                   ),
                 ],
@@ -336,6 +346,9 @@ final class SafeContractsSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final viewportScale = SafeContractsTypography.viewportScale(
+      MediaQuery.sizeOf(context).width,
+    );
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -356,6 +369,9 @@ final class SafeContractsSectionTitle extends StatelessWidget {
                 title,
                 style: textTheme.headlineSmall?.copyWith(
                   color: SafeContractsVisual.ink,
+                  fontSize:
+                      SafeContractsTypography.headlineSmall * viewportScale,
+                  height: SafeContractsTypography.headlineHeight,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
                 ),
@@ -366,6 +382,9 @@ final class SafeContractsSectionTitle extends StatelessWidget {
                   subtitle!,
                   style: textTheme.bodyMedium?.copyWith(
                     color: SafeContractsVisual.muted,
+                    fontSize:
+                        SafeContractsTypography.bodyMedium * viewportScale,
+                    height: SafeContractsTypography.bodyHeight,
                   ),
                 ),
               ],

@@ -30,6 +30,10 @@ jobs:
   real-wordpress-visual-qa:
     runs-on: ubuntu-24.04
     timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        scope: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.scope != 'all' && format('["{0}"]', inputs.scope) || '["lead","worker1","worker2","worker3"]') }}
     services:
       mysql:
         image: mysql:8.0
@@ -66,19 +70,7 @@ jobs:
         id: qa
         shell: bash
         run: |
-          requested='${{ github.event.inputs.scope }}'
-          if [ -n "$requested" ]; then
-            scope="$requested"
-          else
-            branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
-            case "$branch" in
-              plugin-redesign/lead-integration) scope=lead ;;
-              plugin-redesign/worker-1-*) scope=worker1 ;;
-              plugin-redesign/worker-2-*) scope=worker2 ;;
-              plugin-redesign/worker-3-*) scope=worker3 ;;
-              *) scope=all ;;
-            esac
-          fi
+          scope='${{ matrix.scope }}'
 
           source_sha="$SC_QA_OVERLAY_SHA"
           marker='tests/plugin-redesign-visual-qa/SOURCE_HEAD_SHA'

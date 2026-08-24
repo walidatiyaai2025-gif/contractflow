@@ -7,6 +7,7 @@ namespace SafeContracts\Rest;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Admin\AdminReadRepository;
+use SafeContracts\Admin\DashboardContractCounter;
 use SafeContracts\Finance\FinanceOverviewService;
 use Throwable;
 use WP_Error;
@@ -35,9 +36,20 @@ final class DashboardController
         try {
             $filters = RequestGuard::strictDashboardFilters($request);
             $read = new AdminReadRepository();
+            $kpis = $read->kpis($filters);
+
+            // Legacy monetary KPIs intentionally remain Customer/AR-specific.
+            // The dedicated Admin read model supplies an all-counterparty count
+            // when the runtime supports it, without moving SQL/database access
+            // into the REST presentation layer.
+            $allContractCount = DashboardContractCounter::tryCount($filters);
+            if ($allContractCount !== null) {
+                $kpis['contract_count'] = (string) $allContractCount;
+            }
+
             return RequestGuard::response([
                 'filters' => $filters,
-                'kpis' => $read->kpis($filters),
+                'kpis' => $kpis,
                 'customers' => $read->customerOptions(),
                 'contracts' => $read->contractOptions($filters['customer_id']),
                 'finance' => (new FinanceOverviewService())->overview($filters),

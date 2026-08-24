@@ -19,6 +19,9 @@ enum MobileBootstrapState { idle, loading, ready, blocked, error }
 final class MobileBootstrapController extends ChangeNotifier {
   MobileBootstrapController(this.client);
 
+  static const customerCreateCapability = 'safecontracts_create_customers';
+  static const customerEditCapability = 'safecontracts_edit_customers';
+  static const contractCreateCapability = 'safecontracts_create_contracts';
   static const contractEditCapability = 'safecontracts_edit_contracts';
   static const supplierCreateCapability = 'safecontracts_create_suppliers';
   static const supplierEditCapability = 'safecontracts_edit_suppliers';
@@ -86,6 +89,8 @@ final class MobileBootstrapController extends ChangeNotifier {
         repository: CustomersRepository(client),
         pageSize: config.defaultPageSize,
         canAccess: policy.destinations.contains(MobileDestination.customers),
+        canCreate: session.can(customerCreateCapability),
+        canEdit: session.can(customerEditCapability),
       );
       customersController = customers;
       final suppliers = SuppliersController(
@@ -96,13 +101,14 @@ final class MobileBootstrapController extends ChangeNotifier {
         canArchive: session.can(supplierArchiveCapability),
       );
       suppliersController = suppliers;
-      final canAccessContracts = policy.destinations.contains(
-        MobileDestination.contracts,
-      );
+      final canAccessContracts =
+          policy.destinations.contains(MobileDestination.contracts);
       final contracts = ContractsController(
         repository: ContractsRepository(client),
         pageSize: config.defaultPageSize,
         canAccess: canAccessContracts,
+        canCreateContract:
+            canAccessContracts && session.can(contractCreateCapability),
         canEditContract:
             canAccessContracts && session.can(contractEditCapability),
       );
@@ -116,9 +122,8 @@ final class MobileBootstrapController extends ChangeNotifier {
       final notifications = NotificationsController(
         repository: NotificationsRepository(client),
         pageSize: config.defaultPageSize,
-        canAccess: policy.destinations.contains(
-          MobileDestination.notifications,
-        ),
+        canAccess:
+            policy.destinations.contains(MobileDestination.notifications),
       );
       notificationsController = notifications;
       final profile = ProfileController(ProfileRepository(client));

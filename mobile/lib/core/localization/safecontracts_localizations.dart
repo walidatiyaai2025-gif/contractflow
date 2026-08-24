@@ -136,6 +136,7 @@ String _twoDecimalMoney(String rawValue) {
       : rawSign == '+'
           ? '+'
           : '';
+  if (cents == 0) return '$sign$whole';
   return '$sign$whole.${cents.toString().padLeft(2, '0')}';
 }
 
@@ -167,6 +168,9 @@ const Map<String, String> _arabic = <String, String>{
   'SafeContracts': 'SafeContracts',
   'Dashboard': 'لوحة التحكم',
   'Customers': 'العملاء',
+  'Suppliers': 'الموردون',
+  'Finance': 'المالية',
+  'Dashboard Two': 'لوحة تحكم اتنين',
   'Contracts': 'العقود',
   'Payments': 'الدفعات',
   'Collections': 'التحصيلات',

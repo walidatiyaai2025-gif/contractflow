@@ -79,8 +79,10 @@ sc_p10a_expect(InvalidArgumentException::class, static fn () => ApiAbuseGuard::s
 sc_p10a_expect(InvalidArgumentException::class, static fn () => ApiAbuseGuard::safeParams(new WP_REST_Request(['customer_id' => ['7', '8']]), ['customer_id']), 'P10-004 parameter pollution arrays are rejected');
 sc_p10a_expect(InvalidArgumentException::class, static fn () => ApiAbuseGuard::safeParams(new WP_REST_Request(['status' => str_repeat('x', ApiAbuseGuard::MAX_STRING_BYTES + 1)]), ['status']), 'P10-004 oversized query values are rejected');
 sc_p10a_expect(InvalidArgumentException::class, static fn () => ApiListQuery::parse(new WP_REST_Request(['sort' => 'password']), [], ['id'], 'id'), 'P10-004 unsupported sort fields fail closed');
-sc_p10a_expect(InvalidArgumentException::class, static fn () => ApiListQuery::parse(new WP_REST_Request(['page' => '6']), [], ['id'], 'id'), 'P10-004 reads cannot exceed the bounded page window');
-sc_p10a_assert(ApiListQuery::BOUNDED_WINDOW === 500, 'P10-004 list reads retain a hard bounded backend window');
+$deepPage = ApiListQuery::parse(new WP_REST_Request(['page' => '6', 'per_page' => '100']), [], ['id'], 'id');
+sc_p10a_assert(($deepPage['page'] ?? 0) === 6 && ($deepPage['per_page'] ?? 0) === 100, 'P10-004 deep pages remain available inside the bounded query-offset window');
+sc_p10a_expect(InvalidArgumentException::class, static fn () => ApiListQuery::parse(new WP_REST_Request(['page' => '10002', 'per_page' => '100']), [], ['id'], 'id'), 'P10-004 reads cannot exceed the bounded server query-offset window');
+sc_p10a_assert(ApiListQuery::BOUNDED_WINDOW === 500, 'P10-004 legacy materialized list reads retain a hard bounded backend window');
 
 // SC-P10-005 — Input validation review.
 sc_p10a_expect(InvalidArgumentException::class, static fn () => ApiListQuery::parse(new WP_REST_Request(['customer_id' => '-1']), ['customer_id'], ['id'], 'id'), 'P10-005 negative identifiers are rejected');

@@ -12,7 +12,7 @@ import 'package:safecontracts_mobile/features/dashboard/dashboard_models.dart';
 import 'fake_api_transport.dart';
 
 void main() {
-  test('SC-P9-011 loads bounded contract page with server default sort',
+  test('SC-P9-011 loads bounded contract page with authoritative totals',
       () async {
     final transport = FakeApiTransport(_contractHandler);
     final controller = ContractsController(
@@ -27,6 +27,8 @@ void main() {
     expect(controller.state, ContractsLoadState.ready);
     expect(controller.currentPage?.page, 1);
     expect(controller.currentPage?.perPage, 25);
+    expect(controller.currentPage?.total, 50);
+    expect(controller.currentPage?.totalPages, 2);
     expect(controller.currentPage?.sort, 'id');
     expect(controller.currentPage?.order, 'desc');
     expect(controller.currentPage?.hasMore, isTrue);
@@ -43,7 +45,8 @@ void main() {
     controller.dispose();
   });
 
-  test('SC-P9-011 customer status sort and page remain server-bound', () async {
+  test('SC-P9-011 customer status sort search and page remain server-bound',
+      () async {
     final transport = FakeApiTransport(_contractHandler);
     final controller = ContractsController(
       repository: ContractsRepository(_client(transport)),
@@ -55,16 +58,70 @@ void main() {
     await controller.ensureLoaded();
     await controller.selectCustomer(8);
     await controller.selectStatus('active');
+    await controller.selectSearch('SC-80');
     await controller.selectSort(ContractSortOption.contractNumber);
     await controller.nextPage();
 
     final last = transport.requests.last.uri.queryParameters;
     expect(last['customer_id'], '8');
     expect(last['status'], 'active');
+    expect(last['search'], 'SC-80');
     expect(last['sort'], 'contract_number');
     expect(last['order'], 'asc');
     expect(last['page'], '2');
     expect(controller.currentPage?.page, 2);
+    controller.dispose();
+  });
+
+  test('B084 repeated Next taps cannot overlap page requests', () async {
+    final transport = FakeApiTransport(_contractHandler);
+    final controller = ContractsController(
+      repository: ContractsRepository(_client(transport)),
+      pageSize: 25,
+      canAccess: true,
+      canEditContract: false,
+    );
+
+    await controller.ensureLoaded();
+    expect(transport.requests, hasLength(1));
+
+    final first = controller.nextPage();
+    final second = controller.nextPage();
+    await Future.wait([first, second]);
+
+    expect(transport.requests, hasLength(2));
+    expect(transport.requests.last.uri.queryParameters['page'], '2');
+    expect(controller.currentPage?.page, 2);
+    expect(controller.currentPage?.hasMore, isFalse);
+    expect(controller.pageRequestInFlight, isFalse);
+    controller.dispose();
+  });
+
+  test('B084 retry reloads the requested page after a recoverable failure',
+      () async {
+    var attempts = 0;
+    final transport = FakeApiTransport((uri) {
+      attempts++;
+      if (attempts == 1) {
+        return _error(503, 'temporarily_unavailable', 'Try again');
+      }
+      return _contractHandler(uri);
+    });
+    final controller = ContractsController(
+      repository: ContractsRepository(_client(transport)),
+      pageSize: 25,
+      canAccess: true,
+      canEditContract: false,
+    );
+
+    await controller.ensureLoaded();
+    expect(controller.state, ContractsLoadState.error);
+    expect(controller.currentPage, isNull);
+
+    await controller.refresh();
+    expect(controller.state, ContractsLoadState.ready);
+    expect(controller.currentPage?.page, 1);
+    expect(transport.requests, hasLength(2));
     controller.dispose();
   });
 
@@ -142,12 +199,15 @@ void main() {
 
     expect(find.text('SC-70'), findsOneWidget);
     expect(find.text('server_custom_status'), findsOneWidget);
+    expect(find.text('1 / 2'), findsOneWidget);
 
     await tester.tap(find.text('SC-70'));
     await tester.pump();
 
     expect(openedContractId, 70);
-    expect(transport.requests, hasLength(1));
+    expect(transport.requests, hasLength(2));
+    expect(transport.requests.first.uri.path, endsWith('/contracts'));
+    expect(transport.requests.last.uri.path, endsWith('/contracts/70/media'));
     controller.dispose();
   });
 }
@@ -186,12 +246,15 @@ ApiTransportResponse _contractHandler(Uri uri) {
         'scope': 'assigned',
         'page': page,
         'per_page': 25,
+        'total': 50,
+        'total_pages': 2,
         'sort': uri.queryParameters['sort'] ?? 'id',
         'order': uri.queryParameters['order'] ?? 'desc',
+        'search': uri.queryParameters['search'] ?? '',
         'returned': 1,
-        'available_in_bounded_read': 2,
+        'available_in_bounded_read': 50,
         'bounded_window': 500,
-        'has_more': page == 1,
+        'has_more': page < 2,
       },
     );
   }

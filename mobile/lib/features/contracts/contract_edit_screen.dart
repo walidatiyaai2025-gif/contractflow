@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/localization/safecontracts_localizations.dart';
+import '../ui/safecontracts_design.dart';
 import 'contracts.dart';
 
 enum ContractEditState {
@@ -317,6 +318,18 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _pickDate(TextEditingController controller) async {
+    final parsed = DateTime.tryParse(controller.text.trim());
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: parsed ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    controller.text = _isoDate(picked);
+  }
+
   @override
   void dispose() {
     _editController.removeListener(_changed);
@@ -330,6 +343,7 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
+    final ar = l10n.isArabic;
     final contract = widget.contractsController.selectedContract;
     final ready = contract != null && contract.id == widget.contractId;
     final saving = _editController.state == ContractEditState.saving;
@@ -337,148 +351,513 @@ final class _ContractEditScreenState extends State<ContractEditScreen> {
     final loadingAccountants =
         _editController.state == ContractEditState.loadingAccountants;
     final busy = saving || assigning;
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('Edit contract'))),
-      body: !ready
-          ? Center(
-              child: widget.contractsController.detailState ==
-                      ContractDetailLoadState.loading
-                  ? const CircularProgressIndicator()
-                  : Text(
-                      l10n.rawMessage(
-                        widget.contractsController.detailErrorMessage ??
-                            'Contract details are unavailable.',
-                      ),
-                    ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      backgroundColor: SafeContractsVisual.background,
+      appBar: AppBar(
+        backgroundColor: SafeContractsVisual.navy,
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        title: Text(ar ? 'تعديل العقد' : 'Edit contract'),
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: SafeContractsVisual.premiumHeaderGradient,
+          ),
+        ),
+      ),
+      body: SafeContractsBackdrop(
+        child: !ready
+            ? _LoadState(
+                loading: widget.contractsController.detailState ==
+                    ContractDetailLoadState.loading,
+                message: l10n.rawMessage(
+                  widget.contractsController.detailErrorMessage ??
+                      'Contract details are unavailable.',
+                ),
+                onRetry: () => unawaited(_load()),
+              )
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 36),
                 children: [
-                  TextField(
-                    controller: _number,
-                    enabled: !busy && _editController.canEdit,
-                    maxLength: 100,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('Contract number'),
-                      border: const OutlineInputBorder(),
+                  _EditHero(contract: contract),
+                  const SizedBox(height: 12),
+                  SafeContractsSurface(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SafeContractsSectionTitle(
+                          title: ar
+                              ? 'البيانات القابلة للتعديل'
+                              : 'Editable fields',
+                          subtitle: ar
+                              ? 'يتم إرسال الحقول المدعومة فقط إلى الخادم.'
+                              : 'Only server-supported fields are submitted.',
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _number,
+                          enabled: !busy && _editController.canEdit,
+                          maxLength: 100,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText:
+                                ar ? 'رقم / اسم العقد *' : 'Contract number *',
+                            prefixIcon: const Icon(Icons.tag_rounded),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: SafeContractsVisual.backgroundRaised,
+                            borderRadius: BorderRadius.circular(14),
+                            border:
+                                Border.all(color: SafeContractsVisual.outline),
+                          ),
+                          child: SwitchListTile.adaptive(
+                            value: _updateDates,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 2,
+                            ),
+                            onChanged: busy || !_editController.canEdit
+                                ? null
+                                : (value) =>
+                                    setState(() => _updateDates = value),
+                            secondary: const Icon(
+                              Icons.date_range_outlined,
+                              color: SafeContractsVisual.navy,
+                            ),
+                            title: Text(
+                              ar
+                                  ? 'تحديث تاريخي البداية والنهاية'
+                                  : 'Update start/end dates',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            subtitle: Text(
+                              ar
+                                  ? 'اترك هذا الخيار مغلقاً للحفاظ على التواريخ الحالية.'
+                                  : 'Leave this off to preserve the current dates.',
+                            ),
+                          ),
+                        ),
+                        if (_updateDates) ...[
+                          const SizedBox(height: 12),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final stack = constraints.maxWidth < 520;
+                              final start = _DateField(
+                                controller: _start,
+                                enabled: !busy && _editController.canEdit,
+                                label: ar ? 'تاريخ البداية' : 'Start date',
+                                onPick: () => unawaited(_pickDate(_start)),
+                              );
+                              final end = _DateField(
+                                controller: _end,
+                                enabled: !busy && _editController.canEdit,
+                                label: ar ? 'تاريخ النهاية' : 'End date',
+                                onPick: () => unawaited(_pickDate(_end)),
+                              );
+                              if (stack) {
+                                return Column(
+                                  children: [
+                                    start,
+                                    const SizedBox(height: 10),
+                                    end,
+                                  ],
+                                );
+                              }
+                              return Row(
+                                children: [
+                                  Expanded(child: start),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: end),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                        if (_editController.canEdit) ...[
+                          const SizedBox(height: 14),
+                          FilledButton.icon(
+                            onPressed: busy ? null : () => unawaited(_save()),
+                            icon: saving
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.save_outlined),
+                            label: Text(
+                              ar
+                                  ? 'حفظ الحقول المدعومة'
+                                  : 'Save supported fields',
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _updateDates,
-                    onChanged: busy || !_editController.canEdit
-                        ? null
-                        : (value) =>
-                            setState(() => _updateDates = value ?? false),
-                    title: Text(l10n.t('Update start/end dates')),
-                  ),
-                  if (_updateDates) ...[
-                    TextField(
-                      controller: _start,
-                      enabled: !busy && _editController.canEdit,
-                      decoration: InputDecoration(
-                        labelText: l10n.t('Start date YYYY-MM-DD'),
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
+                  if (_editController.canAssignAccountant ||
+                      loadingAccountants) ...[
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: _end,
-                      enabled: !busy && _editController.canEdit,
-                      decoration: InputDecoration(
-                        labelText: l10n.t('End date YYYY-MM-DD'),
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
-                  if (_editController.canAssignAccountant) ...[
-                    const SizedBox(height: 24),
-                    Text(
-                      l10n.t('Responsible accountant'),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    if (loadingAccountants)
-                      const Center(child: CircularProgressIndicator())
-                    else if (_editController.accountants.isEmpty)
-                      Text(
-                        l10n.t(
-                          'No eligible SafeContracts Accountant users are available.',
-                        ),
-                      )
-                    else ...[
-                      DropdownButtonFormField<int>(
-                        key: ValueKey<int?>(_accountantId),
-                        initialValue: _accountantId,
-                        decoration: InputDecoration(
-                          labelText: l10n.t('Responsible accountant'),
-                          border: const OutlineInputBorder(),
-                        ),
-                        items: _editController.accountants
-                            .map(
-                              (accountant) => DropdownMenuItem<int>(
-                                value: accountant.id,
-                                child: Text(
-                                  accountant.label,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                    SafeContractsSurface(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SafeContractsSectionTitle(
+                            title:
+                                ar ? 'مسؤول العقد' : 'Responsible accountant',
+                            subtitle: ar
+                                ? 'التعيين مستقل ويخضع لصلاحية الخادم والتدقيق.'
+                                : 'Assignment is independently server-authorized and audited.',
+                          ),
+                          const SizedBox(height: 13),
+                          if (loadingAccountants)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 18),
+                              child: Center(child: CircularProgressIndicator()),
                             )
-                            .toList(growable: false),
-                        onChanged: busy
-                            ? null
-                            : (value) => setState(() => _accountantId = value),
+                          else if (_editController.accountants.isEmpty)
+                            _MessageBox(
+                              icon: Icons.person_search_outlined,
+                              text: ar
+                                  ? 'لا يوجد محاسبون مؤهلون متاحون للتعيين.'
+                                  : 'No eligible SafeContracts Accountant users are available.',
+                            )
+                          else ...[
+                            DropdownButtonFormField<int>(
+                              key: ValueKey<int?>(_accountantId),
+                              initialValue: _accountantId,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                labelText: ar
+                                    ? 'المحاسب المسؤول'
+                                    : 'Responsible accountant',
+                                prefixIcon: const Icon(Icons.badge_outlined),
+                              ),
+                              items: _editController.accountants
+                                  .map(
+                                    (accountant) => DropdownMenuItem<int>(
+                                      value: accountant.id,
+                                      child: Text(
+                                        accountant.label,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                              onChanged: busy
+                                  ? null
+                                  : (value) =>
+                                      setState(() => _accountantId = value),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: busy || _accountantId == null
+                                  ? null
+                                  : () => unawaited(_assignAccountant()),
+                              icon: assigning
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.assignment_ind_outlined),
+                              label: Text(
+                                ar
+                                    ? 'تعيين المسؤول'
+                                    : 'Assign responsible accountant',
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: busy || _accountantId == null
-                            ? null
-                            : () => unawaited(_assignAccountant()),
-                        icon: assigning
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.assignment_ind_outlined),
-                        label: Text(l10n.t('Assign responsible accountant')),
-                      ),
-                    ],
+                    ),
                   ],
                   if (_editController.message != null) ...[
-                    const SizedBox(height: 16),
-                    Text(l10n.rawMessage(_editController.message!)),
-                  ],
-                  if (_editController.canEdit) ...[
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: busy ? null : () => unawaited(_save()),
-                      icon: saving
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save_outlined),
-                      label: Text(l10n.t('Save supported fields')),
+                    const SizedBox(height: 12),
+                    _EditStateMessage(
+                      state: _editController.state,
+                      text: l10n.rawMessage(_editController.message!),
                     ),
                   ],
                   const SizedBox(height: 12),
-                  Text(
-                    l10n.t(
-                      !_editController.canEdit &&
-                              _editController.canAssignAccountant
-                          ? 'Contract fields are read-only for this session. Responsible accountant assignment remains server-authorized and audited.'
-                          : _editController.canAssignAccountant
-                              ? 'Status and financial values are not editable here. Responsible accountant assignment is server-authorized and audited.'
-                              : 'Status, assignment and financial values are not editable here. Server scope, validation and audit remain authoritative.',
-                    ),
+                  _MessageBox(
+                    icon: Icons.verified_user_outlined,
+                    text: ar
+                        ? (!_editController.canEdit &&
+                                _editController.canAssignAccountant
+                            ? 'حقول العقد للقراءة فقط في هذه الجلسة. تعيين المسؤول يظل خاضعاً لصلاحيات الخادم.'
+                            : _editController.canAssignAccountant
+                                ? 'الحالة والقيم المالية لا يتم تعديلها هنا. الخادم هو المرجع النهائي للقواعد المالية.'
+                                : 'الحالة والتعيين والقيم المالية للقراءة فقط هنا. النطاق والتحقق والتدقيق من الخادم هي المرجع النهائي.')
+                        : (!_editController.canEdit &&
+                                _editController.canAssignAccountant
+                            ? 'Contract fields are read-only in this session. Responsible-accountant assignment remains server-authorized.'
+                            : _editController.canAssignAccountant
+                                ? 'Status and financial values are not edited here. The server remains authoritative for financial rules.'
+                                : 'Status, assignment and financial values are read-only here. Server scope, validation and audit remain authoritative.'),
                   ),
                 ],
               ),
+      ),
+    );
+  }
+}
+
+final class _EditHero extends StatelessWidget {
+  const _EditHero({required this.contract});
+  final SafeContractsContract contract;
+
+  @override
+  Widget build(BuildContext context) {
+    final ar = context.scL10n.isArabic;
+    final directionColor = contract.isSupplier
+        ? SafeContractsVisual.amber
+        : SafeContractsVisual.green;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: SafeContractsVisual.premiumHeaderGradient,
+        borderRadius: BorderRadius.circular(SafeContractsVisual.radius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: SafeContractsVisual.roseGradient,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Icon(
+                  Icons.edit_document,
+                  color: SafeContractsVisual.navyDeep,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      contract.contractNumber,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    Text(
+                      contract.displayCounterparty,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _HeroPill(
+                label: context.scL10n.status(contract.status),
+                color: safeContractsStatusColor(contract.status),
+              ),
+              _HeroPill(
+                label: contract.isSupplier
+                    ? (ar ? 'مستحق علينا' : 'Payable')
+                    : (ar ? 'مستحق لنا' : 'Receivable'),
+                color: directionColor,
+              ),
+              if (contract.currencyCode != 'UNSET')
+                _HeroPill(
+                  label: contract.currencyCode,
+                  color: SafeContractsVisual.champagne,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _HeroPill extends StatelessWidget {
+  const _HeroPill({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: color.withValues(alpha: 0.34)),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: color == SafeContractsVisual.champagne ? color : Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+final class _DateField extends StatelessWidget {
+  const _DateField({
+    required this.controller,
+    required this.enabled,
+    required this.label,
+    required this.onPick,
+  });
+  final TextEditingController controller;
+  final bool enabled;
+  final String label;
+  final VoidCallback onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      keyboardType: TextInputType.datetime,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: 'YYYY-MM-DD',
+        prefixIcon: const Icon(Icons.event_outlined),
+        suffixIcon: IconButton(
+          onPressed: enabled ? onPick : null,
+          icon: const Icon(Icons.calendar_month_outlined),
+        ),
+      ),
+    );
+  }
+}
+
+final class _EditStateMessage extends StatelessWidget {
+  const _EditStateMessage({required this.state, required this.text});
+  final ContractEditState state;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final error = state == ContractEditState.validationError ||
+        state == ContractEditState.forbidden ||
+        state == ContractEditState.conflict ||
+        state == ContractEditState.error;
+    final color = error ? SafeContractsVisual.red : SafeContractsVisual.green;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            error ? Icons.error_outline_rounded : Icons.check_circle_outline,
+            color: color,
+            size: 19,
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
+
+final class _MessageBox extends StatelessWidget {
+  const _MessageBox({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: SafeContractsVisual.navySoft,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: SafeContractsVisual.navy, size: 19),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: SafeContractsVisual.navyDeep),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _LoadState extends StatelessWidget {
+  const _LoadState({
+    required this.loading,
+    required this.message,
+    required this.onRetry,
+  });
+  final bool loading;
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator());
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 44,
+              color: SafeContractsVisual.red,
+            ),
+            const SizedBox(height: 10),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(context.scL10n.t('Retry')),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -499,6 +878,10 @@ bool _validNullableDate(String? value) {
       parsed.month == int.parse(match.group(2)!) &&
       parsed.day == int.parse(match.group(3)!);
 }
+
+String _isoDate(DateTime value) => '${value.year.toString().padLeft(4, '0')}-'
+    '${value.month.toString().padLeft(2, '0')}-'
+    '${value.day.toString().padLeft(2, '0')}';
 
 int _positiveInt(Object? value, String field) {
   final parsed = switch (value) {

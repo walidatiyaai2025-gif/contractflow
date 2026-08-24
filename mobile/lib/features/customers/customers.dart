@@ -39,6 +39,41 @@ final class SafeContractsCustomer {
   }
 }
 
+final class CustomerDraft {
+  const CustomerDraft({
+    required this.name,
+    this.internalCode,
+    this.contactName,
+    this.email,
+    this.phone,
+    this.notes,
+    this.isActive = true,
+  });
+
+  final String name;
+  final String? internalCode;
+  final String? contactName;
+  final String? email;
+  final String? phone;
+
+  /// Notes are supported by the mutation API but are not exposed by the
+  /// customer read projection. Callers must therefore omit notes on edit
+  /// unless the user intentionally supplied a replacement value.
+  final String? notes;
+  final bool isActive;
+
+  Map<String, Object?> toPayload({required bool includeNotes}) =>
+      <String, Object?>{
+        'name': name.trim(),
+        'internal_code': _payloadText(internalCode),
+        'contact_name': _payloadText(contactName),
+        'email': _payloadText(email),
+        'phone': _payloadText(phone),
+        'is_active': isActive,
+        if (includeNotes) 'notes': _payloadText(notes),
+      };
+}
+
 final class CustomerPage {
   const CustomerPage({
     required this.customers,
@@ -89,7 +124,6 @@ final class CustomerPage {
         throw const FormatException('Customer page contains a duplicate ID.');
       }
     }
-
     final sort = _requiredText(meta['sort'], 'meta.sort');
     if (sort != 'name' && sort != 'id') {
       throw const FormatException('Customer sort metadata is invalid.');
@@ -98,8 +132,6 @@ final class CustomerPage {
     if (order != 'asc' && order != 'desc') {
       throw const FormatException('Customer order metadata is invalid.');
     }
-    final scope = _scope(meta['scope']);
-
     return CustomerPage(
       customers: List<SafeContractsCustomer>.unmodifiable(customers),
       page: page,
@@ -108,7 +140,7 @@ final class CustomerPage {
       order: order,
       hasMore: _boolish(meta['has_more'], 'meta.has_more'),
       boundedWindow: boundedWindow,
-      scope: scope,
+      scope: _scope(meta['scope']),
     );
   }
 }
@@ -132,7 +164,6 @@ final class CustomersRepository {
     if (order != 'asc' && order != 'desc') {
       throw ArgumentError('Customer order must be asc or desc.');
     }
-
     final envelope = await client.get(
       'customers',
       query: <String, String>{
@@ -146,11 +177,47 @@ final class CustomersRepository {
   }
 
   Future<SafeContractsCustomer> loadCustomer(int id) async {
-    if (id <= 0) {
-      throw ArgumentError('Customer ID must be positive.');
-    }
+    if (id <= 0) throw ArgumentError('Customer ID must be positive.');
     final envelope = await client.get('customers/$id');
-    return SafeContractsCustomer.fromData(envelope.data);
+    final customer = SafeContractsCustomer.fromData(envelope.data);
+    if (customer.id != id) {
+      throw const FormatException('Customer detail ID does not match request.');
+    }
+    return customer;
+  }
+
+  Future<SafeContractsCustomer> create(CustomerDraft draft) async {
+    _validateDraft(draft);
+    final envelope = await client.post(
+      'mobile/customers/create',
+      body: draft.toPayload(includeNotes: true),
+    );
+    final data = apiObjectMap(envelope.data, 'customer_create');
+    final id = _positiveInt(data['id'], 'customer_create.id');
+    return loadCustomer(id);
+  }
+
+  Future<SafeContractsCustomer> update(int id, CustomerDraft draft) async {
+    if (id <= 0) throw ArgumentError('Customer ID must be positive.');
+    _validateDraft(draft);
+    await client.patch(
+      'mobile/customers/$id/edit',
+      // Notes are deliberately omitted because the read endpoint cannot
+      // provide the current value and an edit must never erase unseen data.
+      body: draft.toPayload(includeNotes: false),
+    );
+    return loadCustomer(id);
+  }
+
+  void _validateDraft(CustomerDraft draft) {
+    final name = draft.name.trim();
+    if (name.isEmpty || name.length > 191) {
+      throw ArgumentError('Customer name is required and is too long.');
+    }
+    final email = _payloadText(draft.email);
+    if (email != null && !email.contains('@')) {
+      throw ArgumentError('Customer email is invalid.');
+    }
   }
 }
 
@@ -159,11 +226,15 @@ final class CustomersController extends ChangeNotifier {
     required this.repository,
     required int pageSize,
     required this.canAccess,
+    this.canCreate = false,
+    this.canEdit = false,
   }) : pageSize = pageSize.clamp(1, 100).toInt();
 
   final CustomersRepository repository;
   final int pageSize;
   final bool canAccess;
+  final bool canCreate;
+  final bool canEdit;
 
   CustomersLoadState state = CustomersLoadState.idle;
   CustomerDetailLoadState detailState = CustomerDetailLoadState.idle;
@@ -173,11 +244,10 @@ final class CustomersController extends ChangeNotifier {
   String? detailErrorMessage;
   int? selectedCustomerId;
   SafeContractsCustomer? selectedCustomer;
+  bool mutationInFlight = false;
 
   Future<void> ensureLoaded() async {
-    if (state == CustomersLoadState.idle) {
-      await loadPage(1);
-    }
+    if (state == CustomersLoadState.idle) await loadPage(1);
   }
 
   Future<void> loadPage(int page) async {
@@ -188,14 +258,10 @@ final class CustomersController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (page < 1 || page > 5) {
-      return;
-    }
-
+    if (page < 1 || page > 5) return;
     state = CustomersLoadState.loading;
     errorMessage = null;
     notifyListeners();
-
     try {
       currentPage = await repository.loadPage(
         page: page,
@@ -213,76 +279,53 @@ final class CustomersController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refresh() async {
-    await loadPage(currentPage?.page ?? 1);
-  }
+  Future<void> refresh() => loadPage(currentPage?.page ?? 1);
 
   Future<void> previousPage() async {
     final page = currentPage?.page ?? 1;
-    if (page > 1) {
-      await loadPage(page - 1);
-    }
+    if (page > 1) await loadPage(page - 1);
   }
 
   Future<void> nextPage() async {
-    final value = currentPage;
-    if (value != null && value.hasMore && value.page < 5) {
-      await loadPage(value.page + 1);
+    final page = currentPage;
+    if (page != null && page.hasMore && page.page < 5) {
+      await loadPage(page.page + 1);
     }
   }
 
   Future<void> setOrder(String nextOrder) async {
-    if (nextOrder != 'asc' && nextOrder != 'desc') {
-      return;
-    }
-    if (order == nextOrder && currentPage != null) {
-      return;
-    }
+    if (nextOrder != 'asc' && nextOrder != 'desc') return;
+    if (order == nextOrder && currentPage != null) return;
     order = nextOrder;
     await loadPage(1);
   }
 
   Future<void> openCustomer(int id) async {
-    if (!canAccess) {
+    if (!canAccess || id <= 0) {
       selectedCustomerId = id > 0 ? id : null;
       selectedCustomer = null;
-      detailErrorMessage = 'Customer access is not authorized.';
+      detailErrorMessage =
+          'Customer access is not authorized or ID is invalid.';
       detailState = CustomerDetailLoadState.error;
       notifyListeners();
       return;
     }
-    if (id <= 0) {
-      selectedCustomerId = null;
-      selectedCustomer = null;
-      detailErrorMessage = 'Customer ID is invalid.';
-      detailState = CustomerDetailLoadState.error;
-      notifyListeners();
-      return;
-    }
-
     selectedCustomerId = id;
     selectedCustomer = null;
     detailErrorMessage = null;
     detailState = CustomerDetailLoadState.loading;
     notifyListeners();
-
     try {
       final customer = await repository.loadCustomer(id);
-      if (selectedCustomerId != id) {
-        return;
-      }
+      if (selectedCustomerId != id) return;
       selectedCustomer = customer;
       detailState = CustomerDetailLoadState.ready;
     } on SafeContractsApiException catch (error) {
-      if (selectedCustomerId != id) {
-        return;
-      }
+      if (selectedCustomerId != id) return;
       detailErrorMessage = error.message;
       detailState = CustomerDetailLoadState.error;
     } on Object catch (error) {
-      if (selectedCustomerId != id) {
-        return;
-      }
+      if (selectedCustomerId != id) return;
       detailErrorMessage = error.toString();
       detailState = CustomerDetailLoadState.error;
     }
@@ -295,6 +338,31 @@ final class CustomersController extends ChangeNotifier {
     detailErrorMessage = null;
     detailState = CustomerDetailLoadState.idle;
     notifyListeners();
+  }
+
+  Future<SafeContractsCustomer> save({
+    int? id,
+    required CustomerDraft draft,
+  }) async {
+    if (id == null && !canCreate) {
+      throw StateError('Customer creation is not authorized.');
+    }
+    if (id != null && !canEdit) {
+      throw StateError('Customer editing is not authorized.');
+    }
+    mutationInFlight = true;
+    notifyListeners();
+    try {
+      final saved = id == null
+          ? await repository.create(draft)
+          : await repository.update(id, draft);
+      await loadPage(1);
+      await openCustomer(saved.id);
+      return saved;
+    } finally {
+      mutationInFlight = false;
+      notifyListeners();
+    }
   }
 }
 
@@ -335,23 +403,23 @@ String _requiredText(Object? value, String field) {
 }
 
 String? _optionalText(Object? value) {
-  if (value == null) {
-    return null;
-  }
+  if (value == null) return null;
   if (value is! String) {
     throw const FormatException(
-      'Customer text field must be a string or null.',
-    );
+        'Customer text field must be a string or null.');
   }
   final normalized = value.trim();
   return normalized.isEmpty ? null : normalized;
 }
 
+String? _payloadText(String? value) {
+  final normalized = value?.trim();
+  return normalized == null || normalized.isEmpty ? null : normalized;
+}
+
 String? _scope(Object? value) {
   final normalized = _optionalText(value);
-  if (normalized == null) {
-    return null;
-  }
+  if (normalized == null) return null;
   if (normalized != 'all' && normalized != 'assigned') {
     throw const FormatException('Customer page scope metadata is invalid.');
   }
@@ -360,12 +428,8 @@ String? _scope(Object? value) {
 
 bool _boolish(Object? value, String field) {
   return switch (value) {
-    true => true,
-    false => false,
-    1 => true,
-    0 => false,
-    '1' => true,
-    '0' => false,
+    true || 1 || '1' => true,
+    false || 0 || '0' => false,
     _ => throw FormatException('$field must be boolean-like.'),
   };
 }
