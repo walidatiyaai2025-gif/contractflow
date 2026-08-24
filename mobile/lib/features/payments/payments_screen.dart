@@ -7,6 +7,7 @@ import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_models.dart';
 import '../ui/safecontracts_design.dart';
+import '../ui/safecontracts_tokens.dart';
 import 'collection_entry_dialog.dart';
 import 'payments.dart';
 
@@ -45,6 +46,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
   String? _error;
   PaymentPage? _page;
   int _pageNumber = 1;
+  bool _requestInFlight = false;
 
   @override
   void initState() {
@@ -64,6 +66,8 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Future<void> _load(int page, {bool background = false}) async {
+    if (_requestInFlight) return;
+    _requestInFlight = true;
     final keepVisible = background && _page != null;
     if (!keepVisible) {
       setState(() {
@@ -92,6 +96,8 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
         _error = error.toString();
         _loading = false;
       });
+    } finally {
+      _requestInFlight = false;
     }
   }
 
@@ -622,6 +628,7 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   String? _errorTitle;
   String? _errorMessage;
   SafeContractsPayment? _payment;
+  bool _requestInFlight = false;
 
   @override
   void initState() {
@@ -630,6 +637,8 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   }
 
   Future<void> _load() async {
+    if (_requestInFlight) return;
+    _requestInFlight = true;
     setState(() {
       _loading = true;
       _errorTitle = null;
@@ -662,6 +671,8 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
         _errorTitle = 'Unable to load payment';
         _errorMessage = error.toString();
       });
+    } finally {
+      _requestInFlight = false;
     }
   }
 
@@ -679,8 +690,6 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     return Scaffold(
       backgroundColor: SafeContractsVisual.background,
       appBar: AppBar(
-        backgroundColor: SafeContractsVisual.background,
-        surfaceTintColor: Colors.transparent,
         title: Text(l10n.t('Payment details')),
       ),
       body: _loading
@@ -707,7 +716,7 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                         color: SafeContractsVisual.navy,
                         child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                          padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
                           children: [
                             SafeContractsPremiumHeader(
                               title: payment.reference ??
@@ -731,23 +740,24 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                               ),
                               trailing: _HeaderStatus(payment: payment),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             _PaymentBalanceHero(
                               payment: payment,
                               currency: widget.currency,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             SafeContractsSectionTitle(
                               title: l10n.isArabic
                                   ? 'بيانات الاستحقاق'
                                   : 'Due information',
                               subtitle: l10n.isArabic
-                                  ? 'تواريخ وقيمة الدفعة كما وردت من الخادم'
-                                  : 'Server-authoritative payment dates and values',
+                                  ? 'التواريخ والقيم من الخادم'
+                                  : 'Dates and values from the server',
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 6),
                             SafeContractsSurface(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
                               child: Column(
                                 children: [
                                   _DetailValue(
@@ -798,15 +808,16 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             SafeContractsSectionTitle(
                               title: l10n.isArabic
                                   ? 'السياق التجاري'
                                   : 'Business context',
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 6),
                             SafeContractsSurface(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
                               child: Column(
                                 children: [
                                   _DetailValue(
@@ -853,7 +864,7 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                   Expanded(
                                     child: Text(
                                       l10n.t(
-                                        'Dates, balances and status are server-authoritative. Mobile does not recalculate receivables.',
+                                        'Server values are shown as received; mobile does not recalculate them.',
                                       ),
                                       style: Theme.of(context)
                                           .textTheme
@@ -1011,14 +1022,9 @@ final class _PaymentBalanceHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            _displayMoney(context, payment.remainingAmount, currency),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: SafeContractsVisual.ink,
-                  fontWeight: FontWeight.w900,
-                ),
+          _PaymentMoneyAmount(
+            amount: payment.remainingAmount,
+            currency: currency,
           ),
           const SizedBox(height: 2),
           Text(
@@ -1029,6 +1035,56 @@ final class _PaymentBalanceHero extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+final class _PaymentMoneyAmount extends StatelessWidget {
+  const _PaymentMoneyAmount({required this.amount, required this.currency});
+
+  final String amount;
+  final MobileCurrencyConfig currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final token = currency.displayToken;
+    final formatted = _displayMoney(context, amount, currency);
+    final numeric =
+        token.isEmpty ? formatted : formatted.replaceFirst(token, '').trim();
+    final scale =
+        SafeContractsTypography.viewportScale(MediaQuery.sizeOf(context).width);
+    final amountStyle = Theme.of(context).textTheme.headlineMedium?.copyWith(
+          color: SafeContractsVisual.ink,
+          fontSize: SafeContractsTypography.headlineMedium * scale,
+          height: SafeContractsTypography.headlineHeight,
+          fontWeight: FontWeight.w900,
+        );
+    final currencyStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: SafeContractsVisual.muted,
+          fontSize: SafeContractsTypography.labelLarge * scale,
+          height: SafeContractsTypography.labelHeight,
+          fontWeight: FontWeight.w800,
+        );
+    if (token.isEmpty) {
+      return Text(formatted,
+          maxLines: 1, overflow: TextOverflow.ellipsis, style: amountStyle);
+    }
+    final children = l10n.isArabic
+        ? <InlineSpan>[
+            TextSpan(text: numeric, style: amountStyle),
+            const TextSpan(text: ' '),
+            TextSpan(text: token, style: currencyStyle),
+          ]
+        : <InlineSpan>[
+            TextSpan(text: token, style: currencyStyle),
+            const TextSpan(text: ' '),
+            TextSpan(text: numeric, style: amountStyle),
+          ];
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: AlignmentDirectional.centerStart,
+      child: Text.rich(TextSpan(children: children), maxLines: 1),
     );
   }
 }
@@ -1050,7 +1106,7 @@ final class _DetailValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 7),
         decoration: BoxDecoration(
           border: last
               ? null
@@ -1062,15 +1118,15 @@ final class _DetailValue extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
                 color: SafeContractsVisual.navySoft,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, size: 18, color: SafeContractsVisual.navy),
+              child: Icon(icon, size: 16, color: SafeContractsVisual.navy),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

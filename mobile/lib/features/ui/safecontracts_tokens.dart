@@ -77,6 +77,15 @@ abstract final class SafeContractsTypography {
   static const titleHeight = 1.22;
   static const bodyHeight = 1.38;
   static const labelHeight = 1.22;
+
+  /// Bounded width adaptation for compact phone surfaces. This deliberately
+  /// does not override the user's accessibility text scale; it only trims the
+  /// repository-owned base metrics on the narrowest supported widths.
+  static double viewportScale(double viewportWidth) {
+    if (viewportWidth <= 320) return 0.92;
+    if (viewportWidth <= 360) return 0.96;
+    return 1.0;
+  }
 }
 
 abstract final class SafeContractsShadows {
