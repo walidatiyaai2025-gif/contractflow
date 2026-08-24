@@ -10,10 +10,28 @@
     return;
   }
 
-  // WordPress renders these routes synchronously. For the financial workspaces,
-  // convert a genuinely empty server tbody into a translated empty state. The
-  // text is provided by wp_localize_script/gettext in PHP; JavaScript owns no
-  // parallel Arabic/English dictionary.
+  const pageSize = 25;
+  const rtl = (document.documentElement.dir || '').toLowerCase() === 'rtl'
+    || window.getComputedStyle(document.body).direction === 'rtl';
+
+  // Keep wide financial tables in a dedicated LTR scroll coordinate system.
+  // The table itself retains the WordPress document direction, so Arabic cells,
+  // column order and semantic reading direction stay RTL. This prevents a wide
+  // RTL table's negative scroll origin from enlarging the document viewport.
+  root.querySelectorAll('.safecontracts-table-card table.widefat').forEach((table) => {
+    if (table.parentElement?.classList.contains('safecontracts-w2-table-scroll')) {
+      return;
+    }
+    const wrapper = document.createElement('div');
+    wrapper.className = 'safecontracts-w2-table-scroll';
+    table.parentNode.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
+    table.dir = rtl ? 'rtl' : 'ltr';
+  });
+
+  // WordPress renders these routes synchronously. Convert a genuinely empty
+  // server tbody into a translated empty state. Translation comes from PHP
+  // gettext/wp_localize_script; JavaScript owns no parallel language catalog.
   const emptyStateRoutes = new Set([
     'safecontracts-payments',
     'safecontracts-collections',
@@ -40,14 +58,8 @@
     });
   }
 
-  // Client pagination is presentation-only. Every authorized server row stays
-  // in the DOM and no monetary value, total, status or direction is recomputed.
-  // Symbols and numerals are intentionally language-neutral; arrow direction
-  // flips with the actual WordPress document direction.
-  const pageSize = 25;
-  const rtl = (document.documentElement.dir || '').toLowerCase() === 'rtl'
-    || window.getComputedStyle(document.body).direction === 'rtl';
-
+  // Presentation-only pagination: authorized rows remain in the DOM and no
+  // amount, total, status, currency or financial direction is recomputed.
   root.querySelectorAll('.safecontracts-table-card table.widefat').forEach((table) => {
     const tbody = table.tBodies[0];
     if (!tbody) {
@@ -92,24 +104,25 @@
       if (current > 1) {
         current -= 1;
         render();
-        table.scrollIntoView({block: 'nearest'});
+        table.closest('.safecontracts-w2-table-scroll')?.scrollIntoView({block: 'nearest'});
       }
     });
     next.addEventListener('click', () => {
       if (current < pages) {
         current += 1;
         render();
-        table.scrollIntoView({block: 'nearest'});
+        table.closest('.safecontracts-w2-table-scroll')?.scrollIntoView({block: 'nearest'});
       }
     });
 
     nav.append(previous, position, next);
-    table.insertAdjacentElement('afterend', nav);
+    const scrollWrapper = table.closest('.safecontracts-w2-table-scroll');
+    (scrollWrapper || table).insertAdjacentElement('afterend', nav);
     render();
   });
 
   // Follow-up operations are fixed by the backend. Progressive disclosure only
-  // hides irrelevant date inputs; it does not create new actions or mutations.
+  // hides irrelevant date inputs; it never creates an unsupported operation.
   if (page === 'safecontracts-followups') {
     const operation = root.querySelector('select[name="followup_operation"]');
     const promised = root.querySelector('input[name="promised_date"]');
