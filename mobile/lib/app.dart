@@ -270,8 +270,7 @@ final class _BootstrapViewState extends State<_BootstrapView> {
               languageCode: widget.languageCode,
               onLanguageChanged: widget.onLanguageChanged,
               usingConfigDefaults: widget.controller.usingConfigDefaults,
-              onClearSession: () =>
-                  unawaited(_logoutFromAuthenticatedShell()),
+              onClearSession: () => unawaited(_logoutFromAuthenticatedShell()),
             );
           }
         }
