@@ -266,8 +266,9 @@ final class _BootstrapViewState extends State<_BootstrapView> {
           );
         }
 
-        final isLoading = widget.controller.state == MobileBootstrapState.idle ||
-            widget.controller.state == MobileBootstrapState.loading;
+        final isLoading =
+            widget.controller.state == MobileBootstrapState.idle ||
+                widget.controller.state == MobileBootstrapState.loading;
         return SafeContractsSplash(
           label: isLoading
               ? l10n.t('Loading')
@@ -287,9 +288,8 @@ final class _BootstrapViewState extends State<_BootstrapView> {
                       'SafeContracts mobile is unavailable.',
                 ),
           retryLabel: l10n.t('Retry session'),
-          onRetry: isLoading
-              ? null
-              : () => unawaited(widget.controller.bootstrap()),
+          onRetry:
+              isLoading ? null : () => unawaited(widget.controller.bootstrap()),
         );
       },
     );
