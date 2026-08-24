@@ -68,6 +68,7 @@ jobs:
           python3 -m py_compile /tmp/alkenzy_global_list_closure.py
 
           stage=apply-production
+          mkdir -p mobile/lib/core/widgets
           python3 /tmp/alkenzy_global_list_closure.py > /tmp/alkenzy_global_apply.log 2>&1 || { cat /tmp/alkenzy_global_apply.log; false; }
 
           stage=php
