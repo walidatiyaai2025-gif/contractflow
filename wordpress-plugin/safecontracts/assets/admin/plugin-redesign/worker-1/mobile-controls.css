@@ -1,0 +1,21 @@
+/* Worker #1 responsive control hardening for SC-013..SC-016. */
+.safecontracts-worker1__field-grid input:not([type="checkbox"]):not([type="radio"]),
+.safecontracts-worker1__field-grid select,
+.safecontracts-worker1__field-grid textarea,
+.safecontracts-worker1__field-full input:not([type="checkbox"]):not([type="radio"]),
+.safecontracts-worker1__field-full select,
+.safecontracts-worker1__field-full textarea {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+@media (max-width: 782px) {
+  .safecontracts-worker1 input[type="file"] {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+}
