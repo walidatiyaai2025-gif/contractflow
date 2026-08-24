@@ -94,22 +94,25 @@ void main() {
     },
   );
 
-  test(
-    'SC-MOBILE-053 dashboard uses lifecycle visual hierarchy with real data',
-    () {
-      final source = File('lib/features/dashboard/dashboard_screen.dart')
-          .readAsStringSync();
+  test('SC-MOBILE-053 dashboard uses compact server-backed tab hierarchy', () {
+    final source =
+        File('lib/features/dashboard/dashboard_screen.dart').readAsStringSync();
 
-      expect(source, contains('FilterChip'));
-      expect(source, contains('_PaymentLifecycleOverview'));
-      expect(source, contains('_LifecycleRingPainter'));
-      expect(source, contains('CustomPaint'));
-      expect(source, contains('_PaymentPipeline'));
-      expect(source, contains('SingleChildScrollView'));
-      expect(source, contains('_RecentActivity'));
-      expect(source, contains('l10n.money'));
-      expect(source, contains('DashboardKpis'));
-      expect(source, contains('DashboardRecord'));
-    },
-  );
+    expect(source, contains('DropdownButton<String>'));
+    expect(source, contains('_CompactFinancialRingPainter'));
+    expect(source, contains('CustomPaint'));
+    expect(source, contains('_DashboardTabs'));
+    expect(source, contains('DashboardTab.overview'));
+    expect(source, contains('DashboardTab.payments'));
+    expect(source, contains('DashboardTab.contracts'));
+    expect(source, contains('DashboardTab.collections'));
+    expect(source, contains('_TabSwipeRegion'));
+    expect(source, contains('_OverviewTab'));
+    expect(source, contains('l10n.money'));
+    expect(source, contains('DashboardKpis'));
+    expect(source, contains('DashboardRecord'));
+    expect(source, isNot(contains('FilterChip')));
+    expect(source, isNot(contains('_PaymentPipeline')));
+    expect(source, isNot(contains('SingleChildScrollView')));
+  });
 }
