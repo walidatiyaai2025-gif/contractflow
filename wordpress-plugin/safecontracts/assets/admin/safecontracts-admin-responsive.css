@@ -83,8 +83,13 @@
 
   .safecontracts-kpi-grid,
   .safecontracts-role-grid,
-  .safecontracts-capability-list {
-    grid-template-columns: 1fr;
+  .safecontracts-capability-list,
+  .safecontracts-split-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .safecontracts-split-layout > * {
+    min-width: 0;
   }
 
   .safecontracts-filter-bar,
@@ -106,6 +111,7 @@
   .safecontracts-settings select,
   .safecontracts-settings textarea,
   .safecontracts-export-form .button {
+    box-sizing: border-box;
     width: 100%;
     max-width: 100%;
     min-width: 0;
