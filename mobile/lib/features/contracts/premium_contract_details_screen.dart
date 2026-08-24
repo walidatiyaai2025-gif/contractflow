@@ -13,12 +13,16 @@ final class PremiumContractDetailsScreen extends StatefulWidget {
     required this.repository,
     required this.contractId,
     required this.currency,
+    this.onEditContract,
+    this.onOpenLegacy,
     super.key,
   });
 
   final ContractsRepository repository;
   final int contractId;
   final MobileCurrencyConfig currency;
+  final VoidCallback? onEditContract;
+  final VoidCallback? onOpenLegacy;
 
   @override
   State<PremiumContractDetailsScreen> createState() =>
@@ -69,6 +73,20 @@ final class _PremiumContractDetailsScreenState
         foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         title: Text(ar ? 'تفاصيل العقد' : 'Contract details'),
+        actions: [
+          if (widget.onOpenLegacy != null)
+            IconButton(
+              tooltip: ar ? 'عرض التفاصيل القديمة' : 'Open legacy details',
+              onPressed: widget.onOpenLegacy,
+              icon: const Icon(Icons.layers_outlined),
+            ),
+          if (widget.onEditContract != null)
+            IconButton(
+              tooltip: ar ? 'تعديل العقد' : 'Edit contract',
+              onPressed: widget.onEditContract,
+              icon: const Icon(Icons.edit_outlined),
+            ),
+        ],
         flexibleSpace: const DecoratedBox(
           decoration: BoxDecoration(
             gradient: SafeContractsVisual.premiumHeaderGradient,
