@@ -113,7 +113,7 @@ final class AdminShell
             </div>
             <span class="safecontracts-dashboard-reference-heading__icon dashicons dashicons-dashboard" aria-hidden="true"></span>
         </div>
-        <nav class="safecontracts-action-strip" aria-label="<?php echo esc_attr__('Dashboard quick actions', 'safecontracts'); ?>">
+        <nav class="safecontracts-action-strip" aria-label="<?php echo esc_attr(__('Dashboard quick actions', 'safecontracts')); ?>">
             <?php if (current_user_can(Capabilities::CREATE_CUSTOMERS)) : ?>
                 <?php self::actionTile(CustomersPage::SLUG, 'dashicons-admin-users', __('Add customer', 'safecontracts'), __('Create or manage a customer record', 'safecontracts')); ?>
             <?php endif; ?>
