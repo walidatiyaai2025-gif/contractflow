@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
+import '../ui/safecontracts_components.dart';
 import '../ui/safecontracts_design.dart';
+import '../ui/safecontracts_form.dart';
+import '../ui/safecontracts_splash.dart';
+import '../ui/safecontracts_tokens.dart';
 import 'mobile_auth.dart';
 
 final class SafeContractsLoginScreen extends StatefulWidget {
@@ -55,9 +59,7 @@ final class _SafeContractsLoginScreenState
       _password.clear();
       await widget.onAuthenticated();
     } finally {
-      if (mounted) {
-        setState(() => _bootstrapping = false);
-      }
+      if (mounted) setState(() => _bootstrapping = false);
     }
   }
 
@@ -65,7 +67,11 @@ final class _SafeContractsLoginScreenState
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     if (_bootstrapping) {
-      return _BlockingBootstrapSplash(label: l10n.t('Loading'));
+      return SafeContractsSplash(
+        label: l10n.t('Loading'),
+        environmentLabel: l10n.isArabic ? 'تجهيز مساحة العمل' : 'Preparing workspace',
+        blockBack: true,
+      );
     }
 
     final selectedLanguage = widget.languageCode == 'ar' ? 'ar' : 'en';
@@ -74,303 +80,219 @@ final class _SafeContractsLoginScreenState
       body: Stack(
         fit: StackFit.expand,
         children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: <double>[0, 0.48, 0.72, 1],
-                colors: <Color>[
-                  SafeContractsVisual.navyDeep,
-                  SafeContractsVisual.navy,
-                  SafeContractsVisual.background,
-                  SafeContractsVisual.background,
-                ],
-              ),
-            ),
-          ),
+          const _LoginBackground(),
           SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: AnimatedBuilder(
-                    animation: widget.controller,
-                    builder: (context, child) {
-                      final submitting = widget.controller.state ==
-                          MobileLoginState.submitting;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final horizontal = constraints.maxWidth <= 360
+                    ? SafeContractsSpacing.screenNarrow
+                    : SafeContractsSpacing.screen;
+                return SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontal,
+                    SafeContractsSpacing.sm,
+                    horizontal,
+                    SafeContractsSpacing.xl,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 470),
+                      child: AnimatedBuilder(
+                        animation: widget.controller,
+                        builder: (context, child) {
+                          final submitting = widget.controller.state ==
+                              MobileLoginState.submitting;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              if (widget.onBack != null)
-                                IconButton(
-                                  tooltip: l10n.t('Back'),
-                                  onPressed: submitting ? null : widget.onBack,
-                                  style: IconButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    backgroundColor:
-                                        Colors.white.withValues(alpha: 0.08),
-                                  ),
-                                  icon: const Icon(Icons.arrow_back_rounded),
-                                ),
-                              const Spacer(),
-                              SegmentedButton<String>(
-                                segments: <ButtonSegment<String>>[
-                                  ButtonSegment<String>(
-                                    value: 'en',
-                                    label: Text(l10n.t('English')),
-                                  ),
-                                  ButtonSegment<String>(
-                                    value: 'ar',
-                                    label: Text(l10n.t('Arabic')),
-                                  ),
-                                ],
-                                selected: <String>{selectedLanguage},
-                                onSelectionChanged: submitting ||
-                                        widget.onLanguageChanged == null
-                                    ? null
-                                    : (selection) => widget
-                                        .onLanguageChanged!(selection.first),
-                                showSelectedIcon: false,
-                                style: ButtonStyle(
-                                  foregroundColor:
-                                      WidgetStateProperty.resolveWith((states) {
-                                    return states.contains(WidgetState.selected)
-                                        ? SafeContractsVisual.navyDeep
-                                        : Colors.white;
-                                  }),
-                                  backgroundColor:
-                                      WidgetStateProperty.resolveWith((states) {
-                                    return states.contains(WidgetState.selected)
-                                        ? SafeContractsVisual.roseGoldSoft
-                                        : Colors.white.withValues(alpha: 0.08);
-                                  }),
-                                  side: WidgetStateProperty.all(
-                                    BorderSide(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.22),
-                                    ),
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                ),
+                              _LoginTopBar(
+                                selectedLanguage: selectedLanguage,
+                                submitting: submitting,
+                                onBack: widget.onBack,
+                                onLanguageChanged: widget.onLanguageChanged,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(22),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.16),
+                              const SizedBox(height: SafeContractsSpacing.xl),
+                              const _LoginBrandHero(),
+                              const SizedBox(height: SafeContractsSpacing.xl),
+                              SafeContractsCard(
+                                accent: SafeContractsVisual.roseGold,
+                                padding: const EdgeInsets.all(
+                                  SafeContractsSpacing.lg,
                                 ),
-                              ),
-                              child: const SafeContractsBrandMark(
-                                size: 76,
-                                borderRadius: 18,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          Text(
-                            SafeContractsBrand.name,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.7,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            l10n.isArabic
-                                ? 'إدارة العقود والمدفوعات والتحصيلات في تجربة تنفيذية واحدة.'
-                                : 'Contracts, payments and collections in one executive workspace.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyLarge
-                                ?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.76),
-                                  height: 1.55,
-                                ),
-                          ),
-                          const SizedBox(height: 28),
-                          SafeContractsSurface(
-                            accent: SafeContractsVisual.roseGold,
-                            padding: const EdgeInsets.all(22),
-                            child: Form(
-                              key: _formKey,
-                              child: AutofillGroup(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Text(
-                                      l10n.isArabic
-                                          ? 'تسجيل الدخول'
-                                          : 'Sign in',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            color: SafeContractsVisual.navy,
-                                            fontWeight: FontWeight.w900,
+                                child: Form(
+                                  key: _formKey,
+                                  child: AutofillGroup(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Text(
+                                          l10n.isArabic
+                                              ? 'تسجيل الدخول'
+                                              : 'Sign in',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineSmall
+                                              ?.copyWith(
+                                                color:
+                                                    SafeContractsVisual.navyDeep,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                        ),
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.xxs,
+                                        ),
+                                        Text(
+                                          l10n.t(
+                                            'Sign in with your WordPress username and password',
                                           ),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      l10n.t(
-                                        'Sign in with your WordPress username and password',
-                                      ),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: SafeContractsVisual.muted,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 18),
-                                    TextFormField(
-                                      controller: _username,
-                                      enabled: !submitting,
-                                      autofillHints: const <String>[
-                                        AutofillHints.username,
-                                        AutofillHints.email,
-                                      ],
-                                      textInputAction: TextInputAction.next,
-                                      autocorrect: false,
-                                      enableSuggestions: false,
-                                      decoration: InputDecoration(
-                                        labelText: l10n.t('Username'),
-                                        prefixIcon:
-                                            const Icon(Icons.person_outline),
-                                      ),
-                                      validator: (value) =>
-                                          value == null || value.trim().isEmpty
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color:
+                                                    SafeContractsVisual.muted,
+                                                height: 1.45,
+                                              ),
+                                        ),
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.lg,
+                                        ),
+                                        SafeContractsTextField(
+                                          controller: _username,
+                                          enabled: !submitting,
+                                          autofillHints: const <String>[
+                                            AutofillHints.username,
+                                            AutofillHints.email,
+                                          ],
+                                          textInputAction: TextInputAction.next,
+                                          autocorrect: false,
+                                          enableSuggestions: false,
+                                          label: l10n.t('Username'),
+                                          icon: Icons.person_outline_rounded,
+                                          validator: (value) => value == null ||
+                                                  value.trim().isEmpty
                                               ? l10n.t('Enter your username.')
                                               : null,
-                                    ),
-                                    const SizedBox(height: 14),
-                                    TextFormField(
-                                      controller: _password,
-                                      enabled: !submitting,
-                                      obscureText: _obscurePassword,
-                                      autofillHints: const <String>[
-                                        AutofillHints.password,
-                                      ],
-                                      textInputAction: TextInputAction.done,
-                                      onFieldSubmitted: submitting
-                                          ? null
-                                          : (_) => unawaited(_submit()),
-                                      decoration: InputDecoration(
-                                        labelText: l10n.t('Password'),
-                                        prefixIcon:
-                                            const Icon(Icons.lock_outline),
-                                        suffixIcon: IconButton(
-                                          onPressed: submitting
+                                        ),
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.sm,
+                                        ),
+                                        SafeContractsPasswordField(
+                                          controller: _password,
+                                          enabled: !submitting,
+                                          obscureText: _obscurePassword,
+                                          label: l10n.t('Password'),
+                                          onToggleVisibility: () => setState(() {
+                                            _obscurePassword =
+                                                !_obscurePassword;
+                                          }),
+                                          onSubmitted: submitting
                                               ? null
-                                              : () => setState(() {
-                                                    _obscurePassword =
-                                                        !_obscurePassword;
-                                                  }),
-                                          icon: Icon(
-                                            _obscurePassword
-                                                ? Icons.visibility_outlined
-                                                : Icons.visibility_off_outlined,
-                                          ),
+                                              : (_) => unawaited(_submit()),
+                                          validator: (value) =>
+                                              value == null || value.isEmpty
+                                                  ? l10n.t(
+                                                      'Enter your password.',
+                                                    )
+                                                  : null,
                                         ),
-                                      ),
-                                      validator: (value) =>
-                                          value == null || value.isEmpty
-                                              ? l10n.t('Enter your password.')
-                                              : null,
-                                    ),
-                                    const SizedBox(height: 6),
-                                    CheckboxListTile(
-                                      value: widget.controller.rememberMe,
-                                      onChanged: submitting
-                                          ? null
-                                          : (value) => widget.controller
-                                              .setRememberMe(value ?? false),
-                                      contentPadding: EdgeInsets.zero,
-                                      controlAffinity:
-                                          ListTileControlAffinity.leading,
-                                      title: Text(l10n.t('Remember me')),
-                                      subtitle: Text(
-                                        l10n.t(
-                                          'Keep me signed in on this device. Your password is never stored.',
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.xxs,
                                         ),
-                                      ),
-                                    ),
-                                    if (widget.controller.errorMessage !=
-                                        null) ...[
-                                      const SizedBox(height: 8),
-                                      Semantics(
-                                        liveRegion: true,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: SafeContractsVisual.redSoft,
-                                            borderRadius:
-                                                BorderRadius.circular(14),
-                                            border: Border.all(
-                                              color: SafeContractsVisual.red
-                                                  .withValues(alpha: 0.28),
+                                        CheckboxListTile(
+                                          value: widget.controller.rememberMe,
+                                          onChanged: submitting
+                                              ? null
+                                              : (value) => widget.controller
+                                                  .setRememberMe(value ?? false),
+                                          contentPadding: EdgeInsets.zero,
+                                          dense: true,
+                                          controlAffinity:
+                                              ListTileControlAffinity.leading,
+                                          title: Text(
+                                            l10n.t('Remember me'),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
                                             ),
                                           ),
-                                          child: Text(
-                                            l10n.rawMessage(
-                                              widget.controller.errorMessage!,
+                                          subtitle: Text(
+                                            l10n.t(
+                                              'Keep me signed in on this device. Your password is never stored.',
                                             ),
                                             style: const TextStyle(
-                                              color:
-                                                  SafeContractsVisual.redDeep,
+                                              color: SafeContractsVisual.muted,
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                    const SizedBox(height: 18),
-                                    FilledButton.icon(
-                                      onPressed: submitting
-                                          ? null
-                                          : () => unawaited(_submit()),
-                                      icon: submitting
-                                          ? const SizedBox.square(
-                                              dimension: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: Colors.white,
-                                              ),
-                                            )
-                                          : const Icon(Icons.login_rounded),
-                                      label: Text(
-                                        l10n.t(
-                                          submitting
-                                              ? 'Signing in…'
-                                              : 'Sign in',
+                                        if (widget.controller.errorMessage !=
+                                            null) ...[
+                                          const SizedBox(
+                                            height: SafeContractsSpacing.xs,
+                                          ),
+                                          _AuthenticationError(
+                                            message: l10n.rawMessage(
+                                              widget.controller.errorMessage!,
+                                            ),
+                                          ),
+                                        ],
+                                        const SizedBox(
+                                          height: SafeContractsSpacing.md,
                                         ),
-                                      ),
+                                        SafeContractsButton(
+                                          key: const Key('loginSubmit'),
+                                          label: l10n.t(
+                                            submitting
+                                                ? 'Signing in…'
+                                                : 'Sign in',
+                                          ),
+                                          icon: Icons.login_rounded,
+                                          loading: submitting,
+                                          onPressed: submitting
+                                              ? null
+                                              : () => unawaited(_submit()),
+                                          variant:
+                                              SafeContractsButtonVariant.primary,
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                              const SizedBox(height: SafeContractsSpacing.md),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.lock_outline_rounded,
+                                    size: SafeContractsIconSizes.xs,
+                                    color: SafeContractsVisual.champagne,
+                                  ),
+                                  const SizedBox(width: SafeContractsSpacing.xs),
+                                  Flexible(
+                                    child: Text(
+                                      l10n.isArabic
+                                          ? 'دخول آمن للمستخدمين المصرح لهم فقط'
+                                          : 'Secure access for authorized users only',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.62,
+                                        ),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -379,69 +301,169 @@ final class _SafeContractsLoginScreenState
   }
 }
 
-final class _BlockingBootstrapSplash extends StatelessWidget {
-  const _BlockingBootstrapSplash({required this.label});
+final class _LoginTopBar extends StatelessWidget {
+  const _LoginTopBar({
+    required this.selectedLanguage,
+    required this.submitting,
+    required this.onBack,
+    required this.onLanguageChanged,
+  });
 
-  final String label;
+  final String selectedLanguage;
+  final bool submitting;
+  final VoidCallback? onBack;
+  final ValueChanged<String>? onLanguageChanged;
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        backgroundColor: SafeContractsVisual.navyDeep,
-        body: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: SafeContractsVisual.premiumHeaderGradient,
+    return Row(
+      children: [
+        if (onBack != null)
+          IconButton(
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: submitting ? null : onBack,
+            style: IconButton.styleFrom(
+              foregroundColor: Colors.white,
+              disabledForegroundColor: Colors.white38,
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
+            ),
+            icon: const Icon(Icons.arrow_back_rounded),
           ),
-          child: SafeArea(
-            child: Center(
-              child: Semantics(
-                liveRegion: true,
-                label: label,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                      child: const SafeContractsBrandMark(
-                        size: 88,
-                        borderRadius: 26,
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    Text(
-                      SafeContractsBrand.name,
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                              ),
-                    ),
-                    const SizedBox(height: 18),
-                    const SizedBox.square(
-                      dimension: 34,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        color: SafeContractsVisual.roseGold,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.78),
-                      ),
-                    ),
-                  ],
+        const Spacer(),
+        SegmentedButton<String>(
+          segments: const <ButtonSegment<String>>[
+            ButtonSegment<String>(value: 'en', label: Text('EN')),
+            ButtonSegment<String>(value: 'ar', label: Text('ع')),
+          ],
+          selected: <String>{selectedLanguage},
+          onSelectionChanged: submitting || onLanguageChanged == null
+              ? null
+              : (selection) => onLanguageChanged!(selection.first),
+          showSelectedIcon: false,
+          style: ButtonStyle(
+            foregroundColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.selected)
+                  ? SafeContractsVisual.navyDeep
+                  : Colors.white,
+            ),
+            backgroundColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.selected)
+                  ? SafeContractsVisual.roseGoldSoft
+                  : Colors.white.withValues(alpha: 0.08),
+            ),
+            side: WidgetStatePropertyAll(
+              BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+            ),
+            visualDensity: VisualDensity.compact,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _LoginBrandHero extends StatelessWidget {
+  const _LoginBrandHero();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(SafeContractsRadii.lg),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          child: const SafeContractsBrandMark(size: 66, borderRadius: 18),
+        ),
+        const SizedBox(height: SafeContractsSpacing.md),
+        Text(
+          SafeContractsBrand.name,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.7,
+              ),
+        ),
+        const SizedBox(height: SafeContractsSpacing.xs),
+        Text(
+          l10n.isArabic
+              ? 'العقود والمدفوعات والتحصيلات في مساحة عمل تنفيذية واحدة.'
+              : 'Contracts, payments and collections in one executive workspace.',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.white.withValues(alpha: 0.74),
+                height: 1.55,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _AuthenticationError extends StatelessWidget {
+  const _AuthenticationError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(SafeContractsSpacing.sm),
+        decoration: BoxDecoration(
+          color: SafeContractsVisual.redSoft,
+          borderRadius: BorderRadius.circular(SafeContractsRadii.sm),
+          border: Border.all(
+            color: SafeContractsVisual.red.withValues(alpha: 0.28),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: SafeContractsVisual.redDeep,
+              size: SafeContractsIconSizes.sm,
+            ),
+            const SizedBox(width: SafeContractsSpacing.xs),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: SafeContractsVisual.redDeep,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class _LoginBackground extends StatelessWidget {
+  const _LoginBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: <double>[0, 0.48, 0.73, 1],
+          colors: <Color>[
+            Color(0xFF061B2F),
+            SafeContractsVisual.navyDeep,
+            SafeContractsVisual.background,
+            SafeContractsVisual.background,
+          ],
         ),
       ),
     );
