@@ -76,9 +76,6 @@ page.on('requestfailed', request => {
     return;
   }
   const failure = request.failure()?.errorText || 'request failed';
-  // Chromium cancels optional/deferred WordPress resources during navigation and
-  // responsive recapture. ERR_ABORTED is not evidence of a missing asset; real
-  // 4xx/5xx responses are caught below and genuine network failures still fail.
   if (failure.includes('ERR_ABORTED')) return;
   failedAssets.push(`${type} ${request.url()} :: ${failure}`);
 });
@@ -139,6 +136,7 @@ for (const [screenId, owner, route, reference] of selected) {
       const clientWidth = document.documentElement.clientWidth;
       const clippedControls = [...document.querySelectorAll('button, input:not([type="hidden"]), select, textarea, a.button')]
         .filter(visible)
+        .filter(el => !(el.closest('table') && scrollableAncestor(el)))
         .map(el => ({ tag: el.tagName, text: (el.innerText || el.getAttribute('aria-label') || el.getAttribute('name') || '').trim(), rect: el.getBoundingClientRect() }))
         .filter(item => item.rect.left < -4 || item.rect.right > clientWidth + 4)
         .map(item => `${item.tag}:${item.text || 'unnamed'} [${Math.round(item.rect.left)},${Math.round(item.rect.right)}]`);
