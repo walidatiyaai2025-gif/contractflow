@@ -251,7 +251,7 @@ final class PaymentMethodsPage
                         <p><label><input type="checkbox" name="is_active" value="1" <?php checked($selected === null || ! empty($selected['is_active'])); ?>> <?php echo esc_html__('Active for new settlement entry', 'safecontracts'); ?></label></p>
                         <?php submit_button($selected ? __('Save Payment Method', 'safecontracts') : __('Add Payment Method', 'safecontracts')); ?>
                     </form>
-                    <p class="description"><?php echo esc_html__('Collection entry accepts only active payment methods. Deactivation is soft and does not alter historical collections.', 'safecontracts'); ?></p>
+                    <p class="description"><?php echo esc_html__('Collection entry accepts only active SafeContracts payment methods. Deactivation is soft and does not alter historical collections.', 'safecontracts'); ?></p>
                 </section>
             </div>
         </div>
