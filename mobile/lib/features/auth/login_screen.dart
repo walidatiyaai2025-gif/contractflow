@@ -219,7 +219,8 @@ final class _SafeContractsLoginScreenState
                                           onChanged: submitting
                                               ? null
                                               : (value) => widget.controller
-                                                  .setRememberMe(value ?? false),
+                                                  .setRememberMe(
+                                                      value ?? false),
                                           contentPadding: EdgeInsets.zero,
                                           dense: true,
                                           controlAffinity:
