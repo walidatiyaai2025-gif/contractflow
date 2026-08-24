@@ -1,4 +1,62 @@
 stage=php
-head=dc576c97a5b4f13496a1bd6843585b306fc26985
+head=e1f305ab60390034f0e32be9bd179a2da6d44d76
 exit=1
 --- apply log ---
+--- php log ---
+SafeContracts PHP foundation tests passed (116 assertions).
+SafeContracts contract data-model tests passed (38 assertions).
+SafeContracts contract workflow tests passed (43 assertions).
+SafeContracts contract financial tests passed (44 assertions).
+SafeContracts contract history tests passed (23 assertions).
+SafeContracts P2 validation SC-P2-017..021 passed (40 assertions).
+SafeContracts P2 final validation tests passed (17 assertions).
+SafeContracts payment core tests passed (47 assertions).
+SafeContracts P3 due/collection tests SC-P3-004..008 passed (48 assertions).
+SafeContracts P3 settlement/reconciliation tests SC-P3-009..013 passed (47 assertions).
+SafeContracts P3 validation SC-P3-014..018 passed (25 assertions).
+SafeContracts P3 validation SC-P3-019..023 passed (39 assertions).
+SafeContracts P3 financial reconciliation validation SC-P3-024 passed (8 assertions).
+SafeContracts P4 follow-up/audit tests SC-P4-001..009 passed (33 assertions).
+SafeContracts P4 final validation SC-P4-010..015 passed (30 assertions).
+SafeContracts P5 notification rules SC-P5-001..004 passed (46 assertions).
+SafeContracts WordPress audit event regression passed (17 assertions).
+SafeContracts P5 notification delivery SC-P5-005..013 passed (51 assertions).
+SafeContracts P5 notification rule validation SC-P5-014 passed (29 assertions).
+SafeContracts P5 reminder targeting validation SC-P5-015..019 passed (46 assertions).
+SafeContracts P5 validation SC-P5-020..024 passed (41 assertions).
+SafeContracts P5 final validation SC-P5-025..026 passed (25 assertions).
+Safe Contracts P6 admin UI SC-P6-001..003 passed (32 assertions).
+SafeContracts P6 dashboard/core screens SC-P6-004..008 passed (30 assertions).
+SafeContracts P6 operations/reports/users SC-P6-009..013 passed (39 assertions).
+SafeContracts P6 settings SC-P6-014..018 passed (57 assertions).
+Safe Contracts P6 Excel/RTL/validation SC-P6-019..023 passed (38 assertions).
+SafeContracts P6 validation SC-P6-024..028 passed (31 assertions).
+SafeContracts P6 validation SC-P6-029..033 passed (39 assertions).
+SafeContracts P6 validation SC-P6-034..038 passed (38 assertions).
+SafeContracts P6 post-validation hardening passed (15 assertions).
+SafeContracts P6 final validation SC-P6-039..040 + UX #390/#404 passed (32 assertions).
+SafeContracts issue #400/#404 admin safe-delete/currency localization regression passed (93 assertions).
+SafeContracts translation registry/editor #404 passed (91 assertions).
+Alkenzy Arabic zero-debt translation gate passed (1150 discovered strings; 0 untranslated).
+Alkenzy Arabic supplier/finance runtime audit #594 passed (176 assertions; Suppliers/Finance/Reports fully translated).
+Alkenzy production migration guard #586 passed (22 assertions).
+Alkenzy production UX contract #586 passed (629 assertions).
+Alkenzy grouped admin navigation #592/#596/#598 passed (56 assertions).
+SafeContracts ALK-PROD-002 production preflight collector passed (31 assertions).
+Safe Contracts #411 brand + silent refresh validation passed (48 checks).
+Safe Contracts issue #414 APK/attachments/status/period validation passed (64 assertions).
+OK: 29 notification schedule assertions passed
+Admin notification center/archive/presence regression checks passed.
+Responsible accountant -> scoped data -> separated notification/email settings -> direct SMTP regression checks passed.
+SafeContracts P8 REST implementation SC-P8-001..010 passed (84 assertions).
+SafeContracts P8 REST SC-P8-011..015 passed (28 assertions).
+SafeContracts P8 REST SC-P8-016..017 passed (34 assertions).
+SafeContracts P7 import SC-P7-001..008 passed (34 assertions).
+SafeContracts P7 final validation SC-P7-009..017 passed (39 assertions).
+SafeContracts P8 API conventions/versioning SC-P8-018 passed (323 assertions).
+SafeContracts P8 final validation SC-P8-019..028 passed (51 assertions).
+SafeContracts P10 security/financial SC-P10-001..005 passed (30 assertions).
+SafeContracts P10 operational verification SC-P10-006..010 passed (50 assertions).
+SafeContracts P10 release readiness SC-P10-011..016 passed (140 assertions).
+SafeContracts P10 validation SC-P10-017..026 passed (196 assertions).
+FAIL: SC-P9-020 inbox preserves safe notification identifiers
