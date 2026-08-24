@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use InvalidArgumentException;
-use SafeContracts\Admin\Worker2\RedesignAssets;
 use SafeContracts\Deletion\SafeDeletionService;
 use SafeContracts\ReferenceData\PaymentMethodRepository;
 use SafeContracts\Roles\Capabilities;
@@ -17,12 +16,29 @@ final class PaymentMethodsPage
     public const SLUG = 'safecontracts-payment-methods';
     public const SAVE_ACTION = 'safecontracts_save_payment_method';
     public const DELETE_ACTION = 'safecontracts_delete_payment_method';
+    public const WORKER_STYLE_HANDLE = 'safecontracts-plugin-redesign-worker-2';
+    public const WORKER_STATE_STYLE_HANDLE = 'safecontracts-plugin-redesign-worker-2-states';
+    public const WORKER_SCRIPT_HANDLE = 'safecontracts-plugin-redesign-worker-2-ui';
+
+    /** @var list<string> */
+    private const WORKER_ROUTE_SLUGS = [
+        'safecontracts-payments',
+        'safecontracts-collections',
+        'safecontracts-followups',
+        'safecontracts-finance',
+        'safecontracts-reports',
+        'safecontracts-imports',
+        self::SLUG,
+    ];
+
+    private static bool $redesignAssetsRegistered = false;
 
     public static function register(): void
     {
-        // Register the isolated Worker #2 visual layer from a Worker #2-owned
-        // route. The registrar itself only enqueues on the seven frozen slugs.
-        RedesignAssets::register();
+        if (! self::$redesignAssetsRegistered) {
+            self::$redesignAssetsRegistered = true;
+            add_action('admin_enqueue_scripts', [self::class, 'enqueueWorkerRedesignAssets'], 40);
+        }
 
         add_submenu_page(
             AdminShell::SLUG,
@@ -31,6 +47,34 @@ final class PaymentMethodsPage
             Capabilities::MANAGE_REFERENCE_DATA,
             self::SLUG,
             [self::class, 'render']
+        );
+    }
+
+    public static function enqueueWorkerRedesignAssets(): void
+    {
+        $page = sanitize_key((string) ($_GET['page'] ?? ''));
+        if (! in_array($page, self::WORKER_ROUTE_SLUGS, true)) {
+            return;
+        }
+
+        wp_enqueue_style(
+            self::WORKER_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-2/finance-operations.css',
+            [AdminShell::PREMIUM_STYLE_HANDLE],
+            SAFECONTRACTS_VERSION
+        );
+        wp_enqueue_style(
+            self::WORKER_STATE_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-2/route-states.css',
+            [self::WORKER_STYLE_HANDLE],
+            SAFECONTRACTS_VERSION
+        );
+        wp_enqueue_script(
+            self::WORKER_SCRIPT_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-2/finance-operations.js',
+            [],
+            SAFECONTRACTS_VERSION,
+            true
         );
     }
 
