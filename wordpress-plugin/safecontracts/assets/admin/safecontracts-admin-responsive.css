@@ -175,6 +175,33 @@
     max-width: 100% !important;
     table-layout: fixed;
   }
+
+  .safecontracts-settings.safecontracts-mobile-configuration,
+  .safecontracts-settings.safecontracts-mobile-configuration .safecontracts-admin-card,
+  .safecontracts-settings.safecontracts-mobile-configuration .safecontracts-settings-card,
+  .safecontracts-settings.safecontracts-mobile-configuration form,
+  .safecontracts-settings.safecontracts-mobile-configuration form > p,
+  .safecontracts-settings.safecontracts-mobile-configuration label,
+  .safecontracts-settings.safecontracts-mobile-configuration fieldset {
+    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .safecontracts-settings.safecontracts-mobile-configuration .safecontracts-settings-card {
+    overflow-x: visible !important;
+  }
+
+  .safecontracts-settings.safecontracts-mobile-configuration input,
+  .safecontracts-settings.safecontracts-mobile-configuration select,
+  .safecontracts-settings.safecontracts-mobile-configuration textarea,
+  .safecontracts-settings.safecontracts-mobile-configuration textarea.widefat {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
 }
 
 @media (max-width: 480px) {
