@@ -1,42 +1,519 @@
-name: Worker1 Format
+name: Worker1 Final Consistency QA
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - mobile-redesign/foundation-auth-navigation
 
 permissions:
   contents: write
 
 jobs:
-  format:
+  final-consistency:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: mobile-redesign/foundation-auth-navigation
           fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-      - name: Format Worker 1 scoped source
+      - name: Apply final foundation and navigation consistency patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def edit(path, transform):
+              p = Path(path)
+              old = p.read_text()
+              new = transform(old)
+              if new == old:
+                  raise SystemExit(f'no change produced for {path}')
+              p.write_text(new)
+
+          def one(text, old, new, label):
+              if text.count(old) != 1:
+                  raise SystemExit(f'{label}: expected one match, got {text.count(old)}')
+              return text.replace(old, new, 1)
+
+          edit('mobile/lib/features/ui/safecontracts_design.dart', lambda t: one(
+              t,
+              '  static const radius = 22.0;\n  static const compactRadius = 16.0;',
+              '  static const radius = 18.0;\n  static const compactRadius = 14.0;',
+              'locked visual radii'))
+
+          def patch_theme(t):
+              old = '''      navigationBarTheme: NavigationBarThemeData(\n        height: SafeContractsControlSizes.bottomNavigationHeight,\n        backgroundColor: SafeContractsVisual.surface,\n        indicatorColor: SafeContractsVisual.roseGoldSoft,\n        iconTheme: WidgetStateProperty.resolveWith(\n          (states) => IconThemeData(\n            color: states.contains(WidgetState.selected)\n                ? SafeContractsVisual.navy\n                : SafeContractsVisual.muted,\n          ),\n        ),\n        labelTextStyle: WidgetStateProperty.resolveWith(\n          (states) => textTheme.labelSmall?.copyWith(\n            color: states.contains(WidgetState.selected)\n                ? SafeContractsVisual.navy\n                : SafeContractsVisual.muted,\n            fontWeight: states.contains(WidgetState.selected)\n                ? FontWeight.w800\n                : FontWeight.w600,\n          ),\n        ),\n      ),'''
+              new = '''      navigationBarTheme: NavigationBarThemeData(\n        height: SafeContractsControlSizes.bottomNavigationHeight,\n        backgroundColor: SafeContractsVisual.navyDeep,\n        indicatorColor: SafeContractsVisual.roseGold.withValues(alpha: 0.16),\n        iconTheme: WidgetStateProperty.resolveWith(\n          (states) => IconThemeData(\n            color: states.contains(WidgetState.selected)\n                ? SafeContractsVisual.roseGoldSoft\n                : Colors.white.withValues(alpha: 0.68),\n          ),\n        ),\n        labelTextStyle: WidgetStateProperty.resolveWith(\n          (states) => textTheme.labelSmall?.copyWith(\n            color: states.contains(WidgetState.selected)\n                ? Colors.white\n                : Colors.white.withValues(alpha: 0.68),\n            fontWeight: states.contains(WidgetState.selected)\n                ? FontWeight.w800\n                : FontWeight.w600,\n          ),\n        ),\n      ),'''
+              return one(t, old, new, 'dark navigation theme')
+          edit('mobile/lib/features/ui/safecontracts_theme.dart', patch_theme)
+
+          def patch_components(t):
+              start = t.index('final class SafeContractsBottomNavigation<T>')
+              end = t.index('final class _NavigationTile', start)
+              replacement = r'''final class SafeContractsBottomNavigation<T> extends StatelessWidget {
+  const SafeContractsBottomNavigation({
+    required this.items,
+    required this.selected,
+    required this.onSelected,
+    this.moreLabel,
+    this.onMore,
+    this.moreSelected = false,
+    this.centerAction,
+    this.centerActionWidth = 64,
+    super.key,
+  });
+
+  final List<SafeContractsNavigationItem<T>> items;
+  final T selected;
+  final ValueChanged<T> onSelected;
+  final String? moreLabel;
+  final VoidCallback? onMore;
+  final bool moreSelected;
+  final Widget? centerAction;
+  final double centerActionWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = <Widget>[
+      for (final item in items)
+        Expanded(
+          child: _NavigationTile(
+            label: item.label,
+            icon: item.icon,
+            selectedIcon: item.selectedIcon,
+            selected: item.value == selected,
+            onTap: () => onSelected(item.value),
+          ),
+        ),
+      if (onMore != null && moreLabel != null)
+        Expanded(
+          child: _NavigationTile(
+            label: moreLabel!,
+            icon: Icons.grid_view_rounded,
+            selected: moreSelected,
+            onTap: onMore!,
+          ),
+        ),
+    ];
+    final split = centerAction == null ? tiles.length : (tiles.length + 1) ~/ 2;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        constraints: const BoxConstraints(
+          minHeight: SafeContractsControlSizes.bottomNavigationHeight,
+        ),
+        decoration: const BoxDecoration(
+          color: SafeContractsVisual.navyDeep,
+          border: Border(
+            top: BorderSide(color: SafeContractsVisual.navyRaised),
+          ),
+          boxShadow: SafeContractsShadows.navigation,
+        ),
+        padding: const EdgeInsets.fromLTRB(5, 5, 5, 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ...tiles.take(split),
+            if (centerAction != null)
+              SizedBox(
+                width: centerActionWidth,
+                child: Center(child: centerAction),
+              ),
+            ...tiles.skip(split),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+'''
+              t = t[:start] + replacement + t[end:]
+              t = one(
+                  t,
+                  '''            color: selected\n                ? SafeContractsVisual.roseGoldSoft.withValues(alpha: 0.88)\n                : Colors.transparent,''',
+                  '''            color: selected\n                ? SafeContractsVisual.roseGold.withValues(alpha: 0.16)\n                : Colors.transparent,''',
+                  'selected nav background')
+              t = one(
+                  t,
+                  '''                color: selected\n                    ? SafeContractsVisual.navyDeep\n                    : SafeContractsVisual.muted,''',
+                  '''                color: selected\n                    ? SafeContractsVisual.roseGoldSoft\n                    : Colors.white.withValues(alpha: 0.68),''',
+                  'nav icon colors')
+              t = one(
+                  t,
+                  '''                      color: selected\n                          ? SafeContractsVisual.navyDeep\n                          : SafeContractsVisual.muted,''',
+                  '''                      color: selected\n                          ? Colors.white\n                          : Colors.white.withValues(alpha: 0.68),''',
+                  'nav label colors')
+
+              insert_at = t.index('final class SafeContractsBottomSheetShell')
+              notice = r'''final class SafeContractsNotice extends StatelessWidget {
+  const SafeContractsNotice({
+    required this.message,
+    this.icon = Icons.info_outline_rounded,
+    this.tone = SafeContractsStatusTone.info,
+    super.key,
+  });
+
+  final String message;
+  final IconData icon;
+  final SafeContractsStatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _statusColors(tone, null);
+    return Container(
+      margin: const EdgeInsetsDirectional.fromSTEB(
+        SafeContractsSpacing.screen,
+        SafeContractsSpacing.xs,
+        SafeContractsSpacing.screen,
+        0,
+      ),
+      padding: const EdgeInsets.all(SafeContractsSpacing.sm),
+      decoration: BoxDecoration(
+        color: colors.background,
+        borderRadius: BorderRadius.circular(SafeContractsRadii.sm),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: colors.foreground, size: SafeContractsIconSizes.sm),
+          const SizedBox(width: SafeContractsSpacing.xs),
+          Expanded(
+            child: Text(
+              message,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.foreground,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+'''
+              return t[:insert_at] + notice + t[insert_at:]
+          edit('mobile/lib/features/ui/safecontracts_components.dart', patch_components)
+
+          def patch_form(t):
+              insert_at = t.index('final class SafeContractsFilePickerField')
+              checkbox = r'''final class SafeContractsCheckboxField extends StatelessWidget {
+  const SafeContractsCheckboxField({
+    required this.value,
+    required this.label,
+    required this.onChanged,
+    this.subtitle,
+    this.enabled = true,
+    super.key,
+  });
+
+  final bool value;
+  final String label;
+  final String? subtitle;
+  final ValueChanged<bool>? onChanged;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final callback = enabled && onChanged != null
+        ? () => onChanged!(!value)
+        : null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SafeContractsRadii.sm),
+        onTap: callback,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: SafeContractsSpacing.xs),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: value,
+                onChanged: enabled && onChanged != null
+                    ? (next) => onChanged!(next ?? false)
+                    : null,
+              ),
+              const SizedBox(width: SafeContractsSpacing.xs),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
+                      const SizedBox(height: SafeContractsSpacing.xxs),
+                      Text(
+                        subtitle!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SafeContractsVisual.muted,
+                              height: 1.4,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+'''
+              t = t[:insert_at] + checkbox + t[insert_at:]
+              start = t.index('  @override\n  Widget build(BuildContext context) {', t.index('final class SafeContractsFilePickerField'))
+              end = t.index('\n  }\n}', start) + len('\n  }')
+              old_method = t[start:end]
+              new_method = r'''  @override
+  Widget build(BuildContext context) {
+    Widget fileInfo() => Row(
+          children: [
+            Container(
+              width: SafeContractsControlSizes.touchTarget,
+              height: SafeContractsControlSizes.touchTarget,
+              decoration: BoxDecoration(
+                color: SafeContractsVisual.roseGoldSoft,
+                borderRadius: BorderRadius.circular(SafeContractsRadii.sm),
+              ),
+              child: Icon(icon, color: SafeContractsVisual.navy),
+            ),
+            const SizedBox(width: SafeContractsSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  if (fileName != null && fileName!.trim().isNotEmpty) ...[
+                    const SizedBox(height: SafeContractsSpacing.xxs),
+                    Text(
+                      fileName!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: SafeContractsVisual.muted,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+
+    return Container(
+      padding: const EdgeInsets.all(SafeContractsSpacing.md),
+      decoration: BoxDecoration(
+        color: SafeContractsVisual.surface,
+        borderRadius: BorderRadius.circular(SafeContractsRadii.md),
+        border: Border.all(color: SafeContractsVisual.outline),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 300;
+          final action = OutlinedButton(
+            onPressed: enabled ? onTap : null,
+            child: Text(
+              actionLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                fileInfo(),
+                const SizedBox(height: SafeContractsSpacing.sm),
+                action,
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: fileInfo()),
+              const SizedBox(width: SafeContractsSpacing.xs),
+              Flexible(child: action),
+            ],
+          );
+        },
+      ),
+    );
+  }'''
+              return t[:start] + new_method + t[end:]
+          edit('mobile/lib/features/ui/safecontracts_form.dart', patch_form)
+
+          def patch_login(t):
+              old = '''                                        CheckboxListTile(\n                                          value: widget.controller.rememberMe,\n                                          onChanged: submitting\n                                              ? null\n                                              : (value) => widget.controller\n                                                  .setRememberMe(\n                                                      value ?? false),\n                                          contentPadding: EdgeInsets.zero,\n                                          dense: true,\n                                          controlAffinity:\n                                              ListTileControlAffinity.leading,\n                                          title: Text(\n                                            l10n.t('Remember me'),\n                                            style: const TextStyle(\n                                              fontWeight: FontWeight.w800,\n                                            ),\n                                          ),\n                                          subtitle: Text(\n                                            l10n.t(\n                                              'Keep me signed in on this device. Your password is never stored.',\n                                            ),\n                                            style: const TextStyle(\n                                              color: SafeContractsVisual.muted,\n                                            ),\n                                          ),\n                                        ),'''
+              new = '''                                        SafeContractsCheckboxField(\n                                          value: widget.controller.rememberMe,\n                                          enabled: !submitting,\n                                          onChanged: (value) => widget.controller\n                                              .setRememberMe(value),\n                                          label: l10n.t('Remember me'),\n                                          subtitle: l10n.t(\n                                            'Keep me signed in on this device. Your password is never stored.',\n                                          ),\n                                        ),'''
+              return one(t, old, new, 'login remember-me field')
+          edit('mobile/lib/features/auth/login_screen.dart', patch_login)
+
+          def patch_shell(t):
+              old_banner = '''            if (widget.usingConfigDefaults)\n              MaterialBanner(\n                backgroundColor: SafeContractsVisual.amberSoft,\n                leading: const Icon(\n                  Icons.info_outline_rounded,\n                  color: SafeContractsVisual.amber,\n                ),\n                content: Text(\n                  l10n.t(\n                    'Remote mobile configuration is unavailable. Safe defaults are active.',\n                  ),\n                ),\n                actions: const <Widget>[SizedBox.shrink()],\n              ),'''
+              new_banner = '''            if (widget.usingConfigDefaults)\n              SafeContractsNotice(\n                message: l10n.t(\n                  'Remote mobile configuration is unavailable. Safe defaults are active.',\n                ),\n                icon: Icons.cloud_off_outlined,\n                tone: SafeContractsStatusTone.warning,\n              ),'''
+              t = one(t, old_banner, new_banner, 'legacy config MaterialBanner')
+              old_fab = '''      floatingActionButton: quickAdds.isEmpty\n          ? null\n          : _QuickAddFab(\n              tooltip: l10n.isArabic ? 'إضافة جديدة' : 'Quick add',\n              onPressed: () => unawaited(_showQuickAdd(quickAdds)),\n            ),\n      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,\n      bottomNavigationBar: bottomItems.isEmpty\n          ? null\n          : _SafeContractsBottomNavigation(\n              items: bottomItems,\n              selected: _selected,\n              onSelected: _selectDestination,\n              moreLabel: l10n.isArabic ? 'المزيد' : 'More',\n              onMore: () => _scaffoldKey.currentState?.openDrawer(),\n            ),'''
+              new_fab = '''      bottomNavigationBar: bottomItems.isEmpty\n          ? null\n          : _SafeContractsBottomNavigation(\n              items: bottomItems,\n              selected: _selected,\n              onSelected: _selectDestination,\n              moreLabel: l10n.isArabic ? 'المزيد' : 'More',\n              moreSelected: !bottomItems.any(\n                (item) => item.value == _selected,\n              ),\n              onMore: () => _scaffoldKey.currentState?.openDrawer(),\n              centerAction: quickAdds.isEmpty\n                  ? null\n                  : Transform.translate(\n                      offset: const Offset(0, -8),\n                      child: _QuickAddFab(\n                        tooltip: l10n.isArabic ? 'إضافة جديدة' : 'Quick add',\n                        onPressed: () => unawaited(_showQuickAdd(quickAdds)),\n                      ),\n                    ),\n            ),'''
+              t = one(t, old_fab, new_fab, 'floating quick add')
+              t = one(
+                  t,
+                  '''    const preferred = <MobileDestination>[\n      MobileDestination.dashboard,\n      MobileDestination.contracts,\n      MobileDestination.payments,\n      MobileDestination.customers,\n    ];''',
+                  '''    const preferred = <MobileDestination>[\n      MobileDestination.dashboard,\n      MobileDestination.contracts,\n      MobileDestination.customers,\n    ];''',
+                  'reference bottom navigation hierarchy')
+              t = one(
+                  t,
+                  '''    required this.moreLabel,\n    required this.onMore,\n  });''',
+                  '''    required this.moreLabel,\n    required this.onMore,\n    required this.moreSelected,\n    required this.centerAction,\n  });''',
+                  'bottom navigation wrapper constructor')
+              t = one(
+                  t,
+                  '''  final String moreLabel;\n  final VoidCallback onMore;''',
+                  '''  final String moreLabel;\n  final VoidCallback onMore;\n  final bool moreSelected;\n  final Widget? centerAction;''',
+                  'bottom navigation wrapper fields')
+              t = one(
+                  t,
+                  '''      moreLabel: moreLabel,\n      onMore: onMore,\n    );''',
+                  '''      moreLabel: moreLabel,\n      onMore: onMore,\n      moreSelected: moreSelected,\n      centerAction: centerAction,\n    );''',
+                  'bottom navigation wrapper forwarding')
+              return t
+          edit('mobile/lib/features/navigation/app_shell.dart', patch_shell)
+
+          Path('mobile/test/final_foundation_navigation_consistency_test.dart').write_text(r'''import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:safecontracts_mobile/features/ui/safecontracts_components.dart';
+import 'package:safecontracts_mobile/features/ui/safecontracts_design.dart';
+import 'package:safecontracts_mobile/features/ui/safecontracts_form.dart';
+import 'package:safecontracts_mobile/features/ui/safecontracts_theme.dart';
+
+void main() {
+  test('locked card radii use the 18 / 14 reference geometry', () {
+    expect(SafeContractsVisual.radius, 18);
+    expect(SafeContractsVisual.compactRadius, 14);
+  });
+
+  testWidgets('dark navigation with center action is safe at 320px RTL', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SafeContractsTheme.build('ar'),
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            bottomNavigationBar: SafeContractsBottomNavigation<int>(
+              items: const [
+                SafeContractsNavigationItem(
+                  value: 0,
+                  label: 'الرئيسية',
+                  icon: Icons.home_outlined,
+                ),
+                SafeContractsNavigationItem(
+                  value: 1,
+                  label: 'العقود',
+                  icon: Icons.description_outlined,
+                ),
+                SafeContractsNavigationItem(
+                  value: 2,
+                  label: 'العملاء',
+                  icon: Icons.people_outline,
+                ),
+              ],
+              selected: 0,
+              onSelected: (_) {},
+              moreLabel: 'المزيد',
+              onMore: () {},
+              centerAction: const SizedBox(
+                width: 56,
+                height: 56,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: SafeContractsVisual.roseGold,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.add_rounded, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('المزيد'), findsOneWidget);
+  });
+
+  testWidgets('file picker stacks action on a very narrow field', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SafeContractsTheme.build('ar'),
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            body: SizedBox(
+              width: 280,
+              child: SafeContractsFilePickerField(
+                label: 'صورة أو ملف العقد الرسمي طويل الاسم',
+                actionLabel: 'اختيار ملف من الجهاز',
+                fileName: 'very-long-contract-file-name-example.pdf',
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('اختيار ملف من الجهاز'), findsOneWidget);
+  });
+}
+''')
+          PY
+      - name: Format and validate focused scope
         working-directory: mobile
         run: |
           flutter pub get
-          dart format lib/features/welcome/company_welcome_screen.dart test/mobile_design_foundation_test.dart test/worker1_visual_capture_test.dart
-      - name: Persist formatting
+          dart format lib test
+          git diff --check
+          flutter analyze
+          flutter test test/mobile_design_foundation_test.dart test/final_foundation_navigation_consistency_test.dart
+      - name: Persist final consistency fixes
         shell: bash
-        env:
-          HEAD_REF: ${{ github.head_ref }}
         run: |
           set -euo pipefail
+          git show HEAD^:.github/workflows/worker1-format.yml > .github/workflows/worker1-format.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mobile/lib/features/welcome/company_welcome_screen.dart mobile/test/mobile_design_foundation_test.dart mobile/test/worker1_visual_capture_test.dart
-          if git diff --cached --quiet; then
-            echo "Worker 1 sources already formatted."
-          else
-            git commit -m "style(mobile): apply worker1 formatter correction"
-            git push origin "HEAD:${HEAD_REF}"
-          fi
+          git add -A
+          git commit -m "fix(mobile): finalize foundation navigation consistency"
+          git push origin HEAD:mobile-redesign/foundation-auth-navigation
