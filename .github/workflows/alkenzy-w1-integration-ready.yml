@@ -1,0 +1,96 @@
+name: ALKENZY W1 Integration Ready
+
+on:
+  push:
+    branches:
+      - bugfix/alkenzy-w1-integration-ready
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bugfix/alkenzy-w1-integration-ready
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Apply and validate W1 production closure
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          stage=bootstrap
+          fail() {
+            rc=$?
+            set +e
+            {
+              printf 'stage=%s\nhead=%s\nexit=%s\n' "$stage" "$(git rev-parse HEAD)" "$rc"
+              if [ -f /tmp/w1.log ]; then
+                printf '%s\n' '--- log ---'
+                tail -80 /tmp/w1.log
+              fi
+            } > .github/ALKENZY_W1_FAILURE.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/ALKENZY_W1_FAILURE.txt
+            git commit -m "ci(w1): record integration-ready failure at $stage" || true
+            git push origin HEAD:bugfix/alkenzy-w1-integration-ready || true
+            exit "$rc"
+          }
+          trap fail ERR
+
+          stage=fetch-generator
+          git fetch origin bugfix/alkenzy-register-w1-customer-navigation
+          git show origin/bugfix/alkenzy-register-w1-customer-navigation:scripts/w1_bug_closure_patch.py > /tmp/w1_bug_closure_patch.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/w1_bug_closure_patch.py')
+          text = p.read_text()
+          text = text.replace(
+              'next_text, count = re.subn(pattern, replacement, text, count=1, flags=flags)',
+              'next_text, count = re.subn(pattern, lambda _: replacement, text, count=1, flags=flags)',
+          )
+          text = text.replace('destination == this.selected', 'destination == selected')
+          bad_edit = '"label: Text(context.scL10n.t(\'Edit\')),' + chr(10) + '",'
+          text = text.replace(bad_edit, '"label: Text(context.scL10n.t(\'Edit\')),\\n",')
+          text = text.replace(
+              r": '$fallback\n${rawError.trim()}';",
+              r": '$fallback\\n${rawError.trim()}';",
+          )
+          p.write_text(text)
+          PY
+          python3 -m py_compile /tmp/w1_bug_closure_patch.py
+
+          stage=apply-production
+          python3 /tmp/w1_bug_closure_patch.py > /tmp/w1.log 2>&1 || { cat /tmp/w1.log; false; }
+
+          stage=dependencies
+          cd mobile
+          flutter pub get
+
+          stage=format
+          dart format lib test
+
+          stage=analyze
+          flutter analyze
+
+          stage=tests
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
+          cd ..
+
+          stage=commit
+          rm -f .github/workflows/alkenzy-w1-integration-ready.yml
+          rm -f .github/ALKENZY_W1_FAILURE.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(w1): close customer navigation bugs on current integration"
+          git push origin HEAD:bugfix/alkenzy-w1-integration-ready
