@@ -3,6 +3,7 @@ name: Mobile Reference Capture
 on:
   pull_request:
     branches:
+      - main
       - feat/alkenzy-0.3.2-premium-final
 
 permissions:
