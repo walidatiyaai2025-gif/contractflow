@@ -18,6 +18,8 @@ final class SafeContractsSession {
     required this.userId,
     required this.scope,
     required this.capabilities,
+    this.displayName,
+    this.avatarUrl,
   });
 
   static const maxCapabilities = 128;
@@ -25,6 +27,8 @@ final class SafeContractsSession {
   final int userId;
   final SafeContractsDataScope scope;
   final Map<String, bool> capabilities;
+  final String? displayName;
+  final String? avatarUrl;
 
   bool can(String capability) => capabilities[capability] ?? false;
 
@@ -49,7 +53,8 @@ final class SafeContractsSession {
     );
     if (rawCapabilities.length > maxCapabilities) {
       throw const FormatException(
-          'session.capabilities contains too many entries.');
+        'session.capabilities contains too many entries.',
+      );
     }
 
     final capabilities = <String, bool>{};
@@ -70,6 +75,8 @@ final class SafeContractsSession {
       userId: userId,
       scope: scope,
       capabilities: Map<String, bool>.unmodifiable(capabilities),
+      displayName: _optionalDisplayName(data['display_name']),
+      avatarUrl: _optionalAvatarUrl(data['avatar_url']),
     );
   }
 }
@@ -129,6 +136,38 @@ int _positiveInt(Object? value, String field) {
     }
   }
   throw FormatException('$field must be a positive integer.');
+}
+
+String? _optionalDisplayName(Object? value) {
+  if (value == null || value == '') return null;
+  if (value is! String) {
+    throw const FormatException('session.display_name must be a string or null.');
+  }
+  final normalized = value.trim();
+  if (normalized.isEmpty) return null;
+  if (normalized.length > 160) {
+    throw const FormatException('session.display_name is too long.');
+  }
+  return normalized;
+}
+
+String? _optionalAvatarUrl(Object? value) {
+  if (value == null || value == '') return null;
+  if (value is! String) {
+    throw const FormatException('session.avatar_url must be a string or null.');
+  }
+  final normalized = value.trim();
+  if (normalized.isEmpty) return null;
+  if (normalized.length > 2048) {
+    throw const FormatException('session.avatar_url is too long.');
+  }
+  final uri = Uri.tryParse(normalized);
+  if (uri == null ||
+      !uri.hasAuthority ||
+      (uri.scheme != 'https' && uri.scheme != 'http')) {
+    throw const FormatException('session.avatar_url is invalid.');
+  }
+  return normalized;
 }
 
 bool _validCapabilityName(String value) {
