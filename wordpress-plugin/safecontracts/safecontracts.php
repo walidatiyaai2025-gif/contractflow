@@ -32,6 +32,7 @@ require_once SAFECONTRACTS_DIR . 'src/Support/Autoloader.php';
 require_once SAFECONTRACTS_DIR . 'src/Admin/MoneyPresentationFunctions.php';
 \SafeContracts\Translations\CompleteArabicDefaults::register();
 \SafeContracts\Translations\FeatureArabicDefaults::register();
+\SafeContracts\Translations\PremiumPolishArabicDefaults::register();
 \SafeContracts\Translations\ArabicRuntimeSafety::register();
 
 register_activation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Activator::class, 'activate']);
