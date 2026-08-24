@@ -36,7 +36,11 @@ jobs:
               printf 'stage=%s\nhead=%s\nexit=%s\n' "$stage" "$(git rev-parse HEAD)" "$rc"
               if [ -f /tmp/alkenzy_global_apply.log ]; then
                 printf '%s\n' '--- apply log ---'
-                tail -40 /tmp/alkenzy_global_apply.log
+                tail -30 /tmp/alkenzy_global_apply.log
+              fi
+              if [ -f /tmp/alkenzy_global_php.log ]; then
+                printf '%s\n' '--- php log ---'
+                tail -60 /tmp/alkenzy_global_php.log
               fi
             } > .github/ALKENZY_GLOBAL_LIST_FAILURE.txt
             git config user.name "github-actions[bot]"
@@ -72,7 +76,7 @@ jobs:
           python3 /tmp/alkenzy_global_list_closure.py > /tmp/alkenzy_global_apply.log 2>&1 || { cat /tmp/alkenzy_global_apply.log; false; }
 
           stage=php
-          bash scripts/test-php.sh
+          bash scripts/test-php.sh > /tmp/alkenzy_global_php.log 2>&1 || { cat /tmp/alkenzy_global_php.log; false; }
 
           stage=dependencies
           cd mobile
