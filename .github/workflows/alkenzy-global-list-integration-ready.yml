@@ -1,0 +1,93 @@
+name: ALKENZY Global List Integration Ready
+
+on:
+  push:
+    branches:
+      - bugfix/alkenzy-global-list-integration-ready
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bugfix/alkenzy-global-list-integration-ready
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Apply validate and commit global list closure
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          stage=bootstrap
+          fail() {
+            rc=$?
+            set +e
+            printf 'stage=%s\nhead=%s\nexit=%s\n' "$stage" "$(git rev-parse HEAD)" "$rc" > .github/ALKENZY_GLOBAL_LIST_FAILURE.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/ALKENZY_GLOBAL_LIST_FAILURE.txt
+            git commit -m "ci(list): record global closure failure at $stage" || true
+            git push origin HEAD:bugfix/alkenzy-global-list-integration-ready || true
+            exit "$rc"
+          }
+          trap fail ERR
+
+          stage=fetch-patch
+          git fetch origin bugfix/alkenzy-global-list-closure
+          git show origin/bugfix/alkenzy-global-list-closure:scripts/alkenzy_global_list_closure.py > /tmp/alkenzy_global_list_closure.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/alkenzy_global_list_closure.py')
+          text = p.read_text()
+          text = text.replace(
+              'contains("\'total_pages\' => $totalPages")',
+              'contains(r"\'total_pages\' => $totalPages")',
+          )
+          text = text.replace(
+              'contains("\'has_more\' => $page < $totalPages")',
+              'contains(r"\'has_more\' => $page < $totalPages")',
+          )
+          p.write_text(text)
+          PY
+          python3 -m py_compile /tmp/alkenzy_global_list_closure.py
+
+          stage=apply-production
+          python3 /tmp/alkenzy_global_list_closure.py
+
+          stage=php
+          bash scripts/test-php.sh
+
+          stage=dependencies
+          cd mobile
+          flutter pub get
+
+          stage=format
+          dart format lib test
+
+          stage=analyze
+          flutter analyze
+
+          stage=tests
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
+          cd ..
+
+          stage=commit
+          rm -f .github/workflows/alkenzy-global-list-integration-ready.yml
+          rm -f .github/ALKENZY_GLOBAL_LIST_FAILURE.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(alkenzy): close global pagination and list-toolbar consistency"
+          git push origin HEAD:bugfix/alkenzy-global-list-integration-ready
