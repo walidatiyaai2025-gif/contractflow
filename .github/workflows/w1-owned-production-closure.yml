@@ -49,6 +49,19 @@ jobs:
           python3 -m py_compile scripts/w1_bug_closure_patch.py
       - name: Execute W1 owned production patch
         run: python3 scripts/w1_bug_closure_patch.py
+      - name: Remove generated lint-only qualifier
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('mobile/lib/features/navigation/app_shell.dart')
+          text = path.read_text()
+          old = 'selected: destination == this.selected,'
+          new = 'selected: destination == selected,'
+          if text.count(old) != 1:
+              raise SystemExit(f'W1 selected qualifier target count={text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
       - name: Preserve integration-owned push registration exactly
         shell: bash
         run: |
