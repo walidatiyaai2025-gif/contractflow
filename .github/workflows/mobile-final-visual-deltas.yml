@@ -1,15 +1,16 @@
 name: Mobile Final Visual Deltas
 
 on:
-  push:
+  pull_request:
     branches:
-      - feat/alkenzy-mobile-reference-redesign
+      - feat/alkenzy-0.3.2-premium-final
 
 permissions:
   contents: write
 
 jobs:
   apply:
+    if: github.event.pull_request.head.ref == 'feat/alkenzy-mobile-reference-redesign'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -21,11 +22,12 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Apply only screenshot-confirmed visual deltas
+      - name: Apply only screenshot-confirmed visual and reachable-placeholder deltas
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import re
           from pathlib import Path
 
           shell = Path('mobile/lib/features/navigation/app_shell.dart')
@@ -40,6 +42,33 @@ jobs:
               'floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,',
               1,
           )
+          text = text.replace(
+              '        case MobileDestination.payments:\n        case MobileDestination.followUps:',
+              '        case MobileDestination.payments:\n        case MobileDestination.collections:\n        case MobileDestination.followUps:',
+              1,
+          )
+          text = text.replace(
+              '        case MobileDestination.collections:\n          break;\n',
+              '',
+              1,
+          )
+          text = text.replace(
+              '      MobileDestination.payments => PaymentsScreen(',
+              '      MobileDestination.payments || MobileDestination.collections =>\n          PaymentsScreen(',
+              1,
+          )
+          text = text.replace(
+              '      _ => _PlannedDestination(destination: _selected),\n',
+              '',
+              1,
+          )
+          text = re.sub(
+              r'\nfinal class _PlannedDestination extends StatelessWidget \{.*?\n\}\n\nString _label',
+              '\nString _label',
+              text,
+              count=1,
+              flags=re.S,
+          )
           shell.write_text(text)
 
           l10n = Path('mobile/lib/core/localization/safecontracts_localizations.dart')
@@ -49,13 +78,15 @@ jobs:
   return '$sign$whole.${cents.toString().padLeft(2, '0')}';"""
           if old in text:
               text = text.replace(old, new, 1)
-          translations = {
-              "  'Suppliers': 'الموردون',\n": "  'Suppliers': 'الموردون',\n",
-              "  'Finance': 'المالية',\n": "  'Finance': 'المالية',\n",
-              "  'Dashboard Two': 'لوحة تحكم اتنين',\n": "  'Dashboard Two': 'لوحة تحكم اتنين',\n",
-          }
+          additions = ''.join(
+              line for line in (
+                  "  'Suppliers': 'الموردون',\n",
+                  "  'Finance': 'المالية',\n",
+                  "  'Dashboard Two': 'لوحة تحكم اتنين',\n",
+              )
+              if line not in text
+          )
           anchor = "  'Customers': 'العملاء',\n"
-          additions = ''.join(k for k in translations if k not in text)
           if additions:
               if anchor not in text:
                   raise SystemExit('translation anchor missing')
@@ -108,5 +139,3 @@ jobs:
             git commit -m 'fix(mobile): align final locked-reference visual deltas'
             git push origin HEAD:feat/alkenzy-mobile-reference-redesign
           fi
-
-# Triggered explicitly after capture comparison to apply only the bounded deltas above.
