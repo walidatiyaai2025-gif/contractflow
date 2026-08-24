@@ -81,9 +81,14 @@ body[class*="_page_safecontracts-finance"] .safecontracts-table-card,
 body[class*="_page_safecontracts-reports"] .safecontracts-table-card,
 body[class*="_page_safecontracts-imports"] .safecontracts-table-card,
 body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
   overflow-x: auto !important;
   overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  contain: layout paint;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -113,6 +118,23 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
 .safecontracts-w2-runtime-notice { border-inline-start-width: 4px !important; }
 
 @media (max-width: 782px) {
+  /* Shared WordPress/admin responsive CSS historically applies a 680px
+   * min-width to every .widefat element. On Worker #2 routes that class is
+   * also used by form controls, so explicitly restore container-sized controls
+   * while keeping the 680px minimum only for financial data tables. */
+  body[class*="_page_safecontracts-payments"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
+  body[class*="_page_safecontracts-collections"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
+  body[class*="_page_safecontracts-followups"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
+  body[class*="_page_safecontracts-finance"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
+  body[class*="_page_safecontracts-reports"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
+  body[class*="_page_safecontracts-imports"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]) {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
   body[class*="_page_safecontracts-payments"] .safecontracts-table-card table.widefat,
   body[class*="_page_safecontracts-collections"] .safecontracts-table-card table.widefat,
   body[class*="_page_safecontracts-followups"] .safecontracts-table-card table.widefat,
@@ -120,7 +142,9 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
   body[class*="_page_safecontracts-reports"] .safecontracts-table-card table.widefat,
   body[class*="_page_safecontracts-imports"] .safecontracts-table-card table.widefat,
   body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card table.widefat {
+    width: 100%;
     min-width: 680px;
+    max-width: none;
   }
 }
 
