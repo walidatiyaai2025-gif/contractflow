@@ -75,7 +75,12 @@ page.on('requestfailed', request => {
   } catch {
     return;
   }
-  failedAssets.push(`${type} ${request.url()} :: ${request.failure()?.errorText || 'request failed'}`);
+  const failure = request.failure()?.errorText || 'request failed';
+  // Chromium cancels optional/deferred WordPress resources during navigation and
+  // responsive recapture. ERR_ABORTED is not evidence of a missing asset; real
+  // 4xx/5xx responses are caught below and genuine network failures still fail.
+  if (failure.includes('ERR_ABORTED')) return;
+  failedAssets.push(`${type} ${request.url()} :: ${failure}`);
 });
 page.on('response', response => {
   const type = response.request().resourceType();
