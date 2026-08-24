@@ -58,9 +58,19 @@ async function selectContaining(select, text) {
   return value;
 }
 
-// SC-023 first because Collections requires an active payment method.
+// SC-023 validation fails closed before creating the method used by Collections.
 await gotoAdmin('safecontracts-payment-methods');
 let form = await formForAction('safecontracts_save_payment_method');
+await form.locator('input[name="code"]').fill('qa_invalid_method');
+await form.locator('input[name="name"]').fill('');
+await form.evaluate((node) => { node.noValidate = true; });
+await submitAndWait(form);
+assert(new URL(page.url()).searchParams.get('safecontracts_status') === 'invalid', 'SC-023 invalid payment method was not rejected');
+record('SC-023', 'reject invalid payment method');
+
+// SC-023 create an active payment method for the settlement flow.
+await gotoAdmin('safecontracts-payment-methods');
+form = await formForAction('safecontracts_save_payment_method');
 await form.locator('input[name="code"]').fill('qa_func_method');
 await form.locator('input[name="name"]').fill('QA Functional Method');
 await form.locator('input[name="display_order"]').fill('99');
@@ -70,7 +80,63 @@ assert(new URL(page.url()).searchParams.get('safecontracts_status') === 'saved',
 assert((await page.locator('body').innerText()).includes('QA Functional Method'), 'SC-023 saved payment method not visible');
 record('SC-023', 'create active payment method');
 
-// SC-017 create a real AR obligation through the authenticated admin form.
+// SC-017 exercise view/filter/edit/delete on a disposable unsettled payment.
+await gotoAdmin('safecontracts-payments');
+form = await formForAction('safecontracts_save_payment_admin');
+await selectContaining(form.locator('select[name="contract_id"]'), 'QA-AR-2026-001');
+await form.locator('input[name="reference"]').fill('QA-FUNC-PAYMENT-CRUD');
+await form.locator('input[name="original_amount"]').fill('50.00');
+await form.locator('input[name="due_date"]').fill('2026-09-15');
+await form.locator('input[name="expected_payment_date"]').fill('2026-09-16');
+await submitAndWait(form);
+let url = new URL(page.url());
+assert(url.searchParams.get('safecontracts_status') === 'saved', 'SC-017 CRUD payment save did not report saved');
+const crudPaymentId = url.searchParams.get('payment_id');
+const crudContractId = url.searchParams.get('contract_id');
+assert(crudPaymentId && Number(crudPaymentId) > 0, 'SC-017 CRUD payment save did not return payment_id');
+assert(crudContractId && Number(crudContractId) > 0, 'SC-017 CRUD payment save did not preserve contract_id');
+record('SC-017', 'create disposable payment for CRUD', {paymentId: crudPaymentId, contractId: crudContractId});
+
+await gotoAdmin('safecontracts-payments', `payment_id=${crudPaymentId}`);
+let body = await page.locator('body').innerText();
+assert(body.includes('QA-FUNC-PAYMENT-CRUD'), 'SC-017 Open did not render the selected payment details');
+record('SC-017', 'open payment details', {paymentId: crudPaymentId});
+
+await gotoAdmin('safecontracts-payments', `payment_id=${crudPaymentId}&payment_action=edit`);
+form = await formForAction('safecontracts_save_payment_admin');
+assert(await form.locator('input[name="payment_id"]').inputValue() === crudPaymentId, 'SC-017 edit form targets the wrong payment');
+await form.locator('input[name="reference"]').fill('QA-FUNC-PAYMENT-CRUD-EDITED');
+await form.locator('input[name="original_amount"]').fill('55.00');
+await form.locator('input[name="due_date"]').fill('2026-09-20');
+await form.locator('input[name="expected_payment_date"]').fill('2026-09-21');
+await submitAndWait(form);
+assert(new URL(page.url()).searchParams.get('safecontracts_status') === 'saved', 'SC-017 edit did not report saved');
+body = await page.locator('body').innerText();
+assert(body.includes('QA-FUNC-PAYMENT-CRUD-EDITED'), 'SC-017 edited payment values did not persist');
+record('SC-017', 'edit unsettled payment', {paymentId: crudPaymentId});
+
+const crudFilter = `contract_id=${crudContractId}&date_from=2026-09-20&date_to=2026-09-20`;
+await gotoAdmin('safecontracts-payments', crudFilter);
+body = await page.locator('body').innerText();
+assert(body.includes('QA-FUNC-PAYMENT-CRUD-EDITED'), 'SC-017 contract/date filter did not retain matching payment');
+assert(await page.locator('select[name="contract_id"]').inputValue() === crudContractId, 'SC-017 contract filter was not applied server-side');
+assert(await page.locator('input[name="date_from"]').inputValue() === '2026-09-20', 'SC-017 date_from filter was not applied');
+assert(await page.locator('input[name="date_to"]').inputValue() === '2026-09-20', 'SC-017 date_to filter was not applied');
+record('SC-017', 'contract and due-date filters');
+
+const crudRow = page.locator('tr').filter({hasText: 'QA-FUNC-PAYMENT-CRUD-EDITED'}).first();
+assert(await crudRow.count(), 'SC-017 edited payment row not found for safe delete');
+const crudDeleteForm = crudRow.locator('form:has(input[name="action"][value="safecontracts_delete_payment_admin"])');
+assert(await crudDeleteForm.count(), 'SC-017 permitted unsettled payment has no delete action');
+page.once('dialog', (dialog) => dialog.accept());
+await submitAndWait(crudDeleteForm);
+assert(new URL(page.url()).searchParams.get('safecontracts_status') === 'deleted', 'SC-017 safe delete did not report deleted');
+await gotoAdmin('safecontracts-payments', crudFilter);
+body = await page.locator('body').innerText();
+assert(!body.includes('QA-FUNC-PAYMENT-CRUD-EDITED'), 'SC-017 archived payment remained in active filtered rows');
+record('SC-017', 'delete permitted unsettled payment', {paymentId: crudPaymentId});
+
+// SC-017 create the real AR obligation that subsequent scopes will reconcile.
 await gotoAdmin('safecontracts-payments');
 form = await formForAction('safecontracts_save_payment_admin');
 await selectContaining(form.locator('select[name="contract_id"]'), 'QA-AR-2026-001');
@@ -79,12 +145,12 @@ await form.locator('input[name="original_amount"]').fill('123.45');
 await form.locator('input[name="due_date"]').fill('2026-09-30');
 await form.locator('input[name="expected_payment_date"]').fill('2026-09-30');
 await submitAndWait(form);
-let url = new URL(page.url());
+url = new URL(page.url());
 assert(url.searchParams.get('safecontracts_status') === 'saved', 'SC-017 payment save did not report saved');
 const paymentId = url.searchParams.get('payment_id');
 assert(paymentId && Number(paymentId) > 0, 'SC-017 payment save did not return payment_id');
 assert((await page.locator('body').innerText()).includes('QA-FUNC-PAYMENT'), 'SC-017 saved payment not visible');
-record('SC-017', 'create AR payment', {paymentId});
+record('SC-017', 'create AR payment for settlement', {paymentId});
 
 // SC-018 record a valid collection and prove payment reconciliation.
 await gotoAdmin('safecontracts-collections', `payment_id=${paymentId}`);
@@ -98,7 +164,7 @@ await form.locator('textarea[name="details"]').fill('Worker #2 functional reconc
 await submitAndWait(form);
 url = new URL(page.url());
 assert(url.searchParams.get('safecontracts_status') === 'saved', 'SC-018 valid collection did not report saved');
-let body = await page.locator('body').innerText();
+body = await page.locator('body').innerText();
 assert(body.includes('QA Functional Method'), 'SC-018 payment method not visible in collection ledger');
 assert(body.includes('23.45'), 'SC-018 collection amount not visible in ledger');
 record('SC-018', 'record valid collection');
@@ -121,7 +187,7 @@ assert(new URL(page.url()).searchParams.get('safecontracts_status') === 'invalid
 await page.screenshot({path: path.join(outDir, 'SC-018-validation.png'), fullPage: true});
 record('SC-018', 'reject over-settlement');
 
-// SC-019 append a real follow-up event and verify append-only history is visible.
+// SC-019 append real follow-up history, exercise a state change and verify date/payment filters.
 await gotoAdmin('safecontracts-followups', `payment_id=${paymentId}`);
 form = await formForAction('safecontracts_save_followup_admin');
 await form.locator('select[name="followup_operation"]').selectOption('note');
@@ -130,15 +196,34 @@ await submitAndWait(form);
 assert(new URL(page.url()).searchParams.get('safecontracts_status') === 'saved', 'SC-019 follow-up did not report saved');
 body = await page.locator('body').innerText();
 assert(body.includes('QA functional follow-up event'), 'SC-019 append-only history does not show saved event');
-await page.screenshot({path: path.join(outDir, 'SC-019-history.png'), fullPage: true});
 record('SC-019', 'append follow-up event and verify history');
 
-// SC-020 exercise real finance filters without recomputing or cross-currency folding in the browser.
-await gotoAdmin('safecontracts-finance', 'financial_direction=receivable&currency_code=KWD');
+form = await formForAction('safecontracts_save_followup_admin');
+await form.locator('select[name="followup_operation"]').selectOption('issue');
+await form.locator('textarea[name="note"]').fill('QA functional issue state');
+await submitAndWait(form);
+assert(new URL(page.url()).searchParams.get('safecontracts_status') === 'saved', 'SC-019 issue state did not report saved');
 body = await page.locator('body').innerText();
-assert(body.includes('KWD'), 'SC-020 KWD finance scope is not visible');
-assert(body.includes('Accounts Receivable') || body.includes('Money coming in') || body.includes('Receivable'), 'SC-020 receivable direction not visible');
-record('SC-020', 'server-side AR/KWD finance filter');
+assert(body.includes('QA functional issue state') && body.includes('Issue'), 'SC-019 issue state/history is not visible');
+record('SC-019', 'set and display follow-up issue state');
+
+await gotoAdmin('safecontracts-followups', `payment_id=${paymentId}&date_from=2026-01-01&date_to=2026-12-31`);
+body = await page.locator('body').innerText();
+assert(body.includes('QA functional issue state'), 'SC-019 payment/date filter lost selected follow-up history');
+assert(await page.locator('input[name="date_from"]').inputValue() === '2026-01-01', 'SC-019 date_from filter was not applied');
+assert(await page.locator('input[name="date_to"]').inputValue() === '2026-12-31', 'SC-019 date_to filter was not applied');
+await page.screenshot({path: path.join(outDir, 'SC-019-history.png'), fullPage: true});
+record('SC-019', 'payment and date filters preserve state/history');
+
+// SC-020 exercise real server-side finance filters and a known calculated outstanding value.
+await gotoAdmin('safecontracts-finance', 'direction=receivable&currency_code=KWD&due_from=2026-09-30&due_to=2026-09-30');
+body = await page.locator('body').innerText();
+assert(await page.locator('select[name="direction"]').inputValue() === 'receivable', 'SC-020 receivable direction filter was not applied');
+assert(await page.locator('select[name="currency_code"]').inputValue() === 'KWD', 'SC-020 KWD currency filter was not applied');
+assert(await page.locator('input[name="due_from"]').inputValue() === '2026-09-30', 'SC-020 due_from filter was not applied');
+assert(await page.locator('input[name="due_to"]').inputValue() === '2026-09-30', 'SC-020 due_to filter was not applied');
+assert(body.includes('KWD 100.00') || body.includes('KWD 100'), 'SC-020 real filtered outstanding value did not reconcile to KWD 100');
+record('SC-020', 'server-side AR/KWD/date filters with calculated outstanding', {outstanding: 'KWD 100.00'});
 
 // SC-021 validation state plus real supported XLSX export.
 await gotoAdmin('safecontracts-reports', 'date_from=2026-10-01&date_to=2026-09-01');
@@ -197,7 +282,7 @@ record('SC-022', 'real XLSX upload/map/execute', {runId, importStatus});
 
 // SC-023 safe deactivate after the method has real settlement history.
 await gotoAdmin('safecontracts-payment-methods');
-const methodRow = page.locator('tr').filter({hasText: 'qa_func_method'}).first();
+let methodRow = page.locator('tr').filter({hasText: 'qa_func_method'}).first();
 assert(await methodRow.count(), 'SC-023 created method row not found for safe deactivate');
 const deleteForm = methodRow.locator('form:has(input[name="action"][value="safecontracts_delete_payment_method"])');
 assert(await deleteForm.count(), 'SC-023 active method has no safe delete/deactivate form');
@@ -206,23 +291,48 @@ await submitAndWait(deleteForm);
 assert(new URL(page.url()).searchParams.get('safecontracts_status') === 'deleted', 'SC-023 safe deactivate did not report deleted');
 record('SC-023', 'safe deactivate payment method');
 
+await gotoAdmin('safecontracts-payment-methods', 'method=qa_func_method');
+methodRow = page.locator('tr').filter({hasText: 'qa_func_method'}).first();
+assert(await methodRow.count(), 'SC-023 inactive method disappeared from administrative history');
+assert((await methodRow.innerText()).includes('Inactive'), 'SC-023 deactivated method is not presented as inactive');
+record('SC-023', 'inactive state remains administratively visible');
+
 await gotoAdmin('safecontracts-collections', `payment_id=${paymentId}`);
 body = await page.locator('body').innerText();
 assert(body.includes('QA Functional Method'), 'SC-023 deactivation rewrote historical collection method reference');
-record('SC-023', 'historical settlement method preserved after deactivate');
+const activeMethodOptions = await page.locator('select[name="payment_method_id"] option').allTextContents();
+assert(!activeMethodOptions.some((text) => text.includes('QA Functional Method')), 'SC-023 inactive method is still offered for new settlement');
+record('SC-023', 'historical settlement method preserved while inactive');
+
+// SC-023 reactivate through the same validated save path; historical references remain untouched.
+await gotoAdmin('safecontracts-payment-methods', 'method=qa_func_method');
+form = await formForAction('safecontracts_save_payment_method');
+assert(await form.locator('input[name="original_code"]').inputValue() === 'qa_func_method', 'SC-023 reactivation edit form lost stable method code');
+if (!(await form.locator('input[name="is_active"]').isChecked())) await form.locator('input[name="is_active"]').check();
+await submitAndWait(form);
+assert(new URL(page.url()).searchParams.get('safecontracts_status') === 'saved', 'SC-023 reactivation did not report saved');
+methodRow = page.locator('tr').filter({hasText: 'qa_func_method'}).first();
+assert(await methodRow.count(), 'SC-023 reactivated method row not found');
+assert((await methodRow.innerText()).includes('Active'), 'SC-023 method did not return to active state');
+record('SC-023', 'reactivate payment method with stable code');
+
+await gotoAdmin('safecontracts-collections', `payment_id=${paymentId}`);
+body = await page.locator('body').innerText();
+assert(body.includes('QA Functional Method'), 'SC-023 reactivation disturbed historical settlement reference');
+record('SC-023', 'historical settlement reference preserved after reactivation');
 
 fs.writeFileSync(path.join(outDir, 'worker2-functional-summary.json'), JSON.stringify(results, null, 2));
 fs.writeFileSync(path.join(outDir, 'WORKER2_FUNCTIONAL_QA.md'), [
   '# Worker #2 Functional QA',
   '',
   '- Runtime: disposable real WordPress + MySQL + authenticated wp-admin + Playwright.',
-  '- SC-017: payment creation and persisted AR context PASS.',
+  '- SC-017: create, Open, edit, contract/date filters and permitted safe delete PASS; settled test payment then persists for downstream scopes.',
   '- SC-018: collection save, settlement reconciliation, and over-settlement rejection PASS.',
-  '- SC-019: append-only follow-up event/history PASS.',
-  '- SC-020: server-side AR/KWD finance filter PASS.',
+  '- SC-019: append-only history, issue state and payment/date filters PASS.',
+  '- SC-020: server-side AR/KWD/due-date filters and known KWD 100 outstanding calculation PASS.',
   '- SC-021: invalid date validation and real XLSX export PASS.',
   '- SC-022: invalid upload rejection and real XLSX upload/map/execute PASS.',
-  '- SC-023: active method creation, safe deactivate, historical settlement reference preservation PASS.',
+  '- SC-023: validation, active creation, safe deactivate, inactive-state enforcement, historical reference preservation and reactivation PASS.',
   '',
 ].join('\n'));
 
