@@ -59,9 +59,8 @@ foreach ([
     [$notificationMigration, 'KEY retry_lookup (status, scheduled_for, attempt_no)'],
     [$notificationMigration, 'KEY user_active (user_id, is_active)'],
     [$importMigration, 'KEY status_created (status, created_at, id)'],
-    // ROW_NUMBER is reserved by MySQL 8. The import migration must quote the
-    // historical identifier while preserving the exact high-frequency index
-    // column order and therefore the P10-006 performance contract.
+    // ROW_NUMBER is reserved by MySQL 8. Keep the exact run_row column order
+    // while requiring the migration to quote the historical identifier.
     [$importMigration, 'KEY run_row (import_run_id, `row_number`, id)'],
 ] as [$source, $needle]) {
     sc_p10b_assert(str_contains($source, $needle), 'P10-006 high-frequency scoped/index path is explicitly indexed: ' . $needle);
@@ -106,8 +105,6 @@ sc_p10b_assert(str_contains($importRuns, '$wpdb->prepare'), 'P10-009 import repo
 
 // SC-P10-010 — Excel export verification.
 $GLOBALS['sc_test_current_caps'] = [Capabilities::ACCESS => true, Capabilities::VIEW_ASSIGNED => true];
-$exportDenied = ExcelExportController::canExport();
-sc_p10b_expect(WP_Error::class, static fn () => null, '');
 $exportDenied = ExcelExportController::canExport();
 sc_p10b_assert($exportDenied instanceof WP_Error && ($exportDenied->data['status'] ?? 0) === 403, 'P10-010 export is denied without explicit export capability');
 $GLOBALS['sc_test_current_caps'][Capabilities::EXPORT_REPORTS] = true;
