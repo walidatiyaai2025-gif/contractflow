@@ -35,6 +35,38 @@ final class NotificationCenterPage
             self::SLUG,
             [self::class, 'render']
         );
+        add_action('admin_enqueue_scripts', [self::class, 'enqueueOwnedScreenStyles'], 30);
+    }
+
+    public static function enqueueOwnedScreenStyles(): void
+    {
+        $page = sanitize_key((string) ($_GET['page'] ?? ''));
+        if (! in_array($page, [
+            self::SLUG,
+            NotificationsPage::SLUG,
+            NotificationSchedulePage::SLUG,
+            NotificationSettingsPage::SLUG,
+            EmailSettingsPage::SLUG,
+            ActiveUsersPage::SLUG,
+            UsersRolesPage::SLUG,
+            FirebaseSettingsPage::SLUG,
+            MobileConfigurationPage::SLUG,
+            TranslationsPage::SLUG,
+            UserGuidePage::SLUG,
+        ], true)) {
+            return;
+        }
+
+        wp_add_inline_style(
+            AdminShell::STYLE_HANDLE,
+            '.safecontracts-settings .safecontracts-summary-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0 18px}' .
+            '.safecontracts-settings .safecontracts-summary-card{box-sizing:border-box;display:flex;min-width:0;min-height:118px;flex-direction:column;gap:6px;padding:17px 18px;border:1px solid var(--sc-ui-line,#e1d4c7);border-radius:var(--sc-ui-radius-md,14px);background:#fff;box-shadow:var(--sc-ui-shadow-xs,0 4px 14px rgba(26,43,58,.06))}' .
+            '.safecontracts-settings .safecontracts-summary-card__label{color:var(--sc-ui-ink-500,#687481);font-size:12px;font-weight:800;line-height:1.4}' .
+            '.safecontracts-settings .safecontracts-summary-card__value{color:var(--sc-ui-navy-950,#102d46);font-size:29px;line-height:1.15;font-weight:800;overflow-wrap:anywhere}' .
+            '.safecontracts-settings .safecontracts-summary-card__detail{margin-top:auto;color:var(--sc-ui-ink-500,#687481);font-size:11px;line-height:1.45}' .
+            '@media(max-width:1180px){.safecontracts-settings .safecontracts-summary-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}' .
+            '@media(max-width:782px){.safecontracts-settings .safecontracts-summary-cards{grid-template-columns:1fr}.safecontracts-settings .safecontracts-summary-card{min-height:0}}'
+        );
     }
 
     public static function registerInboxActions(): void
