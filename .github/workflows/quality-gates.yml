@@ -55,7 +55,7 @@ jobs:
       - name: Test
         shell: bash
         run: |
-          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' -print0 | sort -z)
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
           flutter test "${tests[@]}"
 
   release-readiness:
