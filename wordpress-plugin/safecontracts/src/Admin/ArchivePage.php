@@ -13,6 +13,7 @@ final class ArchivePage
 
     public static function register(): void
     {
+        Worker1Assets::register();
         add_submenu_page(
             AdminShell::SLUG,
             __('Archive', 'safecontracts'),
@@ -29,6 +30,7 @@ final class ArchivePage
             wp_die(__('You do not have permission to view the archive.', 'safecontracts'));
         }
 
+        $canViewSuppliers = current_user_can(Capabilities::VIEW_SUPPLIERS);
         $allRows = self::rows();
         $counts = [];
         foreach ($allRows as $row) {
@@ -59,8 +61,6 @@ final class ArchivePage
         $pageRows = array_slice($rows, ($currentPage - 1) * self::PAGE_SIZE, self::PAGE_SIZE);
         $financialCount = ($counts['Contract'] ?? 0) + ($counts['Payment'] ?? 0) + ($counts['Collection'] ?? 0);
         $referenceCount = ($counts['Customer'] ?? 0) + ($counts['Supplier'] ?? 0) + ($counts['Payment method'] ?? 0);
-
-        self::renderStylesheet();
         ?>
         <div class="wrap safecontracts-settings safecontracts-archive safecontracts-worker1" dir="auto">
             <header class="safecontracts-worker1__header">
@@ -72,7 +72,7 @@ final class ArchivePage
                 <div class="safecontracts-worker1__header-actions">
                     <a class="button" href="<?php echo esc_url(add_query_arg(['page' => ContractsPage::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Active contracts', 'safecontracts'); ?></a>
                     <a class="button" href="<?php echo esc_url(add_query_arg(['page' => CustomersPage::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Customers', 'safecontracts'); ?></a>
-                    <a class="button" href="<?php echo esc_url(add_query_arg(['page' => SuppliersPage::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Suppliers', 'safecontracts'); ?></a>
+                    <?php if ($canViewSuppliers) : ?><a class="button" href="<?php echo esc_url(add_query_arg(['page' => SuppliersPage::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Suppliers', 'safecontracts'); ?></a><?php endif; ?>
                 </div>
             </header>
 
@@ -110,7 +110,7 @@ final class ArchivePage
                                         <td><div class="safecontracts-worker1__primary-cell"><strong><?php echo esc_html((string) ($row['label'] !== '' ? $row['label'] : '—')); ?></strong><span class="safecontracts-worker1__secondary"><?php echo esc_html((string) $row['type']); ?></span></div></td>
                                         <td><?php echo esc_html((string) ($row['archived_at'] !== '' ? $row['archived_at'] : '—')); ?></td>
                                         <td><?php echo (int) $row['archived_by'] > 0 ? '#' . esc_html((string) $row['archived_by']) : '—'; ?></td>
-                                        <td><?php if ((string) $row['type'] === 'Supplier') : ?><a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => SuppliersPage::SLUG, 'supplier_id' => (int) $row['id'], 'include_archived' => '1'], admin_url('admin.php'))); ?>"><?php echo esc_html__('View read-only supplier', 'safecontracts'); ?></a><?php else : ?><span class="description"><?php echo esc_html__('History only', 'safecontracts'); ?></span><?php endif; ?></td>
+                                        <td><?php if ((string) $row['type'] === 'Supplier' && $canViewSuppliers) : ?><a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => SuppliersPage::SLUG, 'supplier_id' => (int) $row['id'], 'include_archived' => '1'], admin_url('admin.php'))); ?>"><?php echo esc_html__('View read-only supplier', 'safecontracts'); ?></a><?php else : ?><span class="description"><?php echo esc_html__('History only', 'safecontracts'); ?></span><?php endif; ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 </tbody>
@@ -184,15 +184,6 @@ final class ArchivePage
             'Payment method' => __('Payment method', 'safecontracts'),
             default => $type,
         };
-    }
-
-    private static function renderStylesheet(): void
-    {
-        $version = defined('SAFECONTRACTS_VERSION') ? SAFECONTRACTS_VERSION : '0.3.2';
-        $url = defined('SAFECONTRACTS_URL') ? SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-1/parties-contracts.css' : '';
-        if ($url !== '') {
-            ?><link class="safecontracts-worker1__stylesheet-marker" rel="stylesheet" href="<?php echo esc_url(add_query_arg('ver', $version, $url)); ?>"><?php
-        }
     }
 
     private static function renderPagination(int $currentPage, int $totalPages, int $totalRows, string $search, string $type): void
