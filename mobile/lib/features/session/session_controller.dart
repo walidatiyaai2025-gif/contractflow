@@ -141,7 +141,8 @@ int _positiveInt(Object? value, String field) {
 String? _optionalDisplayName(Object? value) {
   if (value == null || value == '') return null;
   if (value is! String) {
-    throw const FormatException('session.display_name must be a string or null.');
+    throw const FormatException(
+        'session.display_name must be a string or null.');
   }
   final normalized = value.trim();
   if (normalized.isEmpty) return null;
