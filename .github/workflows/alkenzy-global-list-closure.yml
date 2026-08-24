@@ -1,0 +1,62 @@
+name: ALKENZY Global List Closure
+
+on:
+  push:
+    branches:
+      - bugfix/alkenzy-global-list-closure
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bugfix/alkenzy-global-list-closure
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Preserve closure patch and reset to latest integration
+        shell: bash
+        run: |
+          cp scripts/alkenzy_global_list_closure.py /tmp/alkenzy_global_list_closure.py
+          python3 -m py_compile /tmp/alkenzy_global_list_closure.py
+          git fetch origin feat/alkenzy-mobile-reference-redesign
+          git reset --hard origin/feat/alkenzy-mobile-reference-redesign
+      - name: Apply global list closure
+        run: python3 /tmp/alkenzy_global_list_closure.py
+      - name: PHP regression suite
+        run: bash scripts/test-php.sh
+      - name: Resolve Flutter dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Canonical format
+        working-directory: mobile
+        run: dart format lib test
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze
+      - name: Flutter regression suite
+        working-directory: mobile
+        shell: bash
+        run: |
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
+      - name: Commit validated global list closure
+        shell: bash
+        run: |
+          rm -f .github/workflows/alkenzy-global-list-closure.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(alkenzy): close global list pagination and toolbar consistency"
+          git push --force-with-lease origin HEAD:bugfix/alkenzy-global-list-closure
