@@ -53,9 +53,8 @@ void main() {
     await _captureDestination(tester, 5, 'REF05_payments_ar_390');
     await _captureDestination(tester, 6, 'REF05_finance_ar_390');
     await _captureDestination(tester, 8, 'REF05_followups_ar_390');
-    await _captureDestination(tester, 9, 'REF06_notifications_ar_390');
-    await _captureDestination(tester, 10, 'REF06_export_ar_390');
-    await _captureDestination(tester, 11, 'REF06_profile_ar_390');
+    await _captureDestination(tester, 9, 'REF06_export_ar_390');
+    await _captureDestination(tester, 10, 'REF06_profile_ar_390');
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -145,7 +144,7 @@ ApiTransportResponse _handler(Uri uri) {
       },
       'features': <String, Object?>{
         'excel_export': true,
-        'push_notifications': true,
+        'push_notifications': false,
         'collection_entry': true,
       },
     });
