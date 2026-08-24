@@ -1,0 +1,221 @@
+exit_code=1
+              '            }).toList(growable: false),\n'
+              '          ),\n'
+              '        ),\n'
+              '      ),\n'
+              '    );\n'
+              '  }\n'
+              '}\n'
+              '\n'
+              'final class _PlannedDestination extends StatelessWidget {\n'
+              '  const _PlannedDestination({required this.destination});\n'
+              '\n'
+              '  final MobileDestination destination;\n'
+              '\n'
+              '  @override\n'
+              '  Widget build(BuildContext context) {\n'
+              '    final l10n = context.scL10n;\n'
+              '    return Center(\n'
+              '      child: Padding(\n'
+              '        padding: const EdgeInsets.all(SafeContractsSpacing.xl),\n'
+              '        child: SafeContractsEmptyState(\n'
+              '          icon: _icon(destination),\n'
+              '          title: _label(l10n, destination),\n'
+              '          message: l10n.isArabic\n'
+              '              ? \'التنقل مسموح لهذا الحساب. شاشة الموبايل المخصصة تُنفذ ضمن مهمة النطاق المقابلة.\'\n'
+              '              : \'Navigation is authorized. The dedicated screen is implemented in its corresponding scope.\',\n'
+              '        ),\n'
+              '      ),\n'
+              '    );\n'
+              '  }\n'
+              '}\n'
+              '\n'
+              'String _label(SafeContractsLocalizations l10n, MobileDestination destination) {\n'
+              '  return l10n.t(switch (destination) {\n'
+              '    MobileDestination.dashboard => \'Dashboard\',\n'
+              '    MobileDestination.customers => \'Customers\',\n'
+              '    MobileDestination.suppliers => \'Suppliers\',\n'
+              '    MobileDestination.contracts => \'Contracts\',\n'
+              '    MobileDestination.payments => \'Payments\',\n'
+              '    MobileDestination.finance => \'Finance\',\n'
+              '    MobileDestination.collections => \'Collections\',\n'
+              '    MobileDestination.followUps => \'Follow-up\',\n'
+              '    MobileDestination.notifications => \'Notifications\',\n'
+              '    MobileDestination.export => \'Excel export\',\n'
+              '    MobileDestination.profile => \'Profile\',\n'
+              '  });\n'
+              '}\n'
+              '\n'
+              'IconData _icon(MobileDestination destination) {\n'
+              '  return switch (destination) {\n'
+              '    MobileDestination.dashboard => Icons.home_outlined,\n'
+              '    MobileDestination.customers => Icons.people_alt_outlined,\n'
+              '    MobileDestination.suppliers => Icons.local_shipping_outlined,\n'
+              '    MobileDestination.contracts => Icons.description_outlined,\n'
+              '    MobileDestination.payments => Icons.receipt_long_outlined,\n'
+              '    MobileDestination.finance => Icons.account_balance_wallet_outlined,\n'
+              '    MobileDestination.collections => Icons.payments_outlined,\n'
+              '    MobileDestination.followUps => Icons.timeline_outlined,\n'
+              '    MobileDestination.notifications => Icons.notifications_outlined,\n'
+              '    MobileDestination.export => Icons.file_download_outlined,\n'
+              '    MobileDestination.profile => Icons.person_outline_rounded,\n'
+              '  };\n'
+              '}\n'
+              '\n'
+              'IconData _selectedIcon(MobileDestination destination) {\n'
+              '  return switch (destination) {\n'
+              '    MobileDestination.dashboard => Icons.home_rounded,\n'
+              '    MobileDestination.customers => Icons.people_alt_rounded,\n'
+              '    MobileDestination.suppliers => Icons.local_shipping_rounded,\n'
+              '    MobileDestination.contracts => Icons.description_rounded,\n'
+              '    MobileDestination.payments => Icons.receipt_long_rounded,\n'
+              '    MobileDestination.finance => Icons.account_balance_wallet_rounded,\n'
+              '    MobileDestination.collections => Icons.payments_rounded,\n'
+              '    MobileDestination.followUps => Icons.timeline_rounded,\n'
+              '    MobileDestination.notifications => Icons.notifications_rounded,\n'
+              '    MobileDestination.export => Icons.file_download_rounded,\n'
+              '    MobileDestination.profile => Icons.person_rounded,\n'
+              '  };\n'
+              '}\n'
+              ''
+     Which: does not contain 'AnimatedScale'
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/mobile_quick_add_profile_ux_test.dart 85:5     main.<fn>
+  
+00:10 +81 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_quick_add_profile_ux_test.dart: contract quick add can reach an authorized customer on page 2
+00:10 +82 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_dashboard_counterparty_609_test.dart: ALK-MOBILE #609 dashboard counterparty compatibility dashboard accepts production supplier contract option with customer 0
+00:10 +83 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_dashboard_counterparty_609_test.dart: ALK-MOBILE #609 dashboard counterparty compatibility dependent contract options accept null empty and zero supplier bridge
+00:10 +84 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_dashboard_counterparty_609_test.dart: ALK-MOBILE #609 dashboard counterparty compatibility customer-filtered options fail closed on supplier leakage
+00:10 +85 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_dashboard_counterparty_609_test.dart: ALK-MOBILE #609 dashboard counterparty compatibility customer option rejects conflicting legacy and canonical identities
+00:10 +86 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_dashboard_counterparty_609_test.dart: ALK-MOBILE #609 dashboard counterparty compatibility dashboard activity resolves supplier counterparty name
+00:10 +87 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_dashboard_counterparty_609_test.dart: ALK-MOBILE #609 dashboard counterparty compatibility payment model accepts zero customer bridge and preserves supplier
+00:10 +88 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_dashboard_counterparty_609_test.dart: ALK-MOBILE #609 dashboard counterparty compatibility source audit keeps contract and payment customer bridges optional
+00:10 +89 -4: /home/runner/work/contractflow/contractflow/mobile/test/sc_p11_004_suppliers_finance_test.dart: suppliers navigation requires the explicit supplier view capability
+00:10 +90 -4: /home/runner/work/contractflow/contractflow/mobile/test/sc_p11_004_suppliers_finance_test.dart: finance navigation accepts AP or AR independently
+00:10 +91 -4: /home/runner/work/contractflow/contractflow/mobile/test/sc_p11_004_suppliers_finance_test.dart: supplier quick add is exposed only by supplier create permission
+00:10 +92 -4: /home/runner/work/contractflow/contractflow/mobile/test/sc_p11_004_suppliers_finance_test.dart: supplier contract does not fabricate a legacy customer
+00:10 +93 -4: /home/runner/work/contractflow/contractflow/mobile/test/sc_p11_004_suppliers_finance_test.dart: contract parser rejects a counterparty direction conflict
+00:10 +94 -4: /home/runner/work/contractflow/contractflow/mobile/test/sc_p11_004_suppliers_finance_test.dart: finance obligation rejects counterparty direction conflict
+00:11 +95 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_remember_language_054_055_test.dart: Remember me controls bearer-token persistence without storing password
+00:11 +96 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_remember_language_054_055_test.dart: Arabic and English language choice is normalized and persisted
+00:12 +97 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_customers_010_test.dart: SC-P9-010 loads bounded customer page with server sort metadata
+00:12 +98 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_customers_010_test.dart: SC-P9-010 paging and order changes remain server-bound
+00:12 +99 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_customers_010_test.dart: SC-P9-010 customer detail uses direct scoped endpoint and safe fields
+00:12 +100 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_customers_010_test.dart: SC-P9-010 unauthorized controller fails before network access
+00:12 +101 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_customers_010_test.dart: SC-P9-010 screen lazy-loads list then direct customer detail
+00:12 +102 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_customers_010_test.dart: SC-P9-010 screen lazy-loads list then direct customer detail
+00:12 +103 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_customers_010_test.dart: SC-P9-010 screen lazy-loads list then direct customer detail
+00:12 +104 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_customers_010_test.dart: SC-P9-010 screen lazy-loads list then direct customer detail
+00:13 +105 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_records_013_015_test.dart: SC-P9-013 sends only supported contract light-edit fields
+00:13 +106 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_records_013_015_test.dart: SC-P9-013 surfaces forbidden and conflict responses distinctly
+00:13 +107 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_records_013_015_test.dart: SC-P9-014 payment list preserves filters and deterministic paging
+00:13 +108 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_records_013_015_test.dart: SC-P9-015 detail keeps financial and status fields server-authoritative
+00:14 +109 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_validation_038_044_test.dart: SC-P9-038 contract light edit remains field and capability bounded
+00:14 +110 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_validation_038_044_test.dart: SC-P9-039 payment list stays bounded filtered and deterministic
+00:14 +111 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_validation_038_044_test.dart: SC-P9-040 payment detail preserves server dates money and status
+00:14 +112 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_validation_038_044_test.dart: SC-P9-041 expected-date edit cannot submit contractual due date
+00:14 +113 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_validation_038_044_test.dart: SC-P9-042 collection entry sends input only and no financial authority
+00:14 +114 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_validation_038_044_test.dart: SC-P9-043 payment methods are server supplied and duplicate-safe
+00:14 +115 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_validation_038_044_test.dart: SC-P9-044 follow-up workflow keeps operational state off balances
+00:14 +116 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_contracts_011_test.dart: SC-P9-011 loads bounded contract page with server default sort
+00:14 +117 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_contracts_011_test.dart: SC-P9-011 customer status sort and page remain server-bound
+00:14 +118 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_contracts_011_test.dart: SC-P9-011 preserves server contract status and safe projection
+00:14 +119 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_contracts_011_test.dart: SC-P9-011 unauthorized controller fails before network access
+00:14 +120 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_contracts_011_test.dart: SC-P9-011 screen lazy-loads and hands selected ID to details
+00:15 +121 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_contracts_011_test.dart: SC-P9-011 screen lazy-loads and hands selected ID to details
+00:15 +122 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_contracts_011_test.dart: SC-P9-011 screen lazy-loads and hands selected ID to details
+00:15 +123 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_contracts_011_test.dart: SC-P9-011 screen lazy-loads and hands selected ID to details
+00:15 +124 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: premium bottom navigation does not overflow phone widths
+00:16 +125 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: premium bottom navigation does not overflow phone widths
+00:16 +126 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: premium bottom navigation does not overflow phone widths
+00:16 +127 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: premium bottom navigation does not overflow phone widths
+00:16 +128 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: premium bottom navigation does not overflow phone widths
+00:16 +129 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: Arabic direction is preserved in shared navigation
+00:16 +130 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones
+00:17 +131 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones
+00:17 +132 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones
+00:17 +133 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones
+00:17 +134 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones
+00:17 +135 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones
+00:17 +136 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones
+00:17 +137 -4: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _KeyWidgetFinder:<Found 0 widgets with key [<'companyWelcomeSignIn'>]: []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart:124:9)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart line 124
+The test description was:
+  welcome and login remain usable at narrow and wide phones
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:18 +137 -5: /home/runner/work/contractflow/contractflow/mobile/test/mobile_final_validation_047_050_test.dart: SC-P9-049 offline/error/loading state validation forbidden state suppresses retry while offline state permits it
+00:18 +138 -5: /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones [E]
+  Test failed. See exception logs above.
+  The test description was: welcome and login remain usable at narrow and wide phones
+  
+00:18 +138 -5: /home/runner/work/contractflow/contractflow/mobile/test/mobile_final_validation_047_050_test.dart: SC-P9-050 mobile test automation validation hermetic harness uses local fake transport and records exact request
+00:18 +139 -5: loading /home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart
+00:18 +139 -5: /home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart: first launch shows company landing then authenticated app
+00:19 +140 -5: /home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart: first launch shows company landing then authenticated app
+00:19 +141 -5: /home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart: first launch shows company landing then authenticated app
+00:19 +142 -5: /home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart: first launch shows company landing then authenticated app
+00:19 +143 -5: /home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart: first launch shows company landing then authenticated app
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 2 widgets with text "Dashboard": [
+            Text("Dashboard", inherit: true, color: Color(alpha: 0.6800, red: 1.0000, green: 1.0000,
+blue: 1.0000, colorSpace: ColorSpace.sRGB), size: 11.0, weight: 600, overflow: ellipsis, maxLines:
+1, dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
+            Text("Dashboard", debugLabel: ((englishLike labelSmall 2021).merge((((blackMountainView
+labelSmall).apply).apply).merge(((((blackMountainView
+labelSmall).apply).copyWith).copyWith).apply))).copyWith, inherit: false, color: Color(alpha:
+1.0000, red: 0.0353, green: 0.1608, blue: 0.2667, colorSpace: ColorSpace.sRGB), family:
+Inter_regular, familyFallback: [Inter], size: 10.5, weight: 900, letterSpacing: 0.5, baseline:
+alphabetic, height: 1.4x, leadingDistribution: even, decoration: Color(alpha: 1.0000, red: 0.1137,
+green: 0.1059, blue: 0.1255, colorSpace: ColorSpace.sRGB) TextDecoration.none, overflow: ellipsis,
+maxLines: 1, dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
+          ]>
+   Which: is too many
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart:129:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart line 129
+The test description was:
+  first launch shows company landing then authenticated app
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:20 +143 -6: /home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart: first launch shows company landing then authenticated app [E]
+  Test failed. See exception logs above.
+  The test description was: first launch shows company landing then authenticated app
+  
+00:20 +143 -6: Some tests failed.
+
+Failing tests:
+  /home/runner/work/contractflow/contractflow/mobile/test/mobile_design_foundation_test.dart: welcome and login remain usable at narrow and wide phones
+  /home/runner/work/contractflow/contractflow/mobile/test/mobile_localization_currency_051_053_test.dart: SC-MOBILE-051 Arabic and English localization is deterministic
+  /home/runner/work/contractflow/contractflow/mobile/test/mobile_login_firebase_test.dart: first launch shows company landing then authenticated app
+  /home/runner/work/contractflow/contractflow/mobile/test/mobile_login_live_refresh_057_058_test.dart: post-auth login is replaced by a blocking bootstrap splash
+  ... and 2 more
