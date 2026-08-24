@@ -30,6 +30,7 @@ final class ContractsPage
 
     public static function register(): void
     {
+        Worker1Assets::register();
         add_submenu_page(AdminShell::SLUG, __('Contracts', 'safecontracts'), __('Contracts', 'safecontracts'), Capabilities::ACCESS, self::SLUG, [self::class, 'render']);
     }
 
@@ -277,8 +278,6 @@ final class ContractsPage
         $currentPage = min($totalPages, max(1, (int) ($_GET['contract_page'] ?? 1)));
         $pageRows = array_slice($contracts, ($currentPage - 1) * self::PAGE_SIZE, self::PAGE_SIZE);
         $showDetailPanel = $selected !== null || $canCreateContracts;
-
-        self::renderStylesheet();
         ?>
         <div class="wrap safecontracts-settings safecontracts-contracts safecontracts-worker1" dir="auto">
             <header class="safecontracts-worker1__header">
@@ -580,15 +579,6 @@ final class ContractsPage
     private static function text(string $english, string $arabic): string
     {
         return TranslationCatalog::currentLanguage() === 'ar' ? $arabic : __($english, 'safecontracts');
-    }
-
-    private static function renderStylesheet(): void
-    {
-        $version = defined('SAFECONTRACTS_VERSION') ? SAFECONTRACTS_VERSION : '0.3.2';
-        $url = defined('SAFECONTRACTS_URL') ? SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-1/parties-contracts.css' : '';
-        if ($url !== '') {
-            ?><link class="safecontracts-worker1__stylesheet-marker" rel="stylesheet" href="<?php echo esc_url(add_query_arg('ver', $version, $url)); ?>"><?php
-        }
     }
 
     private static function queryText(string $key): string
