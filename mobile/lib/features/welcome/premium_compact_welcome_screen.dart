@@ -3,14 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/branding/safe_contracts_brand.dart';
+import '../ui/alkenzy_reference_components.dart';
 import '../ui/safecontracts_design.dart';
 import 'mobile_landing.dart';
 
-/// Additive no-scroll landing for the Alkenzy ADV 0.3.2 premium flow.
+/// Reference-aligned entry page for Alkenzy ADV.
 ///
-/// The existing company welcome screen is intentionally retained in source.
-/// This variant keeps all primary controls visible in one viewport, matching
-/// the supplied premium reference without changing authentication behavior.
+/// This keeps the existing landing controller and authentication entry point
+/// intact while adopting the locked cream/navy/copper onboarding composition.
 final class PremiumCompactWelcomeScreen extends StatefulWidget {
   const PremiumCompactWelcomeScreen({
     required this.controller,
@@ -46,86 +46,121 @@ final class _PremiumCompactWelcomeScreenState
       builder: (context, child) {
         final content = widget.controller.content;
         return Scaffold(
-          backgroundColor: SafeContractsVisual.navyDeep,
+          backgroundColor: SafeContractsVisual.background,
           body: Stack(
             fit: StackFit.expand,
             children: [
-              const _PremiumBackdrop(),
+              const _ReferenceBackdrop(),
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final compact = constraints.maxHeight < 720;
-                    return Padding(
+                    final compactWidth = constraints.maxWidth < 360;
+                    return SingleChildScrollView(
                       padding: EdgeInsets.fromLTRB(
-                        constraints.maxWidth < 380 ? 14 : 20,
-                        compact ? 8 : 14,
-                        constraints.maxWidth < 380 ? 14 : 20,
-                        compact ? 10 : 16,
+                        compactWidth ? 14 : 20,
+                        10,
+                        compactWidth ? 14 : 20,
+                        20,
                       ),
-                      child: Column(
-                        children: [
-                          _Header(
-                            content: content,
-                            languageCode: widget.languageCode,
-                            onLanguageChanged: widget.onLanguageChanged,
-                          ),
-                          SizedBox(height: compact ? 10 : 16),
-                          Expanded(
-                            child: _HeroCard(
-                              content: content,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight - 30,
+                          maxWidth: 520,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _ReferenceHeader(
                               languageCode: widget.languageCode,
-                              compact: compact,
-                            ),
-                          ),
-                          SizedBox(height: compact ? 10 : 14),
-                          _Dots(compact: compact),
-                          SizedBox(height: compact ? 8 : 12),
-                          FilledButton.icon(
-                            key: const Key('companyWelcomeSignIn'),
-                            onPressed: widget.onSignIn,
-                            style: FilledButton.styleFrom(
-                              minimumSize: Size.fromHeight(compact ? 48 : 54),
-                              backgroundColor: SafeContractsVisual.roseGold,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            icon: const Icon(Icons.login_rounded),
-                            label: Text(
-                              content.signInLabel.resolve(widget.languageCode),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w900),
-                            ),
-                          ),
-                          SizedBox(height: compact ? 7 : 9),
-                          OutlinedButton.icon(
-                            key: const Key('companyWelcomeLearnMore'),
-                            onPressed: () => _showAbout(content, ar),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: Size.fromHeight(compact ? 44 : 50),
-                              foregroundColor: Colors.white,
-                              side: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.68),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            icon: const Icon(Icons.auto_awesome_outlined),
-                            label: Text(
-                              content.learnMoreLabel
+                              onLanguageChanged: widget.onLanguageChanged,
+                              learnMoreLabel: content.learnMoreLabel
                                   .resolve(widget.languageCode),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w800),
+                              onLearnMore: () => _showAbout(content, ar),
                             ),
-                          ),
-                          if (widget.controller.state ==
-                              MobileLandingState.loading) ...[
-                            const SizedBox(height: 5),
-                            const LinearProgressIndicator(minHeight: 2),
+                            const SizedBox(height: 26),
+                            const _BrandMedallion(),
+                            const SizedBox(height: 20),
+                            Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: ar ? 'مرحباً بك في\n' : 'Welcome to\n',
+                                  ),
+                                  const TextSpan(
+                                    text: '${SafeContractsBrand.name} ',
+                                    style: TextStyle(
+                                      color: SafeContractsVisual.navy,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(
+                                    color: SafeContractsVisual.ink,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.18,
+                                    letterSpacing: -0.6,
+                                  ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              content.summary.resolve(widget.languageCode),
+                              textAlign: TextAlign.center,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: SafeContractsVisual.muted,
+                                    height: 1.65,
+                                  ),
+                            ),
+                            const SizedBox(height: 22),
+                            AlkenzyReferenceFeatureTile(
+                              icon: Icons.contract_outlined,
+                              title: ar ? 'إدارة العقود بسهولة' : 'Contract control',
+                              description: ar
+                                  ? 'أنشئ العقود وتابع حالتها من البداية حتى الإغلاق.'
+                                  : 'Create contracts and follow every stage through closure.',
+                            ),
+                            const SizedBox(height: 10),
+                            AlkenzyReferenceFeatureTile(
+                              icon: Icons.account_balance_wallet_outlined,
+                              title: ar ? 'تحكم مالي ذكي' : 'Smart finance',
+                              description: ar
+                                  ? 'تابع المستحقات والمدفوعات والتحصيلات لحظة بلحظة.'
+                                  : 'Track receivables, payables and collections in one place.',
+                            ),
+                            const SizedBox(height: 10),
+                            AlkenzyReferenceFeatureTile(
+                              icon: Icons.analytics_outlined,
+                              title: ar ? 'تقارير وبيانات دقيقة' : 'Clear reporting',
+                              description: ar
+                                  ? 'رؤى وتقارير تساعدك على اتخاذ القرار من بيانات النظام الحقيقية.'
+                                  : 'Use live system data for focused operational decisions.',
+                            ),
+                            const SizedBox(height: 18),
+                            const _ProgressDots(),
+                            const SizedBox(height: 18),
+                            AlkenzyReferencePrimaryButton(
+                              label: ar ? 'ابدأ الآن' : 'Get started',
+                              icon: ar
+                                  ? Icons.arrow_back_rounded
+                                  : Icons.arrow_forward_rounded,
+                              onPressed: widget.onSignIn,
+                            ),
+                            if (widget.controller.state ==
+                                MobileLandingState.loading) ...[
+                              const SizedBox(height: 10),
+                              const LinearProgressIndicator(minHeight: 2),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     );
                   },
@@ -196,15 +231,17 @@ final class _PremiumCompactWelcomeScreenState
   }
 }
 
-final class _Header extends StatelessWidget {
-  const _Header({
-    required this.content,
+final class _ReferenceHeader extends StatelessWidget {
+  const _ReferenceHeader({
     required this.languageCode,
+    required this.learnMoreLabel,
+    required this.onLearnMore,
     required this.onLanguageChanged,
   });
 
-  final MobileLandingContent content;
   final String languageCode;
+  final String learnMoreLabel;
+  final VoidCallback onLearnMore;
   final ValueChanged<String>? onLanguageChanged;
 
   @override
@@ -212,267 +249,84 @@ final class _Header extends StatelessWidget {
     final selected = languageCode.toLowerCase() == 'ar' ? 'ar' : 'en';
     return Row(
       children: [
-        const SafeContractsBrandMark(size: 42, borderRadius: 12),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                content.brandName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                    ),
-              ),
-              Text(
-                content.agencyName.resolve(languageCode),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: SafeContractsVisual.champagne,
-                    ),
-              ),
-            ],
+        TextButton(
+          onPressed: onLearnMore,
+          child: Text(
+            learnMoreLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
+        const Spacer(),
         SegmentedButton<String>(
           segments: const [
-            ButtonSegment(value: 'en', label: Text('EN')),
             ButtonSegment(value: 'ar', label: Text('ع')),
+            ButtonSegment(value: 'en', label: Text('EN')),
           ],
           selected: {selected},
           showSelectedIcon: false,
           onSelectionChanged: onLanguageChanged == null
               ? null
               : (selection) => onLanguageChanged!(selection.first),
-          style: const ButtonStyle(visualDensity: VisualDensity.compact),
+          style: ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            foregroundColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.selected)
+                  ? Colors.white
+                  : SafeContractsVisual.navy,
+            ),
+            backgroundColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.selected)
+                  ? SafeContractsVisual.navy
+                  : SafeContractsVisual.surface,
+            ),
+          ),
         ),
       ],
     );
   }
 }
 
-final class _HeroCard extends StatelessWidget {
-  const _HeroCard({
-    required this.content,
-    required this.languageCode,
-    required this.compact,
-  });
-
-  final MobileLandingContent content;
-  final String languageCode;
-  final bool compact;
+final class _BrandMedallion extends StatelessWidget {
+  const _BrandMedallion();
 
   @override
   Widget build(BuildContext context) {
-    final ar = languageCode.toLowerCase() == 'ar';
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x55000000),
-            blurRadius: 32,
-            offset: Offset(0, 14),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFB7CBE3),
-                  Color(0xFF315C87),
-                  Color(0xFF071F36),
-                ],
-              ),
-            ),
-          ),
-          PositionedDirectional(
-            top: compact ? 28 : 44,
-            end: compact ? 24 : 38,
-            child: const _FinanceSculpture(),
-          ),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: [0.25, 0.58, 1],
-                colors: [
-                  Colors.transparent,
-                  Color(0x26000000),
-                  Color(0xF0092944),
-                ],
-              ),
-            ),
-          ),
-          PositionedDirectional(
-            start: 20,
-            end: 20,
-            bottom: compact ? 16 : 24,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  content.headline.resolve(languageCode),
-                  maxLines: compact ? 2 : 3,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: SafeContractsVisual.champagne,
-                        fontWeight: FontWeight.w900,
-                        height: 1.18,
-                      ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  content.highlight.resolve(languageCode),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.86),
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.14),
-                    ),
-                  ),
-                  child: Text(
-                    ar
-                        ? '${content.experienceYears}+ سنة خبرة'
-                        : '${content.experienceYears}+ years experience',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+    return Center(
+      child: Container(
+        width: 92,
+        height: 92,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: SafeContractsVisual.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: SafeContractsVisual.champagne),
+          boxShadow: AlkenzyReferenceTokens.softShadow,
+        ),
+        child: const SafeContractsBrandMark(size: 68, borderRadius: 20),
       ),
     );
   }
 }
 
-final class _FinanceSculpture extends StatelessWidget {
-  const _FinanceSculpture();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 210,
-      height: 150,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          for (final item
-              in const <({double left, double height, double width})>[
-            (left: 12, height: 52, width: 34),
-            (left: 60, height: 78, width: 34),
-            (left: 108, height: 126, width: 36),
-            (left: 158, height: 94, width: 34),
-          ])
-            Positioned(
-              left: item.left,
-              bottom: 8,
-              child: Container(
-                width: item.width,
-                height: item.height,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFE8F2FF), Color(0xFF5D7FA5)],
-                  ),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(5),
-                  ),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.38),
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x44000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          Positioned(
-            left: 22,
-            top: 50,
-            child: Transform.rotate(
-              angle: -0.28,
-              child: Container(
-                width: 162,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: SafeContractsVisual.roseGoldSoft,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-            ),
-          ),
-          const Positioned(
-            right: 2,
-            top: 18,
-            child: Icon(
-              Icons.trending_up_rounded,
-              size: 48,
-              color: SafeContractsVisual.roseGoldSoft,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _Dots extends StatelessWidget {
-  const _Dots({required this.compact});
-  final bool compact;
+final class _ProgressDots extends StatelessWidget {
+  const _ProgressDots();
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List<Widget>.generate(
+      children: List.generate(
         4,
-        (index) => Container(
-          width: index == 0 ? (compact ? 14 : 17) : 6,
-          height: 6,
+        (index) => AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: index == 0 ? 17 : 7,
+          height: 7,
           margin: const EdgeInsets.symmetric(horizontal: 3),
           decoration: BoxDecoration(
             color: index == 0
-                ? SafeContractsVisual.roseGold
-                : Colors.white.withValues(alpha: 0.48),
+                ? SafeContractsVisual.navy
+                : SafeContractsVisual.outline,
             borderRadius: BorderRadius.circular(99),
           ),
         ),
@@ -481,8 +335,8 @@ final class _Dots extends StatelessWidget {
   }
 }
 
-final class _PremiumBackdrop extends StatelessWidget {
-  const _PremiumBackdrop();
+final class _ReferenceBackdrop extends StatelessWidget {
+  const _ReferenceBackdrop();
 
   @override
   Widget build(BuildContext context) {
@@ -491,7 +345,11 @@ final class _PremiumBackdrop extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF071E34), Color(0xFF0B3154), Color(0xFF061725)],
+          colors: [
+            Color(0xFFFFFCF7),
+            SafeContractsVisual.backgroundRaised,
+            SafeContractsVisual.background,
+          ],
         ),
       ),
     );
