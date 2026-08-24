@@ -188,7 +188,7 @@ final class SuppliersPage
 
             <section class="safecontracts-worker1__metrics" aria-label="<?php echo esc_attr(self::text('Supplier summary')); ?>">
                 <article class="safecontracts-worker1__metric"><span><?php echo esc_html(self::text('Visible suppliers')); ?></span><strong><?php echo esc_html((string) $totalRows); ?></strong><small><?php echo esc_html(self::text('Current authorized result set')); ?></small></article>
-                <article class="safecontracts-worker1__metric safecontracts-worker1__metric--payable"><span><?php echo esc_html__('Payable contracts', 'safecontracts'); ?></span><strong><?php echo esc_html((string) $payableContracts); ?></strong><small><?php echo esc_html(self::text('Linked supplier contracts')); ?></small></article>
+                <article class="safecontracts-worker1__metric safecontracts-worker1__metric--payable"><span><?php echo esc_html(self::text('Payable contracts')); ?></span><strong><?php echo esc_html((string) $payableContracts); ?></strong><small><?php echo esc_html(self::text('Linked supplier contracts')); ?></small></article>
                 <article class="safecontracts-worker1__metric"><span><?php echo esc_html(self::text('Active suppliers')); ?></span><strong><?php echo esc_html((string) $activeCount); ?></strong><small><?php echo esc_html(self::text('Available for active operations')); ?></small></article>
                 <article class="safecontracts-worker1__metric<?php echo $archivedCount > 0 ? ' safecontracts-worker1__metric--warning' : ''; ?>"><span><?php echo esc_html(self::text('Archived in result')); ?></span><strong><?php echo esc_html((string) $archivedCount); ?></strong><small><?php echo esc_html($includeArchived ? self::text('Archive visibility is enabled') : self::text('Archived suppliers are hidden')); ?></small></article>
             </section>
@@ -311,6 +311,7 @@ final class SuppliersPage
             'Supplier summary' => 'ملخص الموردين',
             'Visible suppliers' => 'الموردون الظاهرون',
             'Current authorized result set' => 'النتائج الحالية ضمن الصلاحيات',
+            'Payable contracts' => 'عقود مستحقة الدفع',
             'Linked supplier contracts' => 'عقود المورد المرتبطة',
             'Active suppliers' => 'الموردون النشطون',
             'Available for active operations' => 'متاح للعمليات النشطة',
