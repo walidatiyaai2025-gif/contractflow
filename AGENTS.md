@@ -11,6 +11,14 @@ These instructions apply to every contributor, coding agent, release operator an
 - Never commit credentials, tokens, database passwords, Firebase private credentials, signing keys, keystores or production configuration containing secrets.
 - `docs/PROJECT_STATUS.md` is machine-maintained. Do not edit its status table manually.
 
+## Alkenzy ADV mobile visual baseline
+
+- The approved mobile redesign references belong under `assets/design/mobile_redesign/reference/` and are the visual baseline for Alkenzy ADV mobile work.
+- Before changing mobile UI, consult `docs/mobile-redesign/MOBILE_UI_REFERENCE.md`, `docs/mobile-redesign/MOBILE_UI_SCREEN_MATRIX.md`, and `docs/mobile-redesign/MOBILE_UI_PROGRESS.md`.
+- Do not replace the approved navy/cream/rose-gold design language with default Flutter/Material styling.
+- Preserve existing API behavior, permissions, business rules, fields and workflows while changing presentation.
+- Update the screen matrix and progress document before handing unfinished redesign work to another contributor.
+
 ## Mandatory quality gate
 
 No build, package, APK or plugin ZIP may be called **verified**, **release**, or **production-ready** unless the exact functional source candidate has passed all required SafeContracts Quality Gates:
