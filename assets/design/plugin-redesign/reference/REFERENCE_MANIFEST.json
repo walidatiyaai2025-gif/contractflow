@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "manifest_version": "1.0.0",
+  "project": "ALKENZY ADV / Safe Contracts — Premium WordPress Plugin Redesign",
+  "baseline_date": "2026-08-24",
+  "default_policy": "LOCKED_IMMUTABLE_UNLESS_OWNER_APPROVES_NEW_REFERENCE_ID",
+  "reference_root": "assets/design/plugin-redesign/reference/",
+  "references": [
+    {
+      "id": "REF_001",
+      "file": "REF_001_Premium_Module_Masterboard.png",
+      "status": "LOCKED",
+      "approved": true,
+      "sha256": "55d5b1657558c2ace1b77d8a2af14026c1bdf5215088dc9f7f5babf8b2eceb05",
+      "width": 1536,
+      "height": 1024,
+      "scope": ["Dashboard", "Customers", "Customer Form", "Customer Details", "Suppliers", "Supplier Details", "Contracts", "Contract Details", "Payments", "Payment Form", "Finance", "Notification Center"],
+      "source_upload": "ChatGPT Image Aug 24, 2026, 11_20_15 AM (4).png",
+      "notes": "Primary premium module masterboard; use for overall composition, navigation, density, cards, tables, forms, finance and notification-center styling."
+    },
+    {
+      "id": "REF_002",
+      "file": "REF_002_WordPress_Plugin_Masterboard_DesignSystem.png",
+      "status": "LOCKED",
+      "approved": true,
+      "sha256": "0b240a3164cc0643b49d95813e2cd8c370660011cf71a535cfd0a8484cca6ee5",
+      "width": 1536,
+      "height": 1024,
+      "scope": ["Landing", "Dashboard", "Customers", "Customer Form", "Receivables", "Notification Settings", "Active Users", "Contracts", "Contract Details", "Attachments", "Contract Form", "Sidebar", "Design Tokens"],
+      "source_upload": "ChatGPT Image Aug 24, 2026, 11_20_14 AM (2).png",
+      "notes": "WordPress-admin-oriented premium masterboard with numbered screens, side navigation and palette/design-system strip."
+    },
+    {
+      "id": "REF_003",
+      "file": "REF_003_WordPress_Dashboard.png",
+      "status": "LOCKED",
+      "approved": true,
+      "sha256": "a53df725f054965c82c0dcbfeb7c7834368903df479e9503542f52ebd1c6dfbf",
+      "width": 1448,
+      "height": 1086,
+      "scope": ["Dashboard", "Summary Cards", "Filters", "Financial Overview", "Contract Distribution", "Charts"],
+      "source_upload": "ChatGPT Image Aug 24, 2026, 11_05_17 AM (1).png",
+      "notes": "Detailed WordPress dashboard visual baseline."
+    },
+    {
+      "id": "REF_004",
+      "file": "REF_004_WordPress_Customers.png",
+      "status": "LOCKED",
+      "approved": true,
+      "sha256": "759bfcb1318b138c65624cd33197ac3492a16f98c50a0ca1ff866fb80c09328b",
+      "width": 1448,
+      "height": 1086,
+      "scope": ["Customers", "Customer Form", "Customer Table", "Filters", "Status", "Actions"],
+      "source_upload": "ChatGPT Image Aug 24, 2026, 11_05_17 AM (2).png",
+      "notes": "Detailed WordPress customers page visual baseline."
+    },
+    {
+      "id": "REF_005",
+      "file": "REF_005_WordPress_Payments.png",
+      "status": "LOCKED",
+      "approved": true,
+      "sha256": "675db72724c3d73184ef7cd8bc94c0be95b8114494c31c8b3f3e1c31f941fc58",
+      "width": 1448,
+      "height": 1086,
+      "scope": ["Payments", "Payment Form", "Receivables", "Payables", "Filters", "Summary Cards"],
+      "source_upload": "ChatGPT Image Aug 24, 2026, 11_05_18 AM (5).png",
+      "notes": "Detailed WordPress payments page visual baseline."
+    },
+    {
+      "id": "REF_006",
+      "file": "REF_006_WordPress_Notification_Settings.png",
+      "status": "LOCKED",
+      "approved": true,
+      "sha256": "345a08985415ee9590e56e49f6da8506feaa84207f6521410c337c91f481e03a",
+      "width": 1448,
+      "height": 1086,
+      "scope": ["Notification Settings", "Rules", "Channels", "Recipients", "Roles", "Pagination"],
+      "source_upload": "ChatGPT Image Aug 24, 2026, 11_05_17 AM (3).png",
+      "notes": "Detailed WordPress notification-settings visual baseline."
+    },
+    {
+      "id": "REF_007",
+      "file": "REF_007_WordPress_Active_Users.png",
+      "status": "LOCKED",
+      "approved": true,
+      "sha256": "7fb60550185c5252efdbc6a0df1383918d9e0e872a3309e99460a748bf13cd27",
+      "width": 1448,
+      "height": 1086,
+      "scope": ["Active Users", "Sessions", "Device Activity", "Dashboard Activity", "User Table", "Filters"],
+      "source_upload": "ChatGPT Image Aug 24, 2026, 11_05_17 AM (4).png",
+      "notes": "Detailed WordPress active-users/activity visual baseline."
+    }
+  ]
+}
