@@ -20,10 +20,10 @@
 | SC-010 | General Settings | `safecontracts-settings` | `GeneralSettingsPage::render()` | REGISTERED | **LEAD** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-011 | Runtime Inspector | `safecontracts-runtime-inspector` | `RuntimeInspectorPage::render()` | REGISTERED | **LEAD** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-012 | Migration Recovery | `safecontracts-migration-recovery` | `MigrationRecoveryPage::render()` | CONDITIONAL_ON_MIGRATION_FAILURE | **LEAD** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-013 | Customers | `safecontracts-customers` | `CustomersPage::render()` | REGISTERED | **WORKER-1** | REF_004 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-014 | Suppliers | `safecontracts-suppliers` | `SuppliersPage::render()` | REGISTERED | **WORKER-1** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-015 | Contracts | `safecontracts-contracts` | `ContractsPage::render()` | REGISTERED | **WORKER-1** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-016 | Archive | `safecontracts-archive` | `ArchivePage::render()` | REGISTERED | **WORKER-1** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
+| SC-013 | Customers | `safecontracts-customers` | `CustomersPage::render()` | REGISTERED | **WORKER-1** | REF_004 | READY FOR LEAD | YES | YES | YES | YES | QA artifact #9528044856 | #638 | NO |
+| SC-014 | Suppliers | `safecontracts-suppliers` | `SuppliersPage::render()` | REGISTERED | **WORKER-1** | REF_001 | READY FOR LEAD | YES | YES | YES | YES | QA artifact #9528044856 | #638 | NO |
+| SC-015 | Contracts | `safecontracts-contracts` | `ContractsPage::render()` | REGISTERED | **WORKER-1** | REF_001 | READY FOR LEAD | YES | YES | YES | YES | QA artifact #9528044856 | #638 | NO |
+| SC-016 | Archive | `safecontracts-archive` | `ArchivePage::render()` | REGISTERED | **WORKER-1** | REF_002 | READY FOR LEAD | YES | YES | YES | YES | QA artifact #9528044856 | #638 | NO |
 | SC-017 | Payments | `safecontracts-payments` | `PaymentsPage::render()` | REGISTERED | **WORKER-2** | REF_005 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-018 | Collections / Settlements | `safecontracts-collections` | `CollectionsPage::render()` | REGISTERED | **WORKER-2** | REF_005 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-019 | Follow-ups | `safecontracts-followups` | `FollowUpsPage::render()` | REGISTERED | **WORKER-2** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
