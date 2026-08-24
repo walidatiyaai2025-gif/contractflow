@@ -17,42 +17,16 @@ jobs:
         with:
           ref: feat/alkenzy-mobile-reference-redesign
           fetch-depth: 0
-      - name: Fetch redesign workers
+      - name: Fetch worker presentation branches
         run: |
           git fetch origin \
             mobile-redesign/foundation-auth-navigation \
             mobile-redesign/payments-finance-operations
-      - name: Integrate Worker 3 completed scope
-        run: |
-          git checkout origin/mobile-redesign/payments-finance-operations -- \
-            mobile/lib/features/export/mobile_excel_export_screen.dart \
-            mobile/lib/features/finance/finance_screen.dart \
-            mobile/lib/features/followups/followups_screen.dart \
-            mobile/lib/features/help/mobile_user_guide_screen.dart \
-            mobile/lib/features/notifications/notifications_screen.dart \
-            mobile/lib/features/payments/collection_entry_dialog.dart \
-            mobile/lib/features/payments/payments.dart \
-            mobile/lib/features/payments/payments_screen.dart \
-            mobile/lib/features/profile/profile_identity_sections.dart \
-            mobile/lib/features/profile/profile_screen.dart
-      - name: Integrate Worker 1 completed non-business scope
-        run: |
-          git checkout origin/mobile-redesign/foundation-auth-navigation -- \
-            mobile/lib/app.dart \
-            mobile/lib/features/auth/login_screen.dart \
-            mobile/lib/features/navigation/app_shell.dart \
-            mobile/lib/features/ui/safecontracts_components.dart \
-            mobile/lib/features/ui/safecontracts_form.dart \
-            mobile/lib/features/ui/safecontracts_splash.dart \
-            mobile/lib/features/ui/safecontracts_theme.dart \
-            mobile/lib/features/ui/safecontracts_tokens.dart \
-            mobile/lib/features/ui/safecontracts_ui.dart \
-            mobile/lib/features/welcome/company_welcome_screen.dart \
-            mobile/test/mobile_design_foundation_test.dart \
-            mobile/test/worker1_visual_capture_test.dart
-      - name: Reconcile PR 624 business routes and Dashboard Two
+      - name: Reconcile shell and guide while preserving PR 624 business routes
         shell: bash
         run: |
+          git checkout origin/mobile-redesign/foundation-auth-navigation -- mobile/lib/features/navigation/app_shell.dart
+          git checkout origin/mobile-redesign/payments-finance-operations -- mobile/lib/features/help/mobile_user_guide_screen.dart
           python3 - <<'PY'
           from pathlib import Path
 
@@ -198,11 +172,10 @@ jobs:
           )
           shell_path.write_text(shell)
 
-          help_path = Path('mobile/lib/features/help/mobile_user_guide_screen.dart')
-          help_text = help_path.read_text()
-          if 'MobileDestination.dashboardTwo => const _GuideEntry(' not in help_text:
-              marker = """    MobileDestination.customers => const _GuideEntry(
-"""
+          guide_path = Path('mobile/lib/features/help/mobile_user_guide_screen.dart')
+          guide = guide_path.read_text()
+          if 'MobileDestination.dashboardTwo => const _GuideEntry(' not in guide:
+              marker = "    MobileDestination.customers => const _GuideEntry(\n"
               insert = """    MobileDestination.dashboardTwo => const _GuideEntry(
         destination: MobileDestination.dashboardTwo,
         title: 'Dashboard Two',
@@ -215,32 +188,33 @@ jobs:
         ],
       ),
 """
-              if marker not in help_text:
-                  raise SystemExit('help guide customer marker missing')
-              help_text = help_text.replace(marker, insert + marker, 1)
-              help_path.write_text(help_text)
+              if marker not in guide:
+                  raise SystemExit('Dashboard Two guide insertion marker missing')
+              guide_path.write_text(guide.replace(marker, insert + marker, 1))
           PY
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-      - name: Full Flutter quality gates
+      - name: Format reconciled sources
         working-directory: mobile
         run: |
           flutter pub get
-          dart format lib test
-          git diff --check
-          flutter analyze
-          flutter test
-      - name: Commit integrated Worker 1 and Worker 3 scope
+          dart format lib/features/navigation/app_shell.dart lib/features/help/mobile_user_guide_screen.dart
+      - name: Persist final shell reconciliation
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mobile/lib mobile/test
-          if git diff --cached --quiet; then
-            echo "No integration changes required."
-          else
-            git commit -m "feat(mobile): integrate redesign workers 1 and 3"
+          git add mobile/lib/features/navigation/app_shell.dart mobile/lib/features/help/mobile_user_guide_screen.dart
+          if ! git diff --cached --quiet; then
+            git commit -m "feat(mobile): reconcile final shell and dashboard two"
             git push origin HEAD:feat/alkenzy-mobile-reference-redesign
           fi
+      - name: Validate integrated mobile head
+        working-directory: mobile
+        run: |
+          dart format lib test
+          git diff --exit-code -- lib test
+          flutter analyze
+          flutter test
