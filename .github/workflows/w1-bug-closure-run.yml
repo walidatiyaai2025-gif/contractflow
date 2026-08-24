@@ -21,23 +21,8 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Execute isolated patch embedded in temporary workflow
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          source = Path('.github/workflows/w1-bug-closure-patch.yml').read_text()
-          marker = "          python3 - <<'PY'\n"
-          start = source.index(marker) + len(marker)
-          end = source.index("\n          PY\n", start)
-          lines = source[start:end].splitlines()
-          code = '\n'.join(
-              line[10:] if line.startswith('          ') else line
-              for line in lines
-          ) + '\n'
-          exec(compile(code, 'w1-bug-closure-patch', 'exec'))
-          PY
+      - name: Apply whitespace-stable Worker 1 closure patch
+        run: python3 scripts/w1_bug_closure_patch.py
       - name: Resolve dependencies
         working-directory: mobile
         run: flutter pub get
@@ -53,15 +38,19 @@ jobs:
         run: |
           mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
           flutter test "${tests[@]}"
-      - name: Capture Worker 1 responsive evidence
+      - name: Capture Worker 1 Arabic and English responsive evidence
         working-directory: mobile
         shell: bash
         run: |
-          for width in 320 360 375 390 412 430; do
-            flutter test test/worker1_visual_capture_test.dart --dart-define=W1_CAPTURE_WIDTH="$width"
+          for language in ar en; do
+            for width in 320 360 375 390 412 430; do
+              flutter test test/worker1_visual_capture_test.dart test/w1_customer_visual_capture.dart \
+                --dart-define=W1_CAPTURE_WIDTH="$width" \
+                --dart-define=W1_CAPTURE_LANG="$language"
+            done
           done
-      - name: Remove temporary execution workflows
-        run: rm .github/workflows/w1-bug-closure-patch.yml .github/workflows/w1-bug-closure-run.yml
+      - name: Remove temporary execution helpers
+        run: rm .github/workflows/w1-bug-closure-patch.yml .github/workflows/w1-bug-closure-run.yml scripts/w1_bug_closure_patch.py
       - name: Commit validated bug closure
         shell: bash
         run: |
@@ -74,8 +63,10 @@ jobs:
                   mobile/lib/features/welcome/premium_compact_welcome_screen.dart \
                   mobile/test/alkenzy_w1_bug_closure_test.dart \
                   mobile/test/worker1_visual_capture_test.dart \
+                  mobile/test/w1_customer_visual_capture.dart \
                   .github/workflows/w1-bug-closure-patch.yml \
-                  .github/workflows/w1-bug-closure-run.yml
+                  .github/workflows/w1-bug-closure-run.yml \
+                  scripts/w1_bug_closure_patch.py
           git commit -m "fix(mobile): close W1 customer and navigation register bugs"
           git push origin HEAD:bugfix/alkenzy-register-w1-customer-navigation
       - name: Upload Worker 1 screenshots
