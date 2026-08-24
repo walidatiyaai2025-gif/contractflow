@@ -138,8 +138,6 @@ final class PaymentMethodsPage
             wp_die(__('You do not have permission to manage SafeContracts reference data.', 'safecontracts'));
         }
 
-        // Show inactive methods as well. Historical method references remain
-        // authoritative, and an inactive method may be deliberately reopened.
         $methods = (new PaymentMethodRepository())->all(false);
         $selected = null;
         try {
@@ -216,11 +214,11 @@ final class PaymentMethodsPage
                                         <div class="safecontracts-dashboard-table-actions">
                                             <a class="button button-small" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'method' => $method['code']], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a>
                                             <?php if ($isActive) : ?>
-                                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Deactivate this payment method from active choices? Existing collection history will keep its method reference.', 'safecontracts'); ?>">
+                                                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" data-safecontracts-delete-form data-delete-message="<?php echo esc_attr__('Delete this payment method from active choices? Existing collection history will keep its method reference.', 'safecontracts'); ?>">
                                                     <input type="hidden" name="action" value="<?php echo esc_attr(self::DELETE_ACTION); ?>">
                                                     <input type="hidden" name="payment_method_id" value="<?php echo esc_attr((string) $method['id']); ?>">
                                                     <?php wp_nonce_field(self::DELETE_ACTION . '_' . (int) $method['id']); ?>
-                                                    <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Deactivate', 'safecontracts'); ?></button>
+                                                    <button type="submit" class="button button-small safecontracts-delete-button"><?php echo esc_html__('Delete', 'safecontracts'); ?></button>
                                                 </form>
                                             <?php endif; ?>
                                         </div>
@@ -247,7 +245,7 @@ final class PaymentMethodsPage
                         <?php endif; ?>
 
                         <p><label><?php echo esc_html__('Name', 'safecontracts'); ?><input class="widefat" name="name" required maxlength="120" value="<?php echo esc_attr((string) ($selected['name'] ?? '')); ?>"></label></p>
-                        <p><label><?php echo esc_html__('Order', 'safecontracts'); ?><input type="number" min="0" max="100000" name="display_order" value="<?php echo esc_attr((string) ($selected['display_order'] ?? 0)); ?>"></label></p>
+                        <p><label><?php echo esc_html__('Order', 'safecontracts'); ?><input type="number" min="0" max="100000" name="display_order" value="<?php echo esc_attr((string) ($selected['display_order'] ?? 0)); ?>></label></p>
                         <p><label><input type="checkbox" name="is_active" value="1" <?php checked($selected === null || ! empty($selected['is_active'])); ?>> <?php echo esc_html__('Active for new settlement entry', 'safecontracts'); ?></label></p>
                         <?php submit_button($selected ? __('Save Payment Method', 'safecontracts') : __('Add Payment Method', 'safecontracts')); ?>
                     </form>
