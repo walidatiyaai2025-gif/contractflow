@@ -25,19 +25,19 @@ jobs:
           cache: true
       - name: Resolve dependencies
         run: flutter pub get
-      - name: Apply Worker 2 analyzer corrections
+      - name: Apply Worker 2 validation corrections
         shell: bash
         run: |
           python3 - <<'PY'
           import re
           from pathlib import Path
 
-          paths = [
+          icon_paths = [
               Path('lib/features/contracts/contracts_screen.dart'),
               Path('lib/features/customers/customers_screen.dart'),
               Path('lib/features/suppliers/suppliers_screen.dart'),
           ]
-          for path in paths:
+          for path in icon_paths:
               text = path.read_text()
               text = re.sub(r'\s*matchTextDirection:\s*true,?', '', text)
               path.write_text(text)
@@ -53,8 +53,55 @@ jobs:
               'action: () => controller.openCustomer(id),',
           )
           customer.write_text(text)
+
+          contracts = Path('lib/features/contracts/contracts.dart')
+          text = contracts.read_text()
+          old = """String? _optionalMoneyText(Object? value, String field) {
+  if (value == null || value == '') return null;
+  final text = switch (value) {
+    final String value => value.trim(),
+    final num value => value.toString(),
+    _ => '',
+  };
+  if (text.isEmpty || !RegExp(r'^\\d+(?:\\.\\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
+  }
+  return text;
+}
+"""
+          new = """String? _optionalMoneyText(Object? value, String field) {
+  if (value == null || value == '') return null;
+  if (value is! String) {
+    throw FormatException('$field must be an exact decimal money string.');
+  }
+  final text = value.trim();
+  if (text.isEmpty || !RegExp(r'^\\d+(?:\\.\\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
+  }
+  return text;
+}
+"""
+          if old not in text:
+              raise SystemExit('Expected contract money parser block was not found.')
+          contracts.write_text(text.replace(old, new))
+
+          test_path = Path('test/mobile_contracts_011_test.dart')
+          text = test_path.read_text()
+          old_test = """    expect(openedContractId, 70);
+    expect(transport.requests, hasLength(1));
+    controller.dispose();
+"""
+          new_test = """    expect(openedContractId, 70);
+    expect(transport.requests, hasLength(2));
+    expect(transport.requests.first.uri.path, endsWith('/contracts'));
+    expect(transport.requests.last.uri.path, endsWith('/contracts/70/media'));
+    controller.dispose();
+"""
+          if old_test not in text:
+              raise SystemExit('Expected contract screen request assertion was not found.')
+          test_path.write_text(text.replace(old_test, new_test))
           PY
-      - name: Format Worker 2 sources
+      - name: Format Worker 2 sources and touched test
         run: |
           dart format \
             lib/features/contracts/contract_edit_screen.dart \
@@ -64,8 +111,9 @@ jobs:
             lib/features/contracts/premium_contract_details_screen.dart \
             lib/features/customers/customers.dart \
             lib/features/customers/customers_screen.dart \
-            lib/features/suppliers/suppliers_screen.dart
-      - name: Persist corrected sources on worker branch
+            lib/features/suppliers/suppliers_screen.dart \
+            test/mobile_contracts_011_test.dart
+      - name: Persist validated Worker 2 corrections
         working-directory: .
         shell: bash
         env:
@@ -82,28 +130,14 @@ jobs:
             mobile/lib/features/contracts/premium_contract_details_screen.dart \
             mobile/lib/features/customers/customers.dart \
             mobile/lib/features/customers/customers_screen.dart \
-            mobile/lib/features/suppliers/suppliers_screen.dart
+            mobile/lib/features/suppliers/suppliers_screen.dart \
+            mobile/test/mobile_contracts_011_test.dart
           if git diff --cached --quiet; then
             echo "Worker 2 sources already corrected."
           else
-            git commit -m "style(mobile): apply worker2 analyzer and formatter corrections"
+            git commit -m "fix(mobile): close worker2 validation regressions"
             git push origin "HEAD:${HEAD_REF}"
           fi
-      - name: Upload corrected formatter output
-        uses: actions/upload-artifact@v4
-        with:
-          name: worker2-corrected-sources
-          path: |
-            mobile/lib/features/contracts/contract_edit_screen.dart
-            mobile/lib/features/contracts/contracts.dart
-            mobile/lib/features/contracts/contracts_screen.dart
-            mobile/lib/features/contracts/counterparty_business_snapshot.dart
-            mobile/lib/features/contracts/premium_contract_details_screen.dart
-            mobile/lib/features/customers/customers.dart
-            mobile/lib/features/customers/customers_screen.dart
-            mobile/lib/features/suppliers/suppliers_screen.dart
-          if-no-files-found: error
-          retention-days: 1
       - name: Analyze
         run: flutter analyze
       - name: Test
