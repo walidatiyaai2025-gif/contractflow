@@ -1,15 +1,16 @@
 name: Worker2 Validate And Capture
 
 on:
-  pull_request:
+  push:
     branches:
-      - feat/alkenzy-mobile-reference-redesign
+      - mobile-redesign/customers-suppliers-contracts
 
 permissions:
   contents: write
 
 jobs:
   validate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -17,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: mobile-redesign/customers-suppliers-contracts
           fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
@@ -81,9 +82,10 @@ jobs:
   return text;
 }
 """
-          if old not in text:
+          if old in text:
+              contracts.write_text(text.replace(old, new))
+          elif 'exact decimal money string' not in text:
               raise SystemExit('Expected contract money parser block was not found.')
-          contracts.write_text(text.replace(old, new))
 
           test_path = Path('test/mobile_contracts_011_test.dart')
           text = test_path.read_text()
@@ -97,9 +99,10 @@ jobs:
     expect(transport.requests.last.uri.path, endsWith('/contracts/70/media'));
     controller.dispose();
 """
-          if old_test not in text:
+          if old_test in text:
+              test_path.write_text(text.replace(old_test, new_test))
+          elif "endsWith('/contracts/70/media')" not in text:
               raise SystemExit('Expected contract screen request assertion was not found.')
-          test_path.write_text(text.replace(old_test, new_test))
           PY
       - name: Format Worker 2 sources and touched test
         run: |
@@ -116,8 +119,6 @@ jobs:
       - name: Persist validated Worker 2 corrections
         working-directory: .
         shell: bash
-        env:
-          HEAD_REF: ${{ github.head_ref }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -136,7 +137,7 @@ jobs:
             echo "Worker 2 sources already corrected."
           else
             git commit -m "fix(mobile): close worker2 validation regressions"
-            git push origin "HEAD:${HEAD_REF}"
+            git push origin HEAD:mobile-redesign/customers-suppliers-contracts
           fi
       - name: Analyze
         run: flutter analyze
