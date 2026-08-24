@@ -36,7 +36,8 @@ final class ProfileScreen extends StatefulWidget {
 
 final class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _openUserGuide() async {
-    final policy = MobileNavigationPolicy.resolve(widget.session, widget.config);
+    final policy =
+        MobileNavigationPolicy.resolve(widget.session, widget.config);
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => MobileUserGuideScreen(
