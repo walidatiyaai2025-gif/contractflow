@@ -76,9 +76,18 @@ final class Router
             $capabilities[$capability] = current_user_can($capability);
         }
 
+        $user = wp_get_current_user();
+        $displayName = trim((string) ($user->display_name ?? ''));
+        if ($displayName === '') {
+            $displayName = trim((string) ($user->user_login ?? ''));
+        }
+        $avatarUrl = get_avatar_url((int) $user->ID, ['size' => 160]);
+
         return ApiResponse::ok([
             'authenticated' => true,
             'user_id' => get_current_user_id(),
+            'display_name' => $displayName,
+            'avatar_url' => is_string($avatarUrl) && $avatarUrl !== '' ? esc_url_raw($avatarUrl) : null,
             'scope' => AccessScope::current(),
             'capabilities' => $capabilities,
         ]);
