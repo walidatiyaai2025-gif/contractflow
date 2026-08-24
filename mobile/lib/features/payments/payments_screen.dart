@@ -864,7 +864,7 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                   Expanded(
                                     child: Text(
                                       l10n.t(
-                                        'Server values are shown as received; mobile does not recalculate them.',
+                                        'Dates, balances and status are server-authoritative. Mobile does not recalculate them.',
                                       ),
                                       style: Theme.of(context)
                                           .textTheme
