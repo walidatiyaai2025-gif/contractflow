@@ -107,7 +107,18 @@ final class _PremiumCompactWelcomeScreenState
                                     letterSpacing: -0.6,
                                   ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
+                            Text(
+                              content.headline.resolve(widget.languageCode),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: SafeContractsVisual.roseGoldDark,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
                             Text(
                               content.summary.resolve(widget.languageCode),
                               textAlign: TextAlign.center,
