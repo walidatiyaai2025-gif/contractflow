@@ -166,6 +166,41 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
     min-width: 680px;
     max-width: none;
   }
+
+  /* In RTL the financial table's final action column is the far-left column.
+   * Keep that control surface pinned to the visible edge of the dedicated
+   * horizontal scroller so Open/Edit/Delete remain reachable at 390px without
+   * turning table width into document-level overflow. */
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat th:last-child,
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat td:last-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    min-width: 116px;
+    max-width: 132px;
+    background: #fffdfb !important;
+    box-shadow: 8px 0 12px -10px rgba(11, 41, 69, .45);
+  }
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat thead th:last-child {
+    z-index: 4;
+    background: #f2e7dc !important;
+  }
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    min-width: 0;
+  }
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions .button,
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions form,
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions form .button {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    text-align: center;
+  }
 }
 
 @media (max-width: 600px) {
