@@ -151,18 +151,19 @@ void main() {
     await tester.pumpAndSettle();
     await _capture(tester, 'shell_ar');
 
-    final menu = find.byIcon(Icons.menu_rounded);
-    if (menu.evaluate().isEmpty) {
-      await tester.tap(find.byTooltip('Open navigation menu'));
-    } else {
-      await tester.tap(menu.first);
-    }
+    final shellScaffold = find.byWidgetPredicate(
+      (widget) => widget is Scaffold && widget.drawer != null,
+    );
+    expect(shellScaffold, findsOneWidget);
+    tester.state<ScaffoldState>(shellScaffold).openDrawer();
     await tester.pumpAndSettle();
     await _capture(tester, 'drawer_ar');
     Navigator.of(tester.element(find.byType(Drawer))).pop();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(FloatingActionButton));
+    final quickAdd = find.byType(FloatingActionButton);
+    expect(quickAdd, findsOneWidget);
+    await tester.tap(quickAdd);
     await tester.pumpAndSettle();
     await _capture(tester, 'quick_add_ar');
 
@@ -171,7 +172,9 @@ void main() {
 }
 
 Future<void> _capture(WidgetTester tester, String name) async {
-  final ui.Image image = await tester.binding.renderView.toImage(pixelRatio: 1);
+  final ui.Image image = await tester.binding.renderView.toImage(
+    pixelRatio: 0.75,
+  );
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   final bytes = data!.buffer.asUint8List();
   // Intentionally emitted only by this temporary visual-QA test.
