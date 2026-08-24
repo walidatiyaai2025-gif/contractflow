@@ -62,8 +62,8 @@ body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontract
   color: var(--sc-ui-ink-500, #70808d) !important;
 }
 
-/* Grid children must be allowed to shrink; table overflow belongs to the card,
- * never to the whole WordPress admin page. */
+/* Grid children must be allowed to shrink; wide-table overflow belongs to the
+ * dedicated scroller and never to the WordPress document. */
 body[class*="_page_safecontracts-payments"] .safecontracts-split-layout > *,
 body[class*="_page_safecontracts-collections"] .safecontracts-split-layout > *,
 body[class*="_page_safecontracts-followups"] .safecontracts-split-layout > *,
@@ -81,15 +81,30 @@ body[class*="_page_safecontracts-finance"] .safecontracts-table-card,
 body[class*="_page_safecontracts-reports"] .safecontracts-table-card,
 body[class*="_page_safecontracts-imports"] .safecontracts-table-card,
 body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  box-sizing: border-box;
-  overflow-x: auto !important;
-  overflow-y: hidden;
-  overscroll-behavior-inline: contain;
+  overflow: hidden !important;
   contain: layout paint;
+}
+
+.safecontracts-w2-table-scroll {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  direction: ltr;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+}
+
+[dir="rtl"] .safecontracts-w2-table-scroll table.widefat,
+.rtl .safecontracts-w2-table-scroll table.widefat {
+  direction: rtl;
+  text-align: right;
 }
 
 .safecontracts-w2-pagination {
@@ -118,10 +133,9 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
 .safecontracts-w2-runtime-notice { border-inline-start-width: 4px !important; }
 
 @media (max-width: 782px) {
-  /* Shared WordPress/admin responsive CSS historically applies a 680px
-   * min-width to every .widefat element. On Worker #2 routes that class is
-   * also used by form controls, so explicitly restore container-sized controls
-   * while keeping the 680px minimum only for financial data tables. */
+  /* Shared admin responsive CSS gives .widefat a table-sized minimum. Worker #2
+   * also uses that class on selects/inputs, so form controls must explicitly
+   * return to their card width. */
   body[class*="_page_safecontracts-payments"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
   body[class*="_page_safecontracts-collections"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
   body[class*="_page_safecontracts-followups"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
@@ -129,19 +143,19 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
   body[class*="_page_safecontracts-reports"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
   body[class*="_page_safecontracts-imports"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]),
   body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings :is(input, select, textarea):not([type="hidden"]) {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
     box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
 
-  body[class*="_page_safecontracts-payments"] .safecontracts-table-card table.widefat,
-  body[class*="_page_safecontracts-collections"] .safecontracts-table-card table.widefat,
-  body[class*="_page_safecontracts-followups"] .safecontracts-table-card table.widefat,
-  body[class*="_page_safecontracts-finance"] .safecontracts-table-card table.widefat,
-  body[class*="_page_safecontracts-reports"] .safecontracts-table-card table.widefat,
-  body[class*="_page_safecontracts-imports"] .safecontracts-table-card table.widefat,
-  body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card table.widefat {
+  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat,
+  body[class*="_page_safecontracts-collections"] .safecontracts-w2-table-scroll table.widefat,
+  body[class*="_page_safecontracts-followups"] .safecontracts-w2-table-scroll table.widefat,
+  body[class*="_page_safecontracts-finance"] .safecontracts-w2-table-scroll table.widefat,
+  body[class*="_page_safecontracts-reports"] .safecontracts-w2-table-scroll table.widefat,
+  body[class*="_page_safecontracts-imports"] .safecontracts-w2-table-scroll table.widefat,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll table.widefat {
     width: 100%;
     min-width: 680px;
     max-width: none;
