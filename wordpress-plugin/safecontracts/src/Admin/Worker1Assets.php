@@ -7,6 +7,7 @@ namespace SafeContracts\Admin;
 final class Worker1Assets
 {
     private const STYLE_HANDLE = 'safecontracts-plugin-redesign-worker-1';
+    private const MOBILE_STYLE_HANDLE = 'safecontracts-plugin-redesign-worker-1-mobile';
     private const ROUTES = [
         'safecontracts-customers',
         'safecontracts-suppliers',
@@ -39,6 +40,12 @@ final class Worker1Assets
             self::STYLE_HANDLE,
             SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-1/parties-contracts.css',
             [AdminShell::PREMIUM_STYLE_HANDLE],
+            SAFECONTRACTS_VERSION
+        );
+        wp_enqueue_style(
+            self::MOBILE_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/worker-1/mobile-controls.css',
+            [self::STYLE_HANDLE],
             SAFECONTRACTS_VERSION
         );
     }
