@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\TranslationCatalog;
 
 final class UserGuidePage
 {
@@ -66,26 +67,26 @@ final class UserGuidePage
         <div class="wrap safecontracts-settings safecontracts-user-guide" dir="auto">
             <div class="safecontracts-section-heading">
                 <div>
-                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Help & guidance', 'safecontracts'); ?></p>
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html(self::text('Help & guidance', 'المساعدة والإرشاد')); ?></p>
                     <h1><?php echo esc_html__('User Guide', 'safecontracts'); ?></h1>
-                    <p><?php echo esc_html__('Role-aware guidance for the SafeContracts areas you can actually access. Use it before changing production data or system configuration.', 'safecontracts'); ?></p>
-                    <p class="description"><?php echo esc_html__('Only sections permitted for your current WordPress user are shown.', 'safecontracts'); ?></p>
+                    <p><?php echo esc_html(self::text('Role-aware guidance for the SafeContracts areas you can actually access. Use it before changing production data or system configuration.', 'إرشادات تراعي صلاحيات دورك للأجزاء التي يمكنك الوصول إليها فعليًا في SafeContracts. راجعها قبل تغيير بيانات الإنتاج أو إعدادات النظام.')); ?></p>
+                    <p class="description"><?php echo esc_html(self::text('Only sections permitted for your current WordPress user are shown.', 'يتم عرض الأقسام المسموح بها لمستخدم ووردبريس الحالي فقط.')); ?></p>
                 </div>
-                <span class="safecontracts-state-chip is-success"><?php echo esc_html(sprintf(__('%d sections available', 'safecontracts'), count($entries))); ?></span>
+                <span class="safecontracts-state-chip is-success"><?php echo esc_html(sprintf(self::text('%d sections available', '%d قسم متاح'), count($entries))); ?></span>
             </div>
 
             <?php AdminSummaryCards::render([
-                ['label' => __('Visible guide sections', 'safecontracts'), 'value' => count($entries)],
+                ['label' => self::text('Visible guide sections', 'أقسام الدليل الظاهرة'), 'value' => count($entries)],
                 ['label' => __('Recommended steps', 'safecontracts'), 'value' => $stepCount],
             ]); ?>
 
             <?php if ($entries === []) : ?>
-                <section class="safecontracts-admin-card"><h2><?php echo esc_html__('No guide sections available', 'safecontracts'); ?></h2><p><?php echo esc_html__('There are no user-guide sections available to the current role.', 'safecontracts'); ?></p></section>
+                <section class="safecontracts-admin-card"><h2><?php echo esc_html(self::text('No guide sections available', 'لا توجد أقسام دليل متاحة')); ?></h2><p><?php echo esc_html(self::text('There are no user-guide sections available to the current role.', 'لا توجد أقسام في دليل المستخدم متاحة للدور الحالي.')); ?></p></section>
             <?php else : ?>
                 <div class="safecontracts-role-grid">
                     <?php foreach ($entries as $slug => $entry) : ?>
                         <section class="safecontracts-admin-card">
-                            <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Guide section', 'safecontracts'); ?></p><h2><?php echo esc_html((string) $entry['title']); ?></h2></div></div>
+                            <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html(self::text('Guide section', 'قسم الدليل')); ?></p><h2><?php echo esc_html((string) $entry['title']); ?></h2></div></div>
                             <?php self::renderEntryBody($entry, false); ?>
                             <?php if ($slug !== self::SLUG) : ?>
                                 <p><a class="button button-primary" href="<?php echo esc_url(self::pageUrl((string) $slug)); ?>"><?php echo esc_html(__('Open', 'safecontracts') . ' ' . (string) $entry['title']); ?></a></p>
@@ -134,5 +135,10 @@ final class UserGuidePage
     private static function pageUrl(string $slug): string
     {
         return add_query_arg(['page' => $slug], admin_url('admin.php'));
+    }
+
+    private static function text(string $english, string $arabic): string
+    {
+        return TranslationCatalog::currentLanguage() === 'ar' ? $arabic : __($english, 'safecontracts');
     }
 }
