@@ -150,8 +150,8 @@ ApiTransportResponse _unauthenticatedHandler(Uri uri) {
       statusCode: 401,
       headers: const <String, String>{'content-type': 'application/json'},
       body: jsonEncode(<String, Object?>{
-        'code': 'safecontracts_authentication_required',
-        'message': 'Authentication required.',
+        'code': 'safecontracts_unauthenticated',
+        'message': 'Authentication is required to access SafeContracts.',
         'data': <String, Object?>{
           'status': 401,
           'api_version': 'v1',
