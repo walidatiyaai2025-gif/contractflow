@@ -70,7 +70,8 @@ final class TranslationsPage
         }
 
         $search = sanitize_text_field((string) ($_GET['translation_search'] ?? ''));
-        $catalog = self::editorCatalog();
+        $allCatalog = self::editorCatalog();
+        $catalog = $allCatalog;
         $overrides = TranslationCatalog::overrides();
         if ($search !== '') {
             $needle = function_exists('mb_strtolower') ? mb_strtolower($search) : strtolower($search);
@@ -84,25 +85,38 @@ final class TranslationsPage
                 ARRAY_FILTER_USE_BOTH
             );
         }
+        $status = isset($_GET['safecontracts_status']) && is_scalar($_GET['safecontracts_status']) ? sanitize_key((string) $_GET['safecontracts_status']) : '';
+        $englishOverrides = is_array($overrides['en'] ?? null) ? count($overrides['en']) : 0;
+        $arabicOverrides = is_array($overrides['ar'] ?? null) ? count($overrides['ar']) : 0;
         ?>
         <div class="wrap safecontracts-settings safecontracts-translations" dir="auto">
             <div class="safecontracts-section-heading">
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Translation management', 'safecontracts'); ?></p>
                     <h1><?php echo esc_html__('Translations', 'safecontracts'); ?></h1>
-                    <p><?php echo esc_html__('Edit SafeContracts Arabic and English wording without changing the WordPress language.', 'safecontracts'); ?></p>
+                    <p><?php echo esc_html__('Edit real SafeContracts Arabic and English wording while preserving technical source keys and existing save/reset behavior.', 'safecontracts'); ?></p>
                 </div>
             </div>
+            <?php if ($status === 'translations_saved') : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html__('Translations saved.', 'safecontracts'); ?></p></div><?php endif; ?>
+            <?php if ($status === 'translations_reset') : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html__('Selected translation overrides were reset to built-in defaults.', 'safecontracts'); ?></p></div><?php endif; ?>
+
+            <?php AdminSummaryCards::render([
+                ['label' => __('Translation entries', 'safecontracts'), 'value' => count($allCatalog)],
+                ['label' => __('English overrides', 'safecontracts'), 'value' => $englishOverrides],
+                ['label' => __('Arabic overrides', 'safecontracts'), 'value' => $arabicOverrides],
+                ['label' => __('Search results', 'safecontracts'), 'value' => count($catalog)],
+            ]); ?>
 
             <section class="safecontracts-admin-card safecontracts-settings-card">
                 <form method="get" class="safecontracts-filter-bar">
                     <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
                     <label><?php echo esc_html__('Search translations', 'safecontracts'); ?>
-                        <input type="search" name="translation_search" value="<?php echo esc_attr($search); ?>">
+                        <input type="search" name="translation_search" value="<?php echo esc_attr($search); ?>" placeholder="<?php echo esc_attr__('Source key, Arabic text or surface', 'safecontracts'); ?>">
                     </label>
-                    <button class="button" type="submit"><?php echo esc_html__('Search translations', 'safecontracts'); ?></button>
+                    <button class="button button-primary" type="submit"><?php echo esc_html__('Search translations', 'safecontracts'); ?></button>
+                    <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Clear', 'safecontracts'); ?></a>
                 </form>
-                <p class="description"><?php echo esc_html__('Leave an override empty to use the built-in default.', 'safecontracts'); ?></p>
+                <p class="description"><?php echo esc_html__('Leave an override empty to use the built-in default. Technical source keys remain LTR even inside Arabic admin pages.', 'safecontracts'); ?></p>
             </section>
 
             <section class="safecontracts-admin-card safecontracts-table-card">
@@ -111,7 +125,7 @@ final class TranslationsPage
                     <input type="hidden" name="translation_search" value="<?php echo esc_attr($search); ?>">
                     <?php wp_nonce_field(self::SAVE_ACTION); ?>
                     <?php if ($catalog === []) : ?>
-                        <p><?php echo esc_html__('No translation entries match this search.', 'safecontracts'); ?></p>
+                        <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('No matching translations', 'safecontracts'); ?></h2><p><?php echo esc_html__('No translation entries match this search.', 'safecontracts'); ?></p></div></div>
                     <?php else : ?>
                         <div class="safecontracts-translations__table-wrap">
                             <table class="widefat striped safecontracts-translations__table">
@@ -127,13 +141,13 @@ final class TranslationsPage
                                 <tbody>
                                 <?php $index = 0; foreach ($catalog as $source => $defaults) : ?>
                                     <tr>
-                                        <td>
+                                        <td dir="ltr">
                                             <input type="hidden" name="translation_rows[<?php echo esc_attr((string) $index); ?>][source]" value="<?php echo esc_attr($source); ?>">
-                                            <code><?php echo esc_html(implode(', ', $defaults['surfaces'])); ?></code>
-                                            <p><small><?php echo esc_html($source); ?></small></p>
+                                            <code dir="ltr"><?php echo esc_html(implode(', ', $defaults['surfaces'])); ?></code>
+                                            <p><small dir="ltr"><?php echo esc_html($source); ?></small></p>
                                         </td>
-                                        <td><?php echo esc_html($defaults['en']); ?></td>
-                                        <td><textarea class="widefat" rows="3" name="translation_rows[<?php echo esc_attr((string) $index); ?>][en]" placeholder="<?php echo esc_attr($defaults['en']); ?>"><?php echo esc_textarea((string) ($overrides['en'][$source] ?? '')); ?></textarea></td>
+                                        <td dir="ltr"><?php echo esc_html($defaults['en']); ?></td>
+                                        <td><textarea class="widefat" dir="ltr" rows="3" name="translation_rows[<?php echo esc_attr((string) $index); ?>][en]" placeholder="<?php echo esc_attr($defaults['en']); ?>"><?php echo esc_textarea((string) ($overrides['en'][$source] ?? '')); ?></textarea></td>
                                         <td dir="rtl"><?php echo esc_html($defaults['ar']); ?></td>
                                         <td><textarea class="widefat" dir="rtl" rows="3" name="translation_rows[<?php echo esc_attr((string) $index); ?>][ar]" placeholder="<?php echo esc_attr($defaults['ar']); ?>"><?php echo esc_textarea((string) ($overrides['ar'][$source] ?? '')); ?></textarea></td>
                                     </tr>
@@ -143,7 +157,7 @@ final class TranslationsPage
                         </div>
                     <?php endif; ?>
 
-                    <div class="safecontracts-translations__actions">
+                    <div class="safecontracts-translations__actions safecontracts-heading-actions">
                         <button class="button button-primary" type="submit" name="translation_mode" value="save"><?php echo esc_html__('Save translations', 'safecontracts'); ?></button>
                         <button class="button" type="submit" name="translation_mode" value="reset_ar" data-safecontracts-reset-translations><?php echo esc_html__('Reset Arabic', 'safecontracts'); ?></button>
                         <button class="button" type="submit" name="translation_mode" value="reset_en" data-safecontracts-reset-translations><?php echo esc_html__('Reset English', 'safecontracts'); ?></button>
