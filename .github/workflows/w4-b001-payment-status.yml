@@ -1,16 +1,16 @@
 name: W4 B001 Payment Status Closure
 
 on:
-  push:
+  pull_request:
     branches:
-      - bugfix/alkenzy-register-w4-payments-typography
+      - feat/alkenzy-mobile-reference-redesign
 
 permissions:
   contents: write
 
 jobs:
   patch-test-commit:
-    if: github.actor != 'github-actions[bot]'
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
