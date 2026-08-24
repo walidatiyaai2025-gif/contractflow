@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use DomainException;
 use InvalidArgumentException;
+use SafeContracts\Contracts\ContractMoney;
 
 final class PaymentStatus
 {
@@ -80,6 +81,30 @@ final class PaymentStatus
 
         $days = (int) $today->diff($due)->format('%a');
         return $days <= $dueSoonDays ? self::DUE_SOON : self::UPCOMING;
+    }
+
+    /**
+     * Read-time status authority for API/mobile presentation. Financial state
+     * comes from authoritative stored amounts; otherwise contractual due_date
+     * determines the temporal state. Stored workflow status remains available
+     * to mutation services for transition/idempotence semantics.
+     */
+    public static function authoritative(
+        mixed $dueDate,
+        mixed $paidAmount,
+        mixed $remainingAmount,
+        ?DateTimeImmutable $today = null,
+        int $dueSoonDays = 10
+    ): string {
+        $paid = ContractMoney::normalizeNonNegative($paidAmount);
+        $remaining = ContractMoney::normalizeNonNegative($remainingAmount);
+        if ($remaining === '0.0000') {
+            return self::PAID;
+        }
+        if (ContractMoney::compare($paid, '0.0000') > 0) {
+            return self::PARTIALLY_PAID;
+        }
+        return self::temporalForDueDate($dueDate, $today, $dueSoonDays);
     }
 
     public static function isDueSoon(mixed $dueDate, ?DateTimeImmutable $today = null, int $dueSoonDays = 10): bool
