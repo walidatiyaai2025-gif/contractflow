@@ -13,6 +13,7 @@ abstract final class SafeContractsSpacing {
   static const xxl = 32.0;
   static const xxxl = 40.0;
 
+  // Locked-reference page geometry.
   static const screenNarrow = 14.0;
   static const screen = 18.0;
   static const screenWide = 24.0;
@@ -22,7 +23,7 @@ abstract final class SafeContractsRadii {
   static const xs = 10.0;
   static const sm = 14.0;
   static const md = 18.0;
-  static const lg = 22.0;
+  static const lg = 18.0;
   static const xl = 28.0;
   static const pill = 999.0;
 }
@@ -39,7 +40,7 @@ abstract final class SafeContractsControlSizes {
   static const fieldMinHeight = 52.0;
   static const buttonMinHeight = 52.0;
   static const compactButtonMinHeight = 44.0;
-  static const bottomNavigationHeight = 72.0;
+  static const bottomNavigationHeight = 70.0;
   static const floatingActionButton = 58.0;
   static const touchTarget = 44.0;
 }
@@ -47,15 +48,15 @@ abstract final class SafeContractsControlSizes {
 abstract final class SafeContractsShadows {
   static const card = <BoxShadow>[
     BoxShadow(
-      color: Color(0x1F3D3028),
-      blurRadius: 20,
-      offset: Offset(0, 8),
+      color: Color(0x185A4638),
+      blurRadius: 18,
+      offset: Offset(0, 7),
     ),
   ];
 
   static const elevatedCard = <BoxShadow>[
     BoxShadow(
-      color: Color(0x2A3D3028),
+      color: Color(0x30092944),
       blurRadius: 28,
       offset: Offset(0, 12),
     ),
@@ -63,9 +64,9 @@ abstract final class SafeContractsShadows {
 
   static const navy = <BoxShadow>[
     BoxShadow(
-      color: Color(0x3A061F35),
-      blurRadius: 30,
-      offset: Offset(0, 14),
+      color: Color(0x30092944),
+      blurRadius: 28,
+      offset: Offset(0, 12),
     ),
   ];
 
