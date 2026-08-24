@@ -1,0 +1,77 @@
+name: Worker 2 Final Fix
+
+on:
+  push:
+    branches:
+      - mobile-redesign/customers-suppliers-contracts
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile-redesign/customers-suppliers-contracts
+          fetch-depth: 0
+      - name: Repair contract parser typo and validation invariants
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('mobile/lib/features/contracts/contracts.dart')
+          text = path.read_text()
+          text = text.replace("data['accountant_user_id',", "data['accountant_user_id'],")
+          old_money = """String? _optionalMoneyText(Object? value, String field) {
+  if (value == null || value == '') return null;
+  final text = switch (value) {
+    final String value => value.trim(),
+    final num value => value.toString(),
+    _ => '',
+  };
+  if (text.isEmpty || !RegExp(r'^\\d+(?:\\.\\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
+  }
+  return text;
+}
+"""
+          new_money = """String? _optionalMoneyText(Object? value, String field) {
+  if (value == null || value == '') return null;
+  if (value is! String) {
+    throw FormatException('$field must be an exact decimal money string.');
+  }
+  final text = value.trim();
+  if (text.isEmpty || !RegExp(r'^\\d+(?:\\.\\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
+  }
+  return text;
+}
+"""
+          if old_money in text:
+              text = text.replace(old_money, new_money, 1)
+          path.write_text(text)
+          PY
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Format and validate
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+          flutter analyze
+          flutter test
+      - name: Commit repaired Worker 2 head
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/lib mobile/test
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(mobile): repair worker2 final validation"
+            git push origin HEAD:mobile-redesign/customers-suppliers-contracts
+          fi
