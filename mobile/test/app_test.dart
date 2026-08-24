@@ -35,7 +35,8 @@ void main() {
     expect(find.text('Financial performance overview'), findsOneWidget);
     expect(find.text('Total contracts'), findsOneWidget);
     expect(find.text('Remaining'), findsWidgets);
-    expect(find.textContaining('125.00'), findsWidgets);
+    expect(find.textContaining('125'), findsWidgets);
+    expect(find.textContaining('125.00'), findsNothing);
 
     final appBar = tester.widget<AppBar>(find.byType(AppBar));
     expect(appBar.backgroundColor, SafeContractsVisual.navy);
