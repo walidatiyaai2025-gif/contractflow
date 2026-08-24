@@ -217,7 +217,8 @@ final class AlkenzyReferencePrimaryButton extends StatelessWidget {
           accent ? SafeContractsVisual.roseGoldDark : SafeContractsVisual.navy,
       foregroundColor: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AlkenzyReferenceTokens.compactRadius),
+        borderRadius:
+            BorderRadius.circular(AlkenzyReferenceTokens.compactRadius),
       ),
     );
     return SizedBox(
