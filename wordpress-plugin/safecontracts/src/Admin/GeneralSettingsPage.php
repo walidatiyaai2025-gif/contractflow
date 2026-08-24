@@ -49,20 +49,67 @@ final class GeneralSettingsPage
         $selectedCurrency = strtoupper(trim((string) ($settings['currency_code'] ?? '')));
         $currencyChoices = AdminLookupOptions::currencyChoices(new AdminReadRepository(), $selectedCurrency);
         ?>
-        <div class="wrap safecontracts-settings" dir="auto">
-            <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('System configuration', 'safecontracts'); ?></p><h1><?php echo esc_html__('SafeContracts Settings', 'safecontracts'); ?></h1></div></div>
-            <section class="safecontracts-admin-card safecontracts-settings-card">
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>"><?php wp_nonce_field(self::SAVE_ACTION); ?>
-                    <p><label><?php echo esc_html__('Organization name', 'safecontracts'); ?><input class="widefat" name="organization_name" maxlength="191" required value="<?php echo esc_attr($settings['organization_name']); ?>"></label></p>
-                    <p><label><?php echo esc_html__('System currency', 'safecontracts'); ?><select class="widefat" name="currency_code"><option value=""><?php echo esc_html__('Select currency', 'safecontracts'); ?></option><?php foreach ($currencyChoices as $currencyChoice) : ?><option value="<?php echo esc_attr($currencyChoice); ?>" <?php selected($selectedCurrency, $currencyChoice); ?>><?php echo esc_html($currencyChoice); ?></option><?php endforeach; ?></select></label></p>
-                    <p><label><?php echo esc_html__('Currency symbol', 'safecontracts'); ?><input class="widefat" name="currency_symbol" maxlength="16" value="<?php echo esc_attr($settings['currency_symbol']); ?>" placeholder="د.ك"></label></p>
-                    <p class="description"><?php echo esc_html__('Choose the system currency from the approved list and set the display symbol used by mobile financial values. Leaving either blank keeps it explicitly unconfigured.', 'safecontracts'); ?></p>
-                    <p><label><?php echo esc_html__('Admin page size', 'safecontracts'); ?><input type="number" min="10" max="200" name="admin_page_size" value="<?php echo esc_attr((string) $settings['admin_page_size']); ?>"></label></p>
-                    <?php submit_button(__('Save SafeContracts Settings', 'safecontracts')); ?>
-                </form>
-                <p class="description"><?php echo esc_html__('These are non-secret operational preferences only. Authorization, assignment scope and financial rules remain server-side and cannot be disabled here.', 'safecontracts'); ?></p>
-            </section>
+        <div class="wrap safecontracts-settings safecontracts-general-settings" dir="auto">
+            <div class="safecontracts-section-heading safecontracts-page-heading">
+                <div>
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Settings & integrations', 'safecontracts'); ?></p>
+                    <h1><?php echo esc_html__('General Settings', 'safecontracts'); ?></h1>
+                    <p class="description"><?php echo esc_html__('Manage organization identity and non-secret operational display preferences. Permissions, assignment scope and accounting rules remain server-side.', 'safecontracts'); ?></p>
+                </div>
+            </div>
+
+            <div class="safecontracts-settings-grid">
+                <section class="safecontracts-admin-card safecontracts-settings-card safecontracts-settings-panel">
+                    <div>
+                        <h2><?php echo esc_html__('Organization & display', 'safecontracts'); ?></h2>
+                        <p class="description"><?php echo esc_html__('These values are used by SafeContracts administrative and mobile presentation without changing financial authority.', 'safecontracts'); ?></p>
+                    </div>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="<?php echo esc_attr(self::SAVE_ACTION); ?>">
+                        <?php wp_nonce_field(self::SAVE_ACTION); ?>
+                        <div class="safecontracts-field-grid">
+                            <label class="safecontracts-field safecontracts-field--full">
+                                <span><?php echo esc_html__('Organization name', 'safecontracts'); ?></span>
+                                <input class="widefat" name="organization_name" maxlength="191" required value="<?php echo esc_attr((string) $settings['organization_name']); ?>">
+                                <span class="safecontracts-field__hint"><?php echo esc_html__('The business name displayed in SafeContracts-managed experiences.', 'safecontracts'); ?></span>
+                            </label>
+                            <label class="safecontracts-field">
+                                <span><?php echo esc_html__('System currency', 'safecontracts'); ?></span>
+                                <select class="widefat" name="currency_code">
+                                    <option value=""><?php echo esc_html__('Select currency', 'safecontracts'); ?></option>
+                                    <?php foreach ($currencyChoices as $currencyChoice) : ?>
+                                        <option value="<?php echo esc_attr($currencyChoice); ?>" <?php selected($selectedCurrency, $currencyChoice); ?>><?php echo esc_html($currencyChoice); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <span class="safecontracts-field__hint"><?php echo esc_html__('Use an approved ISO currency code. Cross-currency values remain separated.', 'safecontracts'); ?></span>
+                            </label>
+                            <label class="safecontracts-field">
+                                <span><?php echo esc_html__('Currency symbol', 'safecontracts'); ?></span>
+                                <input class="widefat" name="currency_symbol" maxlength="16" value="<?php echo esc_attr((string) $settings['currency_symbol']); ?>" placeholder="د.ك">
+                                <span class="safecontracts-field__hint"><?php echo esc_html__('Presentation symbol only; it does not replace the stored currency code.', 'safecontracts'); ?></span>
+                            </label>
+                            <label class="safecontracts-field">
+                                <span><?php echo esc_html__('Admin page size', 'safecontracts'); ?></span>
+                                <input type="number" min="10" max="200" name="admin_page_size" value="<?php echo esc_attr((string) $settings['admin_page_size']); ?>">
+                                <span class="safecontracts-field__hint"><?php echo esc_html__('Allowed range: 10–200 records per administrative page.', 'safecontracts'); ?></span>
+                            </label>
+                        </div>
+                        <?php submit_button(__('Save General Settings', 'safecontracts')); ?>
+                    </form>
+                </section>
+
+                <aside class="safecontracts-admin-card safecontracts-settings-card">
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Current configuration', 'safecontracts'); ?></p>
+                    <h2><?php echo esc_html__('Operational summary', 'safecontracts'); ?></h2>
+                    <dl class="safecontracts-system-summary">
+                        <div><dt><?php echo esc_html__('Organization', 'safecontracts'); ?></dt><dd><?php echo esc_html((string) ($settings['organization_name'] ?: '—')); ?></dd></div>
+                        <div><dt><?php echo esc_html__('Currency', 'safecontracts'); ?></dt><dd><?php echo esc_html($selectedCurrency !== '' ? $selectedCurrency : '—'); ?></dd></div>
+                        <div><dt><?php echo esc_html__('Symbol', 'safecontracts'); ?></dt><dd><?php echo esc_html((string) ($settings['currency_symbol'] ?: '—')); ?></dd></div>
+                        <div><dt><?php echo esc_html__('Rows per page', 'safecontracts'); ?></dt><dd><?php echo esc_html((string) $settings['admin_page_size']); ?></dd></div>
+                    </dl>
+                    <p class="description"><?php echo esc_html__('Secrets, authorization, tenant/data scope and financial rules cannot be disabled from this page.', 'safecontracts'); ?></p>
+                </aside>
+            </div>
         </div>
         <?php
     }
