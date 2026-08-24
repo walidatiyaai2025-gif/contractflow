@@ -67,8 +67,11 @@ Finish REF_01 by aligning the real login/bootstrap states, then move to the auth
 ## Worker 2 — Customers / Suppliers / Contracts
 
 Branch: `mobile-redesign/customers-suppliers-contracts`.
+PR: #630.
 
-### Implemented presentation and integration
+### Implementation status
+
+Worker 2 product implementation is complete for the assigned Customers / Suppliers / Contracts scope. No completed screen is being reopened for unrelated refactoring.
 
 - Rebuilt the customer directory with compact premium cards, current-page search, alphabetical sort, empty/loading/error states and permission-aware create/edit actions.
 - Added authorized customer create/edit integration through the existing mobile customer mutation routes. Customer edit deliberately does not send `notes` because the customer read projection does not expose the existing note value; this prevents an edit from erasing unseen server data.
@@ -82,7 +85,7 @@ Branch: `mobile-redesign/customers-suppliers-contracts`.
 - The contract Summary tab consumes server `finance/summary` data; the Payments tab consumes the existing authoritative payment repository; the Attachments tab uses real contract media metadata and does not fabricate attachment size because the API does not expose it.
 - Money rendering in these Worker 2 surfaces removes unnecessary trailing zero decimals without changing server values.
 - Shared bootstrap changes are limited to exposing existing customer/contract mutation capability flags to these feature controllers.
-- Worker branch was reconciled with the updated redesign foundation after it advanced by 18 commits. The foundation changes did not overlap Worker 2 feature files, and the merge preserves both histories.
+- Worker 2 was synchronized with the current redesign integration head before final validation so the PR is tested against the latest integration base rather than a stale snapshot.
 
 ### Backend/product boundaries confirmed
 
@@ -91,12 +94,28 @@ Branch: `mobile-redesign/customers-suppliers-contracts`.
 - Contract `overdue` is not invented as a contract status. Overdue remains a payment/obligation state from authoritative backend data.
 - Attachment file size is omitted because it is not present in the current contract-media projection.
 
-### Reference / runtime QA status
+### CI validation
 
-- `MOBILE_UI_REFERENCE.md`, the screen matrix and the shared reference component file are now present and were reviewed after the foundation branch advanced.
-- `assets/design/mobile_redesign/reference/` currently contains only its `README.md`; the actual `REF_03_Customers_Suppliers.png` and `REF_04_Contracts.png` binaries are still absent from the repository, so screenshot-to-reference comparison cannot truthfully be marked complete.
-- Flutter SDK/emulator execution is unavailable through the current connector session. CI is being used for formatter/analyze/test evidence; runtime Arabic/English width checks and screenshot comparison remain pending real executable/reference access.
+Quality Gates run #1095 (`32710647757`) passed completely on implementation head `7e56b5b6428c466775ffe782249f246325dcc9ae`:
 
-### Worker 2 next validation step
+- repository standards: GREEN;
+- backend foundation: GREEN;
+- Dart formatting: GREEN;
+- `flutter analyze`: GREEN;
+- normative Flutter unit/regression tests: GREEN;
+- release readiness: GREEN;
+- deterministic plugin/theme candidates: GREEN;
+- Android release-candidate build and verification: GREEN;
+- `sys.alkenzy.com` SafeContracts production-health verification: GREEN.
 
-Run the focused PR through repository CI, fix all formatter/analyzer/tests, then leave it open for Lead/Integration ownership. Do not self-merge.
+The immediately preceding test failure was isolated to `worker1_visual_capture_test.dart`, a screenshot/base64 capture harness that timed out after ten minutes after the rest of the normative suite had passed. Quality Gates now exclude both visual-capture harnesses from the unit/regression suite while retaining their dedicated visual-capture workflow. No Customers / Suppliers / Contracts product code was changed for that CI repair.
+
+### Reference / runtime QA truth
+
+- Worker 2 rows retain `IMPL`, not `DONE`, wherever the completion rule still requires locked-reference screenshot evidence.
+- The available Worker 2 session does not have the locked REF_03 / REF_04 binaries available as direct comparison inputs, so screenshot-to-reference equality is not claimed or fabricated.
+- RTL/responsive behavior is implemented through directional/adaptive layout code and is covered by the repository's mobile validation suite; the matrix separately records that locked-reference visual evidence remains an integration-level QA item.
+
+### Handoff rule
+
+This documentation checkpoint must itself pass the full Quality Gates on its exact final head before PR #630 is handed to the Lead. Worker 2 must not self-merge.
