@@ -1,0 +1,487 @@
+/*
+ * ALKENZY ADV Premium Plugin Redesign — Worker #2
+ * SC-017 .. SC-023 only.
+ *
+ * This stylesheet deliberately depends on the Lead-owned premium layer and
+ * only refines Worker #2 routes. It never changes financial values, direction,
+ * permissions, mutations, WordPress chrome, or shared navigation.
+ */
+
+body[class*="_page_safecontracts-payments"],
+body[class*="_page_safecontracts-collections"],
+body[class*="_page_safecontracts-followups"],
+body[class*="_page_safecontracts-finance"],
+body[class*="_page_safecontracts-reports"],
+body[class*="_page_safecontracts-imports"],
+body[class*="_page_safecontracts-payment-methods"]{
+  --sc-w2-navy:#0b2945;
+  --sc-w2-navy-2:#123f67;
+  --sc-w2-ivory:#f3efec;
+  --sc-w2-card:#fffdfb;
+  --sc-w2-rose:#c88f7a;
+  --sc-w2-gold:#c9a46b;
+  --sc-w2-line:#ded4ce;
+  --sc-w2-muted:#6d737b;
+  --sc-w2-green:#176c4a;
+  --sc-w2-green-bg:#eef8f2;
+  --sc-w2-red:#a93c34;
+  --sc-w2-red-bg:#fff1ef;
+  --sc-w2-amber:#9a6819;
+  --sc-w2-amber-bg:#fff7e8;
+}
+
+/* Page framing */
+body[class*="_page_safecontracts-payments"] .safecontracts-settings,
+body[class*="_page_safecontracts-collections"] .safecontracts-settings,
+body[class*="_page_safecontracts-followups"] .safecontracts-settings,
+body[class*="_page_safecontracts-finance"] .safecontracts-settings,
+body[class*="_page_safecontracts-reports"] .safecontracts-settings,
+body[class*="_page_safecontracts-imports"] .safecontracts-settings,
+body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings{
+  max-width:1440px!important;
+  padding-bottom:36px;
+}
+
+body[class*="_page_safecontracts-payments"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+body[class*="_page_safecontracts-collections"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+body[class*="_page_safecontracts-followups"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+body[class*="_page_safecontracts-reports"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+body[class*="_page_safecontracts-imports"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings>.safecontracts-section-heading:first-child{
+  min-height:112px;
+  padding:24px 26px!important;
+  border-color:rgba(255,255,255,.13)!important;
+  background:linear-gradient(118deg,#08233c 0%,#113d64 64%,#173f61 100%)!important;
+  box-shadow:0 20px 42px rgba(8,31,54,.18)!important;
+}
+
+body[class*="_page_safecontracts-payments"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+body[class*="_page_safecontracts-collections"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+body[class*="_page_safecontracts-followups"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+body[class*="_page_safecontracts-reports"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+body[class*="_page_safecontracts-imports"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings>.safecontracts-section-heading:first-child:after{
+  content:"";
+  position:absolute;
+  inset:auto -45px -75px auto;
+  width:230px;
+  height:170px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(229,182,165,.30),rgba(229,182,165,0) 70%);
+  pointer-events:none;
+}
+
+body[class*="_page_safecontracts-payments"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+body[class*="_page_safecontracts-collections"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+body[class*="_page_safecontracts-followups"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+body[class*="_page_safecontracts-reports"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+body[class*="_page_safecontracts-imports"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings>.safecontracts-section-heading:first-child h1{
+  margin:2px 0 6px!important;
+  color:#fff!important;
+  font-size:31px!important;
+  line-height:1.2;
+}
+
+body[class*="_page_safecontracts-payments"] .safecontracts-settings>.safecontracts-section-heading:first-child .description,
+body[class*="_page_safecontracts-collections"] .safecontracts-settings>.safecontracts-section-heading:first-child .description,
+body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontracts-section-heading:first-child p:not(.safecontracts-admin-shell__eyebrow){
+  max-width:960px;
+  color:rgba(255,255,255,.79)!important;
+}
+
+/* Filters: reference-like compact toolbar that can wrap without overflow. */
+body[class*="_page_safecontracts-payments"] .safecontracts-filter-bar,
+body[class*="_page_safecontracts-collections"] .safecontracts-filter-bar,
+body[class*="_page_safecontracts-followups"] .safecontracts-filter-bar,
+body[class*="_page_safecontracts-finance"] .safecontracts-filter-bar,
+body[class*="_page_safecontracts-reports"] .safecontracts-filter-bar{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  align-items:end;
+  margin:16px 0 8px;
+  padding:15px 16px!important;
+  background:rgba(255,253,251,.96)!important;
+}
+
+body[class*="_page_safecontracts-payments"] .safecontracts-filter-bar label,
+body[class*="_page_safecontracts-collections"] .safecontracts-filter-bar label,
+body[class*="_page_safecontracts-followups"] .safecontracts-filter-bar label,
+body[class*="_page_safecontracts-finance"] .safecontracts-filter-bar label,
+body[class*="_page_safecontracts-reports"] .safecontracts-filter-bar label{
+  display:grid;
+  gap:6px;
+  margin:0;
+  min-width:0;
+  font-size:12px;
+  letter-spacing:.015em;
+}
+
+body[class*="_page_safecontracts-payments"] .safecontracts-filter-bar select,
+body[class*="_page_safecontracts-collections"] .safecontracts-filter-bar select,
+body[class*="_page_safecontracts-followups"] .safecontracts-filter-bar select,
+body[class*="_page_safecontracts-finance"] .safecontracts-filter-bar select,
+body[class*="_page_safecontracts-reports"] .safecontracts-filter-bar select,
+body[class*="_page_safecontracts-payments"] .safecontracts-filter-bar input,
+body[class*="_page_safecontracts-collections"] .safecontracts-filter-bar input,
+body[class*="_page_safecontracts-followups"] .safecontracts-filter-bar input,
+body[class*="_page_safecontracts-finance"] .safecontracts-filter-bar input,
+body[class*="_page_safecontracts-reports"] .safecontracts-filter-bar input{
+  width:100%;
+  max-width:none;
+}
+
+/* Financial cards: preserve currency and direction visually, never aggregate. */
+.safecontracts-payments-page .safecontracts-payments-summary,
+.safecontracts-finance .safecontracts-kpi-grid{
+  gap:14px!important;
+}
+
+.safecontracts-payments-page .safecontracts-payments-summary__card,
+.safecontracts-finance .safecontracts-kpi,
+body[class*="_page_safecontracts-reports"] .safecontracts-kpi{
+  position:relative;
+  overflow:hidden;
+  min-height:120px;
+  border-color:var(--sc-w2-line)!important;
+  border-radius:17px!important;
+  box-shadow:0 10px 26px rgba(24,38,50,.075)!important;
+}
+
+.safecontracts-payments-page .safecontracts-payments-summary__card:before,
+.safecontracts-finance .safecontracts-kpi:before,
+body[class*="_page_safecontracts-reports"] .safecontracts-kpi:before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto;
+  height:4px;
+  background:linear-gradient(90deg,var(--sc-w2-navy-2),var(--sc-w2-rose));
+}
+
+.safecontracts-payments-page .safecontracts-payments-summary__card--receivable:before,
+.safecontracts-finance .safecontracts-finance-summary--receivable:before{
+  background:linear-gradient(90deg,#176c4a,#66a986);
+}
+
+.safecontracts-payments-page .safecontracts-payments-summary__card--payable:before,
+.safecontracts-finance .safecontracts-finance-summary--payable:before{
+  background:linear-gradient(90deg,#a93c34,#d8897f);
+}
+
+.safecontracts-payments-page .safecontracts-payments-summary__card strong,
+.safecontracts-finance .safecontracts-kpi strong,
+body[class*="_page_safecontracts-reports"] .safecontracts-kpi strong{
+  font-variant-numeric:tabular-nums;
+}
+
+/* AR/AP lanes and ledgers */
+.safecontracts-payments-page .safecontracts-payment-lanes,
+.safecontracts-settlements-page .safecontracts-settlement-lanes{
+  gap:18px!important;
+}
+
+.safecontracts-payments-page .safecontracts-payment-panel,
+.safecontracts-settlements-page .safecontracts-settlement-panel{
+  overflow:hidden;
+  border-radius:18px!important;
+  box-shadow:0 12px 30px rgba(24,38,50,.075)!important;
+}
+
+.safecontracts-payment-panel--receivable,
+.safecontracts-settlement-panel--receivable{
+  border-top:5px solid var(--sc-w2-green)!important;
+  background:linear-gradient(180deg,var(--sc-w2-green-bg),#fffdfb 150px)!important;
+}
+
+.safecontracts-payment-panel--payable,
+.safecontracts-settlement-panel--payable{
+  border-top:5px solid var(--sc-w2-red)!important;
+  background:linear-gradient(180deg,var(--sc-w2-red-bg),#fffdfb 150px)!important;
+}
+
+.safecontracts-payment-panel__heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding-bottom:12px;
+}
+
+.safecontracts-payment-panel__heading h2{margin-bottom:3px!important}
+.safecontracts-payment-panel__heading p{margin:0;color:var(--sc-w2-muted)}
+
+.safecontracts-direction-pill{
+  display:inline-flex!important;
+  align-items:center;
+  gap:5px;
+  border:1px solid currentColor!important;
+  font-weight:800!important;
+}
+.safecontracts-direction-pill--receivable{color:var(--sc-w2-green)!important;background:var(--sc-w2-green-bg)!important}
+.safecontracts-direction-pill--payable{color:var(--sc-w2-red)!important;background:var(--sc-w2-red-bg)!important}
+
+/* Details/editors: dense but readable, aligned with REF_005. */
+.safecontracts-payments-page .safecontracts-payment-editor,
+.safecontracts-settlements-page .safecontracts-settlement-editor,
+body[class*="_page_safecontracts-followups"] .safecontracts-split-layout>.safecontracts-admin-card:last-child,
+body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings-card{
+  border-top:4px solid var(--sc-w2-rose)!important;
+}
+
+.safecontracts-payments-page .safecontracts-detail-list,
+.safecontracts-settlements-page .safecontracts-detail-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px!important;
+}
+
+.safecontracts-payments-page .safecontracts-detail-list>div,
+.safecontracts-settlements-page .safecontracts-detail-list>div{
+  min-width:0;
+  padding:10px 12px!important;
+}
+
+.safecontracts-payments-page .safecontracts-detail-list dd,
+.safecontracts-settlements-page .safecontracts-detail-list dd{
+  overflow-wrap:anywhere;
+  font-variant-numeric:tabular-nums;
+}
+
+/* Tables: readable at financial density; horizontal scrolling is explicit on narrow WP admin. */
+body[class*="_page_safecontracts-payments"] .safecontracts-table-card,
+body[class*="_page_safecontracts-collections"] .safecontracts-table-card,
+body[class*="_page_safecontracts-followups"] .safecontracts-table-card,
+body[class*="_page_safecontracts-finance"] .safecontracts-table-card,
+body[class*="_page_safecontracts-reports"] .safecontracts-table-card,
+body[class*="_page_safecontracts-imports"] .safecontracts-table-card,
+body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card{
+  margin-block:16px;
+}
+
+body[class*="_page_safecontracts-payments"] table.widefat,
+body[class*="_page_safecontracts-collections"] table.widefat,
+body[class*="_page_safecontracts-followups"] table.widefat,
+body[class*="_page_safecontracts-finance"] table.widefat,
+body[class*="_page_safecontracts-reports"] table.widefat,
+body[class*="_page_safecontracts-imports"] table.widefat,
+body[class*="_page_safecontracts-payment-methods"] table.widefat{
+  font-variant-numeric:tabular-nums;
+}
+
+body[class*="_page_safecontracts-payments"] table.widefat tbody td,
+body[class*="_page_safecontracts-collections"] table.widefat tbody td,
+body[class*="_page_safecontracts-followups"] table.widefat tbody td,
+body[class*="_page_safecontracts-finance"] table.widefat tbody td,
+body[class*="_page_safecontracts-reports"] table.widefat tbody td,
+body[class*="_page_safecontracts-imports"] table.widefat tbody td,
+body[class*="_page_safecontracts-payment-methods"] table.widefat tbody td{
+  line-height:1.45;
+}
+
+.safecontracts-dashboard-table-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:7px;
+}
+.safecontracts-dashboard-table-actions form{margin:0}
+
+/* Follow-ups */
+body[class*="_page_safecontracts-followups"] .safecontracts-split-layout{
+  grid-template-columns:minmax(0,1.35fr) minmax(330px,.65fr)!important;
+  align-items:start;
+  gap:18px!important;
+}
+body[class*="_page_safecontracts-followups"] .safecontracts-field-row{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+body[class*="_page_safecontracts-followups"] .safecontracts-field-row label{display:grid;gap:6px}
+
+/* Finance */
+.safecontracts-finance .safecontracts-finance-layout{
+  display:grid;
+  grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);
+  gap:18px;
+  align-items:start;
+}
+.safecontracts-finance .safecontracts-finance-panel{
+  min-height:100%;
+  border-top:4px solid var(--sc-w2-gold)!important;
+}
+.safecontracts-finance .safecontracts-action-list{display:grid;gap:9px}
+.safecontracts-finance .safecontracts-action-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:12px 13px;
+  border:1px solid var(--sc-w2-line);
+  border-radius:12px;
+  background:#faf6f3;
+}
+.safecontracts-finance .safecontracts-action-item span{display:grid;gap:2px}
+.safecontracts-finance .safecontracts-action-item small{color:var(--sc-w2-muted)}
+.safecontracts-finance .safecontracts-action-item b{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--sc-w2-navy)}
+
+/* Reports */
+body[class*="_page_safecontracts-reports"] .safecontracts-export-form{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid var(--sc-w2-line);
+}
+body[class*="_page_safecontracts-reports"] .safecontracts-export-form .description{flex:1;min-width:240px}
+body[class*="_page_safecontracts-reports"] .safecontracts-admin-card--security{
+  border-inline-start:4px solid var(--sc-w2-navy-2)!important;
+  background:linear-gradient(145deg,#f7f2ee,#fffdfb)!important;
+}
+
+/* Imports: real backend stages presented as a connected operational sequence. */
+body[class*="_page_safecontracts-imports"] .safecontracts-settings>.safecontracts-admin-card{
+  margin-block:16px;
+}
+body[class*="_page_safecontracts-imports"] .safecontracts-settings-card{
+  position:relative;
+  border-top:4px solid var(--sc-w2-rose)!important;
+}
+body[class*="_page_safecontracts-imports"] input[type="file"]{
+  width:100%;
+  padding:16px;
+  border:1px dashed #b9aaa1;
+  border-radius:12px;
+  background:#fbf7f4;
+}
+body[class*="_page_safecontracts-imports"] .safecontracts-role-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:12px;
+}
+body[class*="_page_safecontracts-imports"] .safecontracts-role-grid label{display:grid;gap:6px}
+
+/* Payment methods */
+body[class*="_page_safecontracts-payment-methods"] .safecontracts-split-layout{
+  grid-template-columns:minmax(0,1.25fr) minmax(330px,.75fr)!important;
+  align-items:start;
+  gap:18px!important;
+}
+.safecontracts-w2-status{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 9px;
+  border:1px solid currentColor;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+}
+.safecontracts-w2-status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.safecontracts-w2-status--active{color:var(--sc-w2-green);background:var(--sc-w2-green-bg)}
+.safecontracts-w2-status--inactive{color:var(--sc-w2-muted);background:#f3f1ef}
+
+/* Semantic empty/error surfaces; text remains supplied by PHP, not CSS. */
+.safecontracts-w2-empty{
+  display:grid;
+  gap:5px;
+  place-items:start;
+  padding:18px;
+  border:1px dashed #cbbeb7;
+  border-radius:13px;
+  background:#faf6f3;
+  color:#536372;
+}
+.safecontracts-w2-empty strong{color:var(--sc-w2-navy)}
+
+.safecontracts-settings .notice.inline{
+  margin:14px 0!important;
+  padding:8px 12px!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  box-shadow:0 6px 16px rgba(35,45,55,.05);
+}
+
+/* RTL: rely on logical properties and keep financial numbers legible. */
+.rtl .safecontracts-financial-amount--receivable,
+.rtl .safecontracts-financial-amount--payable,
+.rtl .safecontracts-financial-amount--neutral,
+.rtl .safecontracts-kpi strong,
+[dir="rtl"] .safecontracts-financial-amount--receivable,
+[dir="rtl"] .safecontracts-financial-amount--payable,
+[dir="rtl"] .safecontracts-financial-amount--neutral{
+  unicode-bidi:plaintext;
+}
+.rtl body[class*="_page_safecontracts-payments"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+.rtl body[class*="_page_safecontracts-collections"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+.rtl body[class*="_page_safecontracts-followups"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+.rtl body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+.rtl body[class*="_page_safecontracts-reports"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+.rtl body[class*="_page_safecontracts-imports"] .safecontracts-settings>.safecontracts-section-heading:first-child:after,
+.rtl body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings>.safecontracts-section-heading:first-child:after{
+  inset:auto auto -75px -45px;
+}
+
+/* Responsive acceptance widths: 1024 / 782 / 600 plus intermediate desktop widths. */
+@media(max-width:1180px){
+  body[class*="_page_safecontracts-followups"] .safecontracts-split-layout,
+  .safecontracts-finance .safecontracts-finance-layout,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-split-layout{grid-template-columns:1fr!important}
+}
+
+@media(max-width:1024px){
+  .safecontracts-payments-page .safecontracts-detail-list,
+  .safecontracts-settlements-page .safecontracts-detail-list{grid-template-columns:1fr}
+  body[class*="_page_safecontracts-payments"] .safecontracts-filter-bar,
+  body[class*="_page_safecontracts-collections"] .safecontracts-filter-bar,
+  body[class*="_page_safecontracts-followups"] .safecontracts-filter-bar,
+  body[class*="_page_safecontracts-finance"] .safecontracts-filter-bar,
+  body[class*="_page_safecontracts-reports"] .safecontracts-filter-bar{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+
+@media(max-width:782px){
+  body[class*="_page_safecontracts-payments"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+  body[class*="_page_safecontracts-collections"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+  body[class*="_page_safecontracts-followups"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+  body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+  body[class*="_page_safecontracts-reports"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+  body[class*="_page_safecontracts-imports"] .safecontracts-settings>.safecontracts-section-heading:first-child,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings>.safecontracts-section-heading:first-child{
+    min-height:0;
+    padding:19px!important;
+  }
+  body[class*="_page_safecontracts-payments"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+  body[class*="_page_safecontracts-collections"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+  body[class*="_page_safecontracts-followups"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+  body[class*="_page_safecontracts-finance"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+  body[class*="_page_safecontracts-reports"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+  body[class*="_page_safecontracts-imports"] .safecontracts-settings>.safecontracts-section-heading:first-child h1,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings>.safecontracts-section-heading:first-child h1{font-size:26px!important}
+  body[class*="_page_safecontracts-payments"] .safecontracts-filter-bar,
+  body[class*="_page_safecontracts-collections"] .safecontracts-filter-bar,
+  body[class*="_page_safecontracts-followups"] .safecontracts-filter-bar,
+  body[class*="_page_safecontracts-finance"] .safecontracts-filter-bar,
+  body[class*="_page_safecontracts-reports"] .safecontracts-filter-bar{grid-template-columns:1fr!important}
+  body[class*="_page_safecontracts-followups"] .safecontracts-field-row{grid-template-columns:1fr}
+  .safecontracts-finance .safecontracts-action-item{align-items:flex-start;flex-direction:column}
+  body[class*="_page_safecontracts-reports"] .safecontracts-export-form{align-items:stretch;flex-direction:column}
+  body[class*="_page_safecontracts-reports"] .safecontracts-export-form .button{width:100%;text-align:center}
+}
+
+@media(max-width:600px){
+  body[class*="_page_safecontracts-payments"] .safecontracts-settings,
+  body[class*="_page_safecontracts-collections"] .safecontracts-settings,
+  body[class*="_page_safecontracts-followups"] .safecontracts-settings,
+  body[class*="_page_safecontracts-finance"] .safecontracts-settings,
+  body[class*="_page_safecontracts-reports"] .safecontracts-settings,
+  body[class*="_page_safecontracts-imports"] .safecontracts-settings,
+  body[class*="_page_safecontracts-payment-methods"] .safecontracts-settings{margin-inline:0!important}
+  .safecontracts-dashboard-table-actions{align-items:stretch;flex-direction:column}
+  .safecontracts-dashboard-table-actions .button{width:100%;text-align:center}
+  body[class*="_page_safecontracts-imports"] .safecontracts-role-grid{grid-template-columns:1fr}
+}
