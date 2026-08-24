@@ -95,8 +95,8 @@ void main() {
   );
 
   test('SC-MOBILE-053 dashboard uses compact server-backed tab hierarchy', () {
-    final source = File('lib/features/dashboard/dashboard_screen.dart')
-        .readAsStringSync();
+    final source =
+        File('lib/features/dashboard/dashboard_screen.dart').readAsStringSync();
 
     expect(source, contains('DropdownButton<String>'));
     expect(source, contains('_CompactFinancialRingPainter'));
