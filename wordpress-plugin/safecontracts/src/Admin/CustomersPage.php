@@ -7,6 +7,7 @@ namespace SafeContracts\Admin;
 use SafeContracts\Customers\CustomerService;
 use SafeContracts\Deletion\SafeDeletionService;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
 final class CustomersPage
@@ -135,9 +136,9 @@ final class CustomersPage
         <div class="wrap safecontracts-settings safecontracts-customers safecontracts-worker1" dir="auto">
             <header class="safecontracts-worker1__header">
                 <div>
-                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Customer master data · Accounts Receivable', 'safecontracts'); ?></p>
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html(self::text('Customer master data · Accounts Receivable')); ?></p>
                     <h1><?php echo esc_html__('Customers', 'safecontracts'); ?></h1>
-                    <p class="description"><?php echo esc_html__('Maintain the customer master used by receivable contracts. Customer identity and contact data stay separate from contract financial authority.', 'safecontracts'); ?></p>
+                    <p class="description"><?php echo esc_html(self::text('Maintain the customer master used by receivable contracts. Customer identity and contact data stay separate from contract financial authority.')); ?></p>
                 </div>
                 <div class="safecontracts-worker1__header-actions">
                     <a class="button" href="<?php echo esc_url(add_query_arg(['page' => ContractsPage::SLUG, 'financial_direction' => 'receivable'], admin_url('admin.php'))); ?>"><?php echo esc_html__('Receivable contracts', 'safecontracts'); ?></a>
@@ -148,55 +149,55 @@ final class CustomersPage
             </header>
 
             <div class="safecontracts-worker1__notice-stack">
-                <?php if ($status === 'saved') : ?><div class="notice notice-success inline"><p><?php echo esc_html__('Customer saved successfully.', 'safecontracts'); ?></p></div><?php endif; ?>
-                <?php if ($status === 'invalid') : ?><div class="notice notice-error inline"><p><?php echo esc_html__('Customer was not saved. Check required fields and validation rules.', 'safecontracts'); ?></p></div><?php endif; ?>
-                <?php if ($status === 'deleted') : ?><div class="notice notice-success inline"><p><?php echo esc_html__('Customer archived from active records. Linked contracts and history were preserved.', 'safecontracts'); ?></p></div><?php endif; ?>
-                <?php if ($status === 'delete_failed') : ?><div class="notice notice-error inline"><p><?php echo esc_html__('Customer could not be archived.', 'safecontracts'); ?></p></div><?php endif; ?>
+                <?php if ($status === 'saved') : ?><div class="notice notice-success inline"><p><?php echo esc_html(self::text('Customer saved successfully.')); ?></p></div><?php endif; ?>
+                <?php if ($status === 'invalid') : ?><div class="notice notice-error inline"><p><?php echo esc_html(self::text('Customer was not saved. Check required fields and validation rules.')); ?></p></div><?php endif; ?>
+                <?php if ($status === 'deleted') : ?><div class="notice notice-success inline"><p><?php echo esc_html(self::text('Customer archived from active records. Linked contracts and history were preserved.')); ?></p></div><?php endif; ?>
+                <?php if ($status === 'delete_failed') : ?><div class="notice notice-error inline"><p><?php echo esc_html(self::text('Customer could not be archived.')); ?></p></div><?php endif; ?>
                 <?php if (! empty($filters['date_range_error'])) : ?><div class="notice notice-error inline"><p><?php echo esc_html__('Invalid period. Use valid dates and make sure the end date is not earlier than the start date.', 'safecontracts'); ?></p></div><?php endif; ?>
             </div>
 
-            <section class="safecontracts-worker1__metrics" aria-label="<?php echo esc_attr__('Customer summary', 'safecontracts'); ?>">
-                <article class="safecontracts-worker1__metric"><span><?php echo esc_html__('Visible customers', 'safecontracts'); ?></span><strong><?php echo esc_html((string) $totalRows); ?></strong><small><?php echo esc_html__('Within the current data scope', 'safecontracts'); ?></small></article>
-                <article class="safecontracts-worker1__metric safecontracts-worker1__metric--receivable"><span><?php echo esc_html__('Receivable contracts', 'safecontracts'); ?></span><strong><?php echo esc_html((string) $visibleContractCount); ?></strong><small><?php echo esc_html__('Linked to the visible customers', 'safecontracts'); ?></small></article>
-                <article class="safecontracts-worker1__metric"><span><?php echo esc_html__('Contact-ready', 'safecontracts'); ?></span><strong><?php echo esc_html((string) $contactReady); ?></strong><small><?php echo esc_html__('Has email or phone', 'safecontracts'); ?></small></article>
-                <article class="safecontracts-worker1__metric"><span><?php echo esc_html__('Current page', 'safecontracts'); ?></span><strong><?php echo esc_html($currentPage . ' / ' . $totalPages); ?></strong><small><?php echo esc_html(sprintf(__('Up to %d customers per page', 'safecontracts'), self::PAGE_SIZE)); ?></small></article>
+            <section class="safecontracts-worker1__metrics" aria-label="<?php echo esc_attr(self::text('Customer summary')); ?>">
+                <article class="safecontracts-worker1__metric"><span><?php echo esc_html(self::text('Visible customers')); ?></span><strong><?php echo esc_html((string) $totalRows); ?></strong><small><?php echo esc_html(self::text('Within the current data scope')); ?></small></article>
+                <article class="safecontracts-worker1__metric safecontracts-worker1__metric--receivable"><span><?php echo esc_html__('Receivable contracts', 'safecontracts'); ?></span><strong><?php echo esc_html((string) $visibleContractCount); ?></strong><small><?php echo esc_html(self::text('Linked to the visible customers')); ?></small></article>
+                <article class="safecontracts-worker1__metric"><span><?php echo esc_html(self::text('Contact-ready')); ?></span><strong><?php echo esc_html((string) $contactReady); ?></strong><small><?php echo esc_html(self::text('Has email or phone')); ?></small></article>
+                <article class="safecontracts-worker1__metric"><span><?php echo esc_html(self::text('Current page')); ?></span><strong><?php echo esc_html($currentPage . ' / ' . $totalPages); ?></strong><small><?php echo esc_html(sprintf(self::text('Up to %d customers per page'), self::PAGE_SIZE)); ?></small></article>
             </section>
 
             <section class="safecontracts-worker1__toolbar">
                 <form method="get" class="safecontracts-worker1__filter-grid">
                     <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
                     <?php if ($editId > 0) : ?><input type="hidden" name="customer_id" value="<?php echo esc_attr((string) $editId); ?>"><?php endif; ?>
-                    <label><?php echo esc_html__('Search', 'safecontracts'); ?><input type="search" name="customer_search" value="<?php echo esc_attr($search); ?>" placeholder="<?php echo esc_attr__('Name, code, contact, email or phone', 'safecontracts'); ?>"></label>
+                    <label><?php echo esc_html(self::text('Search')); ?><input type="search" name="customer_search" value="<?php echo esc_attr($search); ?>" placeholder="<?php echo esc_attr(self::text('Name, code, contact, email or phone')); ?>"></label>
                     <?php AdminPeriodFilter::renderFields($filters); ?>
                     <div class="safecontracts-worker1__filter-actions">
                         <button class="button button-primary" type="submit"><?php echo esc_html__('Apply filters', 'safecontracts'); ?></button>
-                        <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Clear', 'safecontracts'); ?></a>
+                        <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html(self::text('Clear')); ?></a>
                     </div>
                 </form>
-                <p class="description"><?php echo esc_html__('The period filter uses the customer record creation date. Search is applied only to records already visible in your authorized data scope.', 'safecontracts'); ?></p>
+                <p class="description"><?php echo esc_html(self::text('The period filter uses the customer record creation date. Search is applied only to records already visible in your authorized data scope.')); ?></p>
             </section>
 
             <div class="safecontracts-worker1__layout<?php echo $canManage ? '' : ' safecontracts-worker1__layout--single'; ?>">
                 <section class="safecontracts-worker1__panel">
                     <div class="safecontracts-worker1__panel-head">
-                        <div><h2><?php echo esc_html__('Customer directory', 'safecontracts'); ?></h2><p><?php echo esc_html__('Active customer master records', 'safecontracts'); ?></p></div>
+                        <div><h2><?php echo esc_html(self::text('Customer directory')); ?></h2><p><?php echo esc_html(self::text('Active customer master records')); ?></p></div>
                         <span class="safecontracts-worker1__count"><?php echo esc_html((string) $totalRows); ?></span>
                     </div>
                     <div class="safecontracts-worker1__panel-body--flush">
                         <?php if ($pageRows === []) : ?>
                             <div class="safecontracts-worker1__empty">
                                 <span class="safecontracts-worker1__empty-mark" aria-hidden="true">+</span>
-                                <h3><?php echo esc_html__('No customers match the current filters', 'safecontracts'); ?></h3>
-                                <p><?php echo esc_html__('Clear the search or period filter, or add a customer if you have permission.', 'safecontracts'); ?></p>
+                                <h3><?php echo esc_html(self::text('No customers match the current filters')); ?></h3>
+                                <p><?php echo esc_html(self::text('Clear the search or period filter, or add a customer if you have permission.')); ?></p>
                             </div>
                         <?php else : ?>
                             <div class="safecontracts-worker1__table-scroll">
                                 <table class="widefat striped">
-                                    <thead><tr><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Contact', 'safecontracts'); ?></th><th><?php echo esc_html__('AR contracts', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead>
+                                    <thead><tr><th><?php echo esc_html__('Customer', 'safecontracts'); ?></th><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Contact', 'safecontracts'); ?></th><th><?php echo esc_html(self::text('AR contracts')); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead>
                                     <tbody>
                                     <?php foreach ($pageRows as $customer) : $customerId = (int) ($customer['id'] ?? 0); ?>
                                         <tr>
-                                            <td><div class="safecontracts-worker1__primary-cell"><a href="<?php echo esc_url(self::customerUrl($customerId, $filters, $search, $currentPage)); ?>"><?php echo esc_html((string) $customer['name']); ?></a><span class="safecontracts-worker1__secondary"><?php echo esc_html((string) ($customer['email'] ?: $customer['phone'] ?: __('No contact channel', 'safecontracts'))); ?></span></div></td>
+                                            <td><div class="safecontracts-worker1__primary-cell"><a href="<?php echo esc_url(self::customerUrl($customerId, $filters, $search, $currentPage)); ?>"><?php echo esc_html((string) $customer['name']); ?></a><span class="safecontracts-worker1__secondary"><?php echo esc_html((string) ($customer['email'] ?: $customer['phone'] ?: self::text('No contact channel'))); ?></span></div></td>
                                             <td><?php echo esc_html((string) ($customer['internal_code'] ?: '—')); ?></td>
                                             <td><div class="safecontracts-worker1__primary-cell"><span><?php echo esc_html((string) ($customer['contact_name'] ?: '—')); ?></span><span class="safecontracts-worker1__secondary"><?php echo esc_html((string) ($customer['phone'] ?: '')); ?></span></div></td>
                                             <td><strong><?php echo esc_html((string) ($contractCounts[$customerId] ?? 0)); ?></strong></td>
@@ -227,18 +228,18 @@ final class CustomersPage
                 <?php if ($canManage) : ?>
                     <aside class="safecontracts-worker1__panel safecontracts-worker1__editor">
                         <div class="safecontracts-worker1__panel-head">
-                            <div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html($editing ? __('Customer profile', 'safecontracts') : __('New receivable party', 'safecontracts')); ?></p><h2><?php echo $editing ? esc_html((string) $editing['name']) : esc_html__('Add customer', 'safecontracts'); ?></h2></div>
+                            <div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html($editing ? self::text('Customer profile') : self::text('New receivable party')); ?></p><h2><?php echo $editing ? esc_html((string) $editing['name']) : esc_html__('Add customer', 'safecontracts'); ?></h2></div>
                         </div>
                         <div class="safecontracts-worker1__panel-body">
                             <?php if ($editing) : ?>
                                 <div class="safecontracts-worker1__context">
-                                    <div class="safecontracts-worker1__context-row"><span><?php echo esc_html__('Status', 'safecontracts'); ?></span><strong><?php echo esc_html__('Active customer', 'safecontracts'); ?></strong></div>
+                                    <div class="safecontracts-worker1__context-row"><span><?php echo esc_html__('Status', 'safecontracts'); ?></span><strong><?php echo esc_html(self::text('Active customer')); ?></strong></div>
                                     <div class="safecontracts-worker1__context-row"><span><?php echo esc_html__('Receivable contracts', 'safecontracts'); ?></span><strong><?php echo esc_html((string) count($customerContracts)); ?></strong></div>
-                                    <div class="safecontracts-worker1__context-row"><span><?php echo esc_html__('Updated', 'safecontracts'); ?></span><strong><?php echo esc_html((string) ($editing['updated_at'] ?? '—')); ?></strong></div>
+                                    <div class="safecontracts-worker1__context-row"><span><?php echo esc_html(self::text('Updated')); ?></span><strong><?php echo esc_html((string) ($editing['updated_at'] ?? '—')); ?></strong></div>
                                 </div>
                                 <?php if ($customerContracts !== []) : ?>
                                     <div class="safecontracts-worker1__form-section">
-                                        <h3><?php echo esc_html__('Recent linked contracts', 'safecontracts'); ?></h3>
+                                        <h3><?php echo esc_html(self::text('Recent linked contracts')); ?></h3>
                                         <ul class="safecontracts-worker1__attachment-list">
                                             <?php foreach (array_slice($customerContracts, 0, 5) as $contract) : ?>
                                                 <li><span><?php echo esc_html((string) ($contract['contract_number'] ?? '')); ?></span><a href="<?php echo esc_url(add_query_arg(['page' => ContractsPage::SLUG, 'contract_id' => (int) ($contract['id'] ?? 0)], admin_url('admin.php'))); ?>"><?php echo esc_html__('Open', 'safecontracts'); ?></a></li>
@@ -252,7 +253,7 @@ final class CustomersPage
                                 <input type="hidden" name="customer_id" value="<?php echo esc_attr((string) ($editing['id'] ?? 0)); ?>">
                                 <?php wp_nonce_field(self::SAVE_ACTION); ?>
                                 <div class="safecontracts-worker1__form-section">
-                                    <h3><?php echo esc_html__('Identity', 'safecontracts'); ?></h3>
+                                    <h3><?php echo esc_html(self::text('Identity')); ?></h3>
                                     <div class="safecontracts-worker1__field-grid">
                                         <label class="safecontracts-worker1__field-full"><?php echo esc_html__('Name', 'safecontracts'); ?><input name="name" required maxlength="191" value="<?php echo esc_attr((string) ($editing['name'] ?? '')); ?>"></label>
                                         <label><?php echo esc_html__('Internal code', 'safecontracts'); ?><input name="internal_code" maxlength="100" value="<?php echo esc_attr((string) ($editing['internal_code'] ?? '')); ?>"></label>
@@ -303,6 +304,49 @@ final class CustomersPage
         return add_query_arg($args, admin_url('admin.php'));
     }
 
+    private static function text(string $english): string
+    {
+        if (TranslationCatalog::currentLanguage() !== 'ar') {
+            return __($english, 'safecontracts');
+        }
+
+        return match ($english) {
+            'Customer master data · Accounts Receivable' => 'بيانات العملاء الأساسية · حسابات القبض',
+            'Maintain the customer master used by receivable contracts. Customer identity and contact data stay separate from contract financial authority.' => 'إدارة بيانات العملاء المستخدمة في عقود المبالغ المستحقة لنا، مع إبقاء بيانات الهوية والتواصل منفصلة عن الصلاحيات المالية للعقد.',
+            'Customer saved successfully.' => 'تم حفظ العميل بنجاح.',
+            'Customer was not saved. Check required fields and validation rules.' => 'لم يتم حفظ العميل. راجع الحقول المطلوبة وقواعد التحقق.',
+            'Customer archived from active records. Linked contracts and history were preserved.' => 'تمت أرشفة العميل من السجلات النشطة مع الاحتفاظ بالعقود المرتبطة والسجل التاريخي.',
+            'Customer could not be archived.' => 'تعذر أرشفة العميل.',
+            'Customer summary' => 'ملخص العملاء',
+            'Visible customers' => 'العملاء الظاهرون',
+            'Within the current data scope' => 'ضمن نطاق البيانات الحالي',
+            'Linked to the visible customers' => 'مرتبطة بالعملاء الظاهرين',
+            'Contact-ready' => 'بيانات التواصل متاحة',
+            'Has email or phone' => 'يتوفر بريد إلكتروني أو هاتف',
+            'Current page' => 'الصفحة الحالية',
+            'Up to %d customers per page' => 'حتى %d عميلاً في الصفحة',
+            'Search' => 'بحث',
+            'Name, code, contact, email or phone' => 'الاسم أو الكود أو جهة الاتصال أو البريد أو الهاتف',
+            'Clear' => 'مسح',
+            'The period filter uses the customer record creation date. Search is applied only to records already visible in your authorized data scope.' => 'يستخدم فلتر الفترة تاريخ إنشاء سجل العميل، ويُطبّق البحث فقط على السجلات الظاهرة ضمن نطاق صلاحياتك.',
+            'Customer directory' => 'دليل العملاء',
+            'Active customer master records' => 'سجلات العملاء النشطة',
+            'No customers match the current filters' => 'لا يوجد عملاء يطابقون الفلاتر الحالية',
+            'Clear the search or period filter, or add a customer if you have permission.' => 'امسح البحث أو فلتر الفترة، أو أضف عميلاً إذا كانت لديك الصلاحية.',
+            'AR contracts' => 'عقود القبض',
+            'No contact channel' => 'لا توجد وسيلة تواصل',
+            'Customer profile' => 'ملف العميل',
+            'New receivable party' => 'عميل جديد مستحق لنا',
+            'Active customer' => 'عميل نشط',
+            'Updated' => 'آخر تحديث',
+            'Recent linked contracts' => 'أحدث العقود المرتبطة',
+            'Identity' => 'البيانات التعريفية',
+            'Customer pagination' => 'ترقيم صفحات العملاء',
+            '%1$d customers · page %2$d of %3$d' => '%1$d عميل · الصفحة %2$d من %3$d',
+            default => $english,
+        };
+    }
+
     /** @param array<string,mixed> $filters */
     private static function renderPagination(int $currentPage, int $totalPages, int $totalRows, array $filters, string $search, int $editId): void
     {
@@ -315,8 +359,8 @@ final class CustomersPage
         if (! empty($filters['date_to'])) { $base['date_to'] = (string) $filters['date_to']; }
         if ($editId > 0) { $base['customer_id'] = $editId; }
         ?>
-        <nav class="safecontracts-worker1__pagination" aria-label="<?php echo esc_attr__('Customer pagination', 'safecontracts'); ?>">
-            <span><?php echo esc_html(sprintf(__('%1$d customers · page %2$d of %3$d', 'safecontracts'), $totalRows, $currentPage, $totalPages)); ?></span>
+        <nav class="safecontracts-worker1__pagination" aria-label="<?php echo esc_attr(self::text('Customer pagination')); ?>">
+            <span><?php echo esc_html(sprintf(self::text('%1$d customers · page %2$d of %3$d'), $totalRows, $currentPage, $totalPages)); ?></span>
             <span class="safecontracts-worker1__pagination-links">
                 <?php for ($page = 1; $page <= $totalPages; $page++) : ?>
                     <?php $url = add_query_arg(array_merge($base, ['customer_page' => $page]), admin_url('admin.php')); ?>
