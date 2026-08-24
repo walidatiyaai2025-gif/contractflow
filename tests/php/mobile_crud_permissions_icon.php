@@ -138,8 +138,14 @@ $profileIdentity = (string) file_get_contents($root . '/mobile/lib/features/prof
 $profileUx = $profile . $profileContent . $profileIdentity;
 $assert(! str_contains($profileUx, 'MobileRecordEditorScreen'), 'profile no longer exposes the CRUD data-management entry');
 $assert(! str_contains($profileUx, 'Granted capabilities'), 'profile no longer dumps raw granted capabilities');
-$assert(str_contains($profileContent, 'ProfileSectionTitle'), 'profile uses dedicated modern settings sections');
-$assert(str_contains($profileIdentity, 'My profile'), 'profile presents a dedicated identity hero');
+$assert(str_contains($profileContent, 'ProfileLanguageControl'), 'profile exposes the compact bilingual language control');
+$assert(str_contains($profileContent, 'ProfilePrimaryActions'), 'profile exposes compact logout and guide actions');
+$assert(str_contains($profileIdentity, 'profileLogoutButton'), 'profile exposes a visible logout action');
+$assert(str_contains($profileIdentity, 'profileUserGuideButton'), 'profile keeps the User Guide as a small secondary action');
+foreach (['Account Information', 'Session History', 'Currency', 'Full scope', 'Active session'] as $forbiddenProfileCopy) {
+    $assert(! str_contains($profileUx, $forbiddenProfileCopy), "profile omits obsolete technical copy: {$forbiddenProfileCopy}");
+}
+$assert(str_contains($profileIdentity, 'My profile'), 'profile presents a dedicated compact identity hero');
 
 $bootstrap = (string) file_get_contents($root . '/scripts/bootstrap_android.sh');
 $assert(str_contains($bootstrap, 'alkenzy_launcher.png'), 'Android bootstrap packages the supplied Alkenzy PNG launcher resource');
