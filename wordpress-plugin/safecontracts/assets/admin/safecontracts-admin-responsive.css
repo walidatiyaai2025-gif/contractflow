@@ -117,7 +117,7 @@
   }
 
   .safecontracts-table-card table,
-  .safecontracts-settings .widefat {
+  .safecontracts-settings table.widefat {
     min-width: 680px;
   }
 }
