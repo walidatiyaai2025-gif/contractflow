@@ -113,6 +113,7 @@ void main() {
 
         await tester.pumpWidget(
           SafeContractsApp(
+            key: ValueKey<String>('welcome-$languageCode-$width'),
             environment: client.environment,
             client: client,
             languageCode: languageCode,
