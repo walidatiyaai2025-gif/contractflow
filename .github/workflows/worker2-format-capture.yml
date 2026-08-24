@@ -1,0 +1,180 @@
+name: Worker2 Validate And Capture
+
+on:
+  push:
+    branches:
+      - mobile-redesign/customers-suppliers-contracts
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile-redesign/customers-suppliers-contracts
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Apply Worker 2 validation corrections
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          icon_paths = [
+              Path('lib/features/contracts/contracts_screen.dart'),
+              Path('lib/features/customers/customers_screen.dart'),
+              Path('lib/features/suppliers/suppliers_screen.dart'),
+          ]
+          for path in icon_paths:
+              text = path.read_text()
+              text = re.sub(r'\s*matchTextDirection:\s*true,?', '', text)
+              path.write_text(text)
+
+          customer = Path('lib/features/customers/customers_screen.dart')
+          text = customer.read_text()
+          text = text.replace(
+              'action: () => unawaited(controller.loadPage(1)),',
+              'action: () => controller.loadPage(1),',
+          )
+          text = text.replace(
+              'action: () => unawaited(controller.openCustomer(id)),',
+              'action: () => controller.openCustomer(id),',
+          )
+          customer.write_text(text)
+
+          contracts = Path('lib/features/contracts/contracts.dart')
+          text = contracts.read_text()
+          old_money = """String? _optionalMoneyText(Object? value, String field) {
+  if (value == null || value == '') return null;
+  final text = switch (value) {
+    final String value => value.trim(),
+    final num value => value.toString(),
+    _ => '',
+  };
+  if (text.isEmpty || !RegExp(r'^\\d+(?:\\.\\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
+  }
+  return text;
+}
+"""
+          new_money = """String? _optionalMoneyText(Object? value, String field) {
+  if (value == null || value == '') return null;
+  if (value is! String) {
+    throw FormatException('$field must be an exact decimal money string.');
+  }
+  final text = value.trim();
+  if (text.isEmpty || !RegExp(r'^\\d+(?:\\.\\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
+  }
+  return text;
+}
+"""
+          if old_money in text:
+              text = text.replace(old_money, new_money)
+          elif 'exact decimal money string' not in text:
+              raise SystemExit('Expected contract money parser block was not found.')
+
+          old_date = """String? _optionalIsoDate(Object? value, String field) {
+  final text = _optionalText(value);
+  if (text == null) return null;
+  if (!RegExp(r'^\\d{4}-\\d{2}-\\d{2}$').hasMatch(text)) {
+    throw FormatException('$field must be YYYY-MM-DD.');
+  }
+  return text;
+}
+"""
+          new_date = """String? _optionalIsoDate(Object? value, String field) {
+  final text = _optionalText(value);
+  if (text == null) return null;
+  final match = RegExp(r'^(\\d{4})-(\\d{2})-(\\d{2})$').firstMatch(text);
+  if (match == null) {
+    throw FormatException('$field must be YYYY-MM-DD.');
+  }
+  final year = int.parse(match.group(1)!);
+  final month = int.parse(match.group(2)!);
+  final day = int.parse(match.group(3)!);
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    throw FormatException('$field is not a valid calendar date.');
+  }
+  final parsed = DateTime.utc(year, month, day);
+  if (parsed.year != year || parsed.month != month || parsed.day != day) {
+    throw FormatException('$field is not a valid calendar date.');
+  }
+  return text;
+}
+"""
+          if old_date in text:
+              text = text.replace(old_date, new_date)
+          elif 'valid calendar date' not in text:
+              raise SystemExit('Expected contract date parser block was not found.')
+          contracts.write_text(text)
+
+          test_path = Path('test/mobile_contracts_011_test.dart')
+          text = test_path.read_text()
+          old_test = """    expect(openedContractId, 70);
+    expect(transport.requests, hasLength(1));
+    controller.dispose();
+"""
+          new_test = """    expect(openedContractId, 70);
+    expect(transport.requests, hasLength(2));
+    expect(transport.requests.first.uri.path, endsWith('/contracts'));
+    expect(transport.requests.last.uri.path, endsWith('/contracts/70/media'));
+    controller.dispose();
+"""
+          if old_test in text:
+              test_path.write_text(text.replace(old_test, new_test))
+          elif "endsWith('/contracts/70/media')" not in text:
+              raise SystemExit('Expected contract screen request assertion was not found.')
+          PY
+      - name: Format Worker 2 sources and touched test
+        run: |
+          dart format \
+            lib/features/contracts/contract_edit_screen.dart \
+            lib/features/contracts/contracts.dart \
+            lib/features/contracts/contracts_screen.dart \
+            lib/features/contracts/counterparty_business_snapshot.dart \
+            lib/features/contracts/premium_contract_details_screen.dart \
+            lib/features/customers/customers.dart \
+            lib/features/customers/customers_screen.dart \
+            lib/features/suppliers/suppliers_screen.dart \
+            test/mobile_contracts_011_test.dart
+      - name: Persist validated Worker 2 corrections
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            mobile/lib/features/contracts/contract_edit_screen.dart \
+            mobile/lib/features/contracts/contracts.dart \
+            mobile/lib/features/contracts/contracts_screen.dart \
+            mobile/lib/features/contracts/counterparty_business_snapshot.dart \
+            mobile/lib/features/contracts/premium_contract_details_screen.dart \
+            mobile/lib/features/customers/customers.dart \
+            mobile/lib/features/customers/customers_screen.dart \
+            mobile/lib/features/suppliers/suppliers_screen.dart \
+            mobile/test/mobile_contracts_011_test.dart
+          if git diff --cached --quiet; then
+            echo "Worker 2 sources already corrected."
+          else
+            git commit -m "fix(mobile): close worker2 validation regressions"
+            git push origin HEAD:mobile-redesign/customers-suppliers-contracts
+          fi
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test

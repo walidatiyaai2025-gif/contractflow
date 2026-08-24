@@ -1,0 +1,129 @@
+name: Worker 2 Final Fix
+
+on:
+  push:
+    branches:
+      - mobile-redesign/customers-suppliers-contracts
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile-redesign/customers-suppliers-contracts
+          fetch-depth: 0
+      - name: Repair final Worker 2 validation invariants
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          contracts = Path('mobile/lib/features/contracts/contracts.dart')
+          text = contracts.read_text()
+          text = text.replace("data['accountant_user_id',", "data['accountant_user_id'],")
+
+          old_money = """String? _optionalMoneyText(Object? value, String field) {
+  if (value == null || value == '') return null;
+  final text = switch (value) {
+    final String value => value.trim(),
+    final num value => value.toString(),
+    _ => '',
+  };
+  if (text.isEmpty || !RegExp(r'^\\d+(?:\\.\\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
+  }
+  return text;
+}
+"""
+          new_money = """String? _optionalMoneyText(Object? value, String field) {
+  if (value == null || value == '') return null;
+  if (value is! String) {
+    throw FormatException('$field must be an exact decimal money string.');
+  }
+  final text = value.trim();
+  if (text.isEmpty || !RegExp(r'^\\d+(?:\\.\\d{1,4})?$').hasMatch(text)) {
+    throw FormatException('$field must be a non-negative decimal amount.');
+  }
+  return text;
+}
+"""
+          if old_money in text:
+              text = text.replace(old_money, new_money, 1)
+
+          old_date = """String? _optionalIsoDate(Object? value, String field) {
+  final text = _optionalText(value);
+  if (text == null) return null;
+  if (!RegExp(r'^\\d{4}-\\d{2}-\\d{2}$').hasMatch(text)) {
+    throw FormatException('$field must be YYYY-MM-DD.');
+  }
+  return text;
+}
+"""
+          new_date = """String? _optionalIsoDate(Object? value, String field) {
+  final text = _optionalText(value);
+  if (text == null) return null;
+  if (!RegExp(r'^\\d{4}-\\d{2}-\\d{2}$').hasMatch(text)) {
+    throw FormatException('$field must be YYYY-MM-DD.');
+  }
+  final parts = text.split('-').map(int.parse).toList(growable: false);
+  final parsed = DateTime.utc(parts[0], parts[1], parts[2]);
+  if (parsed.year != parts[0] ||
+      parsed.month != parts[1] ||
+      parsed.day != parts[2]) {
+    throw FormatException('$field must be a real calendar date.');
+  }
+  return text;
+}
+"""
+          if old_date in text:
+              text = text.replace(old_date, new_date, 1)
+          contracts.write_text(text)
+
+          test_path = Path('mobile/test/mobile_contracts_011_test.dart')
+          test = test_path.read_text()
+          old = """    expect(openedContractId, 70);
+    expect(transport.requests, hasLength(1));
+    controller.dispose();
+"""
+          new = """    expect(openedContractId, 70);
+    expect(transport.requests, hasLength(2));
+    expect(transport.requests.first.uri.path, endsWith('/contracts'));
+    expect(transport.requests.last.uri.path, endsWith('/contracts/70/media'));
+    controller.dispose();
+"""
+          if old in test:
+              test_path.write_text(test.replace(old, new, 1))
+          PY
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Format repaired files
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib/features/contracts/contracts.dart test/mobile_contracts_011_test.dart
+      - name: Persist repaired Worker 2 head
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/lib/features/contracts/contracts.dart mobile/test/mobile_contracts_011_test.dart
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(mobile): close worker2 final validation"
+            git push origin HEAD:mobile-redesign/customers-suppliers-contracts
+          fi
+      - name: Validate Worker 2
+        working-directory: mobile
+        shell: bash
+        run: |
+          dart format lib test
+          git diff --exit-code -- lib test
+          flutter analyze
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
