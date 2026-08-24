@@ -11,6 +11,7 @@ use SafeContracts\Translations\ControlledInputArabicDefaults;
 use SafeContracts\Translations\FeatureArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
 use SafeContracts\Translations\NavigationArabicDefaults;
+use SafeContracts\Translations\PremiumPolishArabicDefaults;
 use SafeContracts\Translations\ProductionUxArabicDefaults;
 use SafeContracts\Translations\RuntimeLabels;
 use SafeContracts\Translations\TranslationCatalog;
@@ -51,6 +52,9 @@ foreach ($catalog as $source => $row) {
     }
     if ($arabic === $source) {
         $arabic = FeatureArabicDefaults::default($source);
+    }
+    if ($arabic === $source) {
+        $arabic = PremiumPolishArabicDefaults::default($source);
     }
     if (trim($arabic) === '' || $arabic === $source) {
         $missing[] = $source;
