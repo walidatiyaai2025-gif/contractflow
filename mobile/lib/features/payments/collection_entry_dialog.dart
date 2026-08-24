@@ -80,7 +80,7 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
     final amount = _amount.text.trim();
     if (!_validPositiveMoney(amount)) {
       setState(() {
-        _error = 'Enter a positive amount with up to 4 decimal places.';
+        _error = 'Enter a positive amount with up to 2 decimal places.';
       });
       return;
     }
@@ -148,10 +148,13 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
     final l10n = context.scL10n;
     final token = widget.currency.displayToken;
     final payment = widget.payment;
-    final owner = payment.displayOwner ?? l10n.t('Customer');
+    final blocked = payment.isPayable;
+    final owner = payment.displayOwner ??
+        (blocked
+            ? (l10n.isArabic ? 'المورد' : 'Supplier')
+            : l10n.t('Customer'));
     final contract =
         payment.contractNumber ?? l10n.contractNumber(payment.contractId);
-    final blocked = payment.isPayable;
 
     return AlertDialog(
       backgroundColor: SafeContractsVisual.background,
@@ -217,8 +220,12 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
                     ),
                     const SizedBox(height: 8),
                     _CollectionContextRow(
-                      icon: Icons.business_outlined,
-                      label: l10n.t('Customer'),
+                      icon: blocked
+                          ? Icons.local_shipping_outlined
+                          : Icons.business_outlined,
+                      label: blocked
+                          ? (l10n.isArabic ? 'المورد' : 'Supplier')
+                          : l10n.t('Customer'),
                       value: owner,
                     ),
                     _CollectionContextRow(
@@ -482,7 +489,7 @@ String _displayMoney(
 bool _validPositiveMoney(String value) {
   final normalized = value.trim();
   if (normalized.isEmpty || normalized.length > 32) return false;
-  if (!RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(normalized)) return false;
+  if (!RegExp(r'^\d+(?:\.\d{1,2})?$').hasMatch(normalized)) return false;
   final digits =
       normalized.replaceAll('.', '').replaceFirst(RegExp(r'^0+'), '');
   return digits.isNotEmpty;
