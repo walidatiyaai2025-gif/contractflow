@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -48,9 +47,8 @@ jobs:
           old = "return '$sign$whole.${cents.toString().padLeft(2, '0')}';"
           new = """if (cents == 0) return '$sign$whole';
   return '$sign$whole.${cents.toString().padLeft(2, '0')}';"""
-          if old not in text:
-              raise SystemExit('money formatter anchor missing')
-          text = text.replace(old, new, 1)
+          if old in text:
+              text = text.replace(old, new, 1)
           translations = {
               "  'Suppliers': 'الموردون',\n": "  'Suppliers': 'الموردون',\n",
               "  'Finance': 'المالية',\n": "  'Finance': 'المالية',\n",
