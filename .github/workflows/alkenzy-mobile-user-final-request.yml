@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  apply-validate:
+  validate-build:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -21,38 +21,25 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Materialize feature code
+      - name: Apply final compile fixes
         shell: bash
         run: |
           set -Eeuo pipefail
-          python3 scripts/alkenzy_mobile_final_prepare.py pre
-          python3 scripts/alkenzy_mobile_user_final_patch.py
-          python3 scripts/alkenzy_mobile_final_prepare.py post
-          git restore .github/workflows/quality-gates.yml
+          python3 scripts/alkenzy_mobile_final_compile_fix.py
           cd mobile
           flutter pub get
           dart format \
-            lib/app.dart \
-            lib/core/auth/biometric_auth.dart \
-            lib/features/auth/login_screen.dart \
-            lib/features/auth/mobile_auth.dart \
-            lib/features/contracts/contracts.dart \
-            lib/features/contracts/contracts_screen.dart \
-            lib/features/customers/customers_screen.dart \
-            lib/features/help/mobile_user_guide_screen.dart \
-            lib/features/navigation/app_shell.dart \
-            lib/features/payments/payments.dart \
-            lib/features/payments/payments_screen.dart \
             lib/features/reports/report_printing.dart \
-            lib/features/reports/reports_screen.dart \
             lib/features/ui/safecontracts_theme.dart \
             lib/features/ui/theme_palette.dart
           cd ..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mobile scripts/bootstrap_android.sh
+          git add mobile/lib/features/reports/report_printing.dart \
+            mobile/lib/features/ui/safecontracts_theme.dart \
+            mobile/lib/features/ui/theme_palette.dart
           git diff --cached --check
-          git commit -m "feat(mobile): materialize biometric reports printing themes and sidebar"
+          git commit -m "fix(mobile): close final report and palette compile deltas"
           git push origin HEAD:feat/alkenzy-mobile-user-final-request
       - name: Analyze
         working-directory: mobile
