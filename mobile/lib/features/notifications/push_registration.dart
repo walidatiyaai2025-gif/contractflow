@@ -58,7 +58,8 @@ final class FirebasePushMessagingGateway implements PushMessagingGateway {
     return switch (settings.authorizationStatus) {
       AuthorizationStatus.authorized => MobilePushPermissionState.authorized,
       AuthorizationStatus.provisional => MobilePushPermissionState.provisional,
-      AuthorizationStatus.denied => MobilePushPermissionState.denied,
+      AuthorizationStatus.denied || AuthorizationStatus.deniedPermanently =>
+        MobilePushPermissionState.denied,
       AuthorizationStatus.notDetermined => MobilePushPermissionState.unknown,
     };
   }
