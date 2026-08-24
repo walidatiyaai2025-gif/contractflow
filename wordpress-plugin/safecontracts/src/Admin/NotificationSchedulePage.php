@@ -10,6 +10,7 @@ use SafeContracts\Notifications\NotificationScheduleService;
 use SafeContracts\Notifications\NotificationScheduleSettings;
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Translations\RuntimeLabels;
+use SafeContracts\Translations\TranslationCatalog;
 use Throwable;
 
 final class NotificationSchedulePage
@@ -86,9 +87,9 @@ final class NotificationSchedulePage
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Notification operations', 'safecontracts'); ?></p>
                     <h1><?php echo esc_html__('Notification Schedule', 'safecontracts'); ?></h1>
-                    <p><?php echo esc_html__('Control dispatch time and inspect the real persisted schedule without changing scheduler semantics.', 'safecontracts'); ?></p>
+                    <p><?php echo esc_html(self::text('Control dispatch time and inspect the real persisted schedule without changing scheduler semantics.', 'تحكم في وقت الإرسال وراجع الجدول الفعلي المحفوظ دون تغيير منطق المجدول.')); ?></p>
                 </div>
-                <span class="safecontracts-state-chip <?php echo $lastRun !== '' ? 'is-success' : 'is-warning'; ?>"><?php echo $lastRun !== '' ? esc_html__('Scheduler has run', 'safecontracts') : esc_html__('No run recorded', 'safecontracts'); ?></span>
+                <span class="safecontracts-state-chip <?php echo $lastRun !== '' ? 'is-success' : 'is-warning'; ?>"><?php echo esc_html($lastRun !== '' ? self::text('Scheduler has run', 'تم تشغيل المجدول') : self::text('No run recorded', 'لا يوجد تشغيل مسجل')); ?></span>
             </div>
             <?php self::renderNotice(); ?>
 
@@ -100,7 +101,7 @@ final class NotificationSchedulePage
             ]); ?>
 
             <section class="safecontracts-admin-card safecontracts-settings-card">
-                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Schedule controls', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html__('Filters do not alter schedules. Changing dispatch time invokes the existing schedule reconciliation service.', 'safecontracts'); ?></p></div></div>
+                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html(self::text('Schedule controls', 'عناصر التحكم في الجدولة')); ?></h2><p class="description"><?php echo esc_html(self::text('Filters do not alter schedules. Changing dispatch time invokes the existing schedule reconciliation service.', 'لا تغير الفلاتر الجداول. تغيير وقت الإرسال يستدعي خدمة تسوية الجداول الحالية.')); ?></p></div></div>
                 <div class="safecontracts-field-row">
                     <form class="safecontracts-filter-bar" method="get" action="<?php echo esc_url(admin_url('admin.php')); ?>">
                         <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
@@ -120,7 +121,7 @@ final class NotificationSchedulePage
             </section>
 
             <section class="safecontracts-admin-card safecontracts-table-card">
-                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Actual scheduled notifications', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html__('State, attempts and error codes below are backend values, not presentation guesses.', 'safecontracts'); ?></p></div></div>
+                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('Actual scheduled notifications', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html(self::text('State, attempts and error codes below are backend values, not presentation guesses.', 'الحالة والمحاولات ورموز الأخطاء أدناه قيم فعلية من الخادم وليست تخمينات من الواجهة.')); ?></p></div></div>
                 <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Scheduled', 'safecontracts'); ?></th><th><?php echo esc_html__('Notification', 'safecontracts'); ?></th><th><?php echo esc_html__('Recipients / result', 'safecontracts'); ?></th><th><?php echo esc_html__('Sent via', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Last attempt', 'safecontracts'); ?></th><th><?php echo esc_html__('Action', 'safecontracts'); ?></th></tr></thead><tbody>
                     <?php if ($rows === []) : ?><tr><td colspan="7"><?php echo esc_html__('No scheduled notifications match this period and status.', 'safecontracts'); ?></td></tr><?php endif; ?>
                     <?php foreach ($rows as $row) : ?>
@@ -233,5 +234,10 @@ final class NotificationSchedulePage
         if ($message !== '') {
             echo '<div class="notice notice-info is-dismissible"><p>' . esc_html($message) . '</p></div>';
         }
+    }
+
+    private static function text(string $english, string $arabic): string
+    {
+        return TranslationCatalog::currentLanguage() === 'ar' ? $arabic : __($english, 'safecontracts');
     }
 }
