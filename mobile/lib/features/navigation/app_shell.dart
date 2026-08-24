@@ -260,7 +260,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: bottomItems.isEmpty
           ? null
-          : SafeContractsBottomNavigation<MobileDestination>(
+          : _SafeContractsBottomNavigation(
               items: bottomItems,
               selected: _selected,
               onSelected: _selectDestination,
@@ -309,7 +309,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                   ),
                 ),
                 Text(
-                  _label(l10n, _selected),
+                  l10n.isArabic
+                      ? 'مساحة العمل التنفيذية'
+                      : 'Executive workspace',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -568,6 +570,33 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 }
 
+final class _SafeContractsBottomNavigation extends StatelessWidget {
+  const _SafeContractsBottomNavigation({
+    required this.items,
+    required this.selected,
+    required this.onSelected,
+    required this.moreLabel,
+    required this.onMore,
+  });
+
+  final List<SafeContractsNavigationItem<MobileDestination>> items;
+  final MobileDestination selected;
+  final ValueChanged<MobileDestination> onSelected;
+  final String moreLabel;
+  final VoidCallback onMore;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeContractsBottomNavigation<MobileDestination>(
+      items: items,
+      selected: selected,
+      onSelected: onSelected,
+      moreLabel: moreLabel,
+      onMore: onMore,
+    );
+  }
+}
+
 final class _QuickAddFab extends StatefulWidget {
   const _QuickAddFab({required this.tooltip, required this.onPressed});
 
@@ -578,32 +607,23 @@ final class _QuickAddFab extends StatefulWidget {
   State<_QuickAddFab> createState() => _QuickAddFabState();
 }
 
-final class _QuickAddFabState extends State<_QuickAddFab>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
+final class _QuickAddFabState extends State<_QuickAddFab> {
+  bool _entered = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 430),
-    );
-    _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _entered = true);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scale,
+    return AnimatedScale(
+      scale: _entered ? 1 : 0.82,
+      duration: const Duration(milliseconds: 430),
+      curve: Curves.easeOutBack,
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
