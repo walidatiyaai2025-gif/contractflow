@@ -20,11 +20,11 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Format welcome source
+      - name: Format Worker 1 scoped source
         working-directory: mobile
         run: |
           flutter pub get
-          dart format lib/features/welcome/company_welcome_screen.dart test/mobile_design_foundation_test.dart
+          dart format lib/features/welcome/company_welcome_screen.dart test/mobile_design_foundation_test.dart test/worker1_visual_capture_test.dart
       - name: Persist formatting
         shell: bash
         env:
@@ -33,7 +33,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mobile/lib/features/welcome/company_welcome_screen.dart mobile/test/mobile_design_foundation_test.dart
+          git add mobile/lib/features/welcome/company_welcome_screen.dart mobile/test/mobile_design_foundation_test.dart mobile/test/worker1_visual_capture_test.dart
           if git diff --cached --quiet; then
             echo "Worker 1 sources already formatted."
           else
