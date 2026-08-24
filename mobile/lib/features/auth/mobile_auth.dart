@@ -50,6 +50,14 @@ final class MobileAuthRepository {
     await tokenStore.write(token, persistent: rememberMe);
   }
 
+  Future<void> persistCurrentSession() async {
+    final token = await tokenStore.read();
+    if (token == null) {
+      throw StateError('No authenticated session is available to persist.');
+    }
+    await tokenStore.write(token, persistent: true);
+  }
+
   Future<void> logout() async {
     try {
       final token = await tokenStore.read();
@@ -111,6 +119,14 @@ final class MobileLoginController extends ChangeNotifier {
       errorMessage = 'Unable to sign in to SafeContracts.';
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<void> persistForBiometricLogin() async {
+    await repository.persistCurrentSession();
+    if (!rememberMe) {
+      rememberMe = true;
+      notifyListeners();
     }
   }
 
