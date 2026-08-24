@@ -151,7 +151,9 @@ $indexContracts = [
     ['wordpress-plugin/safecontracts/src/Database/Migrations/Migration0011NotificationDelivery.php', 'KEY retry_lookup (status, scheduled_for, attempt_no)'],
     ['wordpress-plugin/safecontracts/src/Database/Migrations/Migration0011NotificationDelivery.php', 'KEY user_active (user_id, is_active)'],
     ['wordpress-plugin/safecontracts/src/Database/Migrations/Migration0012Import.php', 'KEY status_created (status, created_at, id)'],
-    ['wordpress-plugin/safecontracts/src/Database/Migrations/Migration0012Import.php', 'KEY run_row (import_run_id, row_number, id)'],
+    // ROW_NUMBER is reserved by MySQL 8. Preserve the exact index order while
+    // validating the required quoted identifier used by the real runtime.
+    ['wordpress-plugin/safecontracts/src/Database/Migrations/Migration0012Import.php', 'KEY run_row (import_run_id, `row_number`, id)'],
 ];
 $indexSources = [];
 foreach ($indexContracts as [$file, $needle]) {

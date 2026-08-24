@@ -84,7 +84,15 @@
   .safecontracts-kpi-grid,
   .safecontracts-role-grid,
   .safecontracts-capability-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .safecontracts-settings .safecontracts-split-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .safecontracts-settings .safecontracts-split-layout > * {
+    min-width: 0;
   }
 
   .safecontracts-filter-bar,
@@ -106,8 +114,10 @@
   .safecontracts-settings select,
   .safecontracts-settings textarea,
   .safecontracts-export-form .button {
+    box-sizing: border-box;
     width: 100%;
     max-width: 100%;
+    min-width: 0;
   }
 
   .safecontracts-table-card,
@@ -117,8 +127,80 @@
   }
 
   .safecontracts-table-card table,
-  .safecontracts-settings .widefat {
+  .safecontracts-settings table.widefat {
     min-width: 680px;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings,
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-admin-card,
+  .safecontracts-settings.safecontracts-firebase-settings form,
+  .safecontracts-settings.safecontracts-firebase-settings form > p,
+  .safecontracts-settings.safecontracts-firebase-settings label,
+  .safecontracts-settings.safecontracts-firebase-settings details {
+    box-sizing: border-box;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-split-layout {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-split-layout > *,
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-admin-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-split-layout > * + * {
+    margin-top: 14px;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings input.widefat,
+  .safecontracts-settings.safecontracts-firebase-settings select.widefat,
+  .safecontracts-settings.safecontracts-firebase-settings textarea.widefat {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings table.widefat {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed;
+  }
+
+  .safecontracts-settings.safecontracts-mobile-configuration,
+  .safecontracts-settings.safecontracts-mobile-configuration .safecontracts-admin-card,
+  .safecontracts-settings.safecontracts-mobile-configuration .safecontracts-settings-card,
+  .safecontracts-settings.safecontracts-mobile-configuration form,
+  .safecontracts-settings.safecontracts-mobile-configuration form > p,
+  .safecontracts-settings.safecontracts-mobile-configuration label,
+  .safecontracts-settings.safecontracts-mobile-configuration fieldset {
+    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .safecontracts-settings.safecontracts-mobile-configuration .safecontracts-settings-card {
+    overflow-x: visible !important;
+  }
+
+  .safecontracts-settings.safecontracts-mobile-configuration input,
+  .safecontracts-settings.safecontracts-mobile-configuration select,
+  .safecontracts-settings.safecontracts-mobile-configuration textarea,
+  .safecontracts-settings.safecontracts-mobile-configuration textarea.widefat {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
 }
 

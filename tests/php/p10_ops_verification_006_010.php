@@ -59,7 +59,9 @@ foreach ([
     [$notificationMigration, 'KEY retry_lookup (status, scheduled_for, attempt_no)'],
     [$notificationMigration, 'KEY user_active (user_id, is_active)'],
     [$importMigration, 'KEY status_created (status, created_at, id)'],
-    [$importMigration, 'KEY run_row (import_run_id, row_number, id)'],
+    // ROW_NUMBER is reserved by MySQL 8. Keep the exact run_row column order
+    // while requiring the migration to quote the historical identifier.
+    [$importMigration, 'KEY run_row (import_run_id, `row_number`, id)'],
 ] as [$source, $needle]) {
     sc_p10b_assert(str_contains($source, $needle), 'P10-006 high-frequency scoped/index path is explicitly indexed: ' . $needle);
 }

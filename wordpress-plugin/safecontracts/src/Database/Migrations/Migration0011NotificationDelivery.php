@@ -20,6 +20,28 @@ final class Migration0011NotificationDelivery implements Migration
         $tokens = $wpdb->prefix . 'safecontracts_device_tokens';
         $deliveries = $wpdb->prefix . 'safecontracts_notification_deliveries';
 
+        // Migration0010 created active_trigger with three columns. This
+        // migration intentionally widens that same logical index to include
+        // days_after. WordPress dbDelta can attempt ADD KEY using the existing
+        // name instead of replacing it on MySQL 8, which emits a duplicate-key
+        // database error during real plugin activation. Reconcile only the
+        // legacy shape before dbDelta so fresh and upgraded installs converge
+        // without changing notification semantics.
+        if (method_exists($wpdb, 'get_results') && method_exists($wpdb, 'query')) {
+            $indexRows = $wpdb->get_results("SHOW INDEX FROM {$rules} WHERE Key_name = 'active_trigger'", ARRAY_A);
+            if (is_array($indexRows) && $indexRows !== []) {
+                usort($indexRows, static fn (array $left, array $right): int => ((int) ($left['Seq_in_index'] ?? 0)) <=> ((int) ($right['Seq_in_index'] ?? 0)));
+                $columns = array_values(array_filter(array_map(
+                    static fn (array $row): string => (string) ($row['Column_name'] ?? ''),
+                    $indexRows
+                )));
+                $required = ['is_active', 'trigger_type', 'days_before', 'days_after'];
+                if ($columns !== $required) {
+                    $wpdb->query("ALTER TABLE {$rules} DROP INDEX active_trigger");
+                }
+            }
+        }
+
         dbDelta("CREATE TABLE {$rules} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             code varchar(100) NOT NULL,
