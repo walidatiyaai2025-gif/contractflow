@@ -72,7 +72,8 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
   Future<void> _submit() async {
     if (widget.payment.isPayable) {
       setState(() {
-        _error = 'Supplier payable entries cannot be recorded as customer collections.';
+        _error =
+            'Supplier payable entries cannot be recorded as customer collections.';
       });
       return;
     }
@@ -246,7 +247,8 @@ final class _CollectionEntryDialogState extends State<CollectionEntryDialog> {
                     color: SafeContractsVisual.roseGoldSoft,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: SafeContractsVisual.roseGold.withValues(alpha: 0.45),
+                      color:
+                          SafeContractsVisual.roseGold.withValues(alpha: 0.45),
                     ),
                   ),
                   child: Row(
