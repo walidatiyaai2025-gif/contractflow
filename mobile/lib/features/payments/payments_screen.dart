@@ -6,6 +6,7 @@ import '../../core/api/api_client.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_models.dart';
+import '../ui/safecontracts_design.dart';
 import 'collection_entry_dialog.dart';
 import 'payments.dart';
 
@@ -118,11 +119,13 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        backgroundColor: SafeContractsVisual.surface,
         title: Text(l10n.t('Expected payment date')),
         content: TextField(
           controller: input,
           decoration: InputDecoration(
             labelText: l10n.t('YYYY-MM-DD (blank clears)'),
+            prefixIcon: const Icon(Icons.event_outlined),
           ),
         ),
         actions: [
@@ -162,6 +165,18 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Future<void> _recordCollection(SafeContractsPayment payment) async {
+    if (payment.isPayable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.scL10n.isArabic
+                ? 'دفعة المورد واجبة الدفع ولا يمكن تسجيلها كتحصيل عميل.'
+                : 'A supplier payable cannot be recorded as a customer collection.',
+          ),
+        ),
+      );
+      return;
+    }
     final receipt = await showDialog<CollectionReceipt>(
       context: context,
       barrierDismissible: false,
@@ -193,89 +208,383 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) {
-      return _ErrorState(
+    if (_loading && _page == null) {
+      return const _PaymentsLoading();
+    }
+    if (_error != null && _page == null) {
+      return _PaymentsState(
+        icon: Icons.cloud_off_outlined,
+        title: l10n.t('Unable to load payments'),
         message: l10n.rawMessage(_error!),
-        onRetry: () => _load(_pageNumber),
+        actionLabel: l10n.t('Retry'),
+        onAction: () => unawaited(_load(_pageNumber)),
       );
     }
     final page = _page;
     if (page == null || page.payments.isEmpty) {
       return RefreshIndicator(
         onRefresh: () => _load(1),
+        color: SafeContractsVisual.navy,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: <Widget>[
-            const SizedBox(height: 180),
-            Center(
-              child: Text(l10n.t('No payments match the authorized filters.')),
+          padding: const EdgeInsets.fromLTRB(16, 56, 16, 24),
+          children: [
+            _PaymentsState(
+              icon: Icons.receipt_long_outlined,
+              title: l10n.isArabic ? 'لا توجد دفعات' : 'No payments',
+              message: l10n.t(
+                'No payments match the authorized filters.',
+              ),
+              actionLabel: l10n.t('Refresh'),
+              onAction: () => unawaited(_load(1)),
+              embedded: true,
             ),
           ],
         ),
       );
     }
 
-    return Column(
-      children: [
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => _load(_pageNumber),
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              itemCount: page.payments.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final payment = page.payments[index];
-                final owner = payment.displayOwner ??
-                    l10n.contractNumber(payment.contractId);
-                return Card(
-                  child: ListTile(
-                    title: Text(
-                      payment.reference ?? l10n.paymentNumber(payment.id),
-                    ),
-                    subtitle: Text(
-                      '$owner · ${payment.dueDate} · ${l10n.status(payment.status)}\n'
-                      '${l10n.t('Remaining')}: ${l10n.money(payment.remainingAmount, widget.currency)}',
-                    ),
-                    isThreeLine: true,
-                    trailing: const Icon(Icons.chevron_right),
+    return SafeContractsBackdrop(
+      child: Column(
+        children: [
+          if (_loading) const LinearProgressIndicator(minHeight: 2),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => _load(_pageNumber),
+              color: SafeContractsVisual.navy,
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
+                itemCount: page.payments.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final payment = page.payments[index];
+                  final owner = payment.displayOwner ??
+                      l10n.contractNumber(payment.contractId);
+                  return _PremiumPaymentCard(
+                    payment: payment,
+                    owner: owner,
+                    currency: widget.currency,
                     onTap: () => unawaited(_open(payment)),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
-        ),
-        SafeArea(
-          top: false,
-          child: Row(
+          _PaymentPaging(
+            page: page,
+            loading: _loading,
+            onPrevious: page.page > 1
+                ? () => unawaited(_load(page.page - 1))
+                : null,
+            onNext: page.hasMore && page.page < 5
+                ? () => unawaited(_load(page.page + 1))
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _PremiumPaymentCard extends StatelessWidget {
+  const _PremiumPaymentCard({
+    required this.payment,
+    required this.owner,
+    required this.currency,
+    required this.onTap,
+  });
+
+  final SafeContractsPayment payment;
+  final String owner;
+  final MobileCurrencyConfig currency;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final statusColor = safeContractsStatusColor(payment.status);
+    final statusSoft = safeContractsStatusSoftColor(payment.status);
+    final directionColor = payment.isPayable
+        ? SafeContractsVisual.roseGoldDark
+        : SafeContractsVisual.greenDeep;
+    final directionSoft = payment.isPayable
+        ? SafeContractsVisual.roseGoldSoft
+        : SafeContractsVisual.greenSoft;
+    final directionLabel = payment.isPayable
+        ? (l10n.isArabic ? 'واجبة الدفع' : 'Payable')
+        : (l10n.isArabic ? 'مستحقة' : 'Receivable');
+
+    return Material(
+      color: SafeContractsVisual.surface,
+      borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius:
+                BorderRadius.circular(SafeContractsVisual.compactRadius),
+            border: Border.all(color: statusColor.withValues(alpha: 0.24)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x165A4638),
+                blurRadius: 16,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                tooltip: l10n.t('Previous page'),
-                onPressed: page.page > 1
-                    ? () => unawaited(_load(page.page - 1))
-                    : null,
-                icon: const Icon(Icons.chevron_left),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: directionSoft,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      payment.isPayable
+                          ? Icons.north_east_rounded
+                          : Icons.south_west_rounded,
+                      color: directionColor,
+                    ),
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          payment.reference ?? l10n.paymentNumber(payment.id),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: SafeContractsVisual.ink,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          owner,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: SafeContractsVisual.muted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _PaymentBadge(
+                    label: l10n.status(payment.status),
+                    foreground: statusColor,
+                    background: statusSoft,
+                  ),
+                ],
               ),
-              Expanded(
-                child: Text(
-                  '${l10n.pageNumber(page.page)} · ${page.sort} ${page.order}',
-                  textAlign: TextAlign.center,
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 7,
+                children: [
+                  _PaymentMeta(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: directionLabel,
+                    color: directionColor,
+                  ),
+                  _PaymentMeta(
+                    icon: Icons.calendar_today_outlined,
+                    label: payment.dueDate,
+                    color: SafeContractsVisual.navy,
+                  ),
+                  _PaymentMeta(
+                    icon: Icons.folder_copy_outlined,
+                    label: payment.contractNumber ??
+                        l10n.contractNumber(payment.contractId),
+                    color: SafeContractsVisual.muted,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: SafeContractsVisual.backgroundRaised,
+                  borderRadius: BorderRadius.circular(13),
                 ),
-              ),
-              IconButton(
-                tooltip: l10n.t('Next page'),
-                onPressed: page.hasMore && page.page < 5
-                    ? () => unawaited(_load(page.page + 1))
-                    : null,
-                icon: const Icon(Icons.chevron_right),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.t('Remaining'),
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: SafeContractsVisual.muted,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _displayMoney(
+                              context,
+                              payment.remainingAmount,
+                              currency,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: directionColor,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Directionality.of(context) == TextDirection.rtl
+                          ? Icons.chevron_left_rounded
+                          : Icons.chevron_right_rounded,
+                      color: SafeContractsVisual.muted,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+final class _PaymentBadge extends StatelessWidget {
+  const _PaymentBadge({
+    required this.label,
+    required this.foreground,
+    required this.background,
+  });
+
+  final String label;
+  final Color foreground;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: foreground,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      );
+}
+
+final class _PaymentMeta extends StatelessWidget {
+  const _PaymentMeta({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 5),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 170),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+final class _PaymentPaging extends StatelessWidget {
+  const _PaymentPaging({
+    required this.page,
+    required this.loading,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final PaymentPage page;
+  final bool loading;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      child: SafeContractsSurface(
+        elevated: false,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: l10n.t('Previous page'),
+              onPressed: loading ? null : onPrevious,
+              icon: Icon(
+                rtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+              ),
+            ),
+            Expanded(
+              child: Text(
+                l10n.pageNumber(page.page),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+            IconButton(
+              tooltip: l10n.t('Next page'),
+              onPressed: loading ? null : onNext,
+              icon: Icon(
+                rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -360,138 +669,534 @@ final class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     final l10n = context.scL10n;
     final payment = _payment;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('Payment details'))),
+      backgroundColor: SafeContractsVisual.background,
+      appBar: AppBar(
+        backgroundColor: SafeContractsVisual.background,
+        surfaceTintColor: Colors.transparent,
+        title: Text(l10n.t('Payment details')),
+      ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const _PaymentsLoading(detail: true)
           : _errorTitle != null
-              ? _ErrorState(
+              ? _PaymentsState(
+                  icon: Icons.error_outline_rounded,
                   title: l10n.t(_errorTitle!),
                   message: l10n.rawMessage(
                     _errorMessage ?? 'SafeContracts request failed.',
                   ),
-                  onRetry: _load,
+                  actionLabel: l10n.t('Retry'),
+                  onAction: () => unawaited(_load()),
                 )
               : payment == null
-                  ? Center(child: Text(l10n.t('Payment not found.')))
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            payment.reference ?? l10n.paymentNumber(payment.id),
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 16),
-                          _Value(l10n.t('Status'), l10n.status(payment.status)),
-                          _Value(
-                            l10n.t('Contractual due date'),
-                            payment.dueDate,
-                          ),
-                          _Value(
-                            l10n.t('Expected payment date'),
-                            payment.expectedPaymentDate ?? '—',
-                          ),
-                          _Value(
-                            l10n.t('Original amount'),
-                            l10n.money(payment.originalAmount, widget.currency),
-                          ),
-                          _Value(
-                            l10n.t('Paid amount'),
-                            l10n.money(payment.paidAmount, widget.currency),
-                          ),
-                          _Value(
-                            l10n.t('Remaining amount'),
-                            l10n.money(
-                              payment.remainingAmount,
-                              widget.currency,
-                            ),
-                          ),
-                          _Value(
-                            l10n.t('Contract archived'),
-                            l10n.yesNo(payment.contractIsArchived),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            l10n.t(
-                              'Dates, balances and status are server-authoritative. Mobile does not recalculate receivables.',
-                            ),
-                          ),
-                          if (!payment.contractIsArchived &&
-                              widget.onEditExpectedDate != null) ...[
-                            const SizedBox(height: 20),
-                            FilledButton.tonalIcon(
-                              onPressed: () => unawaited(
-                                _runAction(widget.onEditExpectedDate!),
+                  ? _PaymentsState(
+                      icon: Icons.search_off_rounded,
+                      title: l10n.t('Payment not found'),
+                      message: l10n.t('Payment not found.'),
+                    )
+                  : SafeContractsBackdrop(
+                      child: RefreshIndicator(
+                        onRefresh: _load,
+                        color: SafeContractsVisual.navy,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                          children: [
+                            SafeContractsPremiumHeader(
+                              title: payment.reference ??
+                                  l10n.paymentNumber(payment.id),
+                              subtitle: payment.displayOwner ??
+                                  payment.contractNumber ??
+                                  l10n.contractNumber(payment.contractId),
+                              leading: Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(13),
+                                ),
+                                child: Icon(
+                                  payment.isPayable
+                                      ? Icons.north_east_rounded
+                                      : Icons.south_west_rounded,
+                                  color: Colors.white,
+                                ),
                               ),
-                              icon: const Icon(Icons.event_available_outlined),
-                              label: Text(l10n.t('Edit expected payment date')),
+                              trailing: _HeaderStatus(payment: payment),
                             ),
-                          ],
-                          if (!payment.contractIsArchived &&
-                              widget.onRecordCollection != null) ...[
-                            const SizedBox(height: 12),
-                            FilledButton.tonalIcon(
-                              onPressed: () => unawaited(
-                                _runAction(widget.onRecordCollection!),
+                            const SizedBox(height: 16),
+                            _PaymentBalanceHero(
+                              payment: payment,
+                              currency: widget.currency,
+                            ),
+                            const SizedBox(height: 16),
+                            SafeContractsSectionTitle(
+                              title: l10n.isArabic
+                                  ? 'بيانات الاستحقاق'
+                                  : 'Due information',
+                              subtitle: l10n.isArabic
+                                  ? 'تواريخ وقيمة الدفعة كما وردت من الخادم'
+                                  : 'Server-authoritative payment dates and values',
+                            ),
+                            const SizedBox(height: 10),
+                            SafeContractsSurface(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                children: [
+                                  _DetailValue(
+                                    icon: Icons.calendar_today_outlined,
+                                    label: l10n.t('Contractual due date'),
+                                    value: payment.dueDate,
+                                  ),
+                                  _DetailValue(
+                                    icon: Icons.event_available_outlined,
+                                    label: l10n.t('Expected payment date'),
+                                    value: payment.expectedPaymentDate ?? '—',
+                                  ),
+                                  _DetailValue(
+                                    icon: Icons.payments_outlined,
+                                    label: l10n.t('Original amount'),
+                                    value: _displayMoney(
+                                      context,
+                                      payment.originalAmount,
+                                      widget.currency,
+                                    ),
+                                  ),
+                                  _DetailValue(
+                                    icon: Icons.done_all_rounded,
+                                    label: payment.isPayable
+                                        ? (l10n.isArabic
+                                            ? 'المبلغ المدفوع'
+                                            : 'Paid amount')
+                                        : (l10n.isArabic
+                                            ? 'المبلغ المحصل'
+                                            : 'Collected amount'),
+                                    value: _displayMoney(
+                                      context,
+                                      payment.paidAmount,
+                                      widget.currency,
+                                    ),
+                                  ),
+                                  _DetailValue(
+                                    icon: Icons.account_balance_wallet_outlined,
+                                    label: l10n.t('Remaining amount'),
+                                    value: _displayMoney(
+                                      context,
+                                      payment.remainingAmount,
+                                      widget.currency,
+                                    ),
+                                    emphasize: true,
+                                    last: true,
+                                  ),
+                                ],
                               ),
-                              icon: const Icon(Icons.add_card_outlined),
-                              label: Text(l10n.t('Record collection')),
                             ),
+                            const SizedBox(height: 16),
+                            SafeContractsSectionTitle(
+                              title: l10n.isArabic
+                                  ? 'السياق التجاري'
+                                  : 'Business context',
+                            ),
+                            const SizedBox(height: 10),
+                            SafeContractsSurface(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                children: [
+                                  _DetailValue(
+                                    icon: Icons.folder_copy_outlined,
+                                    label: l10n.t('Contract'),
+                                    value: payment.contractNumber ??
+                                        l10n.contractNumber(payment.contractId),
+                                  ),
+                                  if (payment.displayOwner != null)
+                                    _DetailValue(
+                                      icon: payment.isPayable
+                                          ? Icons.local_shipping_outlined
+                                          : Icons.business_outlined,
+                                      label: payment.isPayable
+                                          ? (l10n.isArabic
+                                              ? 'المورد'
+                                              : 'Supplier')
+                                          : l10n.t('Customer'),
+                                      value: payment.displayOwner!,
+                                    ),
+                                  _DetailValue(
+                                    icon: Icons.archive_outlined,
+                                    label: l10n.t('Contract archived'),
+                                    value: l10n.yesNo(payment.contractIsArchived),
+                                    last: true,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            SafeContractsSurface(
+                              elevated: false,
+                              padding: const EdgeInsets.all(13),
+                              accent: SafeContractsVisual.green,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(
+                                    Icons.verified_user_outlined,
+                                    color: SafeContractsVisual.green,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      l10n.t(
+                                        'Dates, balances and status are server-authoritative. Mobile does not recalculate receivables.',
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: SafeContractsVisual.muted,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (!payment.contractIsArchived &&
+                                widget.onEditExpectedDate != null) ...[
+                              const SizedBox(height: 16),
+                              OutlinedButton.icon(
+                                onPressed: () => unawaited(
+                                  _runAction(widget.onEditExpectedDate!),
+                                ),
+                                icon: const Icon(Icons.event_available_outlined),
+                                label: Text(l10n.t('Edit expected payment date')),
+                              ),
+                            ],
+                            if (!payment.contractIsArchived &&
+                                !payment.isPayable &&
+                                widget.onRecordCollection != null) ...[
+                              const SizedBox(height: 10),
+                              FilledButton.icon(
+                                onPressed: () => unawaited(
+                                  _runAction(widget.onRecordCollection!),
+                                ),
+                                icon: const Icon(Icons.add_card_outlined),
+                                label: Text(
+                                  l10n.isArabic
+                                      ? 'تسجيل تحصيل عميل'
+                                      : 'Record customer collection',
+                                ),
+                              ),
+                            ],
+                            if (payment.isPayable) ...[
+                              const SizedBox(height: 12),
+                              SafeContractsSurface(
+                                elevated: false,
+                                padding: const EdgeInsets.all(12),
+                                accent: SafeContractsVisual.roseGold,
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.local_shipping_outlined,
+                                      color: SafeContractsVisual.roseGoldDark,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        l10n.isArabic
+                                            ? 'هذه دفعة مورد واجبة الدفع. لا يتم عرض إجراء تحصيل العملاء عليها.'
+                                            : 'This is a supplier payable. Customer collection actions are not shown for it.',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
     );
   }
 }
 
-final class _Value extends StatelessWidget {
-  const _Value(this.label, this.value);
-  final String label;
-  final String value;
+final class _HeaderStatus extends StatelessWidget {
+  const _HeaderStatus({required this.payment});
+
+  final SafeContractsPayment payment;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        title: Text(label),
-        subtitle: SelectableText(value),
-      );
+  Widget build(BuildContext context) {
+    final color = safeContractsStatusColor(payment.status);
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 100),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              context.scL10n.status(payment.status),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-final class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    this.title = 'Unable to load payments',
-    required this.message,
-    required this.onRetry,
+final class _PaymentBalanceHero extends StatelessWidget {
+  const _PaymentBalanceHero({
+    required this.payment,
+    required this.currency,
   });
 
-  final String title;
-  final String message;
-  final Future<void> Function() onRetry;
+  final SafeContractsPayment payment;
+  final MobileCurrencyConfig currency;
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) {
+    final l10n = context.scL10n;
+    final accent = payment.isPayable
+        ? SafeContractsVisual.roseGoldDark
+        : SafeContractsVisual.greenDeep;
+    return SafeContractsSurface(
+      accent: accent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                context.scL10n.t(title),
-                style: Theme.of(context).textTheme.titleLarge,
+              Expanded(
+                child: Text(
+                  payment.isPayable
+                      ? (l10n.isArabic ? 'واجبة الدفع' : 'Payable')
+                      : (l10n.isArabic ? 'مستحقة للتحصيل' : 'Receivable'),
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              FilledButton.tonal(
-                onPressed: () => unawaited(onRetry()),
-                child: Text(context.scL10n.t('Retry')),
+              Icon(
+                payment.isPayable
+                    ? Icons.north_east_rounded
+                    : Icons.south_west_rounded,
+                color: accent,
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          Text(
+            _displayMoney(context, payment.remainingAmount, currency),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: SafeContractsVisual.ink,
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l10n.t('Remaining amount'),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: SafeContractsVisual.muted,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _DetailValue extends StatelessWidget {
+  const _DetailValue({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.emphasize = false,
+    this.last = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool emphasize;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          border: last
+              ? null
+              : const Border(
+                  bottom: BorderSide(color: SafeContractsVisual.contour),
+                ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: SafeContractsVisual.navySoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 18, color: SafeContractsVisual.navy),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: SafeContractsVisual.muted,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  SelectableText(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight:
+                              emphasize ? FontWeight.w900 : FontWeight.w700,
+                          color: emphasize
+                              ? SafeContractsVisual.navy
+                              : SafeContractsVisual.ink,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       );
+}
+
+final class _PaymentsLoading extends StatelessWidget {
+  const _PaymentsLoading({this.detail = false});
+
+  final bool detail;
+
+  @override
+  Widget build(BuildContext context) => SafeContractsBackdrop(
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          itemCount: detail ? 4 : 5,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (context, index) => Container(
+            height: detail ? (index == 0 ? 112 : 92) : 128,
+            decoration: BoxDecoration(
+              color: SafeContractsVisual.surface,
+              borderRadius:
+                  BorderRadius.circular(SafeContractsVisual.compactRadius),
+              border: Border.all(color: SafeContractsVisual.outline),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 28,
+                child: LinearProgressIndicator(minHeight: 2),
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+final class _PaymentsState extends StatelessWidget {
+  const _PaymentsState({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+    this.embedded = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final bool embedded;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = SafeContractsSurface(
+      elevated: !embedded,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: SafeContractsVisual.navySoft,
+              borderRadius: BorderRadius.circular(17),
+            ),
+            child: Icon(icon, color: SafeContractsVisual.navy, size: 28),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: SafeContractsVisual.muted,
+                ),
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 14),
+            FilledButton.tonal(
+              onPressed: onAction,
+              child: Text(actionLabel!),
+            ),
+          ],
+        ],
+      ),
+    );
+    if (embedded) return content;
+    return SafeContractsBackdrop(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: content,
+        ),
+      ),
+    );
+  }
+}
+
+String _displayMoney(
+  BuildContext context,
+  String raw,
+  MobileCurrencyConfig currency,
+) {
+  final formatted = context.scL10n.money(raw, currency);
+  return formatted.replaceFirst(RegExp(r'\.00(?=\s|$)'), '');
 }
 
 bool _validNullableDate(String value) {
