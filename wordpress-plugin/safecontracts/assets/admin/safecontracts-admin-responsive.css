@@ -130,6 +130,12 @@
   .safecontracts-settings table.widefat {
     min-width: 680px;
   }
+
+  .safecontracts-settings.safecontracts-firebase-settings table.widefat {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+  }
 }
 
 @media (max-width: 480px) {
