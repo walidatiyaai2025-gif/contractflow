@@ -330,7 +330,9 @@ final class _AttentionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic ? 'متأخر ويتطلب إجراء' : 'Overdue — action needed',
+                      isArabic
+                          ? 'متأخر ويتطلب إجراء'
+                          : 'Overdue — action needed',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: SafeContractsVisual.redDeep,
                             fontWeight: FontWeight.w900,
@@ -659,7 +661,10 @@ final class _NotificationCard extends StatelessWidget {
                             _template(notification.templateCode, isArabic),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),
@@ -848,7 +853,9 @@ final class _PagingControls extends StatelessWidget {
 bool _isPaymentDue(SafeContractsNotification notification) {
   final code = notification.templateCode.toLowerCase();
   return code == 'payment_due' ||
-      (code.contains('payment') && code.contains('due') && !_isOverdue(notification));
+      (code.contains('payment') &&
+          code.contains('due') &&
+          !_isOverdue(notification));
 }
 
 bool _isOverdue(SafeContractsNotification notification) {

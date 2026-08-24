@@ -112,9 +112,8 @@ final class _FinanceScreenState extends State<FinanceScreen> {
                 ],
                 const SizedBox(height: 22),
                 _FinanceSectionTitle(
-                  eyebrow: context.scL10n.isArabic
-                      ? 'أعمار الأرصدة'
-                      : 'Balance age',
+                  eyebrow:
+                      context.scL10n.isArabic ? 'أعمار الأرصدة' : 'Balance age',
                   title: context.scL10n.isArabic ? 'أعمار الاستحقاق' : 'Aging',
                 ),
                 const SizedBox(height: 10),
@@ -134,9 +133,8 @@ final class _FinanceScreenState extends State<FinanceScreen> {
                 ],
                 const SizedBox(height: 22),
                 _FinanceSectionTitle(
-                  eyebrow: context.scL10n.isArabic
-                      ? 'قائمة العمل'
-                      : 'Work queue',
+                  eyebrow:
+                      context.scL10n.isArabic ? 'قائمة العمل' : 'Work queue',
                   title: context.scL10n.isArabic
                       ? 'الالتزامات المالية'
                       : 'Financial obligations',
@@ -161,9 +159,10 @@ final class _FinanceScreenState extends State<FinanceScreen> {
                           context.scL10n.isArabic
                               ? 'الأرصدة وحالات السداد وأعمار الاستحقاق محسوبة على الخادم. التطبيق يعرض القيم المصرح بها كما وردت ولا ينشئ حسابات مالية موازية.'
                               : 'Balances, settlement states and aging are computed by the server. Mobile presents the authorized values and does not create parallel accounting calculations.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SafeContractsVisual.muted,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: SafeContractsVisual.muted,
+                                  ),
                         ),
                       ),
                     ],
@@ -386,9 +385,7 @@ final class _SummaryCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  payable
-                      ? Icons.north_east_rounded
-                      : Icons.south_west_rounded,
+                  payable ? Icons.north_east_rounded : Icons.south_west_rounded,
                   color: accent,
                 ),
               ),
@@ -832,7 +829,9 @@ final class _DirectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Text(
         direction == 'payable'
             ? (context.scL10n.isArabic ? 'واجبة الدفع AP' : 'Payables AP')
-            : (context.scL10n.isArabic ? 'مستحقات العملاء AR' : 'Receivables AR'),
+            : (context.scL10n.isArabic
+                ? 'مستحقات العملاء AR'
+                : 'Receivables AR'),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -1145,9 +1144,8 @@ String _actionLabel(BuildContext context, FinanceActionItem item) {
   return switch (item.kind) {
     'overdue' =>
       context.scL10n.isArabic ? '$subject المتأخر' : '$subject overdue',
-    'due_today' => context.scL10n.isArabic
-        ? '$subject المستحق اليوم'
-        : '$subject due today',
+    'due_today' =>
+      context.scL10n.isArabic ? '$subject المستحق اليوم' : '$subject due today',
     'due_7_days' => context.scL10n.isArabic
         ? '$subject خلال 7 أيام'
         : '$subject due in 7 days',
