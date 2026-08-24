@@ -26,6 +26,47 @@ jobs:
           cache: true
       - name: Apply B001 authoritative status patch
         run: python3 scripts/w4_b001_payment_status.py
+      - name: Separate read authority from mutation lifecycle state
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          repo = Path('wordpress-plugin/safecontracts/src/Payments/PaymentRepository.php')
+          text = repo.read_text()
+          computed = """            'status' => PaymentStatus::authoritative(
+                $row['due_date'] ?? '',
+                $row['paid_amount'] ?? '0.0000',
+                $row['remaining_amount'] ?? '0.0000'
+            ),
+"""
+          stored = "            'status' => (string) ($row['status'] ?? PaymentStatus::UPCOMING),\n"
+          if text.count(computed) != 1:
+              raise SystemExit('B001 mutation-state restore target not unique')
+          repo.write_text(text.replace(computed, stored, 1))
+
+          controller = Path('wordpress-plugin/safecontracts/src/Rest/DataController.php')
+          text = controller.read_text()
+          import_old = "use SafeContracts\\Payments\\PaymentRepository;\n"
+          import_new = import_old + "use SafeContracts\\Payments\\PaymentStatus;\n"
+          if text.count(import_old) != 1:
+              raise SystemExit('B001 DataController import target not unique')
+          text = text.replace(import_old, import_new, 1)
+          old = """            ApiScope::assertAccountant($row['accountant_user_id']);
+            return ApiResponse::ok(self::paymentView($row));
+"""
+          new = """            ApiScope::assertAccountant($row['accountant_user_id']);
+            $row['status'] = PaymentStatus::authoritative(
+                $row['due_date'] ?? '',
+                $row['paid_amount'] ?? '0.0000',
+                $row['remaining_amount'] ?? '0.0000'
+            );
+            return ApiResponse::ok(self::paymentView($row));
+"""
+          if text.count(old) != 1:
+              raise SystemExit('B001 detail read-projection target not unique')
+          controller.write_text(text.replace(old, new, 1))
+          PY
       - name: Preserve compact server-authority copy contract
         shell: bash
         run: |
