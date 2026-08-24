@@ -124,8 +124,13 @@ sc_622_assert(str_contains($paymentsPage, "Accounts Payable · we will pay it") 
 
 $contractsPage = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Admin/ContractsPage.php');
 sc_622_assert(str_contains($contractsPage, "__('Scheduled total', 'safecontracts')") && str_contains($contractsPage, 'scheduledTotalsForContracts'), 'Contracts grid shows the scheduled payment total for each visible contract');
-sc_622_assert(str_contains($contractsPage, "__('Add payment', 'safecontracts')") && str_contains($contractsPage, 'PaymentsPage::SLUG') && str_contains($contractsPage, "'contract_id' => $contractId"), 'Contracts grid links directly to a preselected payment-create flow');
-sc_622_assert(str_contains($contractsPage, 'safecontracts-payment-action--') && str_contains($contractsPage, 'safecontracts-direction-pill--'), 'Contracts grid applies directional styling hooks to receivable/payable actions');
+sc_622_assert(str_contains($contractsPage, "__('Add payment', 'safecontracts')") && str_contains($contractsPage, 'PaymentsPage::SLUG') && str_contains($contractsPage, "'contract_id' => \$contractId"), 'Contracts grid links directly to a preselected payment-create flow');
+$worker1Css = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/assets/admin/plugin-redesign/worker-1/parties-contracts.css');
+$hasDirectionBadgeHook = str_contains($contractsPage, 'safecontracts-direction-pill--')
+    || (str_contains($contractsPage, 'safecontracts-worker1__status--')
+        && str_contains($worker1Css, '.safecontracts-worker1__status--receivable')
+        && str_contains($worker1Css, '.safecontracts-worker1__status--payable'));
+sc_622_assert(str_contains($contractsPage, 'safecontracts-payment-action--') && $hasDirectionBadgeHook, 'Contracts grid applies directional styling hooks to receivable/payable actions');
 
 $paymentRepo = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Payments/PaymentRepository.php');
 sc_622_assert(str_contains($paymentRepo, 'scheduledTotalsForContracts') && str_contains($paymentRepo, 'SUM(original_amount)') && str_contains($paymentRepo, 'is_archived = 0'), 'scheduled totals aggregate only active scheduled-payment rows');
