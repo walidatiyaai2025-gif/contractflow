@@ -84,10 +84,12 @@ final class PaymentStatus
     }
 
     /**
-     * Read-time status authority for API/mobile presentation. Financial state
-     * comes from authoritative stored amounts; otherwise contractual due_date
-     * determines the temporal state. Stored workflow status remains available
-     * to mutation services for transition/idempotence semantics.
+     * Read-time status authority for API/mobile presentation. A zero remaining
+     * balance is paid. Otherwise contractual due-date truth takes precedence
+     * once an obligation is due/overdue, even if it was partially settled.
+     * Partial-payment state is used only while a remaining balance is still
+     * future-dated. Stored workflow status remains available to mutation
+     * services for transition/idempotence semantics.
      */
     public static function authoritative(
         mixed $dueDate,
@@ -101,10 +103,15 @@ final class PaymentStatus
         if ($remaining === '0.0000') {
             return self::PAID;
         }
+
+        $temporal = self::temporalForDueDate($dueDate, $today, $dueSoonDays);
+        if ($temporal === self::OVERDUE || $temporal === self::DUE) {
+            return $temporal;
+        }
         if (ContractMoney::compare($paid, '0.0000') > 0) {
             return self::PARTIALLY_PAID;
         }
-        return self::temporalForDueDate($dueDate, $today, $dueSoonDays);
+        return $temporal;
     }
 
     public static function isDueSoon(mixed $dueDate, ?DateTimeImmutable $today = null, int $dueSoonDays = 10): bool
