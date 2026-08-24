@@ -69,7 +69,8 @@ final class _SafeContractsLoginScreenState
     if (_bootstrapping) {
       return SafeContractsSplash(
         label: l10n.t('Loading'),
-        environmentLabel: l10n.isArabic ? 'تجهيز مساحة العمل' : 'Preparing workspace',
+        environmentLabel:
+            l10n.isArabic ? 'تجهيز مساحة العمل' : 'Preparing workspace',
         blockBack: true,
       );
     }
@@ -134,8 +135,8 @@ final class _SafeContractsLoginScreenState
                                               .textTheme
                                               .headlineSmall
                                               ?.copyWith(
-                                                color:
-                                                    SafeContractsVisual.navyDeep,
+                                                color: SafeContractsVisual
+                                                    .navyDeep,
                                                 fontWeight: FontWeight.w900,
                                               ),
                                         ),
@@ -183,7 +184,8 @@ final class _SafeContractsLoginScreenState
                                           enabled: !submitting,
                                           obscureText: _obscurePassword,
                                           label: l10n.t('Password'),
-                                          onToggleVisibility: () => setState(() {
+                                          onToggleVisibility: () =>
+                                              setState(() {
                                             _obscurePassword =
                                                 !_obscurePassword;
                                           }),
@@ -205,7 +207,8 @@ final class _SafeContractsLoginScreenState
                                           onChanged: submitting
                                               ? null
                                               : (value) => widget.controller
-                                                  .setRememberMe(value ?? false),
+                                                  .setRememberMe(
+                                                      value ?? false),
                                           contentPadding: EdgeInsets.zero,
                                           dense: true,
                                           controlAffinity:
@@ -251,8 +254,8 @@ final class _SafeContractsLoginScreenState
                                           onPressed: submitting
                                               ? null
                                               : () => unawaited(_submit()),
-                                          variant:
-                                              SafeContractsButtonVariant.primary,
+                                          variant: SafeContractsButtonVariant
+                                              .primary,
                                         ),
                                       ],
                                     ),
@@ -268,7 +271,8 @@ final class _SafeContractsLoginScreenState
                                     size: SafeContractsIconSizes.xs,
                                     color: SafeContractsVisual.champagne,
                                   ),
-                                  const SizedBox(width: SafeContractsSpacing.xs),
+                                  const SizedBox(
+                                      width: SafeContractsSpacing.xs),
                                   Flexible(
                                     child: Text(
                                       l10n.isArabic
