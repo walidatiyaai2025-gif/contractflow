@@ -1,8 +1,8 @@
 stage=apply
-head=c9a7c66fc81f5ab9c834b0e56494bafc0137b4a9
+head=7daad9093a9f4f13ce185b6b2b2feea5bfe19a44
 exit=1
 --- apply ---
-FAIL mobile/lib/features/auth/login_screen.dart: expected one marker, found 2: '  @override\n  Widget build(BuildContext context) {\n    final l10n = context.scL10n;\n'
+FAIL mobile/lib/features/ui/safecontracts_theme.dart: expected one marker, found 2: '        backgroundColor: SafeContractsVisual.navy,'
 --- pubget ---
 --- analyze ---
 --- tests ---
