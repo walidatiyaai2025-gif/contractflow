@@ -31,17 +31,17 @@
 | SC-021 | Reports | `safecontracts-reports` | `ReportsPage::render()` | REGISTERED | **WORKER-2** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-022 | Imports | `safecontracts-imports` | `ImportsPage::render()` | REGISTERED | **WORKER-2** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
 | SC-023 | Payment Methods | `safecontracts-payment-methods` | `PaymentMethodsPage::render()` | REGISTERED | **WORKER-2** | REF_005 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-024 | Notification Center | `safecontracts-notification-center` | `NotificationCenterPage::render()` | REGISTERED | **WORKER-3** | REF_001 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-025 | Notification Delivery Activity | `safecontracts-notifications` | `NotificationsPage::render()` | REGISTERED | **WORKER-3** | REF_006 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-026 | Notification Schedule | `safecontracts-notification-schedule` | `NotificationSchedulePage::render()` | REGISTERED | **WORKER-3** | REF_006 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-027 | Notification Settings | `safecontracts-notification-settings` | `NotificationSettingsPage::render()` | REGISTERED | **WORKER-3** | REF_006 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-028 | Email Settings | `safecontracts-email-settings` | `EmailSettingsPage::render()` | LATENT_CLASS_NOT_REGISTERED_BY_PLUGIN_BOOT | **WORKER-3** | REF_006 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-029 | Active Users | `safecontracts-active-users` | `ActiveUsersPage::render()` | REGISTERED | **WORKER-3** | REF_007 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-030 | Users & Roles | `safecontracts-users-roles` | `UsersRolesPage::render()` | REGISTERED | **WORKER-3** | REF_007 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-031 | Firebase Settings | `safecontracts-firebase-settings` | `FirebaseSettingsPage::render()` | REGISTERED | **WORKER-3** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-032 | Mobile Configuration | `safecontracts-mobile-configuration` | `MobileConfigurationPage::render()` | REGISTERED | **WORKER-3** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-033 | Translations | `safecontracts-translations` | `TranslationsPage::render()` | REGISTERED | **WORKER-3** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
-| SC-034 | User Guide | `safecontracts-user-guide` | `UserGuidePage::render()` | REGISTERED | **WORKER-3** | REF_002 | NOT STARTED | NO | NO | NO | NO | — | — | NO |
+| SC-024 | Notification Center | `safecontracts-notification-center` | `NotificationCenterPage::render()` | REGISTERED | **WORKER-3** | REF_001 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-025 | Notification Delivery Activity | `safecontracts-notifications` | `NotificationsPage::render()` | REGISTERED | **WORKER-3** | REF_006 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-026 | Notification Schedule | `safecontracts-notification-schedule` | `NotificationSchedulePage::render()` | REGISTERED | **WORKER-3** | REF_006 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-027 | Notification Settings | `safecontracts-notification-settings` | `NotificationSettingsPage::render()` | REGISTERED | **WORKER-3** | REF_006 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-028 | Email Settings | `safecontracts-email-settings` | `EmailSettingsPage::render()` | LATENT_CLASS_NOT_REGISTERED_BY_PLUGIN_BOOT | **WORKER-3** | REF_006 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-029 | Active Users | `safecontracts-active-users` | `ActiveUsersPage::render()` | REGISTERED | **WORKER-3** | REF_007 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-030 | Users & Roles | `safecontracts-users-roles` | `UsersRolesPage::render()` | REGISTERED | **WORKER-3** | REF_007 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-031 | Firebase Settings | `safecontracts-firebase-settings` | `FirebaseSettingsPage::render()` | REGISTERED | **WORKER-3** | REF_002 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-032 | Mobile Configuration | `safecontracts-mobile-configuration` | `MobileConfigurationPage::render()` | REGISTERED | **WORKER-3** | REF_002 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-033 | Translations | `safecontracts-translations` | `TranslationsPage::render()` | REGISTERED | **WORKER-3** | REF_002 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
+| SC-034 | User Guide | `safecontracts-user-guide` | `UserGuidePage::render()` | REGISTERED | **WORKER-3** | REF_002 | READY FOR LEAD | PASS | PASS | PASS | PASS | run 32742163204 / artifact 9525710167 | #636 | NO |
 
 ## Frozen ownership totals
 
