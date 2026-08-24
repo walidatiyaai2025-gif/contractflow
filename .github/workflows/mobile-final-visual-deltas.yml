@@ -1,0 +1,112 @@
+name: Mobile Final Visual Deltas
+
+on:
+  push:
+    branches:
+      - feat/alkenzy-mobile-reference-redesign
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-mobile-reference-redesign
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Apply only screenshot-confirmed visual deltas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          shell = Path('mobile/lib/features/navigation/app_shell.dart')
+          text = shell.read_text()
+          text = text.replace(
+              'backgroundColor: SafeContractsVisual.surface,\n        selectedIndex:',
+              'backgroundColor: SafeContractsVisual.navyDeep,\n        selectedIndex:',
+              1,
+          )
+          text = text.replace(
+              'floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,',
+              'floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,',
+              1,
+          )
+          shell.write_text(text)
+
+          l10n = Path('mobile/lib/core/localization/safecontracts_localizations.dart')
+          text = l10n.read_text()
+          old = "return '$sign$whole.${cents.toString().padLeft(2, '0')}';"
+          new = """if (cents == 0) return '$sign$whole';
+  return '$sign$whole.${cents.toString().padLeft(2, '0')}';"""
+          if old not in text:
+              raise SystemExit('money formatter anchor missing')
+          text = text.replace(old, new, 1)
+          translations = {
+              "  'Suppliers': 'الموردون',\n": "  'Suppliers': 'الموردون',\n",
+              "  'Finance': 'المالية',\n": "  'Finance': 'المالية',\n",
+              "  'Dashboard Two': 'لوحة تحكم اتنين',\n": "  'Dashboard Two': 'لوحة تحكم اتنين',\n",
+          }
+          anchor = "  'Customers': 'العملاء',\n"
+          additions = ''.join(k for k in translations if k not in text)
+          if additions:
+              if anchor not in text:
+                  raise SystemExit('translation anchor missing')
+              text = text.replace(anchor, anchor + additions, 1)
+          l10n.write_text(text)
+
+          capture = Path('mobile/test/reference_visual_capture_extended_test.dart')
+          text = capture.read_text()
+          old_supplier = """        'id': 8,
+        'name': 'شركة الخليج للتوريدات',
+        'internal_code': 'S-008',
+        'contact_name': 'سالم حسن',
+        'email': 'supplier@example.com',
+        'phone': '+96550000008',
+        'is_active': true,
+"""
+          new_supplier = """        'id': 8,
+        'internal_code': 'S-008',
+        'legal_name': 'شركة الخليج للتوريدات',
+        'trading_name': 'الخليج للتوريدات',
+        'contact_name': 'سالم حسن',
+        'email': 'supplier@example.com',
+        'phone': '+96550000008',
+        'default_currency': 'KWD',
+        'status': 'active',
+        'is_archived': false,
+"""
+          if old_supplier in text:
+              text = text.replace(old_supplier, new_supplier, 1)
+          capture.write_text(text)
+          PY
+      - name: Validate bounded changes
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+          flutter analyze
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
+          flutter test test/reference_visual_capture_test.dart
+          flutter test test/reference_visual_capture_extended_test.dart
+      - name: Commit validated visual deltas
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/lib/features/navigation/app_shell.dart mobile/lib/core/localization/safecontracts_localizations.dart mobile/test/reference_visual_capture_extended_test.dart
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix(mobile): align final locked-reference visual deltas'
+            git push origin HEAD:feat/alkenzy-mobile-reference-redesign
+          fi
