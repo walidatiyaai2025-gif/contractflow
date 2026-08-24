@@ -24,8 +24,6 @@ final class UserGuidePage
 
     public static function registerContextualHelp(): void
     {
-        // Keep contextual guidance available on every SafeContracts screen without
-        // consuming the prime operational area above the page content.
         add_action('in_admin_footer', [self::class, 'renderContextualHelp'], 20);
     }
 
@@ -60,27 +58,42 @@ final class UserGuidePage
         }
 
         $entries = UserGuideCatalog::visibleEntries();
+        $stepCount = 0;
+        foreach ($entries as $entry) {
+            $stepCount += is_array($entry['steps'] ?? null) ? count($entry['steps']) : 0;
+        }
         ?>
         <div class="wrap safecontracts-settings safecontracts-user-guide" dir="auto">
             <div class="safecontracts-section-heading">
                 <div>
-                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('User Guide', 'safecontracts'); ?></p>
+                    <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Help & guidance', 'safecontracts'); ?></p>
                     <h1><?php echo esc_html__('User Guide', 'safecontracts'); ?></h1>
-                    <p><?php echo esc_html__('Use this guide to understand each area before changing production data.', 'safecontracts'); ?></p>
-                    <p class="description"><?php echo esc_html__('Only sections available to your current role are shown.', 'safecontracts'); ?></p>
+                    <p><?php echo esc_html__('Role-aware guidance for the SafeContracts areas you can actually access. Use it before changing production data or system configuration.', 'safecontracts'); ?></p>
+                    <p class="description"><?php echo esc_html__('Only sections permitted for your current WordPress user are shown.', 'safecontracts'); ?></p>
                 </div>
+                <span class="safecontracts-state-chip is-success"><?php echo esc_html(sprintf(__('%d sections available', 'safecontracts'), count($entries))); ?></span>
             </div>
-            <div class="safecontracts-role-grid">
-                <?php foreach ($entries as $slug => $entry) : ?>
-                    <section class="safecontracts-admin-card">
-                        <h2><?php echo esc_html((string) $entry['title']); ?></h2>
-                        <?php self::renderEntryBody($entry, false); ?>
-                        <?php if ($slug !== self::SLUG) : ?>
-                            <p><a class="button" href="<?php echo esc_url(self::pageUrl((string) $slug)); ?>"><?php echo esc_html(__('Open', 'safecontracts') . ' ' . (string) $entry['title']); ?></a></p>
-                        <?php endif; ?>
-                    </section>
-                <?php endforeach; ?>
-            </div>
+
+            <?php AdminSummaryCards::render([
+                ['label' => __('Visible guide sections', 'safecontracts'), 'value' => count($entries)],
+                ['label' => __('Recommended steps', 'safecontracts'), 'value' => $stepCount],
+            ]); ?>
+
+            <?php if ($entries === []) : ?>
+                <section class="safecontracts-admin-card"><h2><?php echo esc_html__('No guide sections available', 'safecontracts'); ?></h2><p><?php echo esc_html__('There are no user-guide sections available to the current role.', 'safecontracts'); ?></p></section>
+            <?php else : ?>
+                <div class="safecontracts-role-grid">
+                    <?php foreach ($entries as $slug => $entry) : ?>
+                        <section class="safecontracts-admin-card">
+                            <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Guide section', 'safecontracts'); ?></p><h2><?php echo esc_html((string) $entry['title']); ?></h2></div></div>
+                            <?php self::renderEntryBody($entry, false); ?>
+                            <?php if ($slug !== self::SLUG) : ?>
+                                <p><a class="button button-primary" href="<?php echo esc_url(self::pageUrl((string) $slug)); ?>"><?php echo esc_html(__('Open', 'safecontracts') . ' ' . (string) $entry['title']); ?></a></p>
+                            <?php endif; ?>
+                        </section>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
         <?php
     }
