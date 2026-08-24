@@ -221,7 +221,7 @@ ApiTransportResponse _handler(Uri uri) {
     return _page(<Object?>[], sort: 'id', order: 'desc');
   }
   if (uri.path.endsWith('/followups')) {
-    return _page(<Object?>[], sort: 'id', order: 'desc');
+    return _page(<Object?>[], sort: 'due_date', order: 'asc');
   }
   if (uri.path.endsWith('/notifications')) {
     return _page(<Object?>[], sort: 'id', order: 'desc');
