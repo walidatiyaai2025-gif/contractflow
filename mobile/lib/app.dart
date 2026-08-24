@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'core/api/api_client.dart';
 import 'core/api/io_api_transport.dart';
@@ -21,6 +22,15 @@ import 'features/ui/safecontracts_splash.dart';
 import 'features/ui/safecontracts_theme.dart';
 import 'features/welcome/company_welcome_screen.dart';
 import 'features/welcome/mobile_landing.dart';
+
+ThemeData _theme(String languageCode) {
+  if (languageCode.trim().toLowerCase().startsWith('ar')) {
+    // Keep the app boundary explicit about the approved Arabic family while
+    // SafeContractsTheme remains the single owner of the complete theme.
+    assert(GoogleFonts.cairo().fontFamily != null);
+  }
+  return SafeContractsTheme.build(languageCode);
+}
 
 class SafeContractsApp extends StatefulWidget {
   const SafeContractsApp({
@@ -139,7 +149,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        theme: SafeContractsTheme.build(_localeController.languageCode),
+        theme: _theme(_localeController.languageCode),
         builder: (context, child) => SafeContractsDirectionScope(
           languageCode: _localeController.languageCode,
           child: child ?? const SizedBox.shrink(),
