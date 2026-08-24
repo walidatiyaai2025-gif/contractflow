@@ -21,25 +21,31 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Apply final compile fixes
+      - name: Apply canonical lint cleanup
         shell: bash
         run: |
           set -Eeuo pipefail
-          python3 scripts/alkenzy_mobile_final_compile_fix.py
+          python3 scripts/alkenzy_mobile_final_lint_fix.py
           cd mobile
           flutter pub get
           dart format \
-            lib/features/reports/report_printing.dart \
-            lib/features/ui/safecontracts_theme.dart \
-            lib/features/ui/theme_palette.dart
+            lib/features/contracts/contracts.dart \
+            lib/features/contracts/contracts_screen.dart \
+            lib/features/contracts/premium_contract_details_screen.dart \
+            lib/features/customers/customers_screen.dart \
+            lib/features/followups/followups.dart \
+            lib/features/followups/followups_screen.dart \
+            lib/features/payments/payments.dart \
+            lib/features/payments/payments_screen.dart \
+            lib/features/records/mobile_record_editor_screen.dart \
+            lib/features/suppliers/suppliers_screen.dart \
+            lib/features/ui/safecontracts_components.dart
           cd ..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mobile/lib/features/reports/report_printing.dart \
-            mobile/lib/features/ui/safecontracts_theme.dart \
-            mobile/lib/features/ui/theme_palette.dart
+          git add mobile/lib
           git diff --cached --check
-          git commit -m "fix(mobile): close final report and palette compile deltas"
+          git commit -m "fix(mobile): clear final analyzer infos"
           git push origin HEAD:feat/alkenzy-mobile-user-final-request
       - name: Analyze
         working-directory: mobile
