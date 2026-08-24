@@ -98,14 +98,18 @@ Future<void> _capture(WidgetTester tester, String name) async {
     find.byKey(_captureKey),
   );
   final image = await boundary.toImage(pixelRatio: 1);
-  final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-  if (bytes == null) throw StateError('Unable to encode $name.');
-  final directory = Directory('build/reference-captures');
-  await directory.create(recursive: true);
-  await File('${directory.path}/$name.png').writeAsBytes(
-    bytes.buffer.asUint8List(),
-    flush: true,
-  );
+  try {
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (bytes == null) throw StateError('Unable to encode $name.');
+    final directory = Directory('build/reference-captures');
+    directory.createSync(recursive: true);
+    File('${directory.path}/$name.png').writeAsBytesSync(
+      bytes.buffer.asUint8List(),
+      flush: true,
+    );
+  } finally {
+    image.dispose();
+  }
 }
 
 ApiTransportResponse _unauthenticatedHandler(Uri uri) {
