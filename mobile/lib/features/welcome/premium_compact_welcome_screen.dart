@@ -113,7 +113,10 @@ final class _PremiumCompactWelcomeScreenState
                               textAlign: TextAlign.center,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
                                     color: SafeContractsVisual.roseGoldDark,
                                     fontWeight: FontWeight.w800,
                                   ),
