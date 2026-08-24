@@ -17,6 +17,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: bugfix/alkenzy-register-w1-customer-navigation
+      - name: Reconcile shared push registration from integration
+        shell: bash
+        run: |
+          git show origin/feat/alkenzy-mobile-reference-redesign:mobile/lib/features/notifications/push_registration.dart > mobile/lib/features/notifications/push_registration.dart
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -48,6 +52,19 @@ jobs:
           python3 -m py_compile scripts/w1_bug_closure_patch.py
       - name: Apply whitespace-stable Worker 1 closure patch
         run: python3 scripts/w1_bug_closure_patch.py
+      - name: Remove W1 lint-only qualifier
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('mobile/lib/features/navigation/app_shell.dart')
+          text = path.read_text()
+          old = 'selected: destination == this.selected,'
+          new = 'selected: destination == selected,'
+          if text.count(old) != 1:
+              raise SystemExit('W1 selected qualifier target not unique')
+          path.write_text(text.replace(old, new, 1))
+          PY
       - name: Resolve dependencies
         working-directory: mobile
         run: flutter pub get
@@ -86,6 +103,7 @@ jobs:
           git add mobile/lib/features/customers/customers_screen.dart \
                   mobile/lib/features/navigation/app_shell.dart \
                   mobile/lib/features/welcome/premium_compact_welcome_screen.dart \
+                  mobile/lib/features/notifications/push_registration.dart \
                   mobile/test/alkenzy_w1_bug_closure_test.dart \
                   mobile/test/worker1_visual_capture_test.dart \
                   mobile/test/w1_customer_visual_capture.dart \
