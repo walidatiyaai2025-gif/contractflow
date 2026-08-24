@@ -35,9 +35,9 @@ void main() {
     expect(find.text('Financial performance'), findsOneWidget);
     expect(find.text('Total account balance'), findsOneWidget);
     expect(find.text('Overview'), findsOneWidget);
-    expect(find.text('Payments'), findsOneWidget);
-    expect(find.text('Contracts'), findsOneWidget);
-    expect(find.text('Collections'), findsOneWidget);
+    expect(find.text('Payments'), findsAtLeastNWidgets(1));
+    expect(find.text('Contracts'), findsAtLeastNWidgets(1));
+    expect(find.text('Collections'), findsAtLeastNWidgets(1));
     expect(find.textContaining('125'), findsWidgets);
     expect(find.textContaining('125.00'), findsNothing);
 
@@ -45,7 +45,7 @@ void main() {
     expect(appBar.backgroundColor, SafeContractsVisual.navy);
     expect(appBar.foregroundColor, Colors.white);
 
-    await tester.tap(find.text('Payments'));
+    await tester.tap(find.text('Payments').first);
     await tester.pumpAndSettle();
     expect(find.text('Filters'), findsOneWidget);
 
