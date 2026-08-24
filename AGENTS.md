@@ -52,3 +52,25 @@ Rules:
 Production build/deployment work must follow `docs/PRODUCTION_ENVIRONMENT_BUILD.md`, `docs/ENVIRONMENT.md`, `docs/BACKUP_RESTORE_RUNBOOK.md`, `docs/PRODUCTION_RELEASE_READINESS.md` and `ops/uat-scenarios.json`.
 
 If a human-only production dependency is missing, record the exact blocker and smallest required action instead of bypassing the gate.
+
+## ALKENZY ADV PLUGIN UI — LOCKED VISUAL GOVERNANCE
+
+Before modifying any SafeContracts / Alkenzy ADV WordPress Admin UI, every contributor MUST fetch latest `main` and read:
+
+- `docs/plugin-redesign/PLUGIN_UI_CONSTITUTION.md`
+- `docs/plugin-redesign/PLUGIN_REDESIGN_EXECUTION_PLAN.md`
+- `docs/plugin-redesign/PLUGIN_UI_SCREEN_MATRIX.md`
+- `docs/plugin-redesign/PLUGIN_UI_PROGRESS.md`
+- `assets/design/plugin-redesign/reference/REFERENCE_MANIFEST.json`
+
+The files under `assets/design/plugin-redesign/reference/` are the approved locked visual source of truth. Never delete, replace, crop, recolor, move, overwrite or silently supersede a locked reference. A new visual baseline requires explicit project-owner approval, a new Reference ID, a new SHA-256 manifest entry and re-review of affected screens.
+
+The P0 redesign gate is mandatory: Worker #1/#2/#3 may not begin plugin redesign implementation until the governance foundation and all seven locked reference binaries are merged to `main` and `python3 scripts/validate-plugin-design-references.py` passes.
+
+`docs/plugin-redesign/PLUGIN_UI_SCREEN_MATRIX.md` is the exactly-one-owner authority. A route owner owns every user-visible state rendered inside that route. Do not edit another owner's screen and do not create overlapping ownership.
+
+The LEAD exclusively owns shared redesign surfaces, including `wordpress-plugin/safecontracts/src/Plugin.php`, `wordpress-plugin/safecontracts/src/Admin/AdminShell.php`, `wordpress-plugin/safecontracts/src/Admin/AdminNavigationGroups.php`, navigation cleanup, common Admin primitives, shared existing `wordpress-plugin/safecontracts/assets/admin/*.css` and `wordpress-plugin/safecontracts/assets/admin/*.js`, design tokens, common redesign primitives and all plugin-redesign governance/reference files. Workers must not make uncoordinated edits to these paths; request the smallest shared change from the LEAD instead.
+
+After the governance foundation lands, LEAD/WORKER-1/WORKER-2/WORKER-3 must branch from the exact same final `main` foundation SHA stated in the governance merge. Every redesign PR must record that SHA, preserve real WordPress permissions/nonces/business behavior, attach real runtime screenshot evidence, pass Arabic RTL + responsive QA, and pass the repository Quality Gates plus the plugin-design validator.
+
+Continue from `PLUGIN_UI_PROGRESS.md`; do not restart approved screens and do not rely on chat history as project state.
