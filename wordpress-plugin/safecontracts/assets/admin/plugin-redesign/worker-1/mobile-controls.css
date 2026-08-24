@@ -18,4 +18,49 @@
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+
+  /* SC-013/SC-014: in RTL the final actions column sits at the far-left edge
+   * of a deliberately wide table. Keep that control surface reachable while
+   * the rest of the directory remains horizontally scrollable. */
+  .safecontracts-customers .safecontracts-worker1__table-scroll table.widefat th:last-child,
+  .safecontracts-customers .safecontracts-worker1__table-scroll table.widefat td:last-child,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat th:last-child,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat td:last-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    box-sizing: border-box;
+    min-width: 118px;
+    max-width: 132px;
+    background: #fffdfb !important;
+    box-shadow: 8px 0 12px -10px rgba(11, 41, 69, .45);
+  }
+
+  .safecontracts-customers .safecontracts-worker1__table-scroll table.widefat thead th:last-child,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll table.widefat thead th:last-child {
+    z-index: 4;
+    background: #f2e7dc !important;
+  }
+
+  .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions .button,
+  .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form,
+  .safecontracts-customers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form .button,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions .button,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form,
+  .safecontracts-suppliers .safecontracts-worker1__table-scroll .safecontracts-dashboard-table-actions form .button {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    text-align: center;
+  }
 }
