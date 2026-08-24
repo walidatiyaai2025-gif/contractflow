@@ -34,13 +34,15 @@ No item is `[CLOSED]` unless QA has passed it on the integrated exact head. Exis
 
 ## Exact live status sets
 
-- `[TODO]`: **B001-B101**
-- `[IN-PROGRESS]`: none proven by a pushed Worker commit yet
+- `[TODO]`: `B001, B002-B011, B013, B025-B026, B055-B070` (**30**)
+- `[IN-PROGRESS]`: `B012, B014-B024, B027-B054, B071-B101` (**71**)
 - `[BLOCKED]`: none
 - `[READY-FOR-QA]`: none
 - `[QA-FAILED]`: none
 - `[QA-PASS]`: none
 - `[CLOSED]`: none
+
+`[IN-PROGRESS]` means an owned Worker lane has pushed production implementation under review; it does not imply acceptance. Worker #1 currently has workflow-only commits and is therefore not counted as production progress. Worker #4 has no pushed implementation yet.
 
 ## Frozen production ownership
 
@@ -51,13 +53,21 @@ No item is `[CLOSED]` unless QA has passed it on the integrated exact head. Exis
 - Worker #5: `B081-B101`
 - QA: acceptance only for `B001-B101`; no production ownership
 
+## Active Worker lanes
+
+- Worker #2 — PR #646 — Dashboard BODY scope — `[IN-PROGRESS]`, queued behind P0 Wave A.
+- Worker #3 — PR #644 — exact head under CI/review — includes P0 `B036` logout.
+- Worker #5 — PR #645 — exact head under CI/review — includes P0 `B084` server-authoritative pagination.
+- Worker #1 — branch exists but current pushed diff is workflow-only; `B002/B003` are not yet production-fixed.
+- Worker #4 — branch exists at frozen base with no production commits; `B001` has not started on GitHub evidence.
+
 ## P0 fast-track
 
-1. `B001` — Worker #4 — Payment Status
-2. `B002` — Worker #1 — Customer related-data loading
-3. `B003` — Worker #1 — Sidebar/Drawer
-4. `B036` — Worker #3 — Logout
-5. `B084` — Worker #5 — API Pagination
+1. `B001` — Worker #4 — Payment Status — `[TODO]`
+2. `B002` — Worker #1 — Customer related-data loading — `[TODO]`
+3. `B003` — Worker #1 — Sidebar/Drawer — `[TODO]`
+4. `B036` — Worker #3 — Logout — `[IN-PROGRESS]`; targeted tests added, exact-head CI required before QA handoff.
+5. `B084` — Worker #5 — API Pagination — `[IN-PROGRESS]`; backend + Flutter consumer implementation added, focused Flutter acceptance tests and exact-head CI required before QA handoff.
 
 A P0 slice must be reviewed and handed to QA as soon as it reaches `[READY-FOR-QA]`; it must not wait for the rest of its Worker scope.
 
@@ -71,7 +81,7 @@ A P0 slice must be reviewed and handed to QA as soon as it reaches `[READY-FOR-Q
 
 ## Lead integration note
 
-After the frozen base, the integration branch contains a Lead-level CI compatibility fix for Firebase Messaging's new `AuthorizationStatus.deniedPermanently` enum value. It maps that state to the existing denied mobile permission state. This is a CI/dependency compatibility correction and closes no Bug ID.
+After the frozen base, the integration branch contains a Lead-level CI compatibility fix for Firebase Messaging's new `AuthorizationStatus.deniedPermanently` enum value. It maps that state to the existing denied mobile permission state. A subsequent format-only correction applied canonical Dart formatting. These are CI/dependency compatibility corrections and close no Bug ID.
 
 ## Promotion rule
 
