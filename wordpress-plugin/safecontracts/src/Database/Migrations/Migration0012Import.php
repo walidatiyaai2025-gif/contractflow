@@ -44,6 +44,8 @@ final class Migration0012Import implements Migration
             KEY actor_created (created_by, created_at, id)
         ) {$charset};");
 
+        // Stable index contract: KEY run_row (import_run_id, row_number, id).
+        // row_number is quoted in executable SQL because ROW_NUMBER is reserved in MySQL 8.
         dbDelta("CREATE TABLE {$errors} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             import_run_id bigint(20) unsigned NOT NULL,
