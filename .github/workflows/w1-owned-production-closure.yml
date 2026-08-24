@@ -21,6 +21,32 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Normalize W1 patch generator literals
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/w1_bug_closure_patch.py')
+          text = path.read_text()
+
+          bad_edit = '"label: Text(context.scL10n.t(\'Edit\')),' + chr(10) + '",'
+          good_edit = '"label: Text(context.scL10n.t(\'Edit\')),\\n",'
+          if text.count(bad_edit) == 1:
+              text = text.replace(bad_edit, good_edit, 1)
+
+          old_sub = 'next_text, count = re.subn(pattern, replacement, text, count=1, flags=flags)'
+          new_sub = 'next_text, count = re.subn(pattern, lambda _: replacement, text, count=1, flags=flags)'
+          if text.count(old_sub) == 1:
+              text = text.replace(old_sub, new_sub, 1)
+
+          old_message = r": '$fallback\n${rawError.trim()}';"
+          new_message = r": '$fallback\\n${rawError.trim()}';"
+          if text.count(old_message) == 1:
+              text = text.replace(old_message, new_message, 1)
+
+          path.write_text(text)
+          PY
+          python3 -m py_compile scripts/w1_bug_closure_patch.py
       - name: Execute W1 owned production patch
         run: python3 scripts/w1_bug_closure_patch.py
       - name: Preserve integration-owned push registration exactly
