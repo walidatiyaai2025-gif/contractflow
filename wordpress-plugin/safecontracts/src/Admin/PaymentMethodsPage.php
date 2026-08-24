@@ -76,6 +76,13 @@ final class PaymentMethodsPage
             SAFECONTRACTS_VERSION,
             true
         );
+        wp_localize_script(
+            self::WORKER_SCRIPT_HANDLE,
+            'safecontractsWorker2Ui',
+            [
+                'emptyScope' => __('No obligations match this scope.', 'safecontracts'),
+            ]
+        );
     }
 
     public static function handleSave(): void
