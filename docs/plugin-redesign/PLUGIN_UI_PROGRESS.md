@@ -22,7 +22,7 @@ All redesign branches must preserve `FOUNDATION_SHA=f671f436d9fd357de1a79089c29e
 - Branch: `plugin-redesign/lead-integration`
 - PR: `#637`
 - Frozen scope: SC-001 through SC-012 only, plus protected shared PHP/CSS/JS/navigation/governance surfaces.
-- Current implementation state: `IMPLEMENTED — RUNTIME VISUAL QA PENDING`
+- Current implementation state: `IMPLEMENTED — RUNTIME VISUAL QA PASS; EXACT-HEAD QUALITY REVALIDATION RUNNING`
 
 ### LEAD implementation completed in code
 
@@ -37,62 +37,65 @@ All redesign branches must preserve `FOUNDATION_SHA=f671f436d9fd357de1a79089c29e
 - Redesigned Migration Recovery and explicitly enqueued the shared redesign assets on the migration-failure boot path.
 - LEAD-only boot integration now registers the pre-existing `EmailSettingsPage` through its own `register()` method. SC-028 visual ownership remains WORKER-3.
 - Runtime Inspector is covered by the shared system-screen/table/detail primitives; its sanitized diagnostics, clear-history nonce and system capability rules remain unchanged.
+- Shared responsive layer now constrains settings split layouts with `minmax(0, 1fr)` under the WordPress mobile breakpoint so RTL controls can shrink without horizontal clipping.
 
-### LEAD validation still required before APPROVED
+### LEAD acceptance checkpoint
 
-- Exact-head PR #637 Plugin Design Reference Guard.
-- Exact-head PR #637 repository Quality Gates.
-- Real WordPress runtime screenshots for SC-001..SC-012.
-- Arabic RTL desktop + 390px narrow evidence.
-- English LTR desktop smoke evidence.
-- 768px evidence where layout materially changes.
-- Locked-reference comparison and recorded differences in each screen `VISUAL_QA.md`.
-- Functional smoke of Dashboard links, grouped navigation, General Settings save, Runtime Inspector clear/history and conditional Migration Recovery rendering.
+- Plugin Design Reference Guard: PASS on the current redesign line.
+- Real WordPress Visual QA: PASS on `7223f413a340814cc159c5bcc10b91ce2b8b0506`.
+- A subsequent shared responsive specificity hardening commit is under exact-head Quality/Visual revalidation before final integration approval.
 
-No LEAD screen is `APPROVED` until those runtime/evidence gates pass.
+No LEAD screen is `APPROVED` until the final integrated exact-head runtime/evidence gates pass.
 
 ## WORKER-1 — FROZEN SCOPE
 
 Customers; Suppliers; Contracts; Archive (SC-013..SC-016).
 
-Latest Lead observation: the frozen Worker #1 branch `plugin-redesign/worker-1-parties-contracts` was not yet present when checked. No Worker #1 plugin-redesign PR is ready for integration yet.
+- Production PR: `#638`.
+- Responsive runtime defects found by acceptance have been fixed rather than waived.
+- Current production head includes shrinkable contract editor controls and mobile file-input hardening.
+- Exact-head runtime QA is being rerun before READY FOR LEAD.
 
-## WORKER-2 — FROZEN SCOPE
+## WORKER-2 — READY FOR LEAD
 
 Payments; Collections/Settlements; Follow-ups; Finance; Reports; Imports; Payment Methods (SC-017..SC-023).
 
-Latest Lead observation: branch `plugin-redesign/worker-2-finance-operations` exists at the official foundation SHA with no implementation commits yet. No Worker #2 plugin-redesign PR is ready for integration yet.
+- Production PR: `#635` at `b8d7f063bec3a28d5bfdb8e40398d993f9d662e3`.
+- Production Quality Gates: PASS.
+- Production Plugin Design Reference Guard: PASS.
+- Real WordPress Worker 2 Functional QA: PASS.
+- Real WordPress Visual QA: PASS.
+- QA-overlay Quality Gates: PASS.
+- QA-overlay Plugin Design Reference Guard: PASS.
+- No fake data, cross-currency aggregation, weakened assertion or visual-only closure was accepted.
 
 ## WORKER-3 — FROZEN SCOPE
 
 Notification Center; Notification Delivery Activity; Notification Schedule; Notification Settings; Email Settings; Active Users; Users & Roles; Firebase Settings; Mobile Configuration; Translations; User Guide (SC-024..SC-034).
 
-Latest Lead observation: branch `plugin-redesign/worker-3-notifications-access-settings` exists at the official foundation SHA with no implementation commits yet. No Worker #3 plugin-redesign PR is ready for integration yet.
+- Production PR: `#636`.
+- SC-031 narrow RTL acceptance exposed a CSS-grid min-content overflow in the shared settings split layout.
+- The shared LEAD responsive layer was hardened with a higher-specificity `minmax(0, 1fr)` rule so the later premium stylesheet cannot restore a non-shrinkable `1fr` track.
+- Real WordPress Visual QA is being rerun before READY FOR LEAD.
 
-SC-028 Email Settings is now boot-registered by the LEAD because `Plugin.php` is a protected shared file. WORKER-3 still owns the screen markup/visual implementation and its runtime evidence.
+SC-028 Email Settings remains boot-registered by the LEAD because `Plugin.php` is a protected shared file. WORKER-3 still owns the screen markup/visual implementation and its runtime evidence.
 
 ## Latest screenshots
 
-The seven locked reference images are the approved visual source of truth. Real implementation screenshots for redesigned WordPress runtime screens have not yet been committed to PR #637 and must not be fabricated.
-
-## Latest visual mismatches
-
-- The pre-redesign oversized AdminShell banner conflicted with REF_003 and has been removed in the LEAD branch.
-- Dashboard composition is now structurally aligned to REF_003 through a compact heading, permission-aware quick actions, filter/KPI area and existing real financial lanes. Pixel/runtime comparison remains pending.
-- Group landing, settings, diagnostics and recovery screens now use the REF_002 design language. Runtime comparison remains pending.
+Runtime screenshot artifacts are generated by the real WordPress + MySQL + authenticated wp-admin Playwright acceptance workflows. The seven locked reference images remain the visual source of truth; workflow GREEN is necessary but does not authorize fabricated evidence.
 
 ## Known responsive issues
 
-No unresolved code-level overflow has been accepted. Runtime verification is still required at 390 / 768 / 1440 widths before any screen can advance to READY FOR LEAD or APPROVED.
+No known responsive defect is being waived. The currently discovered Worker #1 contract-editor and Worker #3 Firebase RTL overflows have production/shared fixes committed and are under exact-head rerun.
 
 ## Known RTL issues
 
-Arabic RTL is the primary acceptance direction. Logical CSS and RTL-aware WordPress layout rules are implemented in the shared layer, but real runtime RTL evidence is still pending.
+Arabic RTL remains the primary acceptance direction. The final integration cannot advance until exact-head RTL evidence is GREEN for every worker and the integrated Lead.
 
 ## Next exact task
 
-1. Run exact-head PR #637 Plugin Design Reference Guard and Quality Gates; fix any failures.
-2. Capture real WordPress runtime evidence for LEAD screens and perform locked-reference/RTL/responsive/functional QA.
-3. Continue monitoring Worker #1/#2/#3 branches and review the first dependency-safe worker PR immediately when it appears.
-4. Before merging a worker PR, reject shared-file ownership violations, missing runtime screenshots, missing RTL/responsive evidence, fake data, or business/security regressions.
-5. After every integration, reconcile remaining workers with latest `main`, rerun the reference validator and repository Quality Gates, and recheck neighboring-screen visual consistency.
+1. Finish exact-head W1 and W3 runtime/Quality revalidation; fix any remaining real defects.
+2. Advance fully-green worker PRs to READY FOR LEAD.
+3. Integrate accepted worker branches in a controlled sequence without QA-only overlays.
+4. After integration, rerun Plugin Design Reference Guard, repository Quality Gates and real WordPress Visual QA on the exact integrated head.
+5. Only after integrated ALL GREEN, advance the LEAD release candidate to `main` and package the user-visible plugin release.
