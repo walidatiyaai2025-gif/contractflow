@@ -131,9 +131,48 @@
     min-width: 680px;
   }
 
+  .safecontracts-settings.safecontracts-firebase-settings,
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-admin-card,
+  .safecontracts-settings.safecontracts-firebase-settings form,
+  .safecontracts-settings.safecontracts-firebase-settings form > p,
+  .safecontracts-settings.safecontracts-firebase-settings label,
+  .safecontracts-settings.safecontracts-firebase-settings details {
+    box-sizing: border-box;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-split-layout {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-split-layout > *,
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-admin-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings .safecontracts-split-layout > * + * {
+    margin-top: 14px;
+  }
+
+  .safecontracts-settings.safecontracts-firebase-settings input.widefat,
+  .safecontracts-settings.safecontracts-firebase-settings select.widefat,
+  .safecontracts-settings.safecontracts-firebase-settings textarea.widefat {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
   .safecontracts-settings.safecontracts-firebase-settings table.widefat {
     width: 100% !important;
     min-width: 0 !important;
+    max-width: 100% !important;
     table-layout: fixed;
   }
 }
