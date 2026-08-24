@@ -1,0 +1,84 @@
+name: W1 Bug Closure Execute
+
+on:
+  pull_request:
+    branches:
+      - feat/alkenzy-mobile-reference-redesign
+
+permissions:
+  contents: write
+
+jobs:
+  execute:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: bugfix/alkenzy-register-w1-customer-navigation
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Execute isolated patch embedded in temporary workflow
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          source = Path('.github/workflows/w1-bug-closure-patch.yml').read_text()
+          marker = "          python3 - <<'PY'\n"
+          start = source.index(marker) + len(marker)
+          end = source.index("\n          PY\n", start)
+          code = textwrap.dedent(source[start:end])
+          exec(compile(code, 'w1-bug-closure-patch', 'exec'))
+          PY
+      - name: Resolve dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Format all mobile Dart sources and tests
+        working-directory: mobile
+        run: dart format lib test
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze
+      - name: Run regression suite
+        working-directory: mobile
+        shell: bash
+        run: |
+          mapfile -d '' tests < <(find test -maxdepth 1 -name '*_test.dart' ! -name 'reference_visual_capture_test.dart' ! -name 'reference_visual_capture_extended_test.dart' ! -name 'worker1_visual_capture_test.dart' -print0 | sort -z)
+          flutter test "${tests[@]}"
+      - name: Capture Worker 1 responsive evidence
+        working-directory: mobile
+        shell: bash
+        run: |
+          for width in 320 360 375 390 412 430; do
+            flutter test test/worker1_visual_capture_test.dart --dart-define=W1_CAPTURE_WIDTH="$width"
+          done
+      - name: Remove temporary execution workflows
+        run: rm .github/workflows/w1-bug-closure-patch.yml .github/workflows/w1-bug-closure-run.yml
+      - name: Commit validated bug closure
+        shell: bash
+        run: |
+          git diff --check
+          git status --short
+          git config user.name "alkenzy-w1-bug-closure"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/lib/features/customers/customers_screen.dart \
+                  mobile/lib/features/navigation/app_shell.dart \
+                  mobile/lib/features/welcome/premium_compact_welcome_screen.dart \
+                  mobile/test/alkenzy_w1_bug_closure_test.dart \
+                  mobile/test/worker1_visual_capture_test.dart \
+                  .github/workflows/w1-bug-closure-patch.yml \
+                  .github/workflows/w1-bug-closure-run.yml
+          git commit -m "fix(mobile): close W1 customer and navigation register bugs"
+          git push origin HEAD:bugfix/alkenzy-register-w1-customer-navigation
+      - name: Upload Worker 1 screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-w1-bug-closure-screenshots
+          path: mobile/build/w1-bug-closure/*.png
+          if-no-files-found: error
+          retention-days: 14
