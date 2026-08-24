@@ -169,7 +169,8 @@ void main() {
     }
   }
 
-  testWidgets('B038-B039 language segmented control switches direction immediately',
+  testWidgets(
+      'B038-B039 language segmented control switches direction immediately',
       (tester) async {
     await tester.pumpWidget(const _ProfileHarness(initialLanguage: 'en'));
     await tester.pumpAndSettle();
@@ -422,4 +423,13 @@ ApiTransportResponse _error(int statusCode, String code) {
       },
     }),
   );
+}
+
+Future<void> _pumpBounded(
+  WidgetTester tester, {
+  int cycles = 16,
+}) async {
+  for (var index = 0; index < cycles; index++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }
