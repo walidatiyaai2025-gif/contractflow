@@ -137,6 +137,7 @@ else:
 permissions = [
     'android.permission.INTERNET',
     'android.permission.POST_NOTIFICATIONS',
+    'android.permission.USE_BIOMETRIC',
 ]
 for permission in permissions:
     if permission in text:
@@ -200,6 +201,10 @@ grep -Fq 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing POST_NOTIFICATIONS permission" >&2
   exit 1
 }
+grep -Fq 'android.permission.USE_BIOMETRIC' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing USE_BIOMETRIC permission" >&2
+  exit 1
+}
 grep -Fq 'android:label="Alkenzy ADV"' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing Alkenzy ADV label" >&2
   exit 1
@@ -216,6 +221,10 @@ grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing high-importance notification channel metadata" >&2
   exit 1
 }
+grep -Fq 'FlutterFragmentActivity' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity must use FlutterFragmentActivity for local_auth" >&2
+  exit 1
+}
 grep -Fq 'safecontracts/notifications' "$MAIN_ACTIVITY_TARGET" || {
   echo "FAIL: Android release activity is missing foreground notification bridge" >&2
   exit 1
@@ -229,4 +238,4 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "Alkenzy ADV Android scaffold bootstrapped with supplied Alkenzy launcher icon, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
+echo "Alkenzy ADV Android scaffold bootstrapped with biometrics, supplied launcher icon, high-importance notifications, release signing, networking, and Firebase contracts."

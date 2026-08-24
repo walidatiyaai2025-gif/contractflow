@@ -76,22 +76,17 @@ final class ContractsFilters {
   final String? status;
 
   ContractsFilters withCustomer(int? value) => ContractsFilters(
-        customerId: value,
-        counterpartyType: value == null ? counterpartyType : 'customer',
-        counterpartyId:
-            value ?? (counterpartyType == 'customer' ? counterpartyId : null),
-        status: status,
-      );
+    customerId: value,
+    counterpartyType: value == null ? counterpartyType : 'customer',
+    counterpartyId:
+        value ?? (counterpartyType == 'customer' ? counterpartyId : null),
+    status: status,
+  );
 
-  ContractsFilters withCounterpartyType(String? value) => ContractsFilters(
-        counterpartyType: value,
-        status: status,
-      );
+  ContractsFilters withCounterpartyType(String? value) =>
+      ContractsFilters(counterpartyType: value, status: status);
 
-  ContractsFilters withCounterparty({
-    required String type,
-    required int id,
-  }) =>
+  ContractsFilters withCounterparty({required String type, required int id}) =>
       ContractsFilters(
         customerId: type == 'customer' ? id : null,
         counterpartyType: type,
@@ -100,11 +95,11 @@ final class ContractsFilters {
       );
 
   ContractsFilters withStatus(String? value) => ContractsFilters(
-        customerId: customerId,
-        counterpartyType: counterpartyType,
-        counterpartyId: counterpartyId,
-        status: value,
-      );
+    customerId: customerId,
+    counterpartyType: counterpartyType,
+    counterpartyId: counterpartyId,
+    status: value,
+  );
 
   int get activeCount {
     var count = 0;
@@ -180,15 +175,15 @@ final class ContractDraft {
   final String? notes;
 
   Map<String, Object?> toPayload() => <String, Object?>{
-        'contract_number': contractNumber.trim(),
-        'counterparty_type': counterpartyType.trim().toLowerCase(),
-        'counterparty_id': counterpartyId,
-        'base_value': baseValue.trim(),
-        if (_payloadText(currencyCode) != null)
-          'currency_code': _payloadText(currencyCode)!.toUpperCase(),
-        if (accountantUserId != null) 'accountant_user_id': accountantUserId,
-        if (_payloadText(notes) != null) 'notes': _payloadText(notes),
-      };
+    'contract_number': contractNumber.trim(),
+    'counterparty_type': counterpartyType.trim().toLowerCase(),
+    'counterparty_id': counterpartyId,
+    'base_value': baseValue.trim(),
+    if (_payloadText(currencyCode) != null)
+      'currency_code': _payloadText(currencyCode)!.toUpperCase(),
+    if (accountantUserId != null) 'accountant_user_id': accountantUserId,
+    if (_payloadText(notes) != null) 'notes': _payloadText(notes),
+  };
 }
 
 final class SafeContractsContract {
@@ -237,45 +232,66 @@ final class SafeContractsContract {
       data['customer_id'],
       'contract.customer_id',
     );
-    final type = _optionalText(data['counterparty_type'])?.toLowerCase() ??
-        (legacyCustomerId != null ? 'customer' : '');
+    final legacySupplierId = _optionalPositiveInt(
+      data['supplier_id'],
+      'contract.supplier_id',
+    );
+    if (legacyCustomerId != null && legacySupplierId != null) {
+      throw const FormatException(
+        'contract has conflicting customer and supplier IDs.',
+      );
+    }
+    final type =
+        _optionalText(data['counterparty_type'])?.toLowerCase() ??
+        (legacyCustomerId != null
+            ? 'customer'
+            : legacySupplierId != null
+            ? 'supplier'
+            : '');
     if (!_supportedCounterpartyTypes.contains(type)) {
       throw const FormatException('contract.counterparty_type is invalid.');
     }
-    final counterpartyId = _optionalPositiveInt(
+    final counterpartyId =
+        _optionalPositiveInt(
           data['counterparty_id'],
           'contract.counterparty_id',
         ) ??
-        (type == 'customer' ? legacyCustomerId : null);
+        (type == 'customer' ? legacyCustomerId : legacySupplierId);
     if (counterpartyId == null) {
       throw const FormatException('contract.counterparty_id is required.');
     }
     final direction =
         _optionalText(data['financial_direction'])?.toLowerCase() ??
-            (type == 'supplier' ? 'payable' : 'receivable');
+        (type == 'supplier' ? 'payable' : 'receivable');
     if ((type == 'supplier' && direction != 'payable') ||
         (type == 'customer' && direction != 'receivable')) {
       throw const FormatException(
         'contract.financial_direction conflicts with counterparty type.',
       );
     }
-    final currency =
-        (_optionalText(data['currency_code']) ?? 'UNSET').toUpperCase();
+    final currency = (_optionalText(data['currency_code']) ?? 'UNSET')
+        .toUpperCase();
     if (currency != 'UNSET' && !RegExp(r'^[A-Z]{3}$').hasMatch(currency)) {
       throw const FormatException('contract.currency_code is invalid.');
     }
 
     return SafeContractsContract(
       id: _positiveInt(data['id'], 'contract.id'),
-      contractNumber:
-          _requiredText(data['contract_number'], 'contract.contract_number'),
-      customerId:
-          type == 'customer' ? (legacyCustomerId ?? counterpartyId) : null,
+      contractNumber: _requiredText(
+        data['contract_number'],
+        'contract.contract_number',
+      ),
+      customerId: type == 'customer'
+          ? (legacyCustomerId ?? counterpartyId)
+          : null,
       customerName: _optionalText(data['customer_name']),
       counterpartyType: type,
       counterpartyId: counterpartyId,
-      counterpartyName: _optionalText(data['counterparty_name']) ??
-          _optionalText(data['customer_name']),
+      counterpartyName:
+          _optionalText(data['counterparty_name']) ??
+          (type == 'supplier'
+              ? _optionalText(data['supplier_name'])
+              : _optionalText(data['customer_name'])),
       financialDirection: direction,
       currencyCode: currency,
       accountantUserId: _optionalPositiveInt(
@@ -318,8 +334,9 @@ final class ContractPage {
 
   factory ContractPage.fromEnvelope(ApiEnvelope envelope) {
     final rows = apiObjectList(envelope.data, 'contracts.data');
-    final contracts =
-        rows.map(SafeContractsContract.fromData).toList(growable: false);
+    final contracts = rows
+        .map(SafeContractsContract.fromData)
+        .toList(growable: false);
     final ids = <int>{};
     for (final contract in contracts) {
       if (!ids.add(contract.id)) {
@@ -358,15 +375,18 @@ final class ContractPage {
       minimum: 1,
       maximum: 1000000000,
     );
-    final expectedTotalPages =
-        total == 0 ? 1 : ((total + perPage - 1) ~/ perPage);
+    final expectedTotalPages = total == 0
+        ? 1
+        : ((total + perPage - 1) ~/ perPage);
     if (totalPages != expectedTotalPages) {
       throw const FormatException(
-          'Contract pagination metadata is inconsistent.');
+        'Contract pagination metadata is inconsistent.',
+      );
     }
     if (page > totalPages && total > 0) {
       throw const FormatException(
-          'Contract page exceeds authoritative total pages.');
+        'Contract page exceeds authoritative total pages.',
+      );
     }
     final sort = _requiredText(meta['sort'], 'meta.sort');
     if (!ContractSortOption.values.any((option) => option.field == sort)) {
@@ -383,7 +403,8 @@ final class ContractPage {
     final hasMore = _boolish(meta['has_more'], 'meta.has_more');
     if (hasMore != (page < totalPages)) {
       throw const FormatException(
-          'Contract has_more metadata is inconsistent.');
+        'Contract has_more metadata is inconsistent.',
+      );
     }
     return ContractPage(
       contracts: List<SafeContractsContract>.unmodifiable(contracts),
@@ -417,7 +438,8 @@ final class ContractsRepository {
     }
     if (page < 1 || (page - 1) * perPage > 1000000) {
       throw ArgumentError(
-          'Contract page exceeds the bounded server query window.');
+        'Contract page exceeds the bounded server query window.',
+      );
     }
     if (!ContractSortOption.values.contains(sort)) {
       throw ArgumentError('Unsupported contract sort.');

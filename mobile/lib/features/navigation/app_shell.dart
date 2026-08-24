@@ -30,12 +30,13 @@ import '../payments/payments.dart';
 import '../payments/payments_screen.dart';
 import '../profile/profile.dart';
 import '../profile/profile_screen.dart';
-import '../records/mobile_quick_add_screen.dart';
+import '../reports/reports_screen.dart';
 import '../refresh/silent_refresh.dart';
 import '../session/session_controller.dart';
 import '../suppliers/suppliers.dart';
 import '../suppliers/suppliers_screen.dart';
 import '../ui/safecontracts_design.dart';
+import '../ui/theme_palette.dart';
 import 'navigation_policy.dart';
 
 final class SafeContractsShell extends StatefulWidget {
@@ -52,6 +53,7 @@ final class SafeContractsShell extends StatefulWidget {
     required this.profileController,
     required this.excelExportController,
     required this.pushRegistration,
+    required this.themePaletteController,
     required this.languageCode,
     required this.onLanguageChanged,
     required this.usingConfigDefaults,
@@ -71,6 +73,7 @@ final class SafeContractsShell extends StatefulWidget {
   final ProfileController profileController;
   final MobileExcelExportController excelExportController;
   final MobilePushRegistration pushRegistration;
+  final ThemePaletteController themePaletteController;
   final String languageCode;
   final ValueChanged<String> onLanguageChanged;
   final bool usingConfigDefaults;
@@ -160,6 +163,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
             setState(() => _liveRefreshRevision++);
           }
           break;
+        case MobileDestination.reports:
+          break;
         case MobileDestination.export:
           await widget.dashboardController.refreshSilently();
           shellSnapshotChanged = true;
@@ -191,7 +196,6 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     }
 
     final bottomDestinations = _bottomDestinations();
-    final quickAdds = availableMobileQuickAdds(widget.session);
     return Scaffold(
       backgroundColor: SafeContractsVisual.background,
       appBar: AppBar(
@@ -205,6 +209,14 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
             gradient: SafeContractsVisual.premiumHeaderGradient,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: l10n.isArabic ? 'تغيير لون الثيم' : 'Change theme color',
+            onPressed: () =>
+                unawaited(widget.themePaletteController.cycleAlternative()),
+            icon: const Icon(Icons.palette_outlined),
+          ),
+        ],
         title: Row(
           children: [
             Container(
@@ -243,70 +255,16 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           ],
         ),
       ),
-      drawer: NavigationDrawer(
-        backgroundColor: SafeContractsVisual.navyDeep,
-        selectedIndex: widget.policy.destinations.indexOf(_selected),
-        onDestinationSelected: (index) {
-          final destination = widget.policy.destinations[index];
+      drawer: _AlkenzyDrawer(
+        destinations: widget.policy.destinations,
+        selected: _selected,
+        paletteController: widget.themePaletteController,
+        labelFor: (destination) => _label(l10n, destination),
+        iconFor: _icon,
+        onSelected: (destination) {
           _selectDestination(destination);
           Navigator.of(context).pop();
         },
-        children: [
-          Container(
-            margin: const EdgeInsets.fromLTRB(12, 14, 12, 10),
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-            decoration: BoxDecoration(
-              gradient: SafeContractsVisual.premiumHeaderGradient,
-              borderRadius: BorderRadius.circular(SafeContractsVisual.radius),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x2B092944),
-                  blurRadius: 20,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const SafeContractsBrandMark(size: 48, borderRadius: 13),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        SafeContractsBrand.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.isArabic
-                            ? 'مساحة العمل التنفيذية'
-                            : 'Executive workspace',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.70),
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ...widget.policy.destinations.map(
-            (destination) => NavigationDrawerDestination(
-              icon: Icon(_icon(destination)),
-              selectedIcon: Icon(
-                _icon(destination),
-                color: SafeContractsVisual.navy,
-              ),
-              label: Text(_label(l10n, destination)),
-            ),
-          ),
-        ],
       ),
       body: SafeContractsBackdrop(
         child: Column(
@@ -346,13 +304,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           ],
         ),
       ),
-      floatingActionButton: quickAdds.isEmpty
-          ? null
-          : _QuickAddFab(
-              tooltip: l10n.isArabic ? 'إضافة جديدة' : 'Quick add',
-              onPressed: () => unawaited(_showQuickAdd(quickAdds)),
-            ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: null,
       bottomNavigationBar: bottomDestinations.isEmpty
           ? null
           : _SafeContractsBottomNavigation(
@@ -382,156 +334,90 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     final apiClient = widget.contractsController.repository.client;
     return switch (_selected) {
       MobileDestination.dashboard => DashboardContextScreen(
-          controller: widget.dashboardController,
-          currency: widget.config.currency,
-          onOpenPayments:
-              widget.policy.destinations.contains(MobileDestination.payments)
-                  ? () => _selectDestination(MobileDestination.payments)
-                  : null,
-        ),
+        controller: widget.dashboardController,
+        currency: widget.config.currency,
+        onOpenPayments:
+            widget.policy.destinations.contains(MobileDestination.payments)
+            ? () => _selectDestination(MobileDestination.payments)
+            : null,
+      ),
       MobileDestination.dashboardTwo => DashboardTwoScreen(
-          controller: widget.dashboardController,
-          currency: widget.config.currency,
-          onOpenPayments:
-              widget.policy.destinations.contains(MobileDestination.payments)
-                  ? () => _selectDestination(MobileDestination.payments)
-                  : null,
-          onOpenContract: _openContract,
-        ),
+        controller: widget.dashboardController,
+        currency: widget.config.currency,
+        onOpenPayments:
+            widget.policy.destinations.contains(MobileDestination.payments)
+            ? () => _selectDestination(MobileDestination.payments)
+            : null,
+        onOpenContract: _openContract,
+      ),
       MobileDestination.customers => CustomersScreen(
-          controller: widget.customersController,
-        ),
+        controller: widget.customersController,
+      ),
       MobileDestination.suppliers => SuppliersScreen(
-          controller: widget.suppliersController,
-        ),
+        controller: widget.suppliersController,
+      ),
       MobileDestination.contracts => ContractsScreen(
-          controller: widget.contractsController,
-          customers: widget.dashboardController.overview?.customers ??
-              const <CustomerOption>[],
-          currency: widget.config.currency,
-          onOpenContract: _openContract,
-        ),
+        controller: widget.contractsController,
+        customers:
+            widget.dashboardController.overview?.customers ??
+            const <CustomerOption>[],
+        currency: widget.config.currency,
+        onOpenContract: _openContract,
+      ),
       MobileDestination.payments => PaymentsScreen(
-          repository: PaymentsRepository(apiClient),
-          pageSize: widget.config.defaultPageSize,
-          filters: widget.dashboardController.filters,
-          currency: widget.config.currency,
-          canManagePayments:
-              widget.session.can('safecontracts_manage_payments'),
-          canEnterCollection: widget.policy.canEnterCollection,
-          refreshRevision: _liveRefreshRevision,
-        ),
+        repository: PaymentsRepository(apiClient),
+        pageSize: widget.config.defaultPageSize,
+        filters: widget.dashboardController.filters,
+        currency: widget.config.currency,
+        canManagePayments: widget.session.can('safecontracts_manage_payments'),
+        canEnterCollection: widget.policy.canEnterCollection,
+        refreshRevision: _liveRefreshRevision,
+      ),
       MobileDestination.collections => PaymentsScreen(
-          repository: PaymentsRepository(apiClient),
-          pageSize: widget.config.defaultPageSize,
-          filters: widget.dashboardController.filters,
-          currency: widget.config.currency,
-          canManagePayments:
-              widget.session.can('safecontracts_manage_payments'),
-          canEnterCollection: widget.policy.canEnterCollection,
-          refreshRevision: _liveRefreshRevision,
-        ),
+        repository: PaymentsRepository(apiClient),
+        pageSize: widget.config.defaultPageSize,
+        filters: widget.dashboardController.filters,
+        currency: widget.config.currency,
+        canManagePayments: widget.session.can('safecontracts_manage_payments'),
+        canEnterCollection: widget.policy.canEnterCollection,
+        refreshRevision: _liveRefreshRevision,
+      ),
       MobileDestination.finance => FinanceScreen(
-          controller: widget.financeController,
-        ),
+        controller: widget.financeController,
+      ),
       MobileDestination.followUps => FollowUpsScreen(
-          repository: FollowUpsRepository(apiClient),
-          pageSize: widget.config.defaultPageSize,
-          filters: widget.dashboardController.filters,
-          currency: widget.config.currency,
-          canManage: widget.policy.canManageFollowUps,
-          refreshRevision: _liveRefreshRevision,
-        ),
+        repository: FollowUpsRepository(apiClient),
+        pageSize: widget.config.defaultPageSize,
+        filters: widget.dashboardController.filters,
+        currency: widget.config.currency,
+        canManage: widget.policy.canManageFollowUps,
+        refreshRevision: _liveRefreshRevision,
+      ),
       MobileDestination.notifications => NotificationsScreen(
-          controller: widget.notificationsController,
-          onOpenDeepLink: _openDeepLink,
-        ),
+        controller: widget.notificationsController,
+        onOpenDeepLink: _openDeepLink,
+      ),
+      MobileDestination.reports => ReportsScreen(
+        repository: MobileReportsRepository(apiClient),
+      ),
       MobileDestination.export => MobileExcelExportScreen(
-          controller: widget.excelExportController,
-        ),
+        controller: widget.excelExportController,
+      ),
       MobileDestination.profile => ProfileScreen(
-          session: widget.session,
-          config: widget.config,
-          controller: widget.profileController,
-          pushRegistration: widget.pushRegistration,
-          languageCode: widget.languageCode,
-          onLanguageChanged: widget.onLanguageChanged,
-          onClearSession: widget.onClearSession,
-        ),
+        session: widget.session,
+        config: widget.config,
+        controller: widget.profileController,
+        pushRegistration: widget.pushRegistration,
+        languageCode: widget.languageCode,
+        onLanguageChanged: widget.onLanguageChanged,
+        onClearSession: widget.onClearSession,
+      ),
     };
   }
 
-  Future<void> _showQuickAdd(List<MobileQuickAddType> actions) async {
-    final selected = await showModalBottomSheet<MobileQuickAddType>(
-      context: context,
-      backgroundColor: SafeContractsVisual.surface,
-      showDragHandle: true,
-      useSafeArea: true,
-      builder: (sheetContext) => _QuickAddSheet(actions: actions),
-    );
-    if (!mounted || selected == null) return;
-
-    final created = await Navigator.of(context).push<bool>(
-      PageRouteBuilder<bool>(
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return MobileQuickAddScreen(
-            client: widget.contractsController.repository.client,
-            session: widget.session,
-            type: selected,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 280),
-        reverseTransitionDuration: const Duration(milliseconds: 210),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
-          return FadeTransition(
-            opacity: curved,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
-              child: child,
-            ),
-          );
-        },
-      ),
-    );
-    if (!mounted || created != true) return;
-
-    switch (selected) {
-      case MobileQuickAddType.customer:
-        unawaited(widget.customersController.refreshSilently());
-        break;
-      case MobileQuickAddType.supplier:
-        unawaited(widget.suppliersController.refreshSilently());
-        break;
-      case MobileQuickAddType.contract:
-        unawaited(widget.contractsController.refreshSilently());
-        break;
-      case MobileQuickAddType.payment:
-        setState(() => _liveRefreshRevision++);
-        break;
-    }
-    unawaited(widget.dashboardController.refreshSilently());
-    if (widget.financeController.canAccess) {
-      unawaited(widget.financeController.refreshSilently());
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          context.scL10n.isArabic
-              ? 'تمت الإضافة بنجاح.'
-              : 'Added successfully.',
-        ),
-      ),
-    );
-  }
-
   void _openContract(int contractId) {
-    final canOpenContractEditor = widget.contractsController.canEditContract ||
+    final canOpenContractEditor =
+        widget.contractsController.canEditContract ||
         widget.session.can('safecontracts_assign_contracts');
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -551,7 +437,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 
   void _openLegacyContract(int contractId) {
-    final canOpenContractEditor = widget.contractsController.canEditContract ||
+    final canOpenContractEditor =
+        widget.contractsController.canEditContract ||
         widget.session.can('safecontracts_assign_contracts');
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -601,185 +488,179 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 }
 
-final class _QuickAddFab extends StatefulWidget {
-  const _QuickAddFab({required this.tooltip, required this.onPressed});
+final class _AlkenzyDrawer extends StatelessWidget {
+  const _AlkenzyDrawer({
+    required this.destinations,
+    required this.selected,
+    required this.paletteController,
+    required this.labelFor,
+    required this.iconFor,
+    required this.onSelected,
+  });
 
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  State<_QuickAddFab> createState() => _QuickAddFabState();
-}
-
-final class _QuickAddFabState extends State<_QuickAddFab>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 430),
-    );
-    _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final List<MobileDestination> destinations;
+  final MobileDestination selected;
+  final ThemePaletteController paletteController;
+  final String Function(MobileDestination destination) labelFor;
+  final IconData Function(MobileDestination destination) iconFor;
+  final ValueChanged<MobileDestination> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scale,
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: SafeContractsVisual.roseGoldSoft,
-            width: 3,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: SafeContractsVisual.roseGold.withValues(alpha: 0.30),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
+    const cream = Color(0xFFF1F0DE);
+    const drawerNavy = Color(0xFF07304F);
+    final ar = context.scL10n.isArabic;
+    return Drawer(
+      width: MediaQuery.sizeOf(context).width * 0.84,
+      backgroundColor: drawerNavy,
+      surfaceTintColor: Colors.transparent,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0D496F),
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: Row(
+                children: [
+                  const SafeContractsBrandMark(size: 58, borderRadius: 16),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          SafeContractsBrand.name,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        Text(
+                          ar ? 'مساحة العمل التنفيذية' : 'Executive workspace',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: Colors.white60),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+                itemCount: destinations.length,
+                itemBuilder: (context, index) {
+                  final destination = destinations[index];
+                  final active = destination == selected;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Material(
+                      color: active
+                          ? const Color(0xFF536A7A).withValues(alpha: 0.72)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(28),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(28),
+                        onTap: () => onSelected(destination),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 13,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                iconFor(destination),
+                                color: cream,
+                                size: 27,
+                              ),
+                              const SizedBox(width: 18),
+                              Expanded(
+                                child: Text(
+                                  labelFor(destination),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        color: cream,
+                                        fontWeight: active
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            AnimatedBuilder(
+              animation: paletteController,
+              builder: (context, child) => Container(
+                margin: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.palette_outlined, color: cream),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        ar ? 'لون الثيم' : 'Theme color',
+                        style: const TextStyle(
+                          color: cream,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    for (final palette in AlkenzyThemePalette.values)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 5),
+                        child: Tooltip(
+                          message: palette.label(ar),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(99),
+                            onTap: () => unawaited(
+                              paletteController.setPalette(palette),
+                            ),
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: palette.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: paletteController.palette == palette
+                                      ? cream
+                                      : Colors.white24,
+                                  width: paletteController.palette == palette
+                                      ? 2.5
+                                      : 1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-        child: FloatingActionButton(
-          tooltip: widget.tooltip,
-          onPressed: widget.onPressed,
-          backgroundColor: SafeContractsVisual.roseGold,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          child: const Icon(Icons.add_rounded, size: 34),
-        ),
-      ),
-    );
-  }
-}
-
-final class _QuickAddSheet extends StatelessWidget {
-  const _QuickAddSheet({required this.actions});
-
-  final List<MobileQuickAddType> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    final arabic = context.scL10n.isArabic;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            arabic ? 'إضافة جديدة' : 'Quick add',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: SafeContractsVisual.navy,
-                  fontWeight: FontWeight.w900,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            arabic
-                ? 'المتاح هنا حسب صلاحيات الإضافة الخاصة بحسابك.'
-                : 'Only create actions allowed for your account appear here.',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: SafeContractsVisual.muted),
-          ),
-          const SizedBox(height: 16),
-          ...actions.indexed.map((entry) {
-            final index = entry.$1;
-            final action = entry.$2;
-            return TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: 1),
-              duration: Duration(milliseconds: 220 + (index * 70)),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: Transform.translate(
-                    offset: Offset(0, 12 * (1 - value)),
-                    child: child,
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Material(
-                  color: SafeContractsVisual.backgroundRaised,
-                  borderRadius: BorderRadius.circular(18),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () => Navigator.of(context).pop(action),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: SafeContractsVisual.roseGoldSoft,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Icon(
-                              mobileQuickAddIcon(action),
-                              color: SafeContractsVisual.navy,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  mobileQuickAddLabel(context, action),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  mobileQuickAddDescription(context, action),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: SafeContractsVisual.muted,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Directionality.of(context) == TextDirection.rtl
-                                ? Icons.chevron_left_rounded
-                                : Icons.chevron_right_rounded,
-                            color: SafeContractsVisual.roseGoldDark,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ],
       ),
     );
   }
@@ -805,9 +686,7 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
       child: DecoratedBox(
         decoration: const BoxDecoration(
           color: SafeContractsVisual.surface,
-          border: Border(
-            top: BorderSide(color: SafeContractsVisual.outline),
-          ),
+          border: Border(top: BorderSide(color: SafeContractsVisual.outline)),
           boxShadow: [
             BoxShadow(
               color: Color(0x205E5142),
@@ -819,45 +698,46 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(6, 8, 6, 6),
           child: Row(
-            children: destinations.map((destination) {
-              final isSelected = destination == selected;
-              return Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => onSelected(destination),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? SafeContractsVisual.roseGoldSoft.withValues(
-                              alpha: 0.86,
-                            )
-                          : Colors.transparent,
+            children: destinations
+                .map((destination) {
+                  final isSelected = destination == selected;
+                  return Expanded(
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedScale(
-                          scale: isSelected ? 1.08 : 1,
-                          duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeOutBack,
-                          child: Icon(
-                            _icon(destination),
-                            color: isSelected
-                                ? SafeContractsVisual.navy
-                                : SafeContractsVisual.muted,
-                          ),
+                      onTap: () => onSelected(destination),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? SafeContractsVisual.roseGoldSoft.withValues(
+                                  alpha: 0.86,
+                                )
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          labelFor(destination),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedScale(
+                              scale: isSelected ? 1.08 : 1,
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutBack,
+                              child: Icon(
+                                _icon(destination),
+                                color: isSelected
+                                    ? SafeContractsVisual.navy
+                                    : SafeContractsVisual.muted,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              labelFor(destination),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
                                     color: isSelected
                                         ? SafeContractsVisual.navy
                                         : SafeContractsVisual.muted,
@@ -865,13 +745,14 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
                                         ? FontWeight.w800
                                         : FontWeight.w500,
                                   ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(growable: false),
+                  );
+                })
+                .toList(growable: false),
           ),
         ),
       ),
@@ -881,7 +762,7 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
 
 String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
   if (destination == MobileDestination.dashboardTwo) {
-    return l10n.isArabic ? 'لوحة تحكم اتنين' : 'Dashboard Two';
+    return l10n.isArabic ? 'تبويب لوحة التحكم' : 'Dashboard Tab';
   }
   return l10n.t(switch (destination) {
     MobileDestination.dashboard => 'Dashboard',
@@ -894,6 +775,7 @@ String _label(SafeContractsLocalizations l10n, MobileDestination destination) {
     MobileDestination.collections => 'Collections',
     MobileDestination.followUps => 'Follow-up',
     MobileDestination.notifications => 'Notifications',
+    MobileDestination.reports => l10n.isArabic ? 'التقارير' : 'Reports',
     MobileDestination.export => 'Excel export',
     MobileDestination.profile => 'Profile',
   });
@@ -911,6 +793,7 @@ IconData _icon(MobileDestination destination) {
     MobileDestination.collections => Icons.payments_outlined,
     MobileDestination.followUps => Icons.timeline_outlined,
     MobileDestination.notifications => Icons.notifications_outlined,
+    MobileDestination.reports => Icons.analytics_outlined,
     MobileDestination.export => Icons.file_download_outlined,
     MobileDestination.profile => Icons.person_outline,
   };

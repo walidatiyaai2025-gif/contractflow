@@ -8,6 +8,7 @@ import '../../core/widgets/compact_pagination.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_models.dart';
 import '../suppliers/suppliers.dart';
+import '../reports/report_printing.dart';
 import '../ui/safecontracts_design.dart';
 import 'contract_media.dart';
 import 'contracts.dart';
@@ -150,6 +151,7 @@ final class _ContractsScreenState extends State<ContractsScreen> {
                 onCreate: widget.controller.canCreateContract
                     ? () => unawaited(_openCreate())
                     : null,
+                report: _contractsReport(context, contracts),
               ),
               Expanded(
                 child: _ContractsContent(
@@ -177,6 +179,7 @@ final class _ContractsHeader extends StatelessWidget {
     required this.onSearchChanged,
     required this.onClearSearch,
     required this.onCreate,
+    required this.report,
   });
 
   final ContractsController controller;
@@ -186,6 +189,7 @@ final class _ContractsHeader extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onClearSearch;
   final VoidCallback? onCreate;
+  final ReportGrid report;
 
   @override
   Widget build(BuildContext context) {
@@ -251,8 +255,10 @@ final class _ContractsHeader extends StatelessWidget {
                                 IconButton(
                                   tooltip: ar ? 'مسح البحث' : 'Clear search',
                                   onPressed: busy ? null : onClearSearch,
-                                  icon:
-                                      const Icon(Icons.close_rounded, size: 18),
+                                  icon: const Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                  ),
                                 ),
                             ],
                           ),
@@ -265,8 +271,9 @@ final class _ContractsHeader extends StatelessWidget {
                           enabled: !busy,
                           compact: narrow,
                           onSelected: (value) => unawaited(
-                            controller
-                                .selectCustomer(value == 0 ? null : value),
+                            controller.selectCustomer(
+                              value == 0 ? null : value,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 5),
@@ -314,12 +321,10 @@ final class _ContractsHeader extends StatelessWidget {
                         onChanged: busy
                             ? null
                             : (value) => unawaited(
-                                  controller.selectCounterpartyType(
-                                    value == null || value.isEmpty
-                                        ? null
-                                        : value,
-                                  ),
+                                controller.selectCounterpartyType(
+                                  value == null || value.isEmpty ? null : value,
                                 ),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -355,19 +360,20 @@ final class _ContractsHeader extends StatelessWidget {
                         onChanged: busy
                             ? null
                             : (value) => unawaited(
-                                  controller.selectStatus(
-                                    value == null || value.isEmpty
-                                        ? null
-                                        : value,
-                                  ),
+                                controller.selectStatus(
+                                  value == null || value.isEmpty ? null : value,
                                 ),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 4),
+                    GridPrintButton(report: report, busy: busy, compact: true),
+                    const SizedBox(width: 4),
                     IconButton.filledTonal(
                       tooltip: context.scL10n.t('Refresh contracts'),
-                      onPressed:
-                          busy ? null : () => unawaited(controller.refresh()),
+                      onPressed: busy
+                          ? null
+                          : () => unawaited(controller.refresh()),
                       icon: const Icon(Icons.refresh_rounded, size: 19),
                     ),
                     if (controller.activeFilterCount > 0) ...[
@@ -377,8 +383,10 @@ final class _ContractsHeader extends StatelessWidget {
                         onPressed: busy
                             ? null
                             : () => unawaited(controller.clearFilters()),
-                        icon:
-                            const Icon(Icons.filter_alt_off_outlined, size: 19),
+                        icon: const Icon(
+                          Icons.filter_alt_off_outlined,
+                          size: 19,
+                        ),
                       ),
                     ],
                   ],
@@ -422,7 +430,9 @@ final class _CustomerFilterMenu extends StatelessWidget {
       onSelected: onSelected,
       itemBuilder: (context) => [
         PopupMenuItem(
-            value: 0, child: Text(ar ? 'كل العملاء' : 'All customers')),
+          value: 0,
+          child: Text(ar ? 'كل العملاء' : 'All customers'),
+        ),
         for (final customer in customers)
           PopupMenuItem(
             value: customer.id,
@@ -509,15 +519,64 @@ final class _ToolbarAction extends StatelessWidget {
             Text(
               label!,
               maxLines: 1,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ],
       ),
     );
   }
+}
+
+ReportGrid _contractsReport(
+  BuildContext context,
+  List<SafeContractsContract> contracts,
+) {
+  final ar = context.scL10n.isArabic;
+  return ReportGrid(
+    title: ar ? 'العقود المعروضة' : 'Visible contracts',
+    fileStem: 'contracts_grid',
+    columns: ar
+        ? const [
+            'العقد',
+            'الطرف',
+            'النوع',
+            'الاتجاه',
+            'القيمة',
+            'العملة',
+            'الحالة',
+            'البداية',
+            'النهاية',
+          ]
+        : const [
+            'Contract',
+            'Counterparty',
+            'Type',
+            'Direction',
+            'Value',
+            'Currency',
+            'Status',
+            'Start',
+            'End',
+          ],
+    rows: contracts
+        .map(
+          (item) => [
+            item.contractNumber,
+            item.displayCounterparty,
+            item.counterpartyType,
+            item.financialDirection,
+            item.baseValue ?? '',
+            item.currencyCode,
+            context.scL10n.status(item.status),
+            item.startDate ?? '',
+            item.endDate ?? '',
+          ],
+        )
+        .toList(growable: false),
+  );
 }
 
 final class _ContractsContent extends StatelessWidget {
@@ -567,8 +626,8 @@ final class _ContractsContent extends StatelessWidget {
               icon: Icons.manage_search_rounded,
               message: hasSearch
                   ? (context.scL10n.isArabic
-                      ? 'لا توجد عقود تطابق البحث الحالي.'
-                      : 'No contracts match the current search.')
+                        ? 'لا توجد عقود تطابق البحث الحالي.'
+                        : 'No contracts match the current search.')
                   : context.scL10n.t('No contracts match the current filters.'),
               action: controller.refresh,
             ),
@@ -663,8 +722,8 @@ final class _InlineLoadError extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                      ),
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
                 ),
               ),
               TextButton(
@@ -751,8 +810,8 @@ final class _ContractCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SafeContractsVisual.muted,
-                            ),
+                          color: SafeContractsVisual.muted,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -790,10 +849,8 @@ final class _ContractCard extends StatelessWidget {
                           ].join(' • '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: SafeContractsVisual.muted,
-                                  ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: SafeContractsVisual.muted),
                         ),
                       if (progress != null) ...[
                         const SizedBox(height: 7),
@@ -872,7 +929,7 @@ final class _NeutralContractPlaceholder extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             SafeContractsVisual.navySoft,
-            SafeContractsVisual.surfaceWarm
+            SafeContractsVisual.surfaceWarm,
           ],
         ),
       ),
@@ -888,8 +945,10 @@ final class _NeutralContractPlaceholder extends StatelessWidget {
 }
 
 final class _ContractCreateSheet extends StatefulWidget {
-  const _ContractCreateSheet(
-      {required this.controller, required this.customers});
+  const _ContractCreateSheet({
+    required this.controller,
+    required this.customers,
+  });
   final ContractsController controller;
   final List<CustomerOption> customers;
 
@@ -967,11 +1026,11 @@ final class _ContractCreateSheetState extends State<_ContractCreateSheet> {
     final supplier = _type == 'supplier';
     final options = supplier
         ? _suppliers
-            .map((item) => (id: item.id, name: item.displayName))
-            .toList(growable: false)
+              .map((item) => (id: item.id, name: item.displayName))
+              .toList(growable: false)
         : widget.customers
-            .map((item) => (id: item.id, name: item.name))
-            .toList(growable: false);
+              .map((item) => (id: item.id, name: item.name))
+              .toList(growable: false);
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -1049,8 +1108,9 @@ final class _ContractCreateSheetState extends State<_ContractCreateSheet> {
               const SizedBox(height: 10),
               TextFormField(
                 controller: _value,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
                   labelText: ar ? 'قيمة العقد *' : 'Contract value *',
                 ),
@@ -1058,8 +1118,8 @@ final class _ContractCreateSheetState extends State<_ContractCreateSheet> {
                   final parsed = num.tryParse(value?.trim() ?? '');
                   return parsed == null || parsed <= 0
                       ? (ar
-                          ? 'أدخل قيمة أكبر من صفر.'
-                          : 'Enter a value greater than zero.')
+                            ? 'أدخل قيمة أكبر من صفر.'
+                            : 'Enter a value greater than zero.')
                       : null;
                 },
               ),
@@ -1087,8 +1147,9 @@ final class _ContractCreateSheetState extends State<_ContractCreateSheet> {
                 minLines: 2,
                 maxLines: 4,
                 maxLength: 5000,
-                decoration:
-                    InputDecoration(labelText: ar ? 'ملاحظات' : 'Notes'),
+                decoration: InputDecoration(
+                  labelText: ar ? 'ملاحظات' : 'Notes',
+                ),
               ),
               const SizedBox(height: 10),
               FilledButton.icon(
@@ -1137,8 +1198,9 @@ final class _Pagination extends StatelessWidget {
         isLoading: controller.pageRequestInFlight,
         previousLabel: context.scL10n.t('Previous'),
         nextLabel: context.scL10n.t('Next'),
-        onPrevious:
-            page.page <= 1 ? null : () => unawaited(controller.previousPage()),
+        onPrevious: page.page <= 1
+            ? null
+            : () => unawaited(controller.previousPage()),
         onNext: page.page >= page.totalPages
             ? null
             : () => unawaited(controller.nextPage()),
@@ -1166,18 +1228,22 @@ final class _StatusPill extends StatelessWidget {
         context.scL10n.status(status),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style:
-            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800),
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
 }
 
 final class _InfoPill extends StatelessWidget {
-  const _InfoPill(
-      {required this.icon,
-      required this.label,
-      this.color = SafeContractsVisual.navy});
+  const _InfoPill({
+    required this.icon,
+    required this.label,
+    this.color = SafeContractsVisual.navy,
+  });
   final IconData icon;
   final String label;
   final Color color;
@@ -1202,7 +1268,10 @@ final class _InfoPill extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  color: color, fontSize: 11, fontWeight: FontWeight.w800),
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],

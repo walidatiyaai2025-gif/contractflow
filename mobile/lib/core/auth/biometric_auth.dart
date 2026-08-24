@@ -8,8 +8,8 @@ final class BiometricAuthService {
   BiometricAuthService({
     LocalAuthentication? localAuthentication,
     FlutterSecureStorage? storage,
-  })  : _localAuthentication = localAuthentication ?? LocalAuthentication(),
-        _storage = storage ?? const FlutterSecureStorage();
+  }) : _localAuthentication = localAuthentication ?? LocalAuthentication(),
+       _storage = storage ?? const FlutterSecureStorage();
 
   final LocalAuthentication _localAuthentication;
   final FlutterSecureStorage _storage;
@@ -23,9 +23,9 @@ final class BiometricAuthService {
   }
 
   Future<void> setEnabled(bool value) => _storage.write(
-        key: _biometricEnabledKey,
-        value: value ? 'true' : 'false',
-      );
+    key: _biometricEnabledKey,
+    value: value ? 'true' : 'false',
+  );
 
   Future<bool> isAvailable() async {
     try {
@@ -57,11 +57,11 @@ final class BiometricAuthService {
       final authenticated = await _localAuthentication.authenticate(
         localizedReason: isArabic
             ? (enrollment
-                ? 'أكد بصمتك لتفعيل الدخول بالبصمة إلى Alkenzy ADV.'
-                : 'استخدم بصمتك للدخول إلى Alkenzy ADV.')
+                  ? 'أكد بصمتك لتفعيل الدخول بالبصمة إلى Alkenzy ADV.'
+                  : 'استخدم بصمتك للدخول إلى Alkenzy ADV.')
             : (enrollment
-                ? 'Confirm your fingerprint to enable biometric sign in to Alkenzy ADV.'
-                : 'Use your fingerprint to sign in to Alkenzy ADV.'),
+                  ? 'Confirm your fingerprint to enable biometric sign in to Alkenzy ADV.'
+                  : 'Use your fingerprint to sign in to Alkenzy ADV.'),
         biometricOnly: true,
         sensitiveTransaction: true,
         persistAcrossBackgrounding: true,

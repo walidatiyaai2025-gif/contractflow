@@ -91,7 +91,11 @@ const mobileReportDefinitions = <MobileReportDefinition>[
       ReportColumnDefinition('contract_number', 'Contract', 'العقد'),
       ReportColumnDefinition('counterparty_name', 'Counterparty', 'الطرف'),
       ReportColumnDefinition('counterparty_type', 'Type', 'النوع'),
-      ReportColumnDefinition('financial_direction', 'Direction', 'الاتجاه المالي'),
+      ReportColumnDefinition(
+        'financial_direction',
+        'Direction',
+        'الاتجاه المالي',
+      ),
       ReportColumnDefinition('base_value', 'Value', 'القيمة'),
       ReportColumnDefinition('currency_code', 'Currency', 'العملة'),
       ReportColumnDefinition('status', 'Status', 'الحالة'),
@@ -133,7 +137,11 @@ const mobileReportDefinitions = <MobileReportDefinition>[
       ReportColumnDefinition('counterparty_name', 'Counterparty', 'الطرف'),
       ReportColumnDefinition('amount', 'Amount', 'المبلغ'),
       ReportColumnDefinition('currency_code', 'Currency', 'العملة'),
-      ReportColumnDefinition('collection_date', 'Collection date', 'تاريخ التحصيل'),
+      ReportColumnDefinition(
+        'collection_date',
+        'Collection date',
+        'تاريخ التحصيل',
+      ),
       ReportColumnDefinition('payment_method_name', 'Method', 'الطريقة'),
     ],
   ),
@@ -148,10 +156,18 @@ const mobileReportDefinitions = <MobileReportDefinition>[
       ReportColumnDefinition('payment_id', 'Payment', 'الدفعة'),
       ReportColumnDefinition('reference', 'Reference', 'المرجع'),
       ReportColumnDefinition('due_date', 'Due date', 'الاستحقاق'),
-      ReportColumnDefinition('expected_payment_date', 'Expected date', 'التاريخ المتوقع'),
+      ReportColumnDefinition(
+        'expected_payment_date',
+        'Expected date',
+        'التاريخ المتوقع',
+      ),
       ReportColumnDefinition('remaining_amount', 'Remaining', 'المتبقي'),
       ReportColumnDefinition('status', 'Status', 'الحالة'),
-      ReportColumnDefinition('followup_state', 'Follow-up state', 'حالة المتابعة'),
+      ReportColumnDefinition(
+        'followup_state',
+        'Follow-up state',
+        'حالة المتابعة',
+      ),
     ],
   ),
   MobileReportDefinition(
@@ -198,9 +214,16 @@ final class MobileReportsRepository {
   }) async {
     final rows = <Map<String, Object?>>[];
     if (!definition.paged) {
-      final envelope = await client.get(definition.endpoint, query: definition.query);
-      rows.addAll(apiObjectList(envelope.data, 'reports.${definition.id}')
-          .map((row) => Map<String, Object?>.from(row)));
+      final envelope = await client.get(
+        definition.endpoint,
+        query: definition.query,
+      );
+      rows.addAll(
+        apiObjectList(
+          envelope.data,
+          'reports.${definition.id}',
+        ).map((row) => apiObjectMap(row, 'reports.${definition.id}.row')),
+      );
     } else {
       var page = 1;
       while (page <= 100) {
@@ -210,8 +233,12 @@ final class MobileReportsRepository {
           'per_page': '100',
         };
         final envelope = await client.get(definition.endpoint, query: query);
-        rows.addAll(apiObjectList(envelope.data, 'reports.${definition.id}')
-            .map((row) => Map<String, Object?>.from(row)));
+        rows.addAll(
+          apiObjectList(
+            envelope.data,
+            'reports.${definition.id}',
+          ).map((row) => apiObjectMap(row, 'reports.${definition.id}.row')),
+        );
         final meta = envelope.meta;
         final hasMore = _boolish(meta['has_more']);
         if (!hasMore) break;
@@ -224,7 +251,9 @@ final class MobileReportsRepository {
           ? 'بيانات فعلية من SafeContracts حسب صلاحيات المستخدم.'
           : 'Live SafeContracts data within the signed-in user scope.',
       fileStem: 'alkenzy_${definition.id}',
-      columns: definition.columns.map((column) => column.label(isArabic)).toList(),
+      columns: definition.columns
+          .map((column) => column.label(isArabic))
+          .toList(),
       rows: rows
           .map(
             (row) => definition.columns
@@ -326,8 +355,12 @@ final class _ReportsScreenState extends State<ReportsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          foregroundColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
                           child: Icon(definition.icon),
                         ),
                         const Spacer(),
@@ -335,9 +368,8 @@ final class _ReportsScreenState extends State<ReportsScreen> {
                           definition.title(ar),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 6),
                         if (loading)
@@ -345,7 +377,8 @@ final class _ReportsScreenState extends State<ReportsScreen> {
                         else
                           Text(
                             ar ? 'فتح التقرير' : 'Open report',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
                                   color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -366,7 +399,9 @@ final class _ReportsScreenState extends State<ReportsScreen> {
                 padding: const EdgeInsets.all(12),
                 child: Text(
                   context.scL10n.rawMessage(_error!),
-                  style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
                 ),
               ),
             ),
@@ -387,9 +422,8 @@ final class _ReportsScreenState extends State<ReportsScreen> {
                           children: [
                             Text(
                               _loadedReport!.title,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w900),
                             ),
                             Text(
                               ar
@@ -405,7 +439,11 @@ final class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                   const SizedBox(height: 12),
                   if (_loadedReport!.rows.isEmpty)
-                    Text(ar ? 'لا توجد بيانات متاحة لهذا التقرير.' : 'No data is available for this report.')
+                    Text(
+                      ar
+                          ? 'لا توجد بيانات متاحة لهذا التقرير.'
+                          : 'No data is available for this report.',
+                    )
                   else
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -419,7 +457,9 @@ final class _ReportsScreenState extends State<ReportsScreen> {
                               (row) => DataRow(
                                 cells: List.generate(
                                   _loadedReport!.columns.length,
-                                  (index) => DataCell(Text(index < row.length ? row[index] : '')),
+                                  (index) => DataCell(
+                                    Text(index < row.length ? row[index] : ''),
+                                  ),
                                 ),
                               ),
                             )

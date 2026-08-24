@@ -56,7 +56,8 @@ final class SafeContractsPayment {
         'payment.customer_id',
       ),
       customerName: _optionalText(data['customer_name']),
-      counterpartyName: _optionalText(data['counterparty_name']) ??
+      counterpartyName:
+          _optionalText(data['counterparty_name']) ??
           _optionalText(data['supplier_name']) ??
           _optionalText(data['customer_name']),
       accountantUserId: _optionalPositiveInt(
@@ -67,11 +68,15 @@ final class SafeContractsPayment {
       reference: _optionalText(data['reference']),
       dueDate: _requiredText(data['due_date'], 'payment.due_date'),
       expectedPaymentDate: _optionalText(data['expected_payment_date']),
-      originalAmount:
-          _moneyText(data['original_amount'], 'payment.original_amount'),
+      originalAmount: _moneyText(
+        data['original_amount'],
+        'payment.original_amount',
+      ),
       paidAmount: _moneyText(data['paid_amount'], 'payment.paid_amount'),
-      remainingAmount:
-          _moneyText(data['remaining_amount'], 'payment.remaining_amount'),
+      remainingAmount: _moneyText(
+        data['remaining_amount'],
+        'payment.remaining_amount',
+      ),
       status: _requiredText(data['status'], 'payment.status'),
       contractIsArchived: _boolish(
         data['contract_is_archived'],
@@ -111,7 +116,7 @@ final class PaymentPage {
     }
     return PaymentPage(
       payments: List<SafeContractsPayment>.unmodifiable(payments),
-      page: _boundedInt(meta['page'], 'meta.page', 1, 5),
+      page: _boundedInt(meta['page'], 'meta.page', 1, 1000000),
       perPage: _boundedInt(meta['per_page'], 'meta.per_page', 1, 100),
       hasMore: _boolish(meta['has_more'], 'meta.has_more'),
       sort: _requiredText(meta['sort'], 'meta.sort'),
@@ -157,8 +162,10 @@ final class CollectionReceipt {
     final data = apiObjectMap(value, 'collection_receipt');
     return CollectionReceipt(
       id: _positiveInt(data['id'], 'collection_receipt.id'),
-      paymentId:
-          _positiveInt(data['payment_id'], 'collection_receipt.payment_id'),
+      paymentId: _positiveInt(
+        data['payment_id'],
+        'collection_receipt.payment_id',
+      ),
     );
   }
 }
@@ -173,8 +180,10 @@ final class PaymentsRepository {
     required int perPage,
     required DashboardFilters filters,
   }) async {
-    if (page < 1 || page > 5) {
-      throw ArgumentError('Payment page must be between 1 and 5.');
+    if (page < 1 || page > 1000000) {
+      throw ArgumentError(
+        'Payment page is outside the supported server range.',
+      );
     }
     filters.validate();
     final envelope = await client.get(
@@ -253,8 +262,11 @@ final class PaymentsRepository {
       );
     }
     final normalizedDate = _requiredDate(collectionDate, 'collection date');
-    final normalizedReference =
-        _boundedOptionalText(reference, 191, 'reference');
+    final normalizedReference = _boundedOptionalText(
+      reference,
+      191,
+      'reference',
+    );
     if (proofMediaId != null && proofMediaId <= 0) {
       throw ArgumentError('Proof media ID must be positive when supplied.');
     }
@@ -344,17 +356,17 @@ String _moneyText(Object? value, String field) {
   if (value is! String ||
       !RegExp(r'^\d+(?:\.\d{4})$').hasMatch(value) ||
       value.length > 40) {
-    throw FormatException(
-      '$field must be an exact four-decimal money string.',
-    );
+    throw FormatException('$field must be an exact four-decimal money string.');
   }
   return value;
 }
 
 String _financialDirection(Object? value) {
   if (value == null || value == '') return 'receivable';
-  final direction =
-      _requiredText(value, 'payment.financial_direction').toLowerCase();
+  final direction = _requiredText(
+    value,
+    'payment.financial_direction',
+  ).toLowerCase();
   if (direction != 'receivable' && direction != 'payable') {
     throw const FormatException('payment.financial_direction is invalid.');
   }

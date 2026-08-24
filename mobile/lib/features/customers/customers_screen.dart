@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../contracts/counterparty_business_snapshot.dart';
 import '../contracts/contracts.dart';
+import '../reports/report_printing.dart';
 import '../ui/safecontracts_design.dart';
 import 'customers.dart';
 
@@ -48,16 +49,18 @@ final class _CustomersScreenState extends State<CustomersScreen> {
     final customers = widget.controller.currentPage?.customers ?? const [];
     final query = _query.trim().toLowerCase();
     if (query.isEmpty) return customers;
-    return customers.where((customer) {
-      final values = <String?>[
-        customer.name,
-        customer.internalCode,
-        customer.contactName,
-        customer.email,
-        customer.phone,
-      ].whereType<String>().join(' ').toLowerCase();
-      return values.contains(query);
-    }).toList(growable: false);
+    return customers
+        .where((customer) {
+          final values = <String?>[
+            customer.name,
+            customer.internalCode,
+            customer.contactName,
+            customer.email,
+            customer.phone,
+          ].whereType<String>().join(' ').toLowerCase();
+          return values.contains(query);
+        })
+        .toList(growable: false);
   }
 
   Future<void> _openEditor([SafeContractsCustomer? customer]) async {
@@ -120,6 +123,7 @@ final class _CustomersScreenState extends State<CustomersScreen> {
                       onCreate: widget.controller.canCreate
                           ? () => unawaited(_openEditor())
                           : null,
+                      report: _customersReport(context, visible),
                     ),
                   Expanded(
                     child: _CustomerBody(
@@ -149,6 +153,7 @@ final class _CustomerHeader extends StatelessWidget {
     required this.onQueryChanged,
     required this.onClear,
     required this.onCreate,
+    required this.report,
   });
 
   final CustomersController controller;
@@ -158,11 +163,13 @@ final class _CustomerHeader extends StatelessWidget {
   final ValueChanged<String> onQueryChanged;
   final VoidCallback onClear;
   final VoidCallback? onCreate;
+  final ReportGrid report;
 
   @override
   Widget build(BuildContext context) {
     final ar = context.scL10n.isArabic;
-    final busy = controller.state == CustomersLoadState.loading ||
+    final busy =
+        controller.state == CustomersLoadState.loading ||
         controller.mutationInFlight;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
@@ -231,10 +238,12 @@ final class _CustomerHeader extends StatelessWidget {
                           ? null
                           : (_) => unawaited(controller.setOrder('desc')),
                     ),
+                    GridPrintButton(report: report, busy: busy, compact: true),
                     IconButton.filledTonal(
                       tooltip: context.scL10n.t('Refresh customers'),
-                      onPressed:
-                          busy ? null : () => unawaited(controller.refresh()),
+                      onPressed: busy
+                          ? null
+                          : () => unawaited(controller.refresh()),
                       icon: const Icon(Icons.refresh_rounded),
                     ),
                     if (onCreate != null)
@@ -252,6 +261,54 @@ final class _CustomerHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+ReportGrid _customersReport(
+  BuildContext context,
+  List<SafeContractsCustomer> customers,
+) {
+  final ar = context.scL10n.isArabic;
+  return ReportGrid(
+    title: ar ? 'العملاء المعروضون' : 'Visible customers',
+    fileStem: 'customers_grid',
+    columns: ar
+        ? const [
+            'الرقم',
+            'الكود',
+            'العميل',
+            'جهة الاتصال',
+            'الهاتف',
+            'البريد',
+            'الحالة',
+          ]
+        : const [
+            'ID',
+            'Code',
+            'Customer',
+            'Contact',
+            'Phone',
+            'Email',
+            'Status',
+          ],
+    rows: customers
+        .map(
+          (item) => [
+            '${item.id}',
+            item.internalCode ?? '',
+            item.name,
+            item.contactName ?? '',
+            _customerPhoneForDisplay(item.phone),
+            item.email ?? '',
+            context.scL10n.status(item.isActive ? 'active' : 'inactive'),
+          ],
+        )
+        .toList(growable: false),
+  );
+}
+
+String _customerPhoneForDisplay(String? value) {
+  final text = value?.trim() ?? '';
+  return text.replaceFirst(RegExp(r'\s+\+500$'), '').trim();
 }
 
 final class _CustomerBody extends StatelessWidget {
@@ -338,8 +395,8 @@ final class _CustomerList extends StatelessWidget {
         icon: Icons.manage_search_rounded,
         message: hasQuery
             ? (context.scL10n.isArabic
-                ? 'لا توجد نتائج مطابقة في الصفحة الحالية.'
-                : 'No matching customers on this page.')
+                  ? 'لا توجد نتائج مطابقة في الصفحة الحالية.'
+                  : 'No matching customers on this page.')
             : context.scL10n.t('No customers are available in your scope.'),
         action: controller.refresh,
       );
@@ -397,7 +454,7 @@ final class _CustomerCard extends StatelessWidget {
         : SafeContractsVisual.muted;
     final detail = <String>[
       if (customer.contactName != null) customer.contactName!,
-      if (customer.phone != null) customer.phone!,
+      if (customer.phone != null) _customerPhoneForDisplay(customer.phone),
       if (customer.internalCode != null) customer.internalCode!,
     ].join(' • ');
     return Material(
@@ -409,8 +466,9 @@ final class _CustomerCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            borderRadius:
-                BorderRadius.circular(SafeContractsVisual.compactRadius),
+            borderRadius: BorderRadius.circular(
+              SafeContractsVisual.compactRadius,
+            ),
             border: Border.all(
               color: selected
                   ? SafeContractsVisual.roseGold
@@ -455,8 +513,8 @@ final class _CustomerCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SafeContractsVisual.muted,
-                            ),
+                          color: SafeContractsVisual.muted,
+                        ),
                       ),
                     ],
                   ],
@@ -541,9 +599,7 @@ final class _CustomerDetailState extends State<_CustomerDetail> {
             alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
               onPressed: controller.closeCustomer,
-              icon: const Icon(
-                Icons.arrow_back_rounded,
-              ),
+              icon: const Icon(Icons.arrow_back_rounded),
               label: Text(context.scL10n.isArabic ? 'العملاء' : 'Customers'),
             ),
           ),
@@ -577,10 +633,7 @@ final class _CustomerDetailState extends State<_CustomerDetail> {
                       : 'Unable to load this customer’s linked business data.',
                 );
               }
-              return _BusinessSnapshot(
-                value: snapshot.data!,
-                supplier: false,
-              );
+              return _BusinessSnapshot(value: snapshot.data!, supplier: false);
             },
           ),
         ],
@@ -631,9 +684,9 @@ final class _CustomerHero extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 if (customer.internalCode != null)
                   Text(
@@ -671,17 +724,17 @@ final class _ContactPanel extends StatelessWidget {
       (
         icon: Icons.person_outline,
         label: ar ? 'جهة الاتصال' : 'Contact',
-        value: customer.contactName
+        value: customer.contactName,
       ),
       (
         icon: Icons.phone_outlined,
         label: ar ? 'الهاتف' : 'Phone',
-        value: customer.phone
+        value: _customerPhoneForDisplay(customer.phone),
       ),
       (
         icon: Icons.email_outlined,
         label: ar ? 'البريد' : 'Email',
-        value: customer.email
+        value: customer.email,
       ),
     ];
     return SafeContractsSurface(
@@ -728,8 +781,8 @@ final class _ContactRow extends StatelessWidget {
                 Text(
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: SafeContractsVisual.muted,
-                      ),
+                    color: SafeContractsVisual.muted,
+                  ),
                 ),
                 Text(
                   actual == null || actual.isEmpty ? '—' : actual,
@@ -747,8 +800,9 @@ final class _ContactRow extends StatelessWidget {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content:
-                        Text(context.scL10n.isArabic ? 'تم النسخ.' : 'Copied.'),
+                    content: Text(
+                      context.scL10n.isArabic ? 'تم النسخ.' : 'Copied.',
+                    ),
                   ),
                 );
               },
@@ -788,7 +842,8 @@ final class _BusinessSnapshot extends StatelessWidget {
           )
         else if (value.finance.isEmpty)
           _InlineNotice(
-              text: ar ? 'لا توجد أرصدة حالية.' : 'No current balances.')
+            text: ar ? 'لا توجد أرصدة حالية.' : 'No current balances.',
+          )
         else
           ...value.finance.map(
             (row) => _FinanceCard(
@@ -819,7 +874,8 @@ final class _BusinessSnapshot extends StatelessWidget {
         ),
         if (pending.isEmpty)
           _InlineNotice(
-              text: ar ? 'لا توجد دفعات معلقة.' : 'No pending payments.')
+            text: ar ? 'لا توجد دفعات معلقة.' : 'No pending payments.',
+          )
         else
           ...pending.map(
             (payment) => _PaymentLine(
@@ -833,11 +889,12 @@ final class _BusinessSnapshot extends StatelessWidget {
         _SectionLabel(title: ar ? 'النشاط الأخير' : 'Recent activity'),
         if (value.activity.isEmpty)
           _InlineNotice(
-              text: ar ? 'لا توجد تحصيلات مسجلة.' : 'No settlement activity.')
+            text: ar ? 'لا توجد تحصيلات مسجلة.' : 'No settlement activity.',
+          )
         else
-          ...value.activity.take(5).map(
-                (activity) => _ActivityLine(activity: activity),
-              ),
+          ...value.activity
+              .take(5)
+              .map((activity) => _ActivityLine(activity: activity)),
       ],
     );
   }
@@ -864,8 +921,9 @@ final class _FinanceCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: SafeContractsSurface(
         elevated: false,
-        accent:
-            supplier ? SafeContractsVisual.amber : SafeContractsVisual.green,
+        accent: supplier
+            ? SafeContractsVisual.amber
+            : SafeContractsVisual.green,
         padding: const EdgeInsets.all(12),
         child: Wrap(
           spacing: 16,
@@ -873,11 +931,13 @@ final class _FinanceCard extends StatelessWidget {
           children: [
             _Metric(label: ar ? 'العملة' : 'Currency', value: currency),
             _Metric(
-                label: ar ? 'القائم' : 'Outstanding',
-                value: _money(outstanding, currency)),
+              label: ar ? 'القائم' : 'Outstanding',
+              value: _money(outstanding, currency),
+            ),
             _Metric(
-                label: ar ? 'المتأخر' : 'Overdue',
-                value: _money(overdue, currency)),
+              label: ar ? 'المتأخر' : 'Overdue',
+              value: _money(overdue, currency),
+            ),
             _Metric(label: ar ? 'عدد الدفعات' : 'Obligations', value: '$count'),
           ],
         ),
@@ -903,15 +963,19 @@ final class _MiniContract extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.description_outlined,
-                color: SafeContractsVisual.navy),
+            const Icon(
+              Icons.description_outlined,
+              color: SafeContractsVisual.navy,
+            ),
             const SizedBox(width: 9),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(contract.contractNumber,
-                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                  Text(
+                    contract.contractNumber,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
                   Text(
                     <String>[
                       if (contract.endDate != null) contract.endDate!,
@@ -920,10 +984,9 @@ final class _MiniContract extends StatelessWidget {
                     ].join(' • '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: SafeContractsVisual.muted),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SafeContractsVisual.muted,
+                    ),
                   ),
                 ],
               ),
@@ -965,20 +1028,25 @@ final class _PaymentLine extends StatelessWidget {
               color: safeContractsStatusSoftColor(status),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Text('$sequence',
-                style: const TextStyle(fontWeight: FontWeight.w900)),
+            child: Text(
+              '$sequence',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
           ),
           const SizedBox(width: 9),
           Expanded(
-              child:
-                  Text(dueDate, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            child: Text(dueDate, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
           const SizedBox(width: 8),
-          Text(_compactNumber(amount),
-              style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(
+            _compactNumber(amount),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
           const SizedBox(width: 8),
           _StatusBadge(
-              label: context.scL10n.status(status),
-              color: safeContractsStatusColor(status)),
+            label: context.scL10n.status(status),
+            color: safeContractsStatusColor(status),
+          ),
         ],
       ),
     );
@@ -994,8 +1062,10 @@ final class _ActivityLine extends StatelessWidget {
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.receipt_long_outlined,
-          color: SafeContractsVisual.green),
+      leading: const Icon(
+        Icons.receipt_long_outlined,
+        color: SafeContractsVisual.green,
+      ),
       title: Text(_money(activity.amount, activity.currencyCode)),
       subtitle: Text(
         <String>[
@@ -1083,27 +1153,33 @@ final class _CustomerEditorState extends State<_CustomerEditor> {
                 controller: _name,
                 maxLength: 191,
                 decoration: InputDecoration(
-                    labelText: ar ? 'اسم العميل *' : 'Customer name *'),
+                  labelText: ar ? 'اسم العميل *' : 'Customer name *',
+                ),
                 validator: (value) => value == null || value.trim().isEmpty
                     ? (ar ? 'اسم العميل مطلوب.' : 'Customer name is required.')
                     : null,
               ),
               const SizedBox(height: 10),
               TextField(
-                  controller: _code,
-                  decoration: InputDecoration(
-                      labelText: ar ? 'الكود الداخلي' : 'Internal code')),
+                controller: _code,
+                decoration: InputDecoration(
+                  labelText: ar ? 'الكود الداخلي' : 'Internal code',
+                ),
+              ),
               const SizedBox(height: 10),
               TextField(
-                  controller: _contact,
-                  decoration: InputDecoration(
-                      labelText: ar ? 'جهة الاتصال' : 'Contact name')),
+                controller: _contact,
+                decoration: InputDecoration(
+                  labelText: ar ? 'جهة الاتصال' : 'Contact name',
+                ),
+              ),
               const SizedBox(height: 10),
               TextFormField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                    labelText: ar ? 'البريد الإلكتروني' : 'Email'),
+                  labelText: ar ? 'البريد الإلكتروني' : 'Email',
+                ),
                 validator: (value) {
                   final text = value?.trim() ?? '';
                   if (text.isNotEmpty && !text.contains('@')) {
@@ -1116,10 +1192,10 @@ final class _CustomerEditorState extends State<_CustomerEditor> {
               ),
               const SizedBox(height: 10),
               TextField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  decoration:
-                      InputDecoration(labelText: ar ? 'الهاتف' : 'Phone')),
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(labelText: ar ? 'الهاتف' : 'Phone'),
+              ),
               if (!editing) ...[
                 const SizedBox(height: 10),
                 TextField(
@@ -1127,8 +1203,9 @@ final class _CustomerEditorState extends State<_CustomerEditor> {
                   minLines: 2,
                   maxLines: 4,
                   maxLength: 5000,
-                  decoration:
-                      InputDecoration(labelText: ar ? 'ملاحظات' : 'Notes'),
+                  decoration: InputDecoration(
+                    labelText: ar ? 'ملاحظات' : 'Notes',
+                  ),
                 ),
               ],
               SwitchListTile.adaptive(
@@ -1189,11 +1266,10 @@ final class _Pagination extends StatelessWidget {
           alignment: WrapAlignment.center,
           children: [
             OutlinedButton.icon(
-              onPressed:
-                  busy || page.page <= 1 ? null : () => unawaited(onPrevious()),
-              icon: const Icon(
-                Icons.chevron_left_rounded,
-              ),
+              onPressed: busy || page.page <= 1
+                  ? null
+                  : () => unawaited(onPrevious()),
+              icon: const Icon(Icons.chevron_left_rounded),
               label: Text(context.scL10n.t('Previous')),
             ),
             Text(context.scL10n.pageShown(page.page, page.customers.length)),
@@ -1201,9 +1277,7 @@ final class _Pagination extends StatelessWidget {
               onPressed: busy || !page.hasMore || page.page >= 5
                   ? null
                   : () => unawaited(onNext()),
-              icon: const Icon(
-                Icons.chevron_right_rounded,
-              ),
+              icon: const Icon(Icons.chevron_right_rounded),
               label: Text(context.scL10n.t('Next')),
             ),
           ],
@@ -1226,16 +1300,23 @@ final class _CountBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
-      child: Text(value,
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w900)),
+      child: Text(
+        value,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
 
 final class _StatusBadge extends StatelessWidget {
-  const _StatusBadge(
-      {required this.label, required this.color, this.dark = false});
+  const _StatusBadge({
+    required this.label,
+    required this.color,
+    this.dark = false,
+  });
   final String label;
   final Color color;
   final bool dark;
@@ -1289,16 +1370,19 @@ final class _Metric extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(color: SafeContractsVisual.muted)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: SafeContractsVisual.muted),
+          ),
           const SizedBox(height: 2),
-          Text(value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
         ],
       ),
     );
@@ -1350,8 +1434,10 @@ final class _InlineNotice extends StatelessWidget {
         color: SafeContractsVisual.navySoft,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(text,
-          style: const TextStyle(color: SafeContractsVisual.navyDeep)),
+      child: Text(
+        text,
+        style: const TextStyle(color: SafeContractsVisual.navyDeep),
+      ),
     );
   }
 }

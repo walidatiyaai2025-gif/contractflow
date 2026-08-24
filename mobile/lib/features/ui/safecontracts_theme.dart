@@ -3,24 +3,26 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'safecontracts_design.dart';
 import 'safecontracts_tokens.dart';
+import 'theme_palette.dart';
 
 abstract final class SafeContractsTheme {
-  static ThemeData build(String languageCode) {
+  static ThemeData build(String languageCode, AlkenzyThemePalette palette) {
     final isArabic = languageCode.trim().toLowerCase().startsWith('ar');
-    final baseTextTheme =
-        isArabic ? GoogleFonts.cairoTextTheme() : GoogleFonts.interTextTheme();
+    final baseTextTheme = isArabic
+        ? GoogleFonts.cairoTextTheme()
+        : GoogleFonts.interTextTheme();
     final fontFamily = isArabic
         ? GoogleFonts.cairo().fontFamily
         : GoogleFonts.inter().fontFamily;
 
-    const scheme = ColorScheme.light(
-      primary: SafeContractsVisual.navy,
+    final scheme = ColorScheme.light(
+      primary: palette.primary,
       onPrimary: Colors.white,
-      primaryContainer: SafeContractsVisual.navySoft,
-      onPrimaryContainer: SafeContractsVisual.navyDeep,
-      secondary: SafeContractsVisual.roseGold,
+      primaryContainer: palette.soft,
+      onPrimaryContainer: palette.deep,
+      secondary: palette.accent,
       onSecondary: Colors.white,
-      secondaryContainer: SafeContractsVisual.roseGoldSoft,
+      secondaryContainer: palette.accent.withValues(alpha: 0.18),
       onSecondaryContainer: SafeContractsVisual.ink,
       tertiary: SafeContractsVisual.green,
       onTertiary: Colors.white,
@@ -122,7 +124,7 @@ abstract final class SafeContractsTheme {
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: SafeContractsVisual.navy,
+        backgroundColor: palette.primary,
         foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -178,10 +180,7 @@ abstract final class SafeContractsTheme {
           borderSide: const BorderSide(color: Color(0xFFE7DED5)),
         ),
         focusedBorder: enabledBorder.copyWith(
-          borderSide: const BorderSide(
-            color: SafeContractsVisual.roseGold,
-            width: 1.8,
-          ),
+          borderSide: const BorderSide(color: palette.accent, width: 1.8),
         ),
         errorBorder: enabledBorder.copyWith(
           borderSide: const BorderSide(color: SafeContractsVisual.red),
@@ -199,9 +198,9 @@ abstract final class SafeContractsTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: SafeContractsVisual.navy,
+          backgroundColor: palette.primary,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: SafeContractsVisual.navySoft,
+          disabledBackgroundColor: palette.soft,
           disabledForegroundColor: SafeContractsVisual.muted,
           minimumSize: const Size(0, SafeContractsControlSizes.buttonMinHeight),
           padding: const EdgeInsets.symmetric(
@@ -219,7 +218,7 @@ abstract final class SafeContractsTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: SafeContractsVisual.roseGold,
+          backgroundColor: palette.accent,
           foregroundColor: Colors.white,
           elevation: 0,
           minimumSize: const Size(0, SafeContractsControlSizes.buttonMinHeight),
@@ -234,8 +233,8 @@ abstract final class SafeContractsTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: SafeContractsVisual.navy,
-          side: const BorderSide(color: SafeContractsVisual.navy),
+          foregroundColor: palette.primary,
+          side: BorderSide(color: palette.primary),
           minimumSize: const Size(0, SafeContractsControlSizes.buttonMinHeight),
           padding: const EdgeInsets.symmetric(
             horizontal: SafeContractsSpacing.lg,
@@ -252,7 +251,7 @@ abstract final class SafeContractsTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: SafeContractsVisual.navy,
+          foregroundColor: palette.primary,
           textStyle: TextStyle(
             fontWeight: FontWeight.w700,
             fontFamily: fontFamily,

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/auth/biometric_auth.dart';
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../ui/safecontracts_components.dart';
@@ -15,6 +16,7 @@ final class SafeContractsLoginScreen extends StatefulWidget {
   const SafeContractsLoginScreen({
     required this.controller,
     required this.onAuthenticated,
+    required this.biometricAuth,
     this.languageCode = 'en',
     this.onLanguageChanged,
     this.onBack,
@@ -22,6 +24,7 @@ final class SafeContractsLoginScreen extends StatefulWidget {
   });
 
   final MobileLoginController controller;
+  final BiometricAuthService biometricAuth;
   final String languageCode;
   final ValueChanged<String>? onLanguageChanged;
   final VoidCallback? onBack;
@@ -56,11 +59,74 @@ final class _SafeContractsLoginScreenState
         password: _password.text,
       );
       if (!success || !mounted) return;
+      await _offerBiometricEnrollment();
+      if (!mounted) return;
       _password.clear();
       await widget.onAuthenticated();
     } finally {
       if (mounted) setState(() => _bootstrapping = false);
     }
+  }
+
+  Future<void> _offerBiometricEnrollment() async {
+    if (await widget.biometricAuth.isEnabled()) return;
+    if (!await widget.biometricAuth.isAvailable() || !mounted) return;
+    final ar = context.scL10n.isArabic;
+    final enable = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.fingerprint_rounded, size: 42),
+        title: Text(
+          ar ? 'تفعيل الدخول بالبصمة؟' : 'Enable fingerprint sign in?',
+        ),
+        content: Text(
+          ar
+              ? 'بعد التفعيل سيطلب التطبيق بصمة الجهاز في كل مرة تفتح فيها جلسة محفوظة. كلمة المرور لا يتم تخزينها.'
+              : 'Once enabled, the app will require your device fingerprint whenever you open a saved session. Your password is never stored.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(ar ? 'ليس الآن' : 'Not now'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.fingerprint_rounded),
+            label: Text(ar ? 'تفعيل' : 'Enable'),
+          ),
+        ],
+      ),
+    );
+    if (enable != true || !mounted) return;
+    final result = await widget.biometricAuth.authenticate(
+      isArabic: ar,
+      enrollment: true,
+    );
+    if (!mounted) return;
+    if (!result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.message ??
+                (ar ? 'تعذر تفعيل البصمة.' : 'Unable to enable fingerprint.'),
+          ),
+        ),
+      );
+      return;
+    }
+    await widget.controller.persistForBiometricLogin();
+    await widget.biometricAuth.setEnabled(true);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ar
+              ? 'تم تفعيل الدخول بالبصمة. سيطلبها التطبيق عند الدخول التالي.'
+              : 'Fingerprint sign in is enabled and will be required next time.',
+        ),
+      ),
+    );
   }
 
   @override
@@ -69,8 +135,9 @@ final class _SafeContractsLoginScreenState
     if (_bootstrapping) {
       return _BlockingBootstrapSplash(
         label: l10n.t('Loading'),
-        environmentLabel:
-            l10n.isArabic ? 'تجهيز مساحة العمل' : 'Preparing workspace',
+        environmentLabel: l10n.isArabic
+            ? 'تجهيز مساحة العمل'
+            : 'Preparing workspace',
       );
     }
 
@@ -100,7 +167,8 @@ final class _SafeContractsLoginScreenState
                       child: AnimatedBuilder(
                         animation: widget.controller,
                         builder: (context, child) {
-                          final submitting = widget.controller.state ==
+                          final submitting =
+                              widget.controller.state ==
                               MobileLoginState.submitting;
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -156,6 +224,73 @@ final class _SafeContractsLoginScreenState
                                               ),
                                         ),
                                         const SizedBox(
+                                          height: SafeContractsSpacing.md,
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: SafeContractsVisual
+                                                .backgroundRaised,
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                            border: Border.all(
+                                              color:
+                                                  SafeContractsVisual.outline,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.language_rounded,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  l10n.isArabic
+                                                      ? 'اللغة'
+                                                      : 'Language',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                              ),
+                                              SegmentedButton<String>(
+                                                segments: const [
+                                                  ButtonSegment(
+                                                    value: 'en',
+                                                    label: Text('English'),
+                                                  ),
+                                                  ButtonSegment(
+                                                    value: 'ar',
+                                                    label: Text('العربية'),
+                                                  ),
+                                                ],
+                                                selected: <String>{
+                                                  selectedLanguage,
+                                                },
+                                                showSelectedIcon: false,
+                                                onSelectionChanged:
+                                                    submitting ||
+                                                        widget.onLanguageChanged ==
+                                                            null
+                                                    ? null
+                                                    : (selection) =>
+                                                          widget
+                                                              .onLanguageChanged!(
+                                                            selection.first,
+                                                          ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(
                                           height: SafeContractsSpacing.lg,
                                         ),
                                         SafeContractsTextField(
@@ -170,7 +305,8 @@ final class _SafeContractsLoginScreenState
                                           enableSuggestions: false,
                                           label: l10n.t('Username'),
                                           icon: Icons.person_outline_rounded,
-                                          validator: (value) => value == null ||
+                                          validator: (value) =>
+                                              value == null ||
                                                   value.trim().isEmpty
                                               ? l10n.t('Enter your username.')
                                               : null,
@@ -185,18 +321,16 @@ final class _SafeContractsLoginScreenState
                                           label: l10n.t('Password'),
                                           onToggleVisibility: () =>
                                               setState(() {
-                                            _obscurePassword =
-                                                !_obscurePassword;
-                                          }),
+                                                _obscurePassword =
+                                                    !_obscurePassword;
+                                              }),
                                           onSubmitted: submitting
                                               ? null
                                               : (_) => unawaited(_submit()),
                                           validator: (value) =>
                                               value == null || value.isEmpty
-                                                  ? l10n.t(
-                                                      'Enter your password.',
-                                                    )
-                                                  : null,
+                                              ? l10n.t('Enter your password.')
+                                              : null,
                                         ),
                                         const SizedBox(
                                           height: SafeContractsSpacing.xxs,
@@ -206,8 +340,9 @@ final class _SafeContractsLoginScreenState
                                           onChanged: submitting
                                               ? null
                                               : (value) => widget.controller
-                                                  .setRememberMe(
-                                                      value ?? false),
+                                                    .setRememberMe(
+                                                      value ?? false,
+                                                    ),
                                           contentPadding: EdgeInsets.zero,
                                           dense: true,
                                           controlAffinity:
@@ -410,10 +545,10 @@ final class _LoginBrandHero extends StatelessWidget {
         Text(
           SafeContractsBrand.name,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.7,
-              ),
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.7,
+          ),
         ),
         const SizedBox(height: SafeContractsSpacing.xs),
         Text(
@@ -421,9 +556,9 @@ final class _LoginBrandHero extends StatelessWidget {
               ? 'العقود والمدفوعات والتحصيلات في مساحة عمل تنفيذية واحدة.'
               : 'Contracts, payments and collections in one executive workspace.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withValues(alpha: 0.74),
-                height: 1.55,
-              ),
+            color: Colors.white.withValues(alpha: 0.74),
+            height: 1.55,
+          ),
         ),
       ],
     );
