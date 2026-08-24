@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use SafeContracts\Presence\PresenceService;
 use SafeContracts\Roles\Capabilities;
+use SafeContracts\Translations\TranslationCatalog;
 
 final class ActiveUsersPage
 {
@@ -68,34 +69,34 @@ final class ActiveUsersPage
                 <div>
                     <p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Presence', 'safecontracts'); ?></p>
                     <h1><?php echo esc_html__('Active Users', 'safecontracts'); ?></h1>
-                    <p><?php echo esc_html__('Recent activity is based only on authenticated SafeContracts app/admin presence signals recorded by the system. It is not an inferred online-presence indicator.', 'safecontracts'); ?></p>
+                    <p><?php echo esc_html(self::text('Recent activity is based only on authenticated SafeContracts app/admin presence signals recorded by the system. It is not an inferred online-presence indicator.', 'يعتمد النشاط الحديث فقط على إشارات الحضور الموثقة من تطبيق وإدارة SafeContracts والمسجلة بواسطة النظام، ولا يمثل استنتاجًا لحالة اتصال المستخدم بالإنترنت.')); ?></p>
                 </div>
             </div>
             <?php AdminSummaryCards::render([
-                ['label' => __('Recently active on app', 'safecontracts'), 'value' => $appActive, 'detail' => __('Seen in the last 5 minutes', 'safecontracts')],
-                ['label' => __('Recently active on dashboard', 'safecontracts'), 'value' => $adminActive, 'detail' => __('Seen in the last 5 minutes', 'safecontracts')],
-                ['label' => __('Recently active anywhere', 'safecontracts'), 'value' => $either],
+                ['label' => self::text('Recently active on app', 'نشط مؤخرًا على التطبيق'), 'value' => $appActive, 'detail' => __('Seen in the last 5 minutes', 'safecontracts')],
+                ['label' => self::text('Recently active on dashboard', 'نشط مؤخرًا على لوحة التحكم'), 'value' => $adminActive, 'detail' => __('Seen in the last 5 minutes', 'safecontracts')],
+                ['label' => self::text('Recently active anywhere', 'نشط مؤخرًا في أي واجهة'), 'value' => $either],
                 ['label' => __('Safe Contracts users', 'safecontracts'), 'value' => count($allUsers)],
             ]); ?>
 
             <form class="safecontracts-filter-bar" method="get">
                 <input type="hidden" name="page" value="<?php echo esc_attr(self::SLUG); ?>">
-                <label><?php echo esc_html__('Search users', 'safecontracts'); ?><input type="search" name="user_search" value="<?php echo esc_attr($search); ?>" placeholder="<?php echo esc_attr__('Name, email or role', 'safecontracts'); ?>"></label>
-                <label><?php echo esc_html__('Recent activity', 'safecontracts'); ?><select name="activity"><option value=""><?php echo esc_html__('All users', 'safecontracts'); ?></option><option value="mobile" <?php selected($activity, 'mobile'); ?>><?php echo esc_html__('App', 'safecontracts'); ?></option><option value="admin" <?php selected($activity, 'admin'); ?>><?php echo esc_html__('Dashboard', 'safecontracts'); ?></option><option value="either" <?php selected($activity, 'either'); ?>><?php echo esc_html__('App or dashboard', 'safecontracts'); ?></option><option value="inactive" <?php selected($activity, 'inactive'); ?>><?php echo esc_html__('No recent activity', 'safecontracts'); ?></option></select></label>
+                <label><?php echo esc_html(self::text('Search users', 'بحث المستخدمين')); ?><input type="search" name="user_search" value="<?php echo esc_attr($search); ?>" placeholder="<?php echo esc_attr(self::text('Name, email or role', 'الاسم أو البريد أو الدور')); ?>"></label>
+                <label><?php echo esc_html(self::text('Recent activity', 'النشاط الحديث')); ?><select name="activity"><option value=""><?php echo esc_html(self::text('All users', 'كل المستخدمين')); ?></option><option value="mobile" <?php selected($activity, 'mobile'); ?>><?php echo esc_html__('App', 'safecontracts'); ?></option><option value="admin" <?php selected($activity, 'admin'); ?>><?php echo esc_html__('Dashboard', 'safecontracts'); ?></option><option value="either" <?php selected($activity, 'either'); ?>><?php echo esc_html(self::text('App or dashboard', 'التطبيق أو لوحة التحكم')); ?></option><option value="inactive" <?php selected($activity, 'inactive'); ?>><?php echo esc_html(self::text('No recent activity', 'لا يوجد نشاط حديث')); ?></option></select></label>
                 <button class="button button-primary" type="submit"><?php echo esc_html__('Apply filters', 'safecontracts'); ?></button>
-                <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html__('Clear', 'safecontracts'); ?></a>
+                <a class="button" href="<?php echo esc_url(add_query_arg(['page' => self::SLUG], admin_url('admin.php'))); ?>"><?php echo esc_html(self::text('Clear', 'مسح')); ?></a>
             </form>
 
             <section class="safecontracts-admin-card safecontracts-table-card">
-                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html__('User activity', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html__('WordPress core does not provide an authoritative last-login timestamp here, so this screen shows only recorded SafeContracts activity. No session token or device-token value is exposed.', 'safecontracts'); ?></p></div></div>
-                <table class="widefat striped"><thead><tr><th><?php echo esc_html__('User', 'safecontracts'); ?></th><th><?php echo esc_html__('Role', 'safecontracts'); ?></th><th><?php echo esc_html__('App activity', 'safecontracts'); ?></th><th><?php echo esc_html__('Dashboard activity', 'safecontracts'); ?></th><th><?php echo esc_html__('Last observed activity', 'safecontracts'); ?></th></tr></thead><tbody>
-                    <?php if ($visibleUsers === []) : ?><tr><td colspan="5"><?php echo esc_html__('No Safe Contracts users match the selected filters.', 'safecontracts'); ?></td></tr><?php endif; ?>
+                <div class="safecontracts-section-heading"><div><h2><?php echo esc_html(self::text('User activity', 'نشاط المستخدم')); ?></h2><p class="description"><?php echo esc_html(self::text('WordPress core does not provide an authoritative last-login timestamp here, so this screen shows only recorded SafeContracts activity. No session token or device-token value is exposed.', 'لا يوفر ووردبريس هنا وقت آخر تسجيل دخول موثوقًا، لذلك تعرض هذه الشاشة نشاط SafeContracts المسجل فقط. لا يتم عرض أي رمز جلسة أو رمز جهاز.')); ?></p></div></div>
+                <table class="widefat striped"><thead><tr><th><?php echo esc_html__('User', 'safecontracts'); ?></th><th><?php echo esc_html(self::text('Role', 'الدور')); ?></th><th><?php echo esc_html(self::text('App activity', 'نشاط التطبيق')); ?></th><th><?php echo esc_html(self::text('Dashboard activity', 'نشاط لوحة التحكم')); ?></th><th><?php echo esc_html(self::text('Last observed activity', 'آخر نشاط مسجل')); ?></th></tr></thead><tbody>
+                    <?php if ($visibleUsers === []) : ?><tr><td colspan="5"><?php echo esc_html(self::text('No Safe Contracts users match the selected filters.', 'لا يوجد مستخدمو Safe Contracts يطابقون الفلاتر المحددة.')); ?></td></tr><?php endif; ?>
                     <?php foreach ($visibleUsers as $row) : ?>
                         <tr>
                             <td><strong><?php echo esc_html($row['name']); ?></strong><br><small dir="ltr"><?php echo esc_html($row['email']); ?></small></td>
-                            <td><?php echo esc_html($row['roles'] !== '' ? $row['roles'] : __('No role', 'safecontracts')); ?></td>
-                            <td><span class="safecontracts-state-chip <?php echo $row['mobile_active'] ? 'is-success' : ''; ?>"><?php echo esc_html($row['mobile_active'] ? __('Recently active', 'safecontracts') : __('No recent activity', 'safecontracts')); ?></span><br><small><?php echo esc_html(self::formatTime($row['mobile_seen'])); ?></small></td>
-                            <td><span class="safecontracts-state-chip <?php echo $row['admin_active'] ? 'is-success' : ''; ?>"><?php echo esc_html($row['admin_active'] ? __('Recently active', 'safecontracts') : __('No recent activity', 'safecontracts')); ?></span><br><small><?php echo esc_html(self::formatTime($row['admin_seen'])); ?></small></td>
+                            <td><?php echo esc_html($row['roles'] !== '' ? $row['roles'] : self::text('No role', 'بدون دور')); ?></td>
+                            <td><span class="safecontracts-state-chip <?php echo $row['mobile_active'] ? 'is-success' : ''; ?>"><?php echo esc_html($row['mobile_active'] ? self::text('Recently active', 'نشط مؤخرًا') : self::text('No recent activity', 'لا يوجد نشاط حديث')); ?></span><br><small><?php echo esc_html(self::formatTime($row['mobile_seen'])); ?></small></td>
+                            <td><span class="safecontracts-state-chip <?php echo $row['admin_active'] ? 'is-success' : ''; ?>"><?php echo esc_html($row['admin_active'] ? self::text('Recently active', 'نشط مؤخرًا') : self::text('No recent activity', 'لا يوجد نشاط حديث')); ?></span><br><small><?php echo esc_html(self::formatTime($row['admin_seen'])); ?></small></td>
                             <td><?php echo esc_html(self::formatTime(max($row['mobile_seen'], $row['admin_seen']))); ?></td>
                         </tr>
                     <?php endforeach; ?>
@@ -153,5 +154,10 @@ final class ActiveUsersPage
             return wp_date('Y-m-d H:i:s', $timestamp);
         }
         return gmdate('Y-m-d H:i:s', $timestamp);
+    }
+
+    private static function text(string $english, string $arabic): string
+    {
+        return TranslationCatalog::currentLanguage() === 'ar' ? $arabic : __($english, 'safecontracts');
     }
 }
