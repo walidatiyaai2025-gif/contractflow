@@ -1,0 +1,57 @@
+name: Worker 3 Final Release QA
+
+on:
+  pull_request:
+    branches:
+      - feat/alkenzy-mobile-reference-redesign
+
+permissions:
+  contents: write
+
+jobs:
+  worker3-final-qa:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Format Worker 3 QA test
+        run: dart format test/worker3_final_release_visual_qa_test.dart
+      - name: Persist formatter result
+        working-directory: .
+        shell: bash
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/test/worker3_final_release_visual_qa_test.dart
+          if git diff --cached --quiet; then
+            echo "Worker 3 QA test already formatted."
+          else
+            git commit -m "style(mobile): format Worker 3 final QA"
+            git push origin "HEAD:${HEAD_REF}"
+          fi
+      - name: Analyze integrated mobile package
+        run: flutter analyze
+      - name: Run Worker 3 final visual QA
+        run: flutter test test/worker3_final_release_visual_qa_test.dart
+      - name: Upload Worker 3 screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker3-final-release-screenshots
+          path: mobile/build/worker3-release-captures/*.png
+          if-no-files-found: warn
+          retention-days: 7
