@@ -34,7 +34,7 @@ final class MobileLandingContent
                 100,
                 $defaults['experience_years']
             ),
-            'services' => $defaults['services'],
+            'services' => $this->services($stored['services'] ?? null, $defaults['services']),
             'contact' => [
                 'phones' => $this->phones($stored['phones'] ?? $defaults['contact']['phones'], $defaults['contact']['phones']),
                 'office_address' => $this->localizedText(
@@ -43,9 +43,38 @@ final class MobileLandingContent
                     240
                 ),
             ],
-            'sign_in_label' => $defaults['sign_in_label'],
-            'learn_more_label' => $defaults['learn_more_label'],
+            'sign_in_label' => $this->localizedText($stored['sign_in_label'] ?? null, $defaults['sign_in_label'], 60),
+            'learn_more_label' => $this->localizedText($stored['learn_more_label'] ?? null, $defaults['learn_more_label'], 60),
         ];
+    }
+
+    /**
+     * Persist only the public, bounded marketing fields used by the mobile
+     * landing endpoint. This method intentionally accepts no URLs, secrets,
+     * user IDs, financial values, or protected application configuration.
+     *
+     * @param array<string,mixed> $input
+     * @return array<string,mixed>
+     */
+    public function save(array $input): array
+    {
+        $defaults = self::defaults();
+        $normalized = [
+            'brand_name' => $this->text($input['brand_name'] ?? null, 80, $defaults['brand_name']),
+            'agency_name' => $this->localizedText($input['agency_name'] ?? null, $defaults['agency_name'], 120),
+            'headline' => $this->localizedText($input['headline'] ?? null, $defaults['headline'], 160),
+            'highlight' => $this->localizedText($input['highlight'] ?? null, $defaults['highlight'], 180),
+            'summary' => $this->localizedText($input['summary'] ?? null, $defaults['summary'], 700),
+            'experience_years' => $this->boundedInt($input['experience_years'] ?? null, 0, 100, $defaults['experience_years']),
+            'services' => $this->services($input['services'] ?? null, $defaults['services']),
+            'phones' => $this->phones($input['phones'] ?? null, $defaults['contact']['phones']),
+            'office_address' => $this->localizedText($input['office_address'] ?? null, $defaults['contact']['office_address'], 240),
+            'sign_in_label' => $this->localizedText($input['sign_in_label'] ?? null, $defaults['sign_in_label'], 60),
+            'learn_more_label' => $this->localizedText($input['learn_more_label'] ?? null, $defaults['learn_more_label'], 60),
+        ];
+
+        update_option(self::OPTION, $normalized, false);
+        return $this->read();
     }
 
     /** @return array<string, mixed> */
@@ -143,6 +172,43 @@ final class MobileLandingContent
         }
 
         return (int) $parsed;
+    }
+
+    /**
+     * @param mixed $value
+     * @param list<array{key:string,title:array{en:string,ar:string},subtitle:array{en:string,ar:string}}> $fallback
+     * @return list<array{key:string,title:array{en:string,ar:string},subtitle:array{en:string,ar:string}}>
+     */
+    private function services(mixed $value, array $fallback): array
+    {
+        if (! is_array($value)) {
+            return $fallback;
+        }
+
+        $byKey = [];
+        foreach ($value as $service) {
+            if (! is_array($service)) {
+                continue;
+            }
+            $key = isset($service['key']) && is_scalar($service['key'])
+                ? preg_replace('/[^a-z0-9_-]/', '', strtolower((string) $service['key']))
+                : '';
+            if (! is_string($key) || $key === '') {
+                continue;
+            }
+            $byKey[$key] = $service;
+        }
+
+        $services = [];
+        foreach ($fallback as $default) {
+            $stored = $byKey[$default['key']] ?? [];
+            $services[] = [
+                'key' => $default['key'],
+                'title' => $this->localizedText($stored['title'] ?? null, $default['title'], 100),
+                'subtitle' => $this->localizedText($stored['subtitle'] ?? null, $default['subtitle'], 180),
+            ];
+        }
+        return $services;
     }
 
     /**
