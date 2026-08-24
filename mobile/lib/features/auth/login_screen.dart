@@ -136,7 +136,8 @@ final class _SafeContractsLoginScreenState
                             ),
                             const SizedBox(height: 26),
                             Container(
-                              padding: const EdgeInsets.fromLTRB(18, 22, 18, 20),
+                              padding:
+                                  const EdgeInsets.fromLTRB(18, 22, 18, 20),
                               decoration: const BoxDecoration(
                                 color: SafeContractsVisual.backgroundRaised,
                                 borderRadius: BorderRadius.vertical(
@@ -165,7 +166,7 @@ final class _SafeContractsLoginScreenState
                                         decoration: InputDecoration(
                                           hintText: l10n.isArabic
                                               ? 'البريد الإلكتروني أو اسم المستخدم'
-                                              : 'Email or username',
+                                              : l10n.t('Username'),
                                           prefixIcon:
                                               const Icon(Icons.person_outline),
                                         ),
@@ -200,7 +201,8 @@ final class _SafeContractsLoginScreenState
                                             icon: Icon(
                                               _obscurePassword
                                                   ? Icons.visibility_outlined
-                                                  : Icons.visibility_off_outlined,
+                                                  : Icons
+                                                      .visibility_off_outlined,
                                             ),
                                           ),
                                         ),
