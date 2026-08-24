@@ -50,6 +50,8 @@ void main() {
     await _pumpBounded(tester);
     expect(find.byType(TextFormField), findsNWidgets(2));
     await _capture(tester, 'REF01_login_ar_390');
+
+    await _disposeCapturedApp(tester);
   });
 
   testWidgets('captures REF02 authenticated dashboard implementation', (
@@ -80,6 +82,8 @@ void main() {
     await _pumpBounded(tester, cycles: 24);
     expect(find.byType(AppBar), findsOneWidget);
     await _capture(tester, 'REF02_dashboard_ar_390');
+
+    await _disposeCapturedApp(tester);
   });
 }
 
@@ -93,23 +97,30 @@ Future<void> _pumpBounded(
   }
 }
 
+Future<void> _disposeCapturedApp(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump();
+}
+
 Future<void> _capture(WidgetTester tester, String name) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(_captureKey),
   );
-  final image = await boundary.toImage(pixelRatio: 1);
-  try {
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    if (bytes == null) throw StateError('Unable to encode $name.');
-    final directory = Directory('build/reference-captures');
-    directory.createSync(recursive: true);
-    File('${directory.path}/$name.png').writeAsBytesSync(
-      bytes.buffer.asUint8List(),
-      flush: true,
+  final encoded = await tester.runAsync<List<int>>(() async {
+    final image = await boundary.toImage(pixelRatio: 0.75);
+    try {
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) throw StateError('Unable to encode $name.');
+      return bytes.buffer.asUint8List();
+    } finally {
+      image.dispose();
+    }
+  });
+  if (encoded == null) throw StateError('Unable to capture $name.');
+  final directory = Directory('build/reference-captures')..createSync(
+      recursive: true,
     );
-  } finally {
-    image.dispose();
-  }
+  File('${directory.path}/$name.png').writeAsBytesSync(encoded, flush: true);
 }
 
 ApiTransportResponse _unauthenticatedHandler(Uri uri) {
