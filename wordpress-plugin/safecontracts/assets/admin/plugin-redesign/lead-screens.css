@@ -125,6 +125,25 @@
 }
 
 .safecontracts-migration-recovery > .safecontracts-admin-card:last-child { margin-top: 16px; }
+.safecontracts-migration-recovery code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 1180px) {
+  .safecontracts-migration-recovery .safecontracts-settings-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .safecontracts-migration-recovery .safecontracts-settings-grid > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .safecontracts-migration-recovery .safecontracts-table-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
 
 @media (max-width: 1100px) {
   .safecontracts-settings .safecontracts-detail-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
