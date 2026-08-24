@@ -42,10 +42,73 @@ abstract final class SafeContractsTheme {
       borderSide: const BorderSide(color: SafeContractsVisual.outline),
     );
 
-    final textTheme = baseTextTheme.apply(
-      bodyColor: SafeContractsVisual.ink,
-      displayColor: SafeContractsVisual.ink,
-    );
+    final textTheme = baseTextTheme
+        .copyWith(
+          displayLarge: baseTextTheme.displayLarge?.copyWith(
+            fontSize: SafeContractsTypography.displayLarge,
+            height: SafeContractsTypography.displayHeight,
+          ),
+          displayMedium: baseTextTheme.displayMedium?.copyWith(
+            fontSize: SafeContractsTypography.displayMedium,
+            height: SafeContractsTypography.displayHeight,
+          ),
+          displaySmall: baseTextTheme.displaySmall?.copyWith(
+            fontSize: SafeContractsTypography.displaySmall,
+            height: SafeContractsTypography.displayHeight,
+          ),
+          headlineLarge: baseTextTheme.headlineLarge?.copyWith(
+            fontSize: SafeContractsTypography.headlineLarge,
+            height: SafeContractsTypography.headlineHeight,
+          ),
+          headlineMedium: baseTextTheme.headlineMedium?.copyWith(
+            fontSize: SafeContractsTypography.headlineMedium,
+            height: SafeContractsTypography.headlineHeight,
+          ),
+          headlineSmall: baseTextTheme.headlineSmall?.copyWith(
+            fontSize: SafeContractsTypography.headlineSmall,
+            height: SafeContractsTypography.headlineHeight,
+          ),
+          titleLarge: baseTextTheme.titleLarge?.copyWith(
+            fontSize: SafeContractsTypography.titleLarge,
+            height: SafeContractsTypography.titleHeight,
+          ),
+          titleMedium: baseTextTheme.titleMedium?.copyWith(
+            fontSize: SafeContractsTypography.titleMedium,
+            height: SafeContractsTypography.titleHeight,
+          ),
+          titleSmall: baseTextTheme.titleSmall?.copyWith(
+            fontSize: SafeContractsTypography.titleSmall,
+            height: SafeContractsTypography.titleHeight,
+          ),
+          bodyLarge: baseTextTheme.bodyLarge?.copyWith(
+            fontSize: SafeContractsTypography.bodyLarge,
+            height: SafeContractsTypography.bodyHeight,
+          ),
+          bodyMedium: baseTextTheme.bodyMedium?.copyWith(
+            fontSize: SafeContractsTypography.bodyMedium,
+            height: SafeContractsTypography.bodyHeight,
+          ),
+          bodySmall: baseTextTheme.bodySmall?.copyWith(
+            fontSize: SafeContractsTypography.bodySmall,
+            height: SafeContractsTypography.bodyHeight,
+          ),
+          labelLarge: baseTextTheme.labelLarge?.copyWith(
+            fontSize: SafeContractsTypography.labelLarge,
+            height: SafeContractsTypography.labelHeight,
+          ),
+          labelMedium: baseTextTheme.labelMedium?.copyWith(
+            fontSize: SafeContractsTypography.labelMedium,
+            height: SafeContractsTypography.labelHeight,
+          ),
+          labelSmall: baseTextTheme.labelSmall?.copyWith(
+            fontSize: SafeContractsTypography.labelSmall,
+            height: SafeContractsTypography.labelHeight,
+          ),
+        )
+        .apply(
+          bodyColor: SafeContractsVisual.ink,
+          displayColor: SafeContractsVisual.ink,
+        );
 
     return ThemeData(
       colorScheme: scheme,

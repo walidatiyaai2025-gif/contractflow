@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use DomainException;
 use InvalidArgumentException;
+use SafeContracts\Contracts\ContractMoney;
 
 final class PaymentStatus
 {
@@ -80,6 +81,37 @@ final class PaymentStatus
 
         $days = (int) $today->diff($due)->format('%a');
         return $days <= $dueSoonDays ? self::DUE_SOON : self::UPCOMING;
+    }
+
+    /**
+     * Read-time status authority for API/mobile presentation. A zero remaining
+     * balance is paid. Otherwise contractual due-date truth takes precedence
+     * once an obligation is due/overdue, even if it was partially settled.
+     * Partial-payment state is used only while a remaining balance is still
+     * future-dated. Stored workflow status remains available to mutation
+     * services for transition/idempotence semantics.
+     */
+    public static function authoritative(
+        mixed $dueDate,
+        mixed $paidAmount,
+        mixed $remainingAmount,
+        ?DateTimeImmutable $today = null,
+        int $dueSoonDays = 10
+    ): string {
+        $paid = ContractMoney::normalizeNonNegative($paidAmount);
+        $remaining = ContractMoney::normalizeNonNegative($remainingAmount);
+        if ($remaining === '0.0000') {
+            return self::PAID;
+        }
+
+        $temporal = self::temporalForDueDate($dueDate, $today, $dueSoonDays);
+        if ($temporal === self::OVERDUE || $temporal === self::DUE) {
+            return $temporal;
+        }
+        if (ContractMoney::compare($paid, '0.0000') > 0) {
+            return self::PARTIALLY_PAID;
+        }
+        return $temporal;
     }
 
     public static function isDueSoon(mixed $dueDate, ?DateTimeImmutable $today = null, int $dueSoonDays = 10): bool

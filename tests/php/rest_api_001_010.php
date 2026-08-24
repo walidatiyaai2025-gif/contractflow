@@ -132,7 +132,8 @@ $paymentSql = implode("\n", array_slice($GLOBALS['sc_test_read_queries'], $befor
 $paymentRow = $payments->data['data'][0] ?? [];
 sc_p8_assert(($paymentRow['due_date'] ?? '') === '2026-08-10' && ($paymentRow['expected_payment_date'] ?? '') === '2026-08-20', 'SC-P8-008 contractual and expected payment dates remain separate');
 sc_p8_assert(($paymentRow['paid_amount'] ?? '') === '60.0000' && ($paymentRow['remaining_amount'] ?? '') === '40.0000', 'SC-P8-008 canonical payment balances pass through unchanged');
-sc_p8_assert(str_contains($paymentSql, "p.status = 'overdue'") && str_contains($paymentSql, "p.due_date >= '2026-08-01'") && str_contains($paymentSql, 'c.accountant_user_id = 42'), 'SC-P8-008 status/date/accountant filters are server-side');
+sc_p8_assert(($paymentRow['status'] ?? '') === 'overdue', 'SC-P8-008 payment status is server-authoritative after due-date and balance evaluation');
+sc_p8_assert(! str_contains($paymentSql, "p.status = 'overdue'") && str_contains($paymentSql, "p.due_date >= '2026-08-01'") && str_contains($paymentSql, 'c.accountant_user_id = 42'), 'SC-P8-008 due-date/accountant filters remain server-side without trusting stale stored payment status');
 
 $GLOBALS['sc_test_result_queue'] = [[[
     'id' => '21', 'contract_id' => '11', 'sequence_no' => '1', 'reference' => 'P-1', 'due_date' => '2026-08-10',
