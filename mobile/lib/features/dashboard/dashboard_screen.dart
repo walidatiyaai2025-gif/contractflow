@@ -449,9 +449,8 @@ final class _GlobalPeriodFilter extends StatelessWidget {
               constraints: const BoxConstraints.tightFor(width: 36, height: 36),
               padding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,
-              onPressed: busy
-                  ? null
-                  : () => unawaited(controller.selectPeriod()),
+              onPressed:
+                  busy ? null : () => unawaited(controller.selectPeriod()),
               icon: const Icon(Icons.close_rounded, size: 18),
             ),
           ],
@@ -791,9 +790,8 @@ final class _PaymentFilterBar extends StatelessWidget {
       'completed',
       'cancelled',
     ];
-    final dropdownValue = orderedStatuses.contains(currentStatus)
-        ? currentStatus
-        : '';
+    final dropdownValue =
+        orderedStatuses.contains(currentStatus) ? currentStatus : '';
     final advancedCount = (controller.filters.customerId == null ? 0 : 1) +
         (controller.filters.contractId == null ? 0 : 1);
     return SafeContractsSurface(
@@ -832,11 +830,12 @@ final class _PaymentFilterBar extends StatelessWidget {
                                         : value,
                                   ),
                                 ),
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: SafeContractsVisual.ink,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: SafeContractsVisual.ink,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
                         items: [
                           DropdownMenuItem(
                             value: '',
@@ -1014,7 +1013,8 @@ final class _AdvancedPaymentFiltersSheet extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: FilledButton(
-                      onPressed: busy ? null : () => Navigator.of(context).pop(),
+                      onPressed:
+                          busy ? null : () => Navigator.of(context).pop(),
                       style: FilledButton.styleFrom(
                         backgroundColor: SafeContractsVisual.navy,
                       ),
@@ -1055,9 +1055,8 @@ final class _SheetDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final safeValue = items.any((item) => item.value == value)
-        ? value
-        : items.first.value;
+    final safeValue =
+        items.any((item) => item.value == value) ? value : items.first.value;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
