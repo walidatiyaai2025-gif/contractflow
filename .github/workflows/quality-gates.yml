@@ -203,7 +203,7 @@ jobs:
       - name: Upload release candidates
         uses: actions/upload-artifact@v4
         with:
-          name: alkenzy-adv-${{ steps.mobile_version.outputs.name }}-release-candidates
+          name: alkenzy-adv-0.3.2-release-candidates
           path: dist/
           if-no-files-found: error
           retention-days: 14
