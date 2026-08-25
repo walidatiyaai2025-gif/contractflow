@@ -313,22 +313,27 @@ final class DashboardRecord {
   factory DashboardRecord.payment(Object? value) {
     final data = apiObjectMap(value, 'payments.item');
     final id = _positiveInt(data['id'], 'payment.id');
+    final status = _optionalText(data['status'], 'payment.status');
+    final original = _optionalMoneyText(
+      data['original_amount'],
+      'payment.original_amount',
+    );
+    final paid = _optionalMoneyText(data['paid_amount'], 'payment.paid_amount');
+    final remaining = _optionalMoneyText(
+      data['remaining_amount'],
+      'payment.remaining_amount',
+    );
+    final settledAmount = status == 'paid' ? (paid ?? original) : remaining;
     return DashboardRecord(
       id: id,
       type: DashboardRecordType.payment,
       title: _optionalText(data['reference'], 'payment.reference') ??
           'Payment #$id',
-      status: _optionalText(data['status'], 'payment.status'),
+      status: status,
       date: _optionalDate(data['due_date'], 'payment.due_date'),
       customerName: _counterpartyName(data, 'payment'),
-      remainingAmount: _optionalMoneyText(
-        data['remaining_amount'],
-        'payment.remaining_amount',
-      ),
-      amount: _optionalMoneyText(
-        data['original_amount'],
-        'payment.original_amount',
-      ),
+      remainingAmount: settledAmount,
+      amount: status == 'paid' ? (paid ?? original) : original,
     );
   }
 

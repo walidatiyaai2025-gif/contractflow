@@ -36,11 +36,28 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
   String? _error;
   FollowUpQueuePage? _page;
   int _pageNumber = 1;
+  bool _requestInFlight = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_loadNextOnScroll);
     unawaited(_load(1));
+  }
+
+  void _loadNextOnScroll() {
+    final page = _page;
+    if (page == null || !page.hasMore || _requestInFlight) return;
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentAfter > 360) return;
+    unawaited(_load(page.page + 1, background: true));
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -55,6 +72,8 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
   }
 
   Future<void> _load(int page, {bool background = false}) async {
+    if (_requestInFlight) return;
+    _requestInFlight = true;
     final keepVisible = background && _page != null;
     if (!keepVisible) {
       setState(() {
@@ -71,18 +90,34 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _page = result;
+        if (page > 1 && _page != null) {
+          final merged = <int, FollowUpQueueItem>{
+            for (final item in _page!.items) item.paymentId: item,
+            for (final item in result.items) item.paymentId: item,
+          };
+          _page = FollowUpQueuePage(
+            items: List<FollowUpQueueItem>.unmodifiable(merged.values),
+            page: result.page,
+            perPage: result.perPage,
+            hasMore: result.hasMore,
+          );
+        } else {
+          _page = result;
+        }
         _pageNumber = page;
         _error = null;
         _loading = false;
       });
     } on Object catch (error) {
       if (!mounted) return;
-      if (keepVisible) return;
-      setState(() {
-        _error = error.toString();
-        _loading = false;
-      });
+      if (!keepVisible) {
+        setState(() {
+          _error = error.toString();
+          _loading = false;
+        });
+      }
+    } finally {
+      _requestInFlight = false;
     }
   }
 
@@ -154,6 +189,7 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
               onRefresh: () => _load(_pageNumber),
               color: SafeContractsVisual.navy,
               child: ListView.separated(
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
                 itemCount: page.items.length,
@@ -169,15 +205,14 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
               ),
             ),
           ),
-          _FollowUpPaging(
-            page: page,
-            loading: _loading,
-            onPrevious:
-                page.page > 1 ? () => unawaited(_load(page.page - 1)) : null,
-            onNext: page.hasMore && page.page < 5
-                ? () => unawaited(_load(page.page + 1))
-                : null,
-          ),
+          if (_loading && page.items.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
         ],
       ),
     );
@@ -199,6 +234,10 @@ final class _FollowUpCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     final urgency = _followUpUrgency(item);
+    final remaining = double.tryParse(item.remainingAmount) ?? 0;
+    final isPaid = item.paymentStatus.toLowerCase() == 'paid' || remaining <= 0;
+    final amountColor =
+        isPaid ? SafeContractsVisual.greenDeep : SafeContractsVisual.redDeep;
     return Material(
       color: SafeContractsVisual.surface,
       borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
@@ -314,7 +353,9 @@ final class _FollowUpCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            l10n.t('Remaining'),
+                            isPaid
+                                ? (l10n.isArabic ? 'تم الدفع' : 'Paid')
+                                : l10n.t('Remaining'),
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
@@ -335,7 +376,7 @@ final class _FollowUpCard extends StatelessWidget {
                                 .textTheme
                                 .titleMedium
                                 ?.copyWith(
-                                  color: urgency.color,
+                                  color: amountColor,
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),

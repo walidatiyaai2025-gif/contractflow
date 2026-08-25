@@ -74,7 +74,8 @@ final class MobileBootstrapController extends ChangeNotifier {
       final nextConfigController = MobileConfigController(client);
       await nextConfigController.load();
       configController = nextConfigController;
-      usingConfigDefaults = nextConfigController.state == MobileConfigState.error;
+      usingConfigDefaults =
+          nextConfigController.state == MobileConfigState.error;
 
       final config = nextConfigController.config;
       final policy = MobileNavigationPolicy.resolve(session, config);

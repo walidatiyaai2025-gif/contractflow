@@ -73,7 +73,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                   color: SafeContractsVisual.navy,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(horizontal, 10, horizontal, 22),
+                    padding:
+                        EdgeInsets.fromLTRB(horizontal, 10, horizontal, 22),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 520),
@@ -102,8 +103,10 @@ final class _AlkenzyCompanyWelcomeScreenState
                                 if (widget.onLanguageChanged != null)
                                   SegmentedButton<String>(
                                     segments: const [
-                                      ButtonSegment(value: 'ar', label: Text('ع')),
-                                      ButtonSegment(value: 'en', label: Text('EN')),
+                                      ButtonSegment(
+                                          value: 'ar', label: Text('ع')),
+                                      ButtonSegment(
+                                          value: 'en', label: Text('EN')),
                                     ],
                                     selected: {arabic ? 'ar' : 'en'},
                                     showSelectedIcon: false,
@@ -183,7 +186,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                                       end: 24,
                                       bottom: 28,
                                       child: Align(
-                                        alignment: AlignmentDirectional.bottomEnd,
+                                        alignment:
+                                            AlignmentDirectional.bottomEnd,
                                         child: Text(
                                           arabic
                                               ? 'مرحباً بك في\n${SafeContractsBrand.name}'
@@ -211,7 +215,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   duration: const Duration(milliseconds: 180),
                                   width: active ? 34 : 12,
                                   height: 12,
-                                  margin: const EdgeInsets.symmetric(horizontal: 5),
+                                  margin:
+                                      const EdgeInsets.symmetric(horizontal: 5),
                                   decoration: BoxDecoration(
                                     color: active
                                         ? SafeContractsVisual.navy
@@ -244,10 +249,12 @@ final class _AlkenzyCompanyWelcomeScreenState
                                         ),
                                       ),
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: const Color(0xFF2977BD),
+                                        backgroundColor:
+                                            const Color(0xFF2977BD),
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(18),
+                                          borderRadius:
+                                              BorderRadius.circular(18),
                                         ),
                                       ),
                                     ),
@@ -260,7 +267,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                                     child: FilledButton.icon(
                                       key: const Key('companyWelcomeSignIn'),
                                       onPressed: widget.onSignIn,
-                                      icon: const Icon(Icons.lock_outline_rounded),
+                                      icon: const Icon(
+                                          Icons.lock_outline_rounded),
                                       label: Text(
                                         arabic
                                             ? 'الدخول للنظام'
@@ -271,10 +279,12 @@ final class _AlkenzyCompanyWelcomeScreenState
                                         ),
                                       ),
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: const Color(0xFF3A9C52),
+                                        backgroundColor:
+                                            const Color(0xFF3A9C52),
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(18),
+                                          borderRadius:
+                                              BorderRadius.circular(18),
                                         ),
                                       ),
                                     ),

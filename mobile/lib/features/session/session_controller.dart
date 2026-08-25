@@ -79,7 +79,8 @@ final class SafeContractsSession {
       userId: userId,
       scope: scope,
       capabilities: Map<String, bool>.unmodifiable(capabilities),
-      displayName: _optionalText(data['display_name'], 'session.display_name', 160),
+      displayName:
+          _optionalText(data['display_name'], 'session.display_name', 160),
       email: _optionalText(data['email'], 'session.email', 254),
       phone: _optionalText(data['phone'], 'session.phone', 64),
       avatarUrl: _optionalAvatarUrl(data['avatar_url']),

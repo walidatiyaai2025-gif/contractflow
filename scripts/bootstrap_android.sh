@@ -8,24 +8,18 @@ FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
 ALKENZY_APP_ASSET="$ROOT/mobile/assets/brand/alkenzy_adv.png"
 ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.png"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
-PATCHER="$ROOT/scripts/apply_alkenzy_036.py"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE" "$PATCHER"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
   fi
 done
-
-# Apply the forward-only 0.3.6 mobile source transforms before Flutter compiles
-# the release candidate. The patcher is idempotent and fails closed if the
-# locked 0.3.5 source contract has unexpectedly changed.
-python3 "$PATCHER"
 
 cmp -s "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" || {
   echo "FAIL: in-app and launcher Alkenzy identities must use the same supplied logo bytes" >&2

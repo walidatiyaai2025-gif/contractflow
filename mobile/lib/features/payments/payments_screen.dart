@@ -47,11 +47,27 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
   PaymentPage? _page;
   int _pageNumber = 1;
   bool _requestInFlight = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_loadNextOnScroll);
     unawaited(_load(1));
+  }
+
+  void _loadNextOnScroll() {
+    final page = _page;
+    if (page == null || !page.hasMore || _requestInFlight) return;
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentAfter > 360) return;
+    unawaited(_load(page.page + 1, background: true));
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -84,7 +100,22 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _page = result;
+        if (page > 1 && _page != null) {
+          final merged = <int, SafeContractsPayment>{
+            for (final item in _page!.payments) item.id: item,
+            for (final item in result.payments) item.id: item,
+          };
+          _page = PaymentPage(
+            payments: List<SafeContractsPayment>.unmodifiable(merged.values),
+            page: result.page,
+            perPage: result.perPage,
+            hasMore: result.hasMore,
+            sort: result.sort,
+            order: result.order,
+          );
+        } else {
+          _page = result;
+        }
         _pageNumber = page;
         _error = null;
         _loading = false;
@@ -259,6 +290,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               onRefresh: () => _load(_pageNumber),
               color: SafeContractsVisual.navy,
               child: ListView.separated(
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
                 itemCount: page.payments.length,
@@ -277,15 +309,14 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               ),
             ),
           ),
-          _PaymentPaging(
-            page: page,
-            loading: _loading,
-            onPrevious:
-                page.page > 1 ? () => unawaited(_load(page.page - 1)) : null,
-            onNext: page.hasMore && page.page < 5
-                ? () => unawaited(_load(page.page + 1))
-                : null,
-          ),
+          if (_loading && page.payments.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
         ],
       ),
     );
@@ -316,9 +347,23 @@ final class _PremiumPaymentCard extends StatelessWidget {
     final directionSoft = payment.isPayable
         ? SafeContractsVisual.roseGoldSoft
         : SafeContractsVisual.greenSoft;
-    final directionLabel = payment.isPayable
-        ? (l10n.isArabic ? 'واجبة الدفع' : 'Payable')
-        : (l10n.isArabic ? 'مستحقة' : 'Receivable');
+    final remaining = double.tryParse(payment.remainingAmount) ?? 0;
+    final paid = double.tryParse(payment.paidAmount) ?? 0;
+    final original = double.tryParse(payment.originalAmount) ?? 0;
+    final isPaid = payment.status.toLowerCase() == 'paid' ||
+        (remaining <= 0 && (paid > 0 || original > 0));
+    final amountValue = isPaid
+        ? (paid > 0 ? payment.paidAmount : payment.originalAmount)
+        : payment.remainingAmount;
+    final amountColor =
+        isPaid ? SafeContractsVisual.greenDeep : SafeContractsVisual.redDeep;
+    final directionLabel = isPaid
+        ? (l10n.isArabic
+            ? (payment.isPayable ? 'تم الدفع' : 'تم التحصيل')
+            : (payment.isPayable ? 'Paid' : 'Collected'))
+        : (payment.isPayable
+            ? (l10n.isArabic ? 'واجبة الدفع' : 'Payable')
+            : (l10n.isArabic ? 'مستحقة' : 'Receivable'));
 
     return Material(
       color: SafeContractsVisual.surface,
@@ -435,7 +480,11 @@ final class _PremiumPaymentCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            l10n.t('Remaining'),
+                            isPaid
+                                ? (l10n.isArabic
+                                    ? 'المبلغ المدفوع'
+                                    : 'Paid amount')
+                                : l10n.t('Remaining'),
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
@@ -447,7 +496,7 @@ final class _PremiumPaymentCard extends StatelessWidget {
                           Text(
                             _displayMoney(
                               context,
-                              payment.remainingAmount,
+                              amountValue,
                               currency,
                             ),
                             maxLines: 1,
@@ -456,7 +505,7 @@ final class _PremiumPaymentCard extends StatelessWidget {
                                 .textTheme
                                 .titleMedium
                                 ?.copyWith(
-                                  color: directionColor,
+                                  color: amountColor,
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),
