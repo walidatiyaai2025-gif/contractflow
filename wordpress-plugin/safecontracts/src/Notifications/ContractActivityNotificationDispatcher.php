@@ -89,6 +89,15 @@ final class ContractActivityNotificationDispatcher
             );
         }, 20, 12);
 
+        add_action('safecontracts_collection_archived', static function (mixed ...$args) use ($dispatcher): void {
+            $dispatcher->handlePaymentAtIndex(
+                'collection_archived',
+                ['ar' => 'تم إلغاء سداد أو تحصيل من دفعة', 'en' => 'Payment settlement reversed'],
+                $args,
+                1
+            );
+        }, 20, 12);
+
         add_action('safecontracts_followup_recorded', static function (mixed ...$args) use ($dispatcher): void {
             $dispatcher->handlePaymentAtIndex(
                 'followup_recorded',
@@ -96,6 +105,21 @@ final class ContractActivityNotificationDispatcher
                 $args,
                 1,
                 'followup'
+            );
+        }, 20, 12);
+
+        add_action('safecontracts_entity_attachment_added', static function (mixed ...$args) use ($dispatcher): void {
+            $dispatcher->handleEntityAttachment(
+                'attachment_added',
+                ['ar' => 'تمت إضافة مرفق', 'en' => 'Attachment added'],
+                $args
+            );
+        }, 20, 12);
+        add_action('safecontracts_entity_attachment_removed', static function (mixed ...$args) use ($dispatcher): void {
+            $dispatcher->handleEntityAttachment(
+                'attachment_removed',
+                ['ar' => 'تم حذف مرفق', 'en' => 'Attachment removed'],
+                $args
             );
         }, 20, 12);
     }
@@ -153,6 +177,31 @@ final class ContractActivityNotificationDispatcher
             return;
         }
         $this->notifyPayment($paymentId, $eventCode, $label, $resourceType);
+    }
+
+    /** @param array{ar:string,en:string} $label @param list<mixed> $args */
+    private function handleEntityAttachment(string $eventCode, array $label, array $args): void
+    {
+        $entityType = strtolower(trim((string) ($args[0] ?? '')));
+        $entityId = (int) ($args[1] ?? 0);
+        if ($entityId <= 0) {
+            return;
+        }
+
+        if ($entityType === 'contract') {
+            $this->notifyContract($entityId, 'contract_' . $eventCode, $label, 'contract', $entityId, 0);
+            return;
+        }
+        if ($entityType === 'payment') {
+            $this->notifyPayment($entityId, 'payment_' . $eventCode, $label, 'payment');
+            return;
+        }
+        if ($entityType === 'collection') {
+            $paymentId = $this->paymentIdForCollection($entityId);
+            if ($paymentId > 0) {
+                $this->notifyPayment($paymentId, 'collection_' . $eventCode, $label, 'payment');
+            }
+        }
     }
 
     /** @param array{ar:string,en:string} $label */
@@ -232,6 +281,20 @@ final class ContractActivityNotificationDispatcher
         } catch (Throwable $error) {
             $this->recordFailure($eventCode, $contractId, $paymentId, $error);
         }
+    }
+
+    private function paymentIdForCollection(int $collectionId): int
+    {
+        global $wpdb;
+        if (! is_object($wpdb) || ! method_exists($wpdb, 'get_var') || ! method_exists($wpdb, 'prepare')) {
+            return 0;
+        }
+        $table = $wpdb->prefix . 'safecontracts_payment_collections';
+        $paymentId = $wpdb->get_var($wpdb->prepare(
+            "SELECT payment_id FROM {$table} WHERE id = %d LIMIT 1",
+            $collectionId
+        ));
+        return max(0, (int) $paymentId);
     }
 
     private function recordFailure(string $eventCode, int $contractId, int $paymentId, Throwable $error): void
