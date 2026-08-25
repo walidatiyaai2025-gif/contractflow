@@ -58,13 +58,9 @@ final class ProfileAvatarController
                 throw new InvalidArgumentException('Profile avatar must be a JPEG, PNG, or WebP image.');
             }
 
+            // Router::canAccess is the route permission callback, so this callback
+            // only runs for an authenticated SafeContracts user.
             $userId = get_current_user_id();
-            if ($userId <= 0) {
-                return RequestGuard::unauthorized(
-                    'safecontracts_profile_avatar_unauthorized',
-                    __('Authentication is required.', 'safecontracts')
-                );
-            }
 
             $filename = sprintf(
                 'alkenzy-avatar-%d-%d.%s',
