@@ -258,28 +258,48 @@ final class CustomersController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (page < 1 || page > 5) return;
+    if (page < 1 || (page - 1) * pageSize > 1000000) return;
+    final previous = currentPage;
     state = CustomersLoadState.loading;
     errorMessage = null;
     notifyListeners();
     try {
-      currentPage = await repository.loadPage(
+      final next = await repository.loadPage(
         page: page,
         perPage: pageSize,
         order: order,
       );
+      if (page > 1 && previous != null) {
+        final merged = <int, SafeContractsCustomer>{
+          for (final item in previous.customers) item.id: item,
+          for (final item in next.customers) item.id: item,
+        };
+        currentPage = CustomerPage(
+          customers: List<SafeContractsCustomer>.unmodifiable(merged.values),
+          page: next.page,
+          perPage: next.perPage,
+          total: next.total,
+          totalPages: next.totalPages,
+          hasMore: next.hasMore,
+          scope: next.scope,
+        );
+      } else {
+        currentPage = next;
+      }
       state = CustomersLoadState.ready;
     } on SafeContractsApiException catch (error) {
+      currentPage = previous;
       errorMessage = error.message;
       state = CustomersLoadState.error;
     } on Object catch (error) {
+      currentPage = previous;
       errorMessage = error.toString();
       state = CustomersLoadState.error;
     }
     notifyListeners();
   }
 
-  Future<void> refresh() => loadPage(currentPage?.page ?? 1);
+  Future<void> refresh() => loadPage(1);
 
   Future<void> previousPage() async {
     final page = currentPage?.page ?? 1;
@@ -288,7 +308,7 @@ final class CustomersController extends ChangeNotifier {
 
   Future<void> nextPage() async {
     final page = currentPage;
-    if (page != null && page.hasMore && page.page < 5) {
+    if (page != null && page.hasMore) {
       await loadPage(page.page + 1);
     }
   }

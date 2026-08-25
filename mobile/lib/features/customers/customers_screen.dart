@@ -292,10 +292,22 @@ final class _CustomerBody extends StatelessWidget {
       );
     }
 
-    final list = _CustomerList(
-      controller: controller,
-      customers: customers,
-      hasQuery: hasQuery,
+    final list = NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        final page = controller.currentPage;
+        if (notification.metrics.extentAfter <= 360 &&
+            page != null &&
+            page.hasMore &&
+            controller.state != CustomersLoadState.loading) {
+          unawaited(controller.nextPage());
+        }
+        return false;
+      },
+      child: _CustomerList(
+        controller: controller,
+        customers: customers,
+        hasQuery: hasQuery,
+      ),
     );
     final detail = _CustomerDetail(controller: controller, onEdit: onEdit);
     if (split) {
@@ -339,7 +351,7 @@ final class _CustomerList extends StatelessWidget {
         message: hasQuery
             ? (context.scL10n.isArabic
                 ? 'لا توجد نتائج مطابقة في الصفحة الحالية.'
-                : 'No matching customers on this page.')
+                : 'No matching customers in the loaded data.')
             : context.scL10n.t('No customers are available in your scope.'),
         action: controller.refresh,
       );
@@ -367,12 +379,6 @@ final class _CustomerList extends StatelessWidget {
               },
             ),
           ),
-        ),
-        _Pagination(
-          page: page,
-          busy: controller.state == CustomersLoadState.loading,
-          onPrevious: controller.previousPage,
-          onNext: controller.nextPage,
         ),
       ],
     );
