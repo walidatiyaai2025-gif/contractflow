@@ -299,9 +299,11 @@ final class MobileReportDocumentBuilder {
     for (var rowIndex = 0; rowIndex < allRows.length; rowIndex++) {
       final cells = <String>[];
       for (final value in allRows[rowIndex]) {
-        final style = rowIndex == 0 ? ' s="1"' : '';
+        final isHeader = rowIndex == 0;
+        final rtl = _containsArabic(value);
+        final styleId = isHeader ? (rtl ? 3 : 1) : (rtl ? 2 : 0);
         cells.add(
-          '<c t="inlineStr"$style><is><t xml:space="preserve">${_xml(value)}</t></is></c>',
+          '<c t="inlineStr" s="$styleId"><is><t xml:space="preserve">${_xml(value)}</t></is></c>',
         );
       }
       sheetRows.add('<row>${cells.join()}</row>');
@@ -347,7 +349,12 @@ final class MobileReportDocumentBuilder {
             '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
             '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
             '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-            '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>'
+            '<cellXfs count="4">'
+            '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+            '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+            '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="right" readingOrder="2"/></xf>'
+            '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="right" readingOrder="2"/></xf>'
+            '</cellXfs>'
             '</styleSheet>',
       ))
       ..addFile(_textFile(
@@ -361,8 +368,18 @@ final class MobileReportDocumentBuilder {
   }
 
   Uint8List _docx(MobileReportData data) {
-    String wordCell(String value, {bool bold = false}) =>
-        '<w:tc><w:p><w:r>${bold ? '<w:rPr><w:b/></w:rPr>' : ''}<w:t xml:space="preserve">${_xml(value)}</w:t></w:r></w:p></w:tc>';
+    String wordCell(String value, {bool bold = false}) {
+      final rtl = _containsArabic(value);
+      final paragraphProperties =
+          rtl ? '<w:pPr><w:bidi/><w:jc w:val="right"/></w:pPr>' : '';
+      final runProperties = StringBuffer('<w:rPr>');
+      if (bold) runProperties.write('<w:b/>');
+      if (rtl) runProperties.write('<w:rtl/>');
+      runProperties.write('</w:rPr>');
+      return '<w:tc><w:p>$paragraphProperties<w:r>${runProperties.toString()}'
+          '<w:t xml:space="preserve">${_xml(value)}</w:t></w:r></w:p></w:tc>';
+    }
+
     final rows = <String>[
       '<w:tr>${data.columns.map((v) => wordCell(v, bold: true)).join()}</w:tr>',
       ...data.rows.map(
@@ -403,12 +420,27 @@ final class MobileReportDocumentBuilder {
     );
     final document = pw.Document();
     final limitedRows = data.rows.take(250).toList(growable: false);
+
+    pw.Widget cellText(String value, {required bool header}) {
+      final rtl = _containsArabic(value);
+      return pw.Text(
+        value,
+        textDirection: rtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+        textAlign: rtl ? pw.TextAlign.right : pw.TextAlign.left,
+        style: pw.TextStyle(
+          font: header ? medium : regular,
+          fontSize: header ? 8 : 7,
+        ),
+      );
+    }
+
     document.addPage(
       pw.MultiPage(
         theme: pw.ThemeData.withFont(base: regular, bold: medium),
         build: (context) => <pw.Widget>[
           pw.Text(
             data.type.title,
+            textDirection: pw.TextDirection.ltr,
             style: pw.TextStyle(font: medium, fontSize: 18),
           ),
           pw.SizedBox(height: 12),
@@ -420,10 +452,7 @@ final class MobileReportDocumentBuilder {
                     .map(
                       (value) => pw.Padding(
                         padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(
-                          value,
-                          style: pw.TextStyle(font: medium, fontSize: 8),
-                        ),
+                        child: cellText(value, header: true),
                       ),
                     )
                     .toList(growable: false),
@@ -434,8 +463,7 @@ final class MobileReportDocumentBuilder {
                       .map(
                         (value) => pw.Padding(
                           padding: const pw.EdgeInsets.all(4),
-                          child: pw.Text(value,
-                              style: const pw.TextStyle(fontSize: 7)),
+                          child: cellText(value, header: false),
                         ),
                       )
                       .toList(growable: false),
@@ -448,6 +476,10 @@ final class MobileReportDocumentBuilder {
     );
     return document.save();
   }
+
+  bool _containsArabic(String value) => RegExp(
+        r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]',
+      ).hasMatch(value);
 
   ArchiveFile _textFile(String name, String content) {
     final bytes = utf8.encode(content);
