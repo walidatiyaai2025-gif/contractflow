@@ -315,8 +315,8 @@ final class _SafeContractsLoginScreenState
                                                 child: Text(
                                                   l10n.isArabic ? 'أو' : 'OR',
                                                   style: const TextStyle(
-                                                    color:
-                                                        SafeContractsVisual.muted,
+                                                    color: SafeContractsVisual
+                                                        .muted,
                                                     fontWeight: FontWeight.w800,
                                                   ),
                                                 ),
@@ -329,12 +329,12 @@ final class _SafeContractsLoginScreenState
                                           ),
                                           OutlinedButton.icon(
                                             key: const Key('biometricLogin'),
-                                            onPressed: submitting ||
-                                                    _biometricBusy
-                                                ? null
-                                                : () => unawaited(
-                                                      _submitBiometric(),
-                                                    ),
+                                            onPressed:
+                                                submitting || _biometricBusy
+                                                    ? null
+                                                    : () => unawaited(
+                                                          _submitBiometric(),
+                                                        ),
                                             icon: _biometricBusy
                                                 ? const SizedBox.square(
                                                     dimension: 18,
