@@ -134,15 +134,12 @@ final class MobileBootstrapController extends ChangeNotifier {
         canExport: policy.destinations.contains(MobileDestination.export),
       );
 
-      await Future.wait<void>(<Future<void>>[
-        dashboard.load(),
-        if (customers.canAccess) customers.ensureLoaded(),
-        if (suppliers.canAccess) suppliers.ensureLoaded(),
-        if (contracts.canAccess) contracts.ensureLoaded(),
-        if (finance.canAccess) finance.ensureLoaded(),
-        if (notifications.canAccess) notifications.ensureLoaded(),
-        profile.ensureLoaded(),
-      ]);
+      // Fast first-entry contract: fetch only the data required to render the
+      // initial Dashboard. Customers, suppliers, contracts, finance,
+      // notifications and profile are lazy-loaded by the destination that
+      // actually needs them. This prevents first login from downloading the
+      // entire workspace before the shell can open.
+      await dashboard.load();
 
       state = MobileBootstrapState.ready;
       notifyListeners();

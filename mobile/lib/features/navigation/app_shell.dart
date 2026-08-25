@@ -437,6 +437,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           canManagePayments:
               widget.session.can('safecontracts_manage_payments'),
           canEnterCollection: widget.policy.canEnterCollection,
+          onDataChanged: () =>
+              unawaited(widget.dashboardController.refreshSilently()),
           refreshRevision: _liveRefreshRevision,
         ),
       MobileDestination.collections => PaymentsScreen(
@@ -447,6 +449,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           canManagePayments:
               widget.session.can('safecontracts_manage_payments'),
           canEnterCollection: widget.policy.canEnterCollection,
+          onDataChanged: () =>
+              unawaited(widget.dashboardController.refreshSilently()),
           refreshRevision: _liveRefreshRevision,
         ),
       MobileDestination.finance => FinanceScreen(

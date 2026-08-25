@@ -53,7 +53,10 @@ void main() {
     await controller.nextPage();
 
     expect(controller.currentPage?.page, 2);
-    expect(controller.currentPage?.customers.single.name, 'Beta');
+    expect(
+      controller.currentPage?.customers.map((item) => item.name).toList(),
+      <String>['Acme', 'Beta'],
+    );
     expect(controller.currentPage?.hasMore, isFalse);
 
     await controller.setOrder('desc');

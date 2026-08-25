@@ -23,6 +23,7 @@ final class PaymentsScreen extends StatefulWidget {
     this.canEnterCollection = false,
     this.onEditExpectedDate,
     this.onRecordCollection,
+    this.onDataChanged,
     this.refreshRevision = 0,
     super.key,
   });
@@ -35,6 +36,7 @@ final class PaymentsScreen extends StatefulWidget {
   final bool canEnterCollection;
   final PaymentAction? onEditExpectedDate;
   final PaymentAction? onRecordCollection;
+  final VoidCallback? onDataChanged;
   final int refreshRevision;
 
   @override
@@ -47,11 +49,31 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
   PaymentPage? _page;
   int _pageNumber = 1;
   bool _requestInFlight = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_loadNextOnScroll);
     unawaited(_load(1));
+  }
+
+  void _loadNextOnScroll() {
+    final page = _page;
+    if (page == null || !page.hasMore || _requestInFlight) {
+      return;
+    }
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentAfter > 360) {
+      return;
+    }
+    unawaited(_load(page.page + 1, background: true));
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -84,7 +106,22 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _page = result;
+        if (page > 1 && _page != null) {
+          final merged = <int, SafeContractsPayment>{
+            for (final item in _page!.payments) item.id: item,
+            for (final item in result.payments) item.id: item,
+          };
+          _page = PaymentPage(
+            payments: List<SafeContractsPayment>.unmodifiable(merged.values),
+            page: result.page,
+            perPage: result.perPage,
+            hasMore: result.hasMore,
+            sort: result.sort,
+            order: result.order,
+          );
+        } else {
+          _page = result;
+        }
         _pageNumber = page;
         _error = null;
         _loading = false;
@@ -115,7 +152,10 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
         ),
       ),
     );
-    if (mounted) unawaited(_load(_pageNumber));
+    if (mounted) {
+      unawaited(_load(_pageNumber));
+      widget.onDataChanged?.call();
+    }
   }
 
   Future<void> _editExpectedDate(SafeContractsPayment payment) async {
@@ -196,6 +236,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.scL10n.collectionRecorded(receipt.id))),
     );
+    widget.onDataChanged?.call();
   }
 
   void _showApiError(SafeContractsApiException error) {
@@ -259,6 +300,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               onRefresh: () => _load(_pageNumber),
               color: SafeContractsVisual.navy,
               child: ListView.separated(
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
                 itemCount: page.payments.length,
@@ -277,15 +319,14 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
               ),
             ),
           ),
-          _PaymentPaging(
-            page: page,
-            loading: _loading,
-            onPrevious:
-                page.page > 1 ? () => unawaited(_load(page.page - 1)) : null,
-            onNext: page.hasMore && page.page < 5
-                ? () => unawaited(_load(page.page + 1))
-                : null,
-          ),
+          if (_loading && page.payments.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
         ],
       ),
     );
@@ -316,9 +357,23 @@ final class _PremiumPaymentCard extends StatelessWidget {
     final directionSoft = payment.isPayable
         ? SafeContractsVisual.roseGoldSoft
         : SafeContractsVisual.greenSoft;
-    final directionLabel = payment.isPayable
-        ? (l10n.isArabic ? 'واجبة الدفع' : 'Payable')
-        : (l10n.isArabic ? 'مستحقة' : 'Receivable');
+    final remaining = double.tryParse(payment.remainingAmount) ?? 0;
+    final paid = double.tryParse(payment.paidAmount) ?? 0;
+    final original = double.tryParse(payment.originalAmount) ?? 0;
+    final isPaid = payment.status.toLowerCase() == 'paid' ||
+        (remaining <= 0 && (paid > 0 || original > 0));
+    final amountValue = isPaid
+        ? (paid > 0 ? payment.paidAmount : payment.originalAmount)
+        : payment.remainingAmount;
+    final amountColor =
+        isPaid ? SafeContractsVisual.greenDeep : SafeContractsVisual.redDeep;
+    final directionLabel = isPaid
+        ? (l10n.isArabic
+            ? (payment.isPayable ? 'تم الدفع' : 'تم التحصيل')
+            : (payment.isPayable ? 'Paid' : 'Collected'))
+        : (payment.isPayable
+            ? (l10n.isArabic ? 'واجبة الدفع' : 'Payable')
+            : (l10n.isArabic ? 'مستحقة' : 'Receivable'));
 
     return Material(
       color: SafeContractsVisual.surface,
@@ -435,7 +490,11 @@ final class _PremiumPaymentCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            l10n.t('Remaining'),
+                            isPaid
+                                ? (l10n.isArabic
+                                    ? 'المبلغ المدفوع'
+                                    : 'Paid amount')
+                                : l10n.t('Remaining'),
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
@@ -447,7 +506,7 @@ final class _PremiumPaymentCard extends StatelessWidget {
                           Text(
                             _displayMoney(
                               context,
-                              payment.remainingAmount,
+                              amountValue,
                               currency,
                             ),
                             maxLines: 1,
@@ -456,7 +515,7 @@ final class _PremiumPaymentCard extends StatelessWidget {
                                 .textTheme
                                 .titleMedium
                                 ?.copyWith(
-                                  color: directionColor,
+                                  color: amountColor,
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),
@@ -548,59 +607,6 @@ final class _PaymentMeta extends StatelessWidget {
           ],
         ),
       );
-}
-
-final class _PaymentPaging extends StatelessWidget {
-  const _PaymentPaging({
-    required this.page,
-    required this.loading,
-    required this.onPrevious,
-    required this.onNext,
-  });
-
-  final PaymentPage page;
-  final bool loading;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-      child: SafeContractsSurface(
-        elevated: false,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: l10n.t('Previous page'),
-              onPressed: loading ? null : onPrevious,
-              icon: Icon(
-                rtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                l10n.pageNumber(page.page),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-            IconButton(
-              tooltip: l10n.t('Next page'),
-              onPressed: loading ? null : onNext,
-              icon: Icon(
-                rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 final class PaymentDetailScreen extends StatefulWidget {
