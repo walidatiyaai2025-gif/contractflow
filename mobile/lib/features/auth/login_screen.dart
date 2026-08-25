@@ -122,7 +122,8 @@ final class _SafeContractsLoginScreenState
           barrierDismissible: false,
           builder: (dialogContext) => AlertDialog(
             icon: const Icon(Icons.fingerprint_rounded, size: 42),
-            title: Text(ar ? 'تفعيل الدخول بالبصمة؟' : 'Enable fingerprint sign-in?'),
+            title: Text(
+                ar ? 'تفعيل الدخول بالبصمة؟' : 'Enable fingerprint sign-in?'),
             content: Text(
               ar
                   ? 'سيتم حفظ رمز الجلسة الآمن فقط لاستخدامه مع البصمة. لن يتم حفظ كلمة المرور ولن يتم تشغيل خيار تذكرني.'
