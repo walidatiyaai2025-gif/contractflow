@@ -10,9 +10,17 @@ final class SecureMobileTokenStore implements MobileTokenStore {
   SecureMobileTokenStore({FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage();
 
-  static const _key = 'safecontracts.mobile.bearer_token';
+  static const storageKey = 'safecontracts.mobile.bearer_token';
   final FlutterSecureStorage _storage;
   String? _sessionValue;
+
+  Future<String?> readPersistent() async {
+    final value = await _storage.read(key: storageKey);
+    final token = value?.trim();
+    return token == null || token.isEmpty ? null : token;
+  }
+
+  Future<bool> hasPersistentToken() async => (await readPersistent()) != null;
 
   @override
   Future<String?> read() async {
@@ -20,9 +28,7 @@ final class SecureMobileTokenStore implements MobileTokenStore {
     if (session != null && session.isNotEmpty) {
       return session;
     }
-    final value = await _storage.read(key: _key);
-    final token = value?.trim();
-    return token == null || token.isEmpty ? null : token;
+    return readPersistent();
   }
 
   @override
@@ -33,16 +39,57 @@ final class SecureMobileTokenStore implements MobileTokenStore {
     }
     _sessionValue = normalized;
     if (persistent) {
-      await _storage.write(key: _key, value: normalized);
+      await _storage.write(key: storageKey, value: normalized);
     } else {
-      await _storage.delete(key: _key);
+      await _storage.delete(key: storageKey);
     }
   }
 
   @override
   Future<void> clear() async {
     _sessionValue = null;
-    await _storage.delete(key: _key);
+    await _storage.delete(key: storageKey);
+  }
+}
+
+/// Protects a remembered server-issued Bearer token behind a local biometric
+/// gate after every cold app start. Passwords are never stored. A successful
+/// username/password login unlocks only the current process and may persist the
+/// opaque token when Remember me is enabled.
+final class BiometricProtectedMobileTokenStore implements MobileTokenStore {
+  BiometricProtectedMobileTokenStore(this._secureStore);
+
+  final SecureMobileTokenStore _secureStore;
+  bool _unlocked = false;
+
+  bool get isUnlocked => _unlocked;
+
+  Future<bool> hasPersistentToken() => _secureStore.hasPersistentToken();
+
+  void unlock() {
+    _unlocked = true;
+  }
+
+  void lock() {
+    _unlocked = false;
+  }
+
+  @override
+  Future<String?> read() async {
+    if (!_unlocked) return null;
+    return _secureStore.read();
+  }
+
+  @override
+  Future<void> write(String token, {bool persistent = true}) async {
+    await _secureStore.write(token, persistent: persistent);
+    _unlocked = true;
+  }
+
+  @override
+  Future<void> clear() async {
+    _unlocked = false;
+    await _secureStore.clear();
   }
 }
 
