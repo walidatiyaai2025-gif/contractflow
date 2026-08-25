@@ -160,6 +160,8 @@ final class AdminPremiumDashboardEnhancements
 
             const financialGrid = dashboard.querySelector('.safecontracts-premium-three-column');
             const monthlyFlow = dashboard.querySelector('.safecontracts-dashboard-monthly-flow');
+            const desktopReferenceLayout = window.matchMedia('(min-width: 1181px)').matches;
+            let referenceGridActive = false;
             if (monthlyFlow instanceof HTMLElement) {
                 const currencyCards = [...monthlyFlow.children].filter((child) => child.matches?.('.safecontracts-dashboard-monthly-flow__currency'));
                 if (currencyCards.length > 1) {
@@ -169,9 +171,10 @@ final class AdminPremiumDashboardEnhancements
                     currencyCards.forEach((card) => rail.append(card));
                     enhanceRail(rail, '.safecontracts-dashboard-monthly-flow__currency');
                 }
-                if (financialGrid instanceof HTMLElement) {
+                if (desktopReferenceLayout && financialGrid instanceof HTMLElement) {
                     financialGrid.classList.add('safecontracts-dashboard-reference-grid');
                     financialGrid.append(monthlyFlow);
+                    referenceGridActive = true;
                 }
             }
 
@@ -187,10 +190,12 @@ final class AdminPremiumDashboardEnhancements
                 const body = document.createElement('div');
                 body.className = 'safecontracts-dashboard-secondary__body';
                 details.append(summary, body);
-                if (financialGrid instanceof HTMLElement) {
+                if (referenceGridActive && financialGrid instanceof HTMLElement) {
                     financialGrid.insertAdjacentElement('afterend', details);
                 } else if (monthlyFlow instanceof HTMLElement) {
                     monthlyFlow.insertAdjacentElement('afterend', details);
+                } else if (financialGrid instanceof HTMLElement) {
+                    financialGrid.insertAdjacentElement('afterend', details);
                 } else {
                     dashboard.append(details);
                 }
