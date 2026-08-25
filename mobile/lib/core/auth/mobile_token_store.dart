@@ -10,9 +10,38 @@ final class SecureMobileTokenStore implements MobileTokenStore {
   SecureMobileTokenStore({FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage();
 
-  static const _key = 'safecontracts.mobile.bearer_token';
+  static const storageKey = 'safecontracts.mobile.bearer_token';
   final FlutterSecureStorage _storage;
   String? _sessionValue;
+  bool _persistentUnlocked = false;
+
+  bool get persistentUnlocked => _persistentUnlocked;
+
+  Future<String?> readPersistent() async {
+    final value = await _storage.read(key: storageKey);
+    final token = value?.trim();
+    return token == null || token.isEmpty ? null : token;
+  }
+
+  Future<bool> hasPersistentToken() async => (await readPersistent()) != null;
+
+  Future<void> persistCurrentForBiometric() async {
+    final token = _sessionValue?.trim();
+    if (token == null || token.isEmpty) {
+      throw StateError('No authenticated session is available to secure.');
+    }
+    await _storage.write(key: storageKey, value: token);
+    _persistentUnlocked = true;
+  }
+
+  void unlockPersistent() {
+    _persistentUnlocked = true;
+  }
+
+  void lockPersistent() {
+    _persistentUnlocked = false;
+    _sessionValue = null;
+  }
 
   @override
   Future<String?> read() async {
@@ -20,9 +49,8 @@ final class SecureMobileTokenStore implements MobileTokenStore {
     if (session != null && session.isNotEmpty) {
       return session;
     }
-    final value = await _storage.read(key: _key);
-    final token = value?.trim();
-    return token == null || token.isEmpty ? null : token;
+    if (!_persistentUnlocked) return null;
+    return readPersistent();
   }
 
   @override
@@ -32,17 +60,19 @@ final class SecureMobileTokenStore implements MobileTokenStore {
       throw const FormatException('SafeContracts mobile token is invalid.');
     }
     _sessionValue = normalized;
+    _persistentUnlocked = true;
     if (persistent) {
-      await _storage.write(key: _key, value: normalized);
+      await _storage.write(key: storageKey, value: normalized);
     } else {
-      await _storage.delete(key: _key);
+      await _storage.delete(key: storageKey);
     }
   }
 
   @override
   Future<void> clear() async {
     _sessionValue = null;
-    await _storage.delete(key: _key);
+    _persistentUnlocked = false;
+    await _storage.delete(key: storageKey);
   }
 }
 
