@@ -77,7 +77,7 @@ final class _MobileExcelExportScreenState
                 child: Column(
                   children: <Widget>[
                     DropdownButtonFormField<MobileReportType>(
-                      value: _reports.reportType,
+                      initialValue: _reports.reportType,
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: l10n.isArabic ? 'التقرير' : 'Report',
@@ -101,7 +101,7 @@ final class _MobileExcelExportScreenState
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<MobileReportFormat>(
-                      value: _reports.format,
+                      initialValue: _reports.format,
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: l10n.isArabic ? 'صيغة الملف' : 'File format',
