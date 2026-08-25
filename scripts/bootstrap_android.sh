@@ -60,8 +60,8 @@ cd "$MOBILE"
 
 # Flutter owns the platform boilerplate version. Recreate it from the exact
 # Flutter stable toolchain used by CI, then restore the repository's release
-# signing, networking, Firebase, notification presentation, and Safe Contracts
-# runtime contracts. The launcher icon is the supplied Alkenzy Advertising mark.
+# signing, networking, Firebase, notification presentation, biometric access,
+# explicit document download, and Safe Contracts runtime contracts.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -137,6 +137,7 @@ else:
 permissions = [
     'android.permission.INTERNET',
     'android.permission.POST_NOTIFICATIONS',
+    'android.permission.USE_BIOMETRIC',
 ]
 for permission in permissions:
     if permission in text:
@@ -200,6 +201,10 @@ grep -Fq 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing POST_NOTIFICATIONS permission" >&2
   exit 1
 }
+grep -Fq 'android.permission.USE_BIOMETRIC' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing USE_BIOMETRIC permission" >&2
+  exit 1
+}
 grep -Fq 'android:label="Alkenzy ADV"' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing Alkenzy ADV label" >&2
   exit 1
@@ -220,6 +225,14 @@ grep -Fq 'safecontracts/notifications' "$MAIN_ACTIVITY_TARGET" || {
   echo "FAIL: Android release activity is missing foreground notification bridge" >&2
   exit 1
 }
+grep -Fq 'safecontracts/files' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity is missing explicit document Save As bridge" >&2
+  exit 1
+}
+grep -Fq 'FlutterFragmentActivity' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity is not biometric-compatible" >&2
+  exit 1
+}
 grep -Fq 'id("com.google.gms.google-services")' android/app/build.gradle.kts || {
   echo "FAIL: Android app does not apply Google Services Gradle plugin" >&2
   exit 1
@@ -229,4 +242,4 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "Alkenzy ADV Android scaffold bootstrapped with supplied Alkenzy launcher icon, high-importance tray notifications, release signing, INTERNET, notifications, and Firebase contracts."
+echo "Alkenzy ADV Android scaffold bootstrapped with launcher identity, biometric login, explicit document Save As, high-importance notifications, release signing, INTERNET, and Firebase contracts."
