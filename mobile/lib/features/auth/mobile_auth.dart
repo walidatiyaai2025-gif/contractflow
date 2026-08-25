@@ -116,7 +116,8 @@ final class MobileLoginController extends ChangeNotifier {
 
   void resetError() {
     errorMessage = null;
-    if (state == MobileLoginState.error) {
+    rememberMe = false;
+    if (state == MobileLoginState.error || state == MobileLoginState.authenticated) {
       state = MobileLoginState.idle;
     }
     notifyListeners();
