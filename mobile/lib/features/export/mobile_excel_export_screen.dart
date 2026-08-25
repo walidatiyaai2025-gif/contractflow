@@ -5,31 +5,55 @@ import 'package:flutter/material.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../ui/safecontracts_design.dart';
 import 'mobile_excel_export.dart';
+import 'mobile_report_export.dart';
 
-final class MobileExcelExportScreen extends StatelessWidget {
+final class MobileExcelExportScreen extends StatefulWidget {
   const MobileExcelExportScreen({required this.controller, super.key});
 
   final MobileExcelExportController controller;
 
   @override
+  State<MobileExcelExportScreen> createState() =>
+      _MobileExcelExportScreenState();
+}
+
+final class _MobileExcelExportScreenState extends State<MobileExcelExportScreen> {
+  late final MobileReportExportController _reports;
+
+  @override
+  void initState() {
+    super.initState();
+    _reports = MobileReportExportController(
+      repository: MobileReportRepository(widget.controller.repository.client),
+      filtersProvider: widget.controller.filtersProvider,
+      canExport: widget.controller.canExport,
+    );
+  }
+
+  @override
+  void dispose() {
+    _reports.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     return AnimatedBuilder(
-      animation: controller,
+      animation: _reports,
       builder: (context, child) {
-        final filters = controller.filtersProvider();
-        final busy = controller.state == ExcelExportState.loading;
-
+        final filters = widget.controller.filtersProvider();
+        final busy = _reports.state == MobileReportExportState.loading;
         return SafeContractsBackdrop(
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-            children: [
+            children: <Widget>[
               SafeContractsPremiumHeader(
-                title: l10n.isArabic ? 'التقارير والتصدير' : 'Reports & export',
+                title: l10n.isArabic ? 'التقارير والطباعة' : 'Reports & print',
                 subtitle: l10n.isArabic
-                    ? 'ملف Excel معتمد على الفلاتر الحالية وصلاحيات حسابك'
-                    : 'Server-generated Excel using your current authorized filters',
+                    ? 'تقارير حقيقية من الخادم مع تنزيل Excel أو Word أو PDF'
+                    : 'Server-authoritative reports downloaded as Excel, Word or PDF',
                 leading: Container(
                   width: 42,
                   height: 42,
@@ -37,234 +61,192 @@ final class MobileExcelExportScreen extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(13),
                   ),
-                  child: const Icon(
-                    Icons.file_download_outlined,
-                    color: Colors.white,
-                  ),
-                ),
-                trailing: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'XLSX',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 11,
-                    ),
-                  ),
+                  child: const Icon(Icons.print_outlined, color: Colors.white),
                 ),
               ),
               const SizedBox(height: 16),
               SafeContractsSectionTitle(
-                title: l10n.isArabic ? 'نوع التقرير' : 'Report format',
+                title: l10n.isArabic ? 'نوع التقرير' : 'Report type',
                 subtitle: l10n.isArabic
-                    ? 'يتم عرض الصيغ التي يدعمها الخادم فعليًا فقط'
-                    : 'Only formats actually supported by the server are shown',
+                    ? 'اختر البيانات ثم صيغة الملف'
+                    : 'Choose the data set and file format',
               ),
               const SizedBox(height: 10),
               SafeContractsSurface(
-                accent: SafeContractsVisual.green,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: SafeContractsVisual.greenSoft,
-                        borderRadius: BorderRadius.circular(15),
+                child: Column(
+                  children: <Widget>[
+                    DropdownButtonFormField<MobileReportType>(
+                      value: _reports.reportType,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.isArabic ? 'التقرير' : 'Report',
+                        prefixIcon: const Icon(Icons.assessment_outlined),
                       ),
-                      child: const Icon(
-                        Icons.table_view_outlined,
-                        color: SafeContractsVisual.greenDeep,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  l10n.t('Excel export'),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w900),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: SafeContractsVisual.greenSoft,
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                                child: Text(
-                                  l10n.isArabic ? 'مدعوم' : 'Supported',
-                                  style: const TextStyle(
-                                    color: SafeContractsVisual.greenDeep,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            l10n.t(
-                              'The workbook is generated by SafeContracts on the server using your current authorized dashboard filters.',
+                      items: MobileReportType.values
+                          .map(
+                            (type) => DropdownMenuItem<MobileReportType>(
+                              value: type,
+                              child: Text(_reportLabel(type, l10n.isArabic)),
                             ),
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: SafeContractsVisual.muted,
-                                    ),
-                          ),
-                        ],
+                          )
+                          .toList(growable: false),
+                      onChanged: busy
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                _reports.selectReportType(value);
+                              }
+                            },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<MobileReportFormat>(
+                      value: _reports.format,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.isArabic ? 'صيغة الملف' : 'File format',
+                        prefixIcon: const Icon(Icons.description_outlined),
                       ),
+                      items: MobileReportFormat.values
+                          .map(
+                            (format) => DropdownMenuItem<MobileReportFormat>(
+                              value: format,
+                              child: Text(format.name.toUpperCase()),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: busy
+                          ? null
+                          : (value) {
+                              if (value != null) _reports.selectFormat(value);
+                            },
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               SafeContractsSectionTitle(
-                title: l10n.t('Current filters'),
+                title: l10n.isArabic ? 'نطاق التقرير' : 'Report scope',
                 subtitle: l10n.isArabic
-                    ? 'راجع نطاق البيانات قبل إنشاء الملف'
-                    : 'Review the data scope before generating the workbook',
+                    ? 'يتم استخدام الفلاتر الحالية من الداشبورد'
+                    : 'Current Dashboard filters are preserved',
               ),
               const SizedBox(height: 10),
               SafeContractsSurface(
-                padding: const EdgeInsets.all(14),
+                elevated: false,
                 child: Column(
-                  children: [
-                    _FilterValue(
-                      icon: Icons.person_outline_rounded,
-                      label: l10n.t('Customer'),
-                      value: filters.customerId?.toString() ??
-                          l10n.t('All customers'),
-                    ),
-                    _FilterValue(
+                  children: <Widget>[
+                    _ScopeRow(
                       icon: Icons.folder_copy_outlined,
-                      label: l10n.t('Contract'),
+                      label: l10n.isArabic ? 'العقد' : 'Contract',
                       value: filters.contractId?.toString() ??
-                          l10n.t('All contracts'),
+                          (l10n.isArabic ? 'كل العقود' : 'All contracts'),
                     ),
-                    _FilterValue(
+                    _ScopeRow(
                       icon: Icons.flag_outlined,
-                      label: l10n.t('Status'),
+                      label: l10n.isArabic ? 'الحالة' : 'Status',
                       value: filters.status == null
-                          ? l10n.t('All statuses')
+                          ? (l10n.isArabic ? 'كل الحالات' : 'All statuses')
                           : l10n.status(filters.status!),
                     ),
-                    _FilterValue(
+                    _ScopeRow(
                       icon: Icons.date_range_outlined,
-                      label: l10n.t('Due from'),
-                      value: filters.dueFrom ?? l10n.t('Any date'),
+                      label: l10n.isArabic ? 'من' : 'From',
+                      value: filters.dueFrom ??
+                          (l10n.isArabic ? 'أي تاريخ' : 'Any date'),
                     ),
-                    _FilterValue(
+                    _ScopeRow(
                       icon: Icons.event_available_outlined,
-                      label: l10n.t('Due to'),
-                      value: filters.dueTo ?? l10n.t('Any date'),
+                      label: l10n.isArabic ? 'إلى' : 'To',
+                      value: filters.dueTo ??
+                          (l10n.isArabic ? 'أي تاريخ' : 'Any date'),
                       last: true,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              if (_reports.reportType == MobileReportType.attachments &&
+                  filters.contractId == null) ...<Widget>[
+                const SizedBox(height: 10),
+                _Message(
+                  icon: Icons.info_outline,
+                  text: l10n.isArabic
+                      ? 'اختر عقدًا من فلاتر الداشبورد أولًا لتقرير المرفقات.'
+                      : 'Select a contract in Dashboard filters before exporting attachments.',
+                ),
+              ],
+              const SizedBox(height: 18),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
-                onPressed: busy || !controller.canExport
+                onPressed: busy || !_reports.canExport
                     ? null
-                    : () => unawaited(controller.downloadCurrentFilters()),
+                    : () => unawaited(_reports.download()),
                 icon: busy
                     ? const SizedBox.square(
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.file_download_outlined),
+                    : const Icon(Icons.download_rounded),
                 label: Text(
-                  l10n.t(busy ? 'Generating Excel…' : 'Download Excel'),
+                  busy
+                      ? (l10n.isArabic ? 'جاري تجهيز الملف…' : 'Preparing file…')
+                      : (l10n.isArabic
+                          ? 'تنزيل / طباعة ${_reports.format.name.toUpperCase()}'
+                          : 'Download / print ${_reports.format.name.toUpperCase()}'),
                 ),
               ),
-              if (busy) ...[
-                const SizedBox(height: 10),
-                const LinearProgressIndicator(minHeight: 2),
-              ],
-              if (!controller.canExport) ...[
+              const SizedBox(height: 9),
+              Text(
+                l10n.isArabic
+                    ? 'سيظهر اختيار مكان الحفظ في Android. لا يتم حفظ التقرير بصمت داخل Cache التطبيق.'
+                    : 'Android Save As will open. Reports are not silently stored in the app cache.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SafeContractsVisual.muted,
+                    ),
+              ),
+              if (_reports.state == MobileReportExportState.error &&
+                  _reports.errorMessage != null) ...<Widget>[
                 const SizedBox(height: 12),
-                _ExportMessage(
-                  icon: Icons.lock_outline,
-                  message: l10n
-                      .t('Excel export is not authorized for this session.'),
-                ),
-              ],
-              if (controller.state == ExcelExportState.error &&
-                  controller.errorMessage != null) ...[
-                const SizedBox(height: 12),
-                _ExportMessage(
+                _Message(
                   icon: Icons.error_outline,
-                  message: l10n.rawMessage(controller.errorMessage!),
-                  isError: true,
+                  text: l10n.rawMessage(_reports.errorMessage!),
+                  error: true,
                 ),
               ],
-              if (controller.state == ExcelExportState.ready &&
-                  controller.lastExport != null) ...[
+              if (_reports.state == MobileReportExportState.ready &&
+                  _reports.lastDocument != null) ...<Widget>[
                 const SizedBox(height: 12),
-                _ExportSuccess(
-                  export: controller.lastExport!,
-                  savedPath: controller.savedPath,
-                  onClear: controller.clearResult,
+                _Message(
+                  icon: Icons.check_circle_outline,
+                  text: l10n.isArabic
+                      ? 'تم تنزيل ${_reports.lastDocument!.filename} بنجاح.'
+                      : '${_reports.lastDocument!.filename} was downloaded successfully.',
                 ),
               ],
-              const SizedBox(height: 14),
-              SafeContractsSurface(
-                elevated: false,
-                padding: const EdgeInsets.all(12),
-                accent: SafeContractsVisual.navy,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.verified_user_outlined,
-                      color: SafeContractsVisual.navy,
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Text(
-                        l10n.isArabic
-                            ? 'اختيار السجلات وصلاحية التصدير وتجهيز ملف Excel تتم من خلال SafeContracts والخادم؛ التطبيق لا يصنع تقريرًا ماليًا موازيًا.'
-                            : 'SafeContracts and the server control record scope, export authorization, and workbook generation. Mobile does not build a parallel financial report.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SafeContractsVisual.muted,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         );
       },
     );
   }
+
+  String _reportLabel(MobileReportType type, bool arabic) {
+    if (!arabic) return type.title;
+    return switch (type) {
+      MobileReportType.contracts => 'تقرير العقود',
+      MobileReportType.payments => 'تقرير الدفعات',
+      MobileReportType.customers => 'تقرير العملاء',
+      MobileReportType.finance => 'التقرير المالي',
+      MobileReportType.attachments => 'تقرير المرفقات',
+      MobileReportType.notifications => 'تقرير الإشعارات',
+    };
+  }
 }
 
-final class _FilterValue extends StatelessWidget {
-  const _FilterValue({
+final class _ScopeRow extends StatelessWidget {
+  const _ScopeRow({
     required this.icon,
     required this.label,
     required this.value,
@@ -278,7 +260,7 @@ final class _FilterValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
           border: last
               ? null
@@ -287,39 +269,23 @@ final class _FilterValue extends StatelessWidget {
                 ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: SafeContractsVisual.navySoft,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 18, color: SafeContractsVisual.navy),
-            ),
-            const SizedBox(width: 10),
+          children: <Widget>[
+            Icon(icon, size: 19, color: SafeContractsVisual.navy),
+            const SizedBox(width: 9),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: SafeContractsVisual.muted,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: SafeContractsVisual.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: SafeContractsVisual.muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
           ],
@@ -327,167 +293,39 @@ final class _FilterValue extends StatelessWidget {
       );
 }
 
-final class _ExportSuccess extends StatelessWidget {
-  const _ExportSuccess({
-    required this.export,
-    required this.savedPath,
-    required this.onClear,
-  });
-
-  final MobileExcelExport export;
-  final String? savedPath;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final sizeKb = (export.bytes.length / 1024).toStringAsFixed(1);
-    return SafeContractsSurface(
-      accent: SafeContractsVisual.green,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: SafeContractsVisual.greenSoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.check_circle_outline,
-                  color: SafeContractsVisual.greenDeep,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.t('Excel export ready'),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: SafeContractsVisual.greenDeep,
-                            fontWeight: FontWeight.w900,
-                          ),
-                    ),
-                    Text(
-                      '$sizeKb KB',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SafeContractsVisual.muted,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SelectableText(
-            export.filename,
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          if (savedPath != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              l10n.t('Saved in app cache:'),
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: SafeContractsVisual.muted,
-                  ),
-            ),
-            const SizedBox(height: 3),
-            SelectableText(savedPath!),
-          ],
-          if (export.rowCounts.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(
-              l10n.t('Rows exported'),
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-            ),
-            const SizedBox(height: 7),
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: [
-                for (final entry in export.rowCounts.entries)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: SafeContractsVisual.greenSoft,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: Text(
-                      '${entry.key}: ${entry.value}',
-                      style: const TextStyle(
-                        color: SafeContractsVisual.greenDeep,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 10),
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: TextButton.icon(
-              onPressed: onClear,
-              icon: const Icon(Icons.close_rounded),
-              label: Text(l10n.t('Clear result')),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _ExportMessage extends StatelessWidget {
-  const _ExportMessage({
+final class _Message extends StatelessWidget {
+  const _Message({
     required this.icon,
-    required this.message,
-    this.isError = false,
+    required this.text,
+    this.error = false,
   });
 
   final IconData icon;
-  final String message;
-  final bool isError;
+  final String text;
+  final bool error;
 
   @override
   Widget build(BuildContext context) {
-    final color = isError
+    final color = error
         ? SafeContractsVisual.redDeep
-        : SafeContractsVisual.roseGoldDark;
-    final soft = isError
+        : SafeContractsVisual.greenDeep;
+    final background = error
         ? SafeContractsVisual.redSoft
-        : SafeContractsVisual.roseGoldSoft;
-    return SafeContractsSurface(
-      elevated: false,
-      accent: color,
-      padding: const EdgeInsets.all(13),
+        : SafeContractsVisual.greenSoft;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(13),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: soft,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(width: 10),
+        children: <Widget>[
+          Icon(icon, color: color),
+          const SizedBox(width: 9),
           Expanded(
             child: Text(
-              message,
-              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+              text,
+              style: TextStyle(color: color, fontWeight: FontWeight.w700),
             ),
           ),
         ],
