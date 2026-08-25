@@ -7,7 +7,6 @@ environment:
   sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
-  arabic_reshaper: ^1.0.0
   archive: ^3.6.1
   flutter:
     sdk: flutter
