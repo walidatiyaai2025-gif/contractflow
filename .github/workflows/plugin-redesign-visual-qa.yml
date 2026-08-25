@@ -145,6 +145,9 @@ jobs:
           }, 99);
           PHP
 
+      - name: Verify historical import-errors schema repair
+        run: wp eval-file "$GITHUB_WORKSPACE/tests/plugin-redesign-visual-qa/schema-repair-runtime.php" --path="$WP_DIR"
+
       - name: Seed controlled real-domain fixtures
         run: wp eval-file "$GITHUB_WORKSPACE/tests/plugin-redesign-visual-qa/seed.php" --path="$WP_DIR"
 
