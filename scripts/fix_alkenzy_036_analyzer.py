@@ -3,27 +3,49 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
+changed_paths = []
 
 
 def patch(path, fn):
     p = ROOT / path
     text = p.read_text(encoding='utf-8')
     updated = fn(text)
-    if updated == text:
-        raise SystemExit(f'No analyzer fix applied to {path}')
-    p.write_text(updated, encoding='utf-8')
+    if updated != text:
+        p.write_text(updated, encoding='utf-8')
+        changed_paths.append(path)
 
 
-def remove_class(text, class_name, next_class):
-    pattern = rf"\nfinal class {re.escape(class_name)} extends StatelessWidget \{{.*?\n\}}\n\n(?=final class {re.escape(next_class)})"
-    text, count = re.subn(pattern, '\n', text, count=1, flags=re.S)
-    if count != 1:
-        raise SystemExit(f'Could not remove {class_name}')
-    return text
+def remove_class(text, class_name):
+    marker = f'final class {class_name} extends StatelessWidget {{'
+    start = text.find(marker)
+    if start < 0:
+        return text
+    brace = text.find('{', start)
+    if brace < 0:
+        raise SystemExit(f'Malformed class {class_name}')
+    depth = 0
+    end = None
+    for index in range(brace, len(text)):
+        char = text[index]
+        if char == '{':
+            depth += 1
+        elif char == '}':
+            depth -= 1
+            if depth == 0:
+                end = index + 1
+                break
+    if end is None:
+        raise SystemExit(f'Unclosed class {class_name}')
+    while end < len(text) and text[end] in '\r\n':
+        end += 1
+    prefix = text[:start]
+    while prefix.endswith('\n\n\n'):
+        prefix = prefix[:-1]
+    return prefix + text[end:]
 
 
 def contracts_screen(text):
-    return remove_class(text, '_Pagination', '_StatusPill')
+    return remove_class(text, '_Pagination')
 
 
 def customers_model(text):
@@ -56,14 +78,14 @@ def customers_model(text):
           boundedWindow: next.boundedWindow,
           scope: next.scope,
         );'''
-    if old not in text:
-        raise SystemExit('CustomerPage merge constructor marker missing')
-    return text.replace(old, new, 1)
+    if old in text:
+        text = text.replace(old, new, 1)
+    return text
 
 
 def customers_screen(text):
     text = text.replace('    final page = controller.currentPage!;\n', '', 1)
-    return remove_class(text, '_Pagination', '_CustomerCard')
+    return remove_class(text, '_Pagination')
 
 
 def followups_screen(text):
@@ -77,7 +99,7 @@ def followups_screen(text):
         "    if (!_scrollController.hasClients ||\n        _scrollController.position.extentAfter > 360) {\n      return;\n    }",
         1,
     )
-    return remove_class(text, '_FollowUpPaging', '_FollowUpCard')
+    return remove_class(text, '_FollowUpPaging')
 
 
 def payments_screen(text):
@@ -91,7 +113,7 @@ def payments_screen(text):
         "    if (!_scrollController.hasClients ||\n        _scrollController.position.extentAfter > 360) {\n      return;\n    }",
         1,
     )
-    return remove_class(text, '_PaymentPaging', '_PaymentCard')
+    return remove_class(text, '_PaymentPaging')
 
 
 def profile_model(text):
@@ -99,13 +121,12 @@ def profile_model(text):
 
 
 def suppliers_screen(text):
-    pattern = re.compile(
-        r"\n  List<SafeContractsSupplier> get _visibleSuppliers =>\n      _filteredSuppliers\.take\(_visibleLimit\)\.toList\(growable: false\);\n"
+    return re.sub(
+        r"\n  List<SafeContractsSupplier> get _visibleSuppliers =>\n      _filteredSuppliers\.take\(_visibleLimit\)\.toList\(growable: false\);\n",
+        '\n',
+        text,
+        count=1,
     )
-    text, count = pattern.subn('\n', text, count=1)
-    if count != 1:
-        raise SystemExit('Supplier unused getter marker missing')
-    return text
 
 
 def welcome_screen(text):
@@ -113,6 +134,8 @@ def welcome_screen(text):
 
 
 def profile_test(text):
+    if 'avatarUploading:' in text and 'onAvatarUpload:' in text:
+        return text
     old = '''            onLogout: () {},
             onUserGuide: () {},
           ),'''
@@ -136,4 +159,9 @@ patch('mobile/lib/features/profile/profile.dart', profile_model)
 patch('mobile/lib/features/suppliers/suppliers_screen.dart', suppliers_screen)
 patch('mobile/lib/features/welcome/company_welcome_screen.dart', welcome_screen)
 patch('mobile/test/alkenzy_worker3_profile_auth_test.dart', profile_test)
-print('Applied all analyzer fixes for Alkenzy ADV 0.3.6+10.')
+
+if not changed_paths:
+    raise SystemExit('No analyzer fixes were necessary; refusing an empty closure run.')
+print('Applied analyzer fixes to:')
+for path in changed_paths:
+    print(f'- {path}')
