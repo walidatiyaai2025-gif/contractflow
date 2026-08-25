@@ -104,7 +104,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Advertising built on experience'), findsOneWidget);
+    expect(
+      find.text('The future of leadership,\nis here now'),
+      findsOneWidget,
+    );
     final landingSignIn = find.byKey(const Key('companyWelcomeSignIn'));
     expect(landingSignIn, findsOneWidget);
     expect(find.text('Username'), findsNothing);

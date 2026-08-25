@@ -103,9 +103,13 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   SegmentedButton<String>(
                                     segments: const [
                                       ButtonSegment(
-                                          value: 'ar', label: Text('ع')),
+                                        value: 'ar',
+                                        label: Text('ع'),
+                                      ),
                                       ButtonSegment(
-                                          value: 'en', label: Text('EN')),
+                                        value: 'en',
+                                        label: Text('EN'),
+                                      ),
                                     ],
                                     selected: {arabic ? 'ar' : 'en'},
                                     showSelectedIcon: false,
@@ -126,6 +130,11 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   fit: StackFit.expand,
                                   children: [
                                     PageView.builder(
+                                      key: slides.isEmpty
+                                          ? null
+                                          : const Key(
+                                              'companyWelcomeImageCarousel',
+                                            ),
                                       controller: _pageController,
                                       itemCount: pageCount,
                                       onPageChanged: (value) =>
@@ -137,6 +146,9 @@ final class _AlkenzyCompanyWelcomeScreenState
                                         final image = slides[index];
                                         return Image.network(
                                           image.url,
+                                          key: Key(
+                                            'companyWelcomeImage-${image.id}',
+                                          ),
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
                                               const _FallbackHero(),
@@ -211,6 +223,9 @@ final class _AlkenzyCompanyWelcomeScreenState
                               children: List.generate(pageCount, (index) {
                                 final active = index == selected;
                                 return AnimatedContainer(
+                                  key: slides.isEmpty
+                                      ? null
+                                      : Key('companyWelcomeImageDot-$index'),
                                   duration: const Duration(milliseconds: 180),
                                   width: active ? 34 : 12,
                                   height: 12,
@@ -225,6 +240,12 @@ final class _AlkenzyCompanyWelcomeScreenState
                                 );
                               }),
                             ),
+                            if (slides.isNotEmpty)
+                              Semantics(
+                                key: const Key('companyWelcomeImagePosition'),
+                                label: 'Image ${selected + 1} of $pageCount',
+                                child: const SizedBox.shrink(),
+                              ),
                             if (widget.controller.state ==
                                 MobileLandingState.loading) ...[
                               const SizedBox(height: 10),
@@ -267,7 +288,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                                       key: const Key('companyWelcomeSignIn'),
                                       onPressed: widget.onSignIn,
                                       icon: const Icon(
-                                          Icons.lock_outline_rounded),
+                                        Icons.lock_outline_rounded,
+                                      ),
                                       label: Text(
                                         arabic
                                             ? 'الدخول للنظام'

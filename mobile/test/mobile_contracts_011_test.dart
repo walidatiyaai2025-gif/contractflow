@@ -199,7 +199,7 @@ void main() {
 
     expect(find.text('SC-70'), findsOneWidget);
     expect(find.text('server_custom_status'), findsOneWidget);
-    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.text('1 / 2'), findsNothing);
 
     await tester.tap(find.text('SC-70'));
     await tester.pump();

@@ -32,7 +32,8 @@ void main() {
       );
     });
 
-    test('contracts keep compact filters sort pagination and working tabs', () {
+    test('contracts keep compact filters sort infinite scroll and working tabs',
+        () {
       final contracts = File('lib/features/contracts/contracts_screen.dart')
           .readAsStringSync();
       final details = File(
@@ -41,9 +42,14 @@ void main() {
 
       expect(contracts, contains('_CustomerFilterMenu('));
       expect(contracts, contains('_SortMenu('));
-      expect(contracts, contains('CompactPagination('));
-      expect(contracts, contains('controller.previousPage()'));
-      expect(contracts, contains('controller.nextPage()'));
+      expect(contracts, contains('_loadNextOnScroll'));
+      expect(
+        contracts,
+        contains('_scrollController.addListener(_loadNextOnScroll)'),
+      );
+      expect(contracts, contains('unawaited(widget.controller.nextPage())'));
+      expect(contracts, isNot(contains('CompactPagination(')));
+      expect(contracts, isNot(contains('controller.previousPage()')));
       expect(details, contains('DefaultTabController('));
       expect(details, contains('length: 4'));
       expect(details, contains('TabBarView('));
@@ -90,7 +96,7 @@ void main() {
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('safecontracts/files'));
       expect(activity, isNot(contains('safecontracts_exports')));
-      expect(pubspec, contains('version: 0.3.5+9'));
+      expect(pubspec, contains('version: 0.3.6+10'));
     });
   });
 }

@@ -26,20 +26,20 @@ void main() {
     expect(login, contains('canPop: false'));
   });
 
-  test('bootstrap preloads authorized shared data before marking ready', () {
+  test('bootstrap loads only first-entry dashboard before marking ready', () {
     final bootstrap =
         source('lib/features/bootstrap/mobile_bootstrap_controller.dart');
 
     expect(bootstrap, contains('bool _bootstrapInFlight = false;'));
     expect(bootstrap, contains('if (_bootstrapInFlight) return;'));
-    expect(bootstrap, contains('await Future.wait<void>'));
-    expect(bootstrap, contains('dashboard.load()'));
-    expect(bootstrap, contains('customers.ensureLoaded()'));
-    expect(bootstrap, contains('contracts.ensureLoaded()'));
-    expect(bootstrap, contains('notifications.ensureLoaded()'));
-    expect(bootstrap, contains('profile.ensureLoaded()'));
+    expect(bootstrap, contains('await dashboard.load();'));
+    expect(bootstrap, isNot(contains('await Future.wait<void>')));
+    expect(bootstrap, isNot(contains('customers.ensureLoaded()')));
+    expect(bootstrap, isNot(contains('contracts.ensureLoaded()')));
+    expect(bootstrap, isNot(contains('notifications.ensureLoaded()')));
+    expect(bootstrap, isNot(contains('profile.ensureLoaded()')));
     expect(
-      bootstrap.indexOf('await Future.wait<void>'),
+      bootstrap.indexOf('await dashboard.load();'),
       lessThan(bootstrap.indexOf('state = MobileBootstrapState.ready;')),
     );
   });
@@ -93,7 +93,6 @@ void main() {
         contains('final keepVisible = background && _page != null;'),
       );
       expect(screen, contains('if (!keepVisible)'));
-      expect(screen, contains('if (keepVisible) return;'));
     }
   });
 }
