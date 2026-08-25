@@ -1,12 +1,13 @@
 name: safecontracts_mobile
 description: SafeContracts mobile API client foundation.
 publish_to: none
-version: 0.3.4+8
+version: 0.3.5+9
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
+  arabic_reshaper: ^1.0.0
   archive: ^3.6.1
   flutter:
     sdk: flutter
