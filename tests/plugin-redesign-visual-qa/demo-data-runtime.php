@@ -103,24 +103,28 @@ if (! array_filter($followUps, static fn (array $row): bool => str_contains((str
     throw new RuntimeException('Demo employee follow-up notes are not visible through the real follow-up read model.');
 }
 
-if ($scope === 'lead') {
-    $deleted = $service->delete();
-    if ((int) ($deleted['deleted_rows'] ?? 0) !== 22000 || $service->registry() !== null) {
-        throw new RuntimeException('Delete-all did not remove both exact registered demo batches.');
+$registry = $service->registry();
+$batchCount = (int) ($registry['batch_count'] ?? 0);
+$expectedBatchCount = $scope === 'lead' ? 2 : 1;
+if ($batchCount !== $expectedBatchCount) {
+    throw new RuntimeException(sprintf('Unexpected registered demo batch count before cleanup: expected=%d actual=%d.', $expectedBatchCount, $batchCount));
+}
+
+$expectedDeletedRows = $expectedBatchCount * 11000;
+$deleted = $service->delete();
+if ((int) ($deleted['deleted_rows'] ?? 0) !== $expectedDeletedRows || $service->registry() !== null) {
+    throw new RuntimeException('Delete-all did not remove every exact registered demo batch.');
+}
+if (sc_demo_table_counts($suffixes) !== $before) {
+    throw new RuntimeException('Delete-all did not restore every plugin table to its exact pre-demo row count.');
+}
+foreach ($attachmentIds as $attachmentId) {
+    if (get_post((int) $attachmentId) !== null) {
+        throw new RuntimeException('Delete-all retained a registered demo WordPress media record.');
     }
-    if (sc_demo_table_counts($suffixes) !== $before) {
-        throw new RuntimeException('Delete-all did not restore every plugin table to its exact pre-demo row count.');
-    }
-    foreach ($attachmentIds as $attachmentId) {
-        if (get_post((int) $attachmentId) !== null) {
-            throw new RuntimeException('Delete-all retained a registered demo WordPress media record.');
-        }
-    }
-    $final = $service->create();
-    sc_demo_assert_batch($final);
 }
 
 fwrite(STDOUT, sprintf(
-    "Demo runtime QA passed for scope=%s: visible customers/contracts/payments/follow-ups, repeatable batches, exact delete; one 500-per-table batch retained for screenshots.\n",
+    "Demo runtime QA passed for scope=%s: visible customers/contracts/payments/follow-ups, repeatable batches, exact delete; controlled visual fixture state restored before screenshots.\n",
     $scope !== '' ? $scope : 'unknown'
 ));
