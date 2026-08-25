@@ -27,7 +27,10 @@ final class SafeContractsNotification {
   factory SafeContractsNotification.fromData(Object? value) {
     final data = apiObjectMap(value, 'notification');
     final id = _positiveInt(data['id'], 'notification.id');
-    final paymentId = _positiveInt(
+    // Generic contract/direct notifications are intentionally not tied to a
+    // payment. The backend represents that legacy column as 0 while the
+    // authorized deep_link carries the actual contract/follow-up resource.
+    final paymentId = _nonNegativeInt(
       data['payment_id'],
       'notification.payment_id',
     );
@@ -47,9 +50,8 @@ final class SafeContractsNotification {
     if (data['deep_link'] != null && deepLink == null) {
       throw const FormatException('notification.deep_link is invalid.');
     }
-    if (deepLink != null &&
-        (deepLink.destination != SafeContractsDeepLinkDestination.payments ||
-            deepLink.resourceId != paymentId)) {
+    if (deepLink?.destination == SafeContractsDeepLinkDestination.payments &&
+        (paymentId <= 0 || deepLink!.resourceId != paymentId)) {
       throw const FormatException(
         'notification.deep_link does not match the authorized payment.',
       );
@@ -257,6 +259,18 @@ int _positiveInt(Object? value, String field) {
   };
   if (parsed == null || parsed <= 0) {
     throw FormatException('$field must be a positive integer.');
+  }
+  return parsed;
+}
+
+int _nonNegativeInt(Object? value, String field) {
+  final parsed = switch (value) {
+    final int value => value,
+    final String value => int.tryParse(value),
+    _ => null,
+  };
+  if (parsed == null || parsed < 0) {
+    throw FormatException('$field must be a non-negative integer.');
   }
   return parsed;
 }
