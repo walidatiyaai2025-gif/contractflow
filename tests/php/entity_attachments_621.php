@@ -49,7 +49,7 @@ function sc_att_expect(string $class, callable $fn, string $message): void
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_att_assert(is_callable($activate), 'attachment validation can activate plugin');
 $activate();
-sc_att_assert(Migrator::LATEST_VERSION === '1.22.0', 'plugin database contract advances to 1.22.0 while attachments remain the 1.21.0 migration');
+sc_att_assert(Migrator::LATEST_VERSION === '1.23.0', 'plugin database contract advances through notification activity context 1.23.0');
 $schemaSql = implode("\n", $GLOBALS['sc_test_dbdelta']);
 sc_att_assert(str_contains($schemaSql, 'wp_safecontracts_entity_attachments'), 'entity attachment table is created');
 sc_att_assert(str_contains($schemaSql, 'UNIQUE KEY entity_media (entity_type, entity_id, media_id)'), 'duplicate entity/media links are prevented');
@@ -57,6 +57,8 @@ sc_att_assert(str_contains($schemaSql, 'KEY entity_order (entity_type, entity_id
 $querySql = implode("\n", $GLOBALS['sc_test_queries']);
 sc_att_assert(str_contains($querySql, "SELECT 'contract', contract_id, media_id"), 'existing contract attachment links are copied forward');
 sc_att_assert(str_contains($querySql, "SELECT 'collection', id, proof_media_id"), 'legacy collection proof links are copied forward');
+sc_att_assert(str_contains($querySql, 'ADD COLUMN resource_type'), 'notification activity migration adds generic resource type context');
+sc_att_assert(str_contains($querySql, 'ADD COLUMN contract_id'), 'notification activity migration adds parent contract context');
 
 $service = new EntityAttachmentService();
 $GLOBALS['sc_test_current_caps'] = [
@@ -117,14 +119,15 @@ sc_att_assert(str_contains($paymentsPage, 'enctype="multipart/form-data"') && st
 sc_att_assert(str_contains($collectionsPage, 'enctype="multipart/form-data"') && str_contains($collectionsPage, "EntityAttachmentService::COLLECTION"), 'collection backend supports multi-file upload and listing');
 sc_att_assert(str_contains($collectionsPage, "__('Files', 'safecontracts')"), 'collection ledger exposes attachments directly in backend table');
 
-// Production at 1.20.0 must still traverse the guarded 1.21.0 attachment
-// migration and the additive 1.22.0 import-errors repair in order.
+// Production at 1.20.0 must still traverse the guarded 1.21.0 attachment,
+// 1.22.0 import-errors repair, and 1.23.0 notification-context migrations in order.
 $GLOBALS['sc_test_options'][Migrator::VERSION_OPTION] = '1.20.0';
 $GLOBALS['sc_test_dbdelta'] = [];
 $GLOBALS['sc_test_queries'] = [];
 (new Migrator())->maybeMigrate();
-sc_att_assert(($GLOBALS['sc_test_options'][Migrator::VERSION_OPTION] ?? '') === '1.22.0', 'production database 1.20.0 upgrades through 1.21.0 to latest 1.22.0');
+sc_att_assert(($GLOBALS['sc_test_options'][Migrator::VERSION_OPTION] ?? '') === '1.23.0', 'production database 1.20.0 upgrades through 1.21.0 and 1.22.0 to latest 1.23.0');
 sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_dbdelta']), 'wp_safecontracts_entity_attachments'), '1.20 to latest upgrade creates attachment schema at the 1.21.0 stage');
-sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'CREATE TABLE wp_safecontracts_import_errors'), '1.20 to latest upgrade also executes the 1.22.0 import-errors repair stage');
+sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'CREATE TABLE wp_safecontracts_import_errors'), '1.20 to latest upgrade executes the 1.22.0 import-errors repair stage');
+sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'ADD COLUMN resource_type'), '1.20 to latest upgrade executes the 1.23.0 notification activity-context stage');
 
 echo "SafeContracts entity attachment tests passed ({$tests} assertions).\n";
