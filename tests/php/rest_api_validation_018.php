@@ -78,6 +78,7 @@ sc_p8v18_assert(($health->data['meta']['api_version'] ?? '') === Router::API_VER
 $landing = MobileLandingController::show(new WP_REST_Request());
 $landingData = $landing->data['data'] ?? [];
 sc_p8v18_assert(($landingData['schema_version'] ?? null) === 1 && ($landingData['brand_name'] ?? '') === 'Alkenzy ADV', 'SC-P8-018 public mobile landing exposes only the versioned company presentation contract');
+sc_p8v18_assert(isset($landingData['images']) && is_array($landingData['images']), 'SC-P8-018 public mobile landing includes the bounded image gallery contract');
 foreach (['user_id', 'users', 'session', 'contracts', 'payments', 'finance', 'capabilities', 'token'] as $protectedField) {
     sc_p8v18_assert(! array_key_exists($protectedField, is_array($landingData) ? $landingData : []), "SC-P8-018 public mobile landing does not expose protected field {$protectedField}");
 }

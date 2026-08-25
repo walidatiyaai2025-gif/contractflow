@@ -351,6 +351,7 @@ final class TranslationCatalog
         'Delete this payment method from active choices? Existing collection history will keep its method reference.' => 'حذف طريقة السداد من الخيارات النشطة؟ سيحتفظ سجل التحصيلات السابق بمرجع طريقة السداد.',
         'You do not have permission to access SafeContracts.' => 'ليست لديك صلاحية للوصول إلى SafeContracts.',
         'You do not have permission to manage SafeContracts settings.' => 'ليست لديك صلاحية لإدارة إعدادات SafeContracts.',
+        'You do not have permission to manage SafeContracts demo data.' => 'ليست لديك صلاحية لإدارة بيانات SafeContracts التجريبية.',
         'You do not have permission to manage customers.' => 'ليست لديك صلاحية لإدارة العملاء.',
         'You do not have permission to delete customers.' => 'ليست لديك صلاحية لحذف العملاء.',
         'You do not have permission to access customers.' => 'ليست لديك صلاحية للوصول إلى العملاء.',

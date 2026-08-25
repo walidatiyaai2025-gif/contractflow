@@ -1,8 +1,11 @@
 <?php
 
 use SafeContracts\Contracts\ContractService;
+use SafeContracts\Collections\CollectionService;
 use SafeContracts\Customers\CustomerService;
+use SafeContracts\FollowUps\FollowUpService;
 use SafeContracts\Payments\PaymentService;
+use SafeContracts\ReferenceData\PaymentMethodRepository;
 use SafeContracts\Suppliers\SupplierService;
 
 if (! defined('ABSPATH')) {
@@ -93,7 +96,7 @@ $payableContractId = $contractService->create([
 $contractService->updateDates($payableContractId, '2026-02-01', '2026-11-30');
 
 $paymentService = new PaymentService();
-$paymentService->create([
+$receivablePaymentId = $paymentService->create([
     'contract_id' => $receivableContractId,
     'reference' => 'QA-AR-INSTALLMENT-1',
     'due_date' => '2026-08-15',
@@ -107,7 +110,7 @@ $paymentService->create([
     'expected_payment_date' => '2026-09-15',
     'original_amount' => '2500',
 ]);
-$paymentService->create([
+$payablePaymentId = $paymentService->create([
     'contract_id' => $payableContractId,
     'reference' => 'QA-AP-INSTALLMENT-1',
     'due_date' => '2026-08-20',
@@ -115,8 +118,49 @@ $paymentService->create([
     'original_amount' => '2000',
 ]);
 
+$methodRepository = new PaymentMethodRepository();
+$methodRepository->save([
+    'code' => 'visual_qa_transfer',
+    'name' => 'Visual QA bank transfer',
+    'display_order' => 1,
+    'is_active' => true,
+]);
+$methodId = 0;
+foreach ($methodRepository->all(true) as $method) {
+    if (($method['code'] ?? '') === 'visual_qa_transfer') {
+        $methodId = (int) ($method['id'] ?? 0);
+        break;
+    }
+}
+if ($methodId <= 0) {
+    throw new RuntimeException('Visual QA payment method was not created.');
+}
+
+$collectionService = new CollectionService();
+foreach ([
+    [$receivablePaymentId, '250', '2026-03-10', 'QA-AR-MAR'],
+    [$receivablePaymentId, '300', '2026-05-10', 'QA-AR-MAY'],
+    [$receivablePaymentId, '350', '2026-07-10', 'QA-AR-JUL'],
+    [$payablePaymentId, '180', '2026-04-12', 'QA-AP-APR'],
+    [$payablePaymentId, '220', '2026-06-12', 'QA-AP-JUN'],
+    [$payablePaymentId, '260', '2026-08-12', 'QA-AP-AUG'],
+] as [$paymentId, $amount, $date, $reference]) {
+    $collectionService->record([
+        'payment_id' => $paymentId,
+        'amount' => $amount,
+        'collection_date' => $date,
+        'payment_method_id' => $methodId,
+        'reference' => $reference,
+        'details' => 'Deterministic visual settlement fixture.',
+    ]);
+}
+
+$followUpService = new FollowUpService();
+$followUpService->addNote($receivablePaymentId, 'تم التواصل مع العميل من تطبيق الموبايل وإرسال كشف الدفعة.');
+$followUpService->markIssue($receivablePaymentId, 'الموظف ينتظر تأكيد موعد التحويل من قسم الحسابات.');
+
 fwrite(STDOUT, sprintf(
-    "Plugin redesign visual QA fixtures ready: customer=%d supplier=%d AR-contract=%d AP-contract=%d.\n",
+    "Plugin redesign visual QA fixtures ready: customer=%d supplier=%d AR-contract=%d AP-contract=%d with monthly settlements and mobile follow-up notes.\n",
     $customerId,
     $supplierId,
     $receivableContractId,

@@ -1,0 +1,136 @@
+.safecontracts-landing-media {
+  grid-column: 1 / -1;
+  margin: 0 0 22px;
+  padding: 20px;
+  border: 1px solid var(--sc-redesign-border, #ded4ce);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #fffdfb, #f7f0eb);
+  box-shadow: 0 10px 26px rgba(11, 41, 69, 0.08);
+}
+
+.safecontracts-landing-media__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.safecontracts-landing-media__head h3 {
+  margin: 4px 0 7px !important;
+  color: #0b2945 !important;
+  font-size: 20px !important;
+}
+
+.safecontracts-landing-media__head p,
+.safecontracts-landing-media__recommendation {
+  margin: 0;
+  color: #68798c;
+  line-height: 1.65;
+}
+
+.safecontracts-landing-media__choose {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+
+.safecontracts-landing-media__recommendation {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: #eef4f8;
+  color: #31506d;
+  font-size: 12px;
+}
+
+.safecontracts-landing-media__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.safecontracts-landing-media__item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #ddd3cd;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 7px 18px rgba(11, 41, 69, 0.07);
+}
+
+.safecontracts-landing-media__item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #e9edf1;
+}
+
+.safecontracts-landing-media__item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 11px 12px 7px;
+}
+
+.safecontracts-landing-media__item-meta strong,
+.safecontracts-landing-media__item-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.safecontracts-landing-media__item-meta strong { color: #173b65; }
+.safecontracts-landing-media__item-meta span { color: #778391; font-size: 11px; }
+
+.safecontracts-landing-media__item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding: 7px 12px 12px;
+}
+
+.safecontracts-landing-media__item-actions .button {
+  min-width: 40px;
+  padding-inline: 10px !important;
+}
+
+.safecontracts-landing-media__remove {
+  margin-inline-start: auto !important;
+  border-color: #d89f99 !important;
+  color: #a63228 !important;
+}
+
+.safecontracts-landing-media__empty {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  margin-top: 16px;
+  padding: 24px;
+  border: 1px dashed #cbbdb5;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.68);
+  color: #68798c;
+  text-align: center;
+}
+
+.safecontracts-landing-media__empty[hidden] { display: none; }
+.safecontracts-landing-media__empty .dashicons { width: 34px; height: 34px; color: #b77d6e; font-size: 34px; }
+.safecontracts-landing-media__empty strong { color: #173b65; font-size: 15px; }
+.safecontracts-landing-media__empty p { margin: 0; }
+
+@media (max-width: 1100px) {
+  .safecontracts-landing-media__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 782px) {
+  .safecontracts-landing-media { padding: 16px; }
+  .safecontracts-landing-media__head { flex-direction: column; }
+  .safecontracts-landing-media__choose { width: 100%; justify-content: center; }
+  .safecontracts-landing-media__grid { grid-template-columns: 1fr; }
+}

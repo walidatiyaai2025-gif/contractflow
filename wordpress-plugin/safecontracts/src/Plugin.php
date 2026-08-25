@@ -15,6 +15,7 @@ use SafeContracts\Admin\ContractPaymentTree;
 use SafeContracts\Admin\ContractsPage;
 use SafeContracts\Admin\CustomersPage;
 use SafeContracts\Admin\DashboardPage;
+use SafeContracts\Admin\DemoDataController;
 use SafeContracts\Admin\EmailSettingsPage;
 use SafeContracts\Admin\FinancePage;
 use SafeContracts\Admin\FirebaseSettingsPage;
@@ -162,6 +163,8 @@ final class Plugin
         add_action('admin_post_' . ContractsPage::BULK_ASSIGN_ACTION, [ContractsPage::class, 'handleBulkAssign']);
         add_action('admin_post_' . ContractsPage::DELETE_ACTION, [ContractsPage::class, 'handleDelete']);
         add_action('admin_post_' . DashboardPage::ARCHIVE_ACTION, [DashboardPage::class, 'handleArchive']);
+        add_action('admin_post_' . DemoDataController::CREATE_ACTION, [DemoDataController::class, 'handleCreate']);
+        add_action('admin_post_' . DemoDataController::DELETE_ACTION, [DemoDataController::class, 'handleDelete']);
         add_action('admin_post_' . PaymentsPage::SAVE_ACTION, [PaymentsPage::class, 'handleSave']);
         add_action('admin_post_' . PaymentsPage::DELETE_ACTION, [PaymentsPage::class, 'handleDelete']);
         add_action('admin_post_' . CollectionsPage::SAVE_ACTION, [CollectionsPage::class, 'handleSave']);

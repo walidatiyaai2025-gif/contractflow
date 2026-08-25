@@ -62,6 +62,111 @@
   box-shadow: var(--sc-ui-shadow-xs) !important;
 }
 
+/* REF_008 Dashboard: compact accounting cards followed by the authoritative
+ * monthly settlement chart and operational follow-up visibility. */
+.safecontracts-dashboard-v2__filters {
+  display: grid !important;
+  grid-template-columns: repeat(2,minmax(180px,1fr)) auto auto !important;
+  align-items: end !important;
+  gap: 12px !important;
+  padding: 14px 16px !important;
+  border: 1px solid var(--sc-ui-line) !important;
+  border-radius: var(--sc-ui-radius-md) !important;
+  background: rgba(255,255,255,.94) !important;
+  box-shadow: var(--sc-ui-shadow-xs) !important;
+}
+
+.safecontracts-premium-three-column {
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1.08fr) !important;
+  gap: 14px !important;
+  margin-top: 16px !important;
+}
+.safecontracts-premium-three-column > .safecontracts-dashboard-v2__lane,
+.safecontracts-premium-three-column > .safecontracts-dashboard-v2__net-section {
+  position: relative;
+  overflow: hidden;
+  margin-top: 0 !important;
+  padding: 18px !important;
+  border: 1px solid #dccbb9 !important;
+  border-top: 1px solid #dccbb9 !important;
+  border-radius: var(--sc-ui-radius-lg) !important;
+  background-color: rgba(255,252,247,.96) !important;
+  background-image: repeating-radial-gradient(ellipse at 0 0,transparent 0 11px,rgba(176,129,83,.08) 12px 13px,transparent 14px 22px) !important;
+  box-shadow: var(--sc-ui-shadow-sm) !important;
+}
+.safecontracts-premium-three-column > .safecontracts-dashboard-v2__lane--receivable { background-color: #f7fcf8 !important; }
+.safecontracts-premium-three-column > .safecontracts-dashboard-v2__lane--payable { background-color: #fff8f6 !important; }
+.safecontracts-premium-three-column .safecontracts-dashboard-v2__lane-heading,
+.safecontracts-premium-three-column .safecontracts-dashboard-v2__section-heading { margin-bottom: 12px; }
+.safecontracts-premium-three-column .safecontracts-dashboard-v2__lane-heading h3,
+.safecontracts-premium-three-column .safecontracts-dashboard-v2__section-heading h3 { font-size: 19px; }
+.safecontracts-premium-three-column .safecontracts-dashboard-v2__money-card,
+.safecontracts-premium-three-column .safecontracts-dashboard-v2__net-card { background: rgba(255,255,255,.9) !important; }
+
+.safecontracts-dashboard-monthly-flow,
+.safecontracts-dashboard-followups,
+.safecontracts-dashboard-demo {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid #dccbb9;
+  border-radius: var(--sc-ui-radius-lg);
+  background: linear-gradient(145deg,rgba(255,253,249,.98),rgba(249,242,233,.95));
+  box-shadow: var(--sc-ui-shadow-sm);
+}
+.safecontracts-dashboard-monthly-flow__head,
+.safecontracts-dashboard-followups__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.safecontracts-dashboard-monthly-flow__head h3,
+.safecontracts-dashboard-followups__head h3,
+.safecontracts-dashboard-demo h3 { margin: 2px 0 5px; color: var(--sc-ui-navy-950); font-size: 22px; }
+.safecontracts-dashboard-monthly-flow__head p,
+.safecontracts-dashboard-followups__head p,
+.safecontracts-dashboard-demo p { margin: 0; color: var(--sc-ui-ink-500); }
+.safecontracts-dashboard-monthly-flow__legend { display: flex; flex-wrap: wrap; gap: 10px 15px; color: var(--sc-ui-ink-500); font-size: 12px; font-weight: 700; }
+.safecontracts-dashboard-monthly-flow__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.safecontracts-dashboard-monthly-flow__legend i { width: 11px; height: 11px; border-radius: 3px; }
+.safecontracts-dashboard-monthly-flow__legend .is-in { background: #20845c; }
+.safecontracts-dashboard-monthly-flow__legend .is-out { background: #c39545; }
+.safecontracts-dashboard-monthly-flow__currency { margin-top: 12px; padding: 14px; border: 1px solid #e1d3c5; border-radius: var(--sc-ui-radius-md); background: rgba(255,255,255,.88); }
+.safecontracts-dashboard-monthly-flow__currency-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.safecontracts-dashboard-monthly-flow__currency-head > strong { color: var(--sc-ui-navy-950); font-size: 17px; }
+.safecontracts-dashboard-monthly-flow__currency-head > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.safecontracts-dashboard-monthly-flow__currency-head span { padding: 5px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.safecontracts-dashboard-monthly-flow__currency-head .is-in { color: #126643; background: #eaf7ef; }
+.safecontracts-dashboard-monthly-flow__currency-head .is-out { color: #8b5d13; background: #fff3db; }
+.safecontracts-dashboard-monthly-flow__plot { width: 100%; overflow-x: auto; }
+.safecontracts-dashboard-monthly-flow svg { display: block; width: 100%; min-width: 680px; height: auto; }
+.safecontracts-dashboard-monthly-flow__grid { stroke: #e6ded5; stroke-width: 1; }
+.safecontracts-dashboard-monthly-flow__axis { fill: #756d65; font-size: 10px; }
+.safecontracts-dashboard-monthly-flow__line { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.safecontracts-dashboard-monthly-flow__line--in { stroke: #20845c; }
+.safecontracts-dashboard-monthly-flow__line--out { stroke: #c39545; }
+.safecontracts-dashboard-monthly-flow__point { fill: #fff; stroke-width: 3; }
+.safecontracts-dashboard-monthly-flow__point--in { stroke: #20845c; }
+.safecontracts-dashboard-monthly-flow__point--out { stroke: #c39545; }
+
+.safecontracts-dashboard-followups { background: rgba(255,255,255,.95); }
+.safecontracts-dashboard-followups .safecontracts-table-scroll { overflow-x: auto; }
+.safecontracts-dashboard-followups table { min-width: 760px; }
+.safecontracts-dashboard-followups__note { min-width: 220px; max-width: 390px; white-space: normal; line-height: 1.55; }
+
+.safecontracts-dashboard-demo { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 20px; border-color: #d5c19d; background: linear-gradient(135deg,#fffaf0,#f5e8d2); }
+.safecontracts-dashboard-demo__safety { display: flex; align-items: flex-start; gap: 7px; margin-top: 10px !important; color: #3c654f !important; font-weight: 700; }
+.safecontracts-dashboard-demo__safety .dashicons { flex: 0 0 auto; color: #20845c; }
+.safecontracts-dashboard-demo dl { display: flex; flex-wrap: wrap; gap: 8px; margin: 13px 0 0; }
+.safecontracts-dashboard-demo dl > div { min-width: 150px; padding: 8px 10px; border: 1px solid #e1cfaf; border-radius: 10px; background: rgba(255,255,255,.75); }
+.safecontracts-dashboard-demo dt { color: var(--sc-ui-ink-500); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.safecontracts-dashboard-demo dd { margin: 3px 0 0; color: var(--sc-ui-navy-950); font-weight: 800; overflow-wrap: anywhere; }
+.safecontracts-dashboard-demo__actions .button { min-width: 220px; }
+.safecontracts-dashboard-empty { display: grid; place-items: center; gap: 8px; min-height: 90px; padding: 18px; border: 1px dashed #d8c9ba; border-radius: var(--sc-ui-radius-md); background: rgba(255,255,255,.72); color: var(--sc-ui-ink-500); text-align: center; }
+.safecontracts-dashboard-empty--chart { min-height: 180px; }
+.safecontracts-dashboard-empty .dashicons { width: 30px; height: 30px; color: var(--sc-ui-copper-600); font-size: 30px; }
+
 .safecontracts-general-settings .submit { margin: 18px 0 0; padding: 0; }
 .safecontracts-general-settings .submit .button { min-width: 180px; }
 
@@ -132,6 +237,9 @@
 }
 
 @media (max-width: 1180px) {
+  .safecontracts-premium-three-column { grid-template-columns: minmax(0,1fr) !important; }
+  .safecontracts-dashboard-demo { grid-template-columns: minmax(0,1fr); }
+  .safecontracts-dashboard-demo__actions .button { min-width: 0; }
   .safecontracts-migration-recovery .safecontracts-settings-grid {
     grid-template-columns: minmax(0, 1fr) !important;
   }
@@ -164,6 +272,12 @@
     box-sizing: border-box;
     min-width: 0;
   }
+  .safecontracts-dashboard-v2__filters { grid-template-columns: minmax(0,1fr) !important; }
+  .safecontracts-dashboard-monthly-flow__head,
+  .safecontracts-dashboard-followups__head,
+  .safecontracts-dashboard-monthly-flow__currency-head { align-items: flex-start; flex-direction: column; }
+  .safecontracts-dashboard-followups__head .button,
+  .safecontracts-dashboard-demo__actions .button { width: 100%; }
 
   /* General Settings uses a two-column desktop grid and WordPress widefat form
    * controls. Collapse the grid before constraining controls so no 680px

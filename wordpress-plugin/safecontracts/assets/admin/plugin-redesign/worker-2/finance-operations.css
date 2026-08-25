@@ -408,6 +408,13 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-split-layout{
 }
 
 /* RTL: rely on logical properties and keep financial numbers legible. */
+.safecontracts-followups-page__notes{margin-bottom:18px!important}
+.safecontracts-followups-page__notes-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:8px}
+.safecontracts-followups-page__notes-heading h2{margin:2px 0 0!important;color:var(--sc-ui-navy-950)!important}
+.safecontracts-followups-page__notes .safecontracts-table-scroll{overflow-x:auto}
+.safecontracts-followups-page__notes table{min-width:900px}
+.safecontracts-followups-page__note{min-width:240px;max-width:420px;white-space:normal!important;line-height:1.55}
+
 .rtl .safecontracts-financial-amount--receivable,
 .rtl .safecontracts-financial-amount--payable,
 .rtl .safecontracts-financial-amount--neutral,
@@ -445,6 +452,7 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-split-layout{
 }
 
 @media(max-width:782px){
+  .safecontracts-followups-page__notes-heading{align-items:flex-start;flex-direction:column}
   body[class*="_page_safecontracts-payments"] .safecontracts-settings>.safecontracts-section-heading:first-child,
   body[class*="_page_safecontracts-collections"] .safecontracts-settings>.safecontracts-section-heading:first-child,
   body[class*="_page_safecontracts-followups"] .safecontracts-settings>.safecontracts-section-heading:first-child,

@@ -178,7 +178,10 @@ def validate_ci_contract() -> int:
         "AAPT=",
         '"$AAPT" dump permissions "$APK"',
         "android.permission.INTERNET",
-        "alkenzy-adv-0.3.2-release-candidates",
+        "Resolve approved release version",
+        "SC_RELEASE_VERSION",
+        "SC_MOBILE_VERSION",
+        "alkenzy-adv-${{ steps.release_version.outputs.version }}-release-candidates",
     )
     missing = [command for command in required_commands if command not in workflow]
     if missing:

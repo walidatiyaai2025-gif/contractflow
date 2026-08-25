@@ -76,8 +76,10 @@ final class FollowUpsPage
 
         $queue = [];
         $history = [];
+        $recent = [];
         $queueError = false;
         $historyError = false;
+        $recentError = false;
         if (empty($filters['date_range_error'])) {
             try {
                 $queue = $service->queue(250, $filters['date_from'], $filters['date_to']);
@@ -92,6 +94,12 @@ final class FollowUpsPage
                     unset($error);
                     $historyError = true;
                 }
+            }
+            try {
+                $recent = $service->recent(100, $filters['date_from'], $filters['date_to']);
+            } catch (Throwable $error) {
+                unset($error);
+                $recentError = true;
             }
         }
 
@@ -109,9 +117,31 @@ final class FollowUpsPage
         ?>
         <div class="wrap safecontracts-settings safecontracts-followups-page" dir="auto">
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Operational receivables', 'safecontracts'); ?></p><h1><?php echo esc_html__('Follow-up', 'safecontracts'); ?></h1></div></div>
-            <?php if ($queueError || $historyError) : ?><div class="notice notice-error inline"><p><?php echo esc_html(RuntimeLabels::text('Error')); ?></p></div><?php endif; ?>
+            <?php if ($queueError || $historyError || $recentError) : ?><div class="notice notice-error inline"><p><?php echo esc_html(RuntimeLabels::text('Error')); ?></p></div><?php endif; ?>
             <?php AdminPeriodFilter::render(self::SLUG, $filters, $selectedPaymentId > 0 ? ['payment_id' => $selectedPaymentId] : []); ?>
             <p class="description"><?php echo esc_html__('The queue period uses contractual payment due date. When a payment is selected, append-only follow-up history uses the follow-up event creation date.', 'safecontracts'); ?></p>
+            <section class="safecontracts-admin-card safecontracts-table-card safecontracts-followups-page__notes">
+                <div class="safecontracts-followups-page__notes-heading">
+                    <div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html(self::text('Mobile team activity', 'نشاط فريق الموبايل')); ?></p><h2><?php echo esc_html(self::text('Employee payment notes', 'ملاحظات الموظفين على الدفعات')); ?></h2></div>
+                    <span class="safecontracts-status-chip safecontracts-status-chip--pass"><?php echo esc_html(sprintf(self::text('%d visible events', '%d متابعة ظاهرة'), count($recent))); ?></span>
+                </div>
+                <p class="description"><?php echo esc_html(self::text('Notes entered from the mobile app and WordPress use the same append-only, permission-scoped history.', 'الملاحظات المسجلة من تطبيق الموبايل ووردبريس تظهر هنا من نفس السجل غير القابل للتعديل وطبقًا للصلاحيات.')); ?></p>
+                <?php if (! $recentError && $recent === []) : ?>
+                    <div class="safecontracts-empty-state"><strong><?php echo esc_html(self::text('No employee notes in this period', 'لا توجد ملاحظات موظفين في هذه الفترة')); ?></strong></div>
+                <?php elseif (! $recentError) : ?>
+                    <div class="safecontracts-table-scroll"><table class="widefat striped"><thead><tr><th><?php echo esc_html(self::text('Employee', 'الموظف')); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html(self::text('Counterparty', 'الطرف')); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Note', 'safecontracts'); ?></th><th><?php echo esc_html__('When', 'safecontracts'); ?></th></tr></thead><tbody>
+                    <?php foreach ($recent as $event) : ?><tr>
+                        <td><strong><?php echo esc_html((string) (($event['author_name'] ?? '') ?: self::text('Unknown employee', 'موظف غير معروف'))); ?></strong></td>
+                        <td><a href="<?php echo esc_url(add_query_arg(['page' => self::SLUG, 'payment_id' => (int) ($event['payment_id'] ?? 0)], admin_url('admin.php'))); ?>"><?php echo esc_html((string) (($event['payment_reference'] ?? '') ?: '#' . (int) ($event['payment_id'] ?? 0))); ?></a></td>
+                        <td><?php echo esc_html((string) (($event['contract_number'] ?? '') ?: '—')); ?></td>
+                        <td><?php echo esc_html((string) (($event['counterparty_name'] ?? '') ?: '—')); ?></td>
+                        <td><?php echo esc_html(self::stateLabel((string) ($event['state'] ?? 'pending'))); ?></td>
+                        <td class="safecontracts-followups-page__note"><?php echo esc_html((string) (($event['note'] ?? '') ?: '—')); ?></td>
+                        <td><?php echo esc_html((string) ($event['created_at'] ?? '')); ?></td>
+                    </tr><?php endforeach; ?>
+                    </tbody></table></div>
+                <?php endif; ?>
+            </section>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
                     <h2><?php echo esc_html__('Assigned follow-up queue', 'safecontracts'); ?></h2>
@@ -161,7 +191,7 @@ final class FollowUpsPage
                         <?php endif; ?>
                         <h3><?php echo esc_html__('Append-only history', 'safecontracts'); ?></h3>
                         <?php if (! $historyError) : ?>
-                        <table class="widefat striped"><thead><tr><th><?php echo esc_html__('When', 'safecontracts'); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Promise / defer', 'safecontracts'); ?></th><th><?php echo esc_html__('Note', 'safecontracts'); ?></th></tr></thead><tbody><?php foreach ($history as $event) : ?><tr><td><?php echo esc_html((string) $event['created_at']); ?></td><td><?php echo esc_html(self::stateLabel((string) $event['state'])); ?></td><td><?php echo esc_html(trim((string) ($event['promised_date'] ?? '') . ' ' . (string) ($event['deferred_until'] ?? ''))); ?></td><td><?php echo esc_html((string) ($event['note'] ?? '')); ?></td></tr><?php endforeach; ?></tbody></table>
+                        <table class="widefat striped"><thead><tr><th><?php echo esc_html__('When', 'safecontracts'); ?></th><th><?php echo esc_html(self::text('Employee', 'الموظف')); ?></th><th><?php echo esc_html__('State', 'safecontracts'); ?></th><th><?php echo esc_html__('Promise / defer', 'safecontracts'); ?></th><th><?php echo esc_html__('Note', 'safecontracts'); ?></th></tr></thead><tbody><?php foreach ($history as $event) : ?><tr><td><?php echo esc_html((string) $event['created_at']); ?></td><td><?php echo esc_html((string) (($event['author_name'] ?? '') ?: self::text('Unknown employee', 'موظف غير معروف'))); ?></td><td><?php echo esc_html(self::stateLabel((string) $event['state'])); ?></td><td><?php echo esc_html(trim((string) ($event['promised_date'] ?? '') . ' ' . (string) ($event['deferred_until'] ?? ''))); ?></td><td><?php echo esc_html((string) ($event['note'] ?? '')); ?></td></tr><?php endforeach; ?></tbody></table>
                         <?php endif; ?>
                     <?php endif; ?>
                 </section>
@@ -173,5 +203,10 @@ final class FollowUpsPage
     private static function stateLabel(string $state): string
     {
         return RuntimeLabels::text(ucwords(str_replace('_', ' ', $state)));
+    }
+
+    private static function text(string $english, string $arabic): string
+    {
+        return \SafeContracts\Translations\TranslationCatalog::currentLanguage() === 'ar' ? $arabic : $english;
     }
 }

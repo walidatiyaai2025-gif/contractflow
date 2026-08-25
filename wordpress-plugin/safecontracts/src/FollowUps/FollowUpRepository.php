@@ -97,21 +97,26 @@ final class FollowUpRepository
         global $wpdb;
         $this->assertWpdb($wpdb);
         $table = $wpdb->prefix . 'safecontracts_payment_followups';
+        $users = $this->usersTable($wpdb);
         $period = '';
         $args = [$paymentId];
         if ($dateFrom !== null) {
-            $period .= ' AND DATE(created_at) >= %s';
+            $period .= ' AND DATE(f.created_at) >= %s';
             $args[] = $dateFrom;
         }
         if ($dateTo !== null) {
-            $period .= ' AND DATE(created_at) <= %s';
+            $period .= ' AND DATE(f.created_at) <= %s';
             $args[] = $dateTo;
         }
         $args[] = $limit;
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, payment_id, state, note, promised_date, deferred_until, created_by, created_at
-                 FROM {$table} WHERE payment_id = %d{$period}
+                "SELECT f.id, f.payment_id, f.state, f.note, f.promised_date, f.deferred_until,
+                        f.created_by, f.created_at,
+                        (SELECT COALESCE(NULLIF(u.display_name, ''), u.user_login)
+                         FROM {$users} u WHERE u.ID = f.created_by LIMIT 1) AS author_name
+                 FROM {$table} f
+                 WHERE f.payment_id = %d{$period}
                  ORDER BY created_at DESC, id DESC LIMIT %d",
                 ...$args
             ),
@@ -120,10 +125,63 @@ final class FollowUpRepository
         return is_array($rows) ? $rows : [];
     }
 
+    /** @return list<array<string,mixed>> */
+    public function recent(?int $accountantUserId, int $limit, ?string $dateFrom = null, ?string $dateTo = null): array
+    {
+        global $wpdb;
+        $this->assertWpdb($wpdb);
+        $followups = $wpdb->prefix . 'safecontracts_payment_followups';
+        $payments = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $contracts = $wpdb->prefix . 'safecontracts_contracts';
+        $customers = $wpdb->prefix . 'safecontracts_customers';
+        $suppliers = $wpdb->prefix . 'safecontracts_suppliers';
+        $users = $this->usersTable($wpdb);
+        $where = ['c.is_archived = 0', 'p.is_archived = 0'];
+        $args = [];
+        if ($accountantUserId !== null) {
+            $where[] = 'c.accountant_user_id = %d';
+            $args[] = $accountantUserId;
+        }
+        if ($dateFrom !== null) {
+            $where[] = 'DATE(f.created_at) >= %s';
+            $args[] = $dateFrom;
+        }
+        if ($dateTo !== null) {
+            $where[] = 'DATE(f.created_at) <= %s';
+            $args[] = $dateTo;
+        }
+        $args[] = $limit;
+        $sql = "SELECT f.id, f.payment_id, f.state, f.note, f.promised_date, f.deferred_until,
+                       f.created_by, f.created_at,
+                       p.reference AS payment_reference, p.due_date, p.remaining_amount, p.currency_code,
+                       c.id AS contract_id, c.contract_number, c.accountant_user_id,
+                       CASE WHEN c.counterparty_type = 'supplier' THEN s.name ELSE cu.name END AS counterparty_name,
+                       COALESCE(NULLIF(u.display_name, ''), u.user_login) AS author_name
+                FROM {$followups} f
+                INNER JOIN {$payments} p ON p.id = f.payment_id
+                INNER JOIN {$contracts} c ON c.id = p.contract_id
+                LEFT JOIN {$customers} cu ON c.counterparty_type = 'customer' AND cu.id = c.counterparty_id
+                LEFT JOIN {$suppliers} s ON c.counterparty_type = 'supplier' AND s.id = c.counterparty_id
+                LEFT JOIN {$users} u ON u.ID = f.created_by
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY f.created_at DESC, f.id DESC LIMIT %d";
+        $rows = $wpdb->get_results($wpdb->prepare($sql, ...$args), ARRAY_A);
+        return is_array($rows) ? $rows : [];
+    }
+
     private function assertWpdb(mixed $wpdb): void
     {
         if (! is_object($wpdb) || ! method_exists($wpdb, 'prepare') || ! method_exists($wpdb, 'query') || ! method_exists($wpdb, 'get_results')) {
             throw new RuntimeException('SafeContracts follow-up repository requires WordPress $wpdb.');
         }
+    }
+
+    private function usersTable(object $wpdb): string
+    {
+        if (isset($wpdb->users) && is_string($wpdb->users) && $wpdb->users !== '') {
+            return $wpdb->users;
+        }
+
+        return (string) $wpdb->prefix . 'users';
     }
 }

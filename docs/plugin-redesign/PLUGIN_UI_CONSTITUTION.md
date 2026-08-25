@@ -359,20 +359,22 @@ Only after this foundation lands may Worker #1, #2 and #3 begin parallel impleme
 |---|---|---|
 | REF_001 | `REF_001_Premium_Module_Masterboard.png` | Primary premium module masterboard |
 | REF_002 | `REF_002_WordPress_Plugin_Masterboard_DesignSystem.png` | WordPress masterboard + design system |
-| REF_003 | `REF_003_WordPress_Dashboard.png` | Detailed Dashboard baseline |
+| REF_003 | `REF_003_WordPress_Dashboard.png` | Historical detailed Dashboard baseline |
 | REF_004 | `REF_004_WordPress_Customers.png` | Detailed Customers baseline |
 | REF_005 | `REF_005_WordPress_Payments.png` | Detailed Payments baseline |
 | REF_006 | `REF_006_WordPress_Notification_Settings.png` | Detailed Notification Settings baseline |
 | REF_007 | `REF_007_WordPress_Active_Users.png` | Detailed Active Users baseline |
+| REF_008 | `REF_008_WordPress_Dashboard_Monthly_Flow.jpg` | Owner-approved Dashboard baseline with monthly financial-flow composition |
 
 The SHA-256 values in `REFERENCE_MANIFEST.json` are authoritative. These files must be committed byte-for-byte from the approved uploads; they must not be cropped, recolored, resized, recompressed or regenerated.
 
 ## Baseline precedence
 
-1. A detailed page reference (REF_003 through REF_007) controls its named page.
-2. For pages without a detailed page reference, REF_001 controls premium visual language and module composition.
-3. REF_002 controls WordPress-admin integration cues, sidebar language, page framing and the visible design-system direction.
-4. Real repository data, permissions, fields, WordPress behavior and business rules override mock values in the images.
-5. Any visual conflict that cannot be resolved by this precedence must be recorded for Lead/owner approval rather than silently reinterpreted.
+1. REF_008 controls Dashboard SC-001 and supersedes REF_003 for that screen only. REF_003 remains immutable historical evidence.
+2. The remaining detailed page references (REF_004 through REF_007) control their named pages.
+3. For pages without a detailed page reference, REF_001 controls premium visual language and module composition.
+4. REF_002 controls WordPress-admin integration cues, sidebar language, page framing and the visible design-system direction.
+5. Real repository data, permissions, fields, WordPress behavior and business rules override mock values in the images.
+6. Any visual conflict that cannot be resolved by this precedence must be recorded for Lead/owner approval rather than silently reinterpreted.
 
 **ALKENZY ADV DESIGN REFERENCES LOCKED**

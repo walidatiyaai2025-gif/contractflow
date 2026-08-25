@@ -8,7 +8,7 @@
 
 | ID | Screen | Page Slug / Route | PHP Class / Callback | Route Status | Agent Owner | Reference ID | Implementation Status | Visual QA | RTL | Responsive | Functional QA | Screenshot | PR | Approved |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| SC-001 | Dashboard | `safecontracts` | `AdminShell::render() → DashboardV2Page::renderContent()` | REGISTERED | **LEAD** | REF_003 | IMPLEMENTED | NO | NO | NO | NO | — | #637 | NO |
+| SC-001 | Dashboard | `safecontracts` | `AdminShell::render() → DashboardV2Page::renderContent()` | REGISTERED | **LEAD** | REF_008 | IN PROGRESS | NO | NO | NO | NO | — | #652 | NO |
 | SC-002 | Navigation Group — Parties & Contracts | `safecontracts&safecontracts_group=contracts` | `AdminShell::render() → AdminNavigationGroups::renderRequestedGroup()` | REGISTERED | **LEAD** | REF_002 | IMPLEMENTED | NO | NO | NO | NO | — | #637 | NO |
 | SC-003 | Navigation Group — Finance | `safecontracts&safecontracts_group=finance` | `AdminShell::render() → AdminNavigationGroups::renderRequestedGroup()` | REGISTERED | **LEAD** | REF_002 | IMPLEMENTED | NO | NO | NO | NO | — | #637 | NO |
 | SC-004 | Navigation Group — Operations | `safecontracts&safecontracts_group=operations` | `AdminShell::render() → AdminNavigationGroups::renderRequestedGroup()` | REGISTERED | **LEAD** | REF_002 | IMPLEMENTED | NO | NO | NO | NO | — | #637 | NO |
