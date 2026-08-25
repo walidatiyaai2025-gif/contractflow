@@ -26,6 +26,7 @@ $saved = $landing->save([
     ]],
     'phones' => ['+20 100 123 4567'],
     'office_address' => ['ar' => 'الجيزة', 'en' => 'Giza'],
+    'image_ids' => ['17', '21', '17', 'invalid', '-2'],
     'sign_in_label' => ['ar' => 'دخول الآن', 'en' => 'Sign in now'],
     'learn_more_label' => ['ar' => 'المزيد', 'en' => 'More'],
 ]);
@@ -38,6 +39,7 @@ $checks = [
     [($saved['services'][0]['title']['en'] ?? null) === 'Custom strategy', 'landing service content was not persisted'],
     [($saved['contact']['phones'][0] ?? null) === '+20 100 123 4567', 'landing phone was not persisted'],
     [($saved['sign_in_label']['ar'] ?? null) === 'دخول الآن', 'landing CTA was not persisted'],
+    [(get_option(MobileLandingContent::OPTION, [])['image_ids'] ?? null) === [17, 21], 'landing image IDs were bounded, deduplicated and persisted'],
 ];
 foreach ($checks as [$ok, $message]) {
     if (! $ok) {
@@ -50,9 +52,13 @@ foreach ($checks as [$ok, $message]) {
 $files = [
     'shell' => $root . '/wordpress-plugin/safecontracts/src/Admin/AdminShell.php',
     'dashboard' => $root . '/wordpress-plugin/safecontracts/src/Admin/AdminPremiumDashboardEnhancements.php',
+    'dashboard_view' => $root . '/wordpress-plugin/safecontracts/src/Admin/DashboardV2Page.php',
+    'dashboard_flow' => $root . '/wordpress-plugin/safecontracts/src/Admin/DashboardMonthlyFlowRepository.php',
     'finance' => $root . '/wordpress-plugin/safecontracts/src/Admin/AdminFinancePremiumEnhancements.php',
     'mobile' => $root . '/wordpress-plugin/safecontracts/src/Admin/MobileConfigurationPage.php',
     'css' => $root . '/wordpress-plugin/safecontracts/assets/admin/safecontracts-admin-polish.css',
+    'landing_media_js' => $root . '/wordpress-plugin/safecontracts/assets/admin/plugin-redesign/worker-3/mobile-landing-media.js',
+    'landing_media_css' => $root . '/wordpress-plugin/safecontracts/assets/admin/plugin-redesign/worker-3/mobile-landing-media.css',
 ];
 $sources = [];
 foreach ($files as $key => $path) {
@@ -72,12 +78,23 @@ $required = [
         '[self::PREMIUM_STYLE_HANDLE]',
     ],
     'dashboard' => [
-        'safecontracts-premium-actions',
+        'safecontracts-premium-fab',
         'dashicons-smartphone',
         'safecontracts-mobile-landing-content',
-        'dashboard.appendChild(chart)',
+        'data-safecontracts-confirm',
         "document.addEventListener('click'",
         "document.addEventListener('keydown'",
+    ],
+    'dashboard_view' => [
+        'safecontracts-dashboard-monthly-flow',
+        'safecontracts-dashboard-followups',
+        'DashboardMonthlyFlowRepository',
+        'DemoDataController::renderControls',
+    ],
+    'dashboard_flow' => [
+        'safecontracts_payment_collections',
+        'MONTH(cl.collection_date)',
+        'SUM(cl.amount)',
     ],
     'finance' => [
         "document.createElementNS(svgNs, 'polyline')",
@@ -90,6 +107,9 @@ $required = [
         'MobileLandingContent',
         'safecontracts-mobile-landing-content',
         'landing_service_',
+        'landing_image_ids',
+        'wp_enqueue_media',
+        'mobile-landing-media.js',
         'Save Mobile & Landing Configuration',
     ],
     'css' => [
@@ -99,6 +119,17 @@ $required = [
         'min-height:44px!important',
         '.safecontracts-landing-editor__grid',
         '.safecontracts-cash-flow-chart__line--in',
+    ],
+    'landing_media_js' => [
+        "library: {type: 'image'}",
+        'data-landing-media-remove',
+        'data-landing-media-up',
+        'data-landing-media-down',
+    ],
+    'landing_media_css' => [
+        '.safecontracts-landing-media__grid',
+        'aspect-ratio: 16 / 9',
+        '@media (max-width: 782px)',
     ],
 ];
 foreach ($required as $key => $markers) {
@@ -115,7 +146,8 @@ foreach ($required as $key => $markers) {
 // regress the exact screenshot defects reported for this pass.
 $forbidden = [
     'finance' => ['safecontracts-cash-flow-chart__bars', "cashCard.insertAdjacentElement('beforebegin', chart)"],
-    'dashboard' => ["kpiGrid?.insertAdjacentElement('afterend', chart)"],
+    'dashboard' => ["kpiGrid?.insertAdjacentElement('afterend', chart)", 'safecontracts-premium-actions', 'safecontracts-premium-chart__bars'],
+    'css' => ['.safecontracts-premium-actions', '.safecontracts-premium-action{'],
 ];
 foreach ($forbidden as $key => $markers) {
     foreach ($markers as $marker) {

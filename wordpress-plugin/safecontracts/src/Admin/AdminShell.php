@@ -6,6 +6,7 @@ namespace SafeContracts\Admin;
 
 use SafeContracts\Roles\Capabilities;
 use SafeContracts\Support\Brand;
+use SafeContracts\Translations\TranslationCatalog;
 
 final class AdminShell
 {
@@ -28,6 +29,9 @@ final class AdminShell
 
     public static function register(): void
     {
+        add_filter('admin_footer_text', [self::class, 'footerText']);
+        add_filter('update_footer', [self::class, 'footerVersion'], 20);
+
         add_menu_page(
             Brand::NAME,
             Brand::NAME,
@@ -37,6 +41,27 @@ final class AdminShell
             Brand::iconDataUri(),
             2
         );
+    }
+
+    public static function footerText(string $current): string
+    {
+        if (! self::isSafeContractsPage()) {
+            return $current;
+        }
+
+        return TranslationCatalog::currentLanguage() === 'ar'
+            ? 'ALKENZY ADV — النسخة المعتمدة'
+            : 'ALKENZY ADV — Approved release';
+    }
+
+    public static function footerVersion(string $current): string
+    {
+        if (! self::isSafeContractsPage()) {
+            return $current;
+        }
+
+        $label = TranslationCatalog::currentLanguage() === 'ar' ? 'الإصدار' : 'Version';
+        return $label . ' ' . SAFECONTRACTS_VERSION;
     }
 
     public static function enqueueAssets(): void

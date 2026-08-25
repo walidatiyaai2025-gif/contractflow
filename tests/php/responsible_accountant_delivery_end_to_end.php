@@ -91,7 +91,7 @@ foreach ([
     $assertContains($recipientContract, $resolver, 'notification resolver must route to the assigned accountant only when valid: ' . $recipientContract);
 }
 
-// 0.3.2 deliberately separates operational inbox, rule configuration and
+// The approved release deliberately separates operational inbox, rule configuration and
 // mail-transport configuration. Keep each responsibility on its own page.
 $center = $read('wordpress-plugin/safecontracts/src/Admin/NotificationCenterPage.php');
 foreach ([

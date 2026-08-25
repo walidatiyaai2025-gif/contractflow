@@ -47,14 +47,14 @@ void main() {
     await _pumpBounded(tester, cycles: 24);
     expect(find.byType(AppBar), findsOneWidget);
 
-    await _captureDestination(tester, 2, 'REF03_customers_ar_390');
-    await _captureDestination(tester, 3, 'REF03_suppliers_ar_390');
-    await _captureDestination(tester, 4, 'REF04_contracts_ar_390');
-    await _captureDestination(tester, 5, 'REF05_payments_ar_390');
-    await _captureDestination(tester, 6, 'REF05_finance_ar_390');
-    await _captureDestination(tester, 8, 'REF05_followups_ar_390');
-    await _captureDestination(tester, 9, 'REF06_export_ar_390');
-    await _captureDestination(tester, 10, 'REF06_profile_ar_390');
+    await _captureDestination(tester, 1, 'REF03_customers_ar_390');
+    await _captureDestination(tester, 2, 'REF03_suppliers_ar_390');
+    await _captureDestination(tester, 3, 'REF04_contracts_ar_390');
+    await _captureDestination(tester, 4, 'REF05_payments_ar_390');
+    await _captureDestination(tester, 5, 'REF05_finance_ar_390');
+    await _captureDestination(tester, 7, 'REF05_followups_ar_390');
+    await _captureDestination(tester, 8, 'REF06_export_ar_390');
+    await _captureDestination(tester, 9, 'REF06_profile_ar_390');
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

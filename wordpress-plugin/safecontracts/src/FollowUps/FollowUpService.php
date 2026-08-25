@@ -86,6 +86,21 @@ final class FollowUpService
         return $this->repository->history($paymentId, max(1, min(500, $limit)), $dateFrom, $dateTo);
     }
 
+    /** @return list<array<string,mixed>> */
+    public function recent(int $limit = 100, ?string $dateFrom = null, ?string $dateTo = null): array
+    {
+        $this->requireCapability(Capabilities::ACCESS, 'You do not have access to SafeContracts follow-up history.');
+        [$dateFrom, $dateTo] = $this->normalizePeriod($dateFrom, $dateTo);
+        $limit = max(1, min(500, $limit));
+        if (current_user_can(Capabilities::VIEW_ALL)) {
+            return $this->repository->recent(null, $limit, $dateFrom, $dateTo);
+        }
+        if (current_user_can(Capabilities::VIEW_ASSIGNED)) {
+            return $this->repository->recent(get_current_user_id(), $limit, $dateFrom, $dateTo);
+        }
+        throw new DomainException('Follow-up history is outside the current user data scope.');
+    }
+
     private function record(
         int $paymentId,
         string $state,

@@ -14,7 +14,11 @@ void main() {
     expect(shell,
         contains('indicatorColor: Colors.white.withValues(alpha: 0.14)'));
     expect(shell, contains('destination == _selected'));
-    expect(dashboard, contains('constraints.maxWidth < 620'));
-    expect(dashboard, contains('height: compact ? 94 : 76'));
+    expect(dashboard, contains('height: 70'));
+    expect(
+      dashboard,
+      contains('Expanded(child: _CompactKpiCard(item: items[index]))'),
+    );
+    expect(dashboard, isNot(contains('final columns = compact ? 2 : 4')));
   });
 }

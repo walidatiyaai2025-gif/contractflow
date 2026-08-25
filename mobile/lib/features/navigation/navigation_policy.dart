@@ -45,9 +45,11 @@ final class MobileNavigationPolicy {
     final destinations = <MobileDestination>[];
 
     if (hasAccess) {
+      // Keep one authoritative Dashboard entry. DashboardScreen already owns
+      // the approved tabs/data-slide experience; exposing Dashboard Two as a
+      // second navigation destination caused users to land on a stale layout.
       destinations.addAll(const <MobileDestination>[
         MobileDestination.dashboard,
-        MobileDestination.dashboardTwo,
         MobileDestination.customers,
       ]);
       if (session.can(viewSuppliersCapability)) {

@@ -157,6 +157,7 @@ def validate_ci_contract() -> int:
     workflow = (ROOT / ".github/workflows/quality-gates.yml").read_text(encoding="utf-8")
     required_commands = (
         "python3 scripts/validate-foundation.py",
+        "python3 scripts/validate-release-version.py",
         "./scripts/test-php.sh",
         "dart format lib test",
         "git diff --exit-code -- lib test",
@@ -178,7 +179,11 @@ def validate_ci_contract() -> int:
         "AAPT=",
         '"$AAPT" dump permissions "$APK"',
         "android.permission.INTERNET",
-        "alkenzy-adv-0.3.2-release-candidates",
+        "Resolve approved release version",
+        "MOBILE_FULL_VERSION",
+        "MOBILE_VERSION_NAME",
+        "PLUGIN_VERSION",
+        "alkenzy-adv-${{ steps.release_version.outputs.name }}-release-candidates",
     )
     missing = [command for command in required_commands if command not in workflow]
     if missing:

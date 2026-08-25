@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/auth/mobile_token_store.dart';
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../ui/safecontracts_components.dart';
@@ -9,6 +10,7 @@ import '../ui/safecontracts_design.dart';
 import '../ui/safecontracts_form.dart';
 import '../ui/safecontracts_splash.dart';
 import '../ui/safecontracts_tokens.dart';
+import 'biometric_auth.dart';
 import 'mobile_auth.dart';
 
 final class SafeContractsLoginScreen extends StatefulWidget {
@@ -37,8 +39,122 @@ final class _SafeContractsLoginScreenState
   final _formKey = GlobalKey<FormState>();
   final _username = TextEditingController();
   final _password = TextEditingController();
+  final MobileBiometricAuth _biometricAuth = MobileBiometricAuth();
   bool _obscurePassword = true;
   bool _bootstrapping = false;
+  bool _biometricAvailable = false;
+  bool _biometricCredentialAvailable = false;
+  bool _biometricBusy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_refreshBiometricAvailability());
+  }
+
+  Future<void> _refreshBiometricAvailability() async {
+    final store = widget.controller.repository.tokenStore;
+    if (store is! SecureMobileTokenStore) return;
+    final available = await _biometricAuth.isAvailable();
+    final remembered = available && await store.hasPersistentToken();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricCredentialAvailable = remembered;
+      });
+    }
+  }
+
+  Future<void> _submitBiometric() async {
+    if (_biometricBusy || _bootstrapping) return;
+    final store = widget.controller.repository.tokenStore;
+    if (store is! SecureMobileTokenStore) return;
+    final isArabic = context.scL10n.isArabic;
+    final hasCredential = await store.hasPersistentToken();
+    if (!hasCredential) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isArabic
+                ? 'سجّل الدخول بكلمة المرور مرة واحدة، ثم فعّل البصمة عندما يطلب التطبيق ذلك.'
+                : 'Sign in with your password once, then enable fingerprint when the app asks.',
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() => _biometricBusy = true);
+    try {
+      final authenticated = await _biometricAuth.authenticate(
+        isArabic: isArabic,
+      );
+      if (!authenticated || !mounted) return;
+      store.unlockPersistent();
+      setState(() => _bootstrapping = true);
+      await widget.onAuthenticated();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _biometricBusy = false;
+          _bootstrapping = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _offerBiometricEnrollment() async {
+    final store = widget.controller.repository.tokenStore;
+    if (store is! SecureMobileTokenStore) return;
+    if (!await _biometricAuth.isAvailable()) return;
+    if (await store.hasPersistentToken()) {
+      if (mounted) {
+        setState(() {
+          _biometricAvailable = true;
+          _biometricCredentialAvailable = true;
+        });
+      }
+      return;
+    }
+    if (!mounted) return;
+    final ar = context.scL10n.isArabic;
+    final enable = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            icon: const Icon(Icons.fingerprint_rounded, size: 42),
+            title: Text(
+                ar ? 'تفعيل الدخول بالبصمة؟' : 'Enable fingerprint sign-in?'),
+            content: Text(
+              ar
+                  ? 'سيتم حفظ رمز الجلسة الآمن فقط لاستخدامه مع البصمة. لن يتم حفظ كلمة المرور ولن يتم تشغيل خيار تذكرني.'
+                  : 'Only the secure session token will be saved for biometric use. Your password will not be stored and Remember me will stay off.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(ar ? 'ليس الآن' : 'Not now'),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                icon: const Icon(Icons.fingerprint_rounded),
+                label: Text(ar ? 'تفعيل البصمة' : 'Enable fingerprint'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!enable || !mounted) return;
+    final authenticated = await _biometricAuth.authenticate(isArabic: ar);
+    if (!authenticated || !mounted) return;
+    await store.persistCurrentForBiometric();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = true;
+        _biometricCredentialAvailable = true;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -57,7 +173,10 @@ final class _SafeContractsLoginScreenState
       );
       if (!success || !mounted) return;
       _password.clear();
+      await _offerBiometricEnrollment();
+      if (!mounted) return;
       await widget.onAuthenticated();
+      unawaited(_refreshBiometricAvailability());
     } finally {
       if (mounted) setState(() => _bootstrapping = false);
     }
@@ -256,6 +375,77 @@ final class _SafeContractsLoginScreenState
                                           variant: SafeContractsButtonVariant
                                               .primary,
                                         ),
+                                        if (_biometricAvailable) ...[
+                                          const SizedBox(
+                                            height: SafeContractsSpacing.md,
+                                          ),
+                                          Row(
+                                            children: [
+                                              const Expanded(child: Divider()),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal:
+                                                      SafeContractsSpacing.sm,
+                                                ),
+                                                child: Text(
+                                                  l10n.isArabic ? 'أو' : 'OR',
+                                                  style: const TextStyle(
+                                                    color: SafeContractsVisual
+                                                        .muted,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                              ),
+                                              const Expanded(child: Divider()),
+                                            ],
+                                          ),
+                                          const SizedBox(
+                                            height: SafeContractsSpacing.md,
+                                          ),
+                                          OutlinedButton.icon(
+                                            key: const Key('biometricLogin'),
+                                            onPressed:
+                                                submitting || _biometricBusy
+                                                    ? null
+                                                    : () => unawaited(
+                                                          _submitBiometric(),
+                                                        ),
+                                            icon: _biometricBusy
+                                                ? const SizedBox.square(
+                                                    dimension: 18,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  )
+                                                : const Icon(
+                                                    Icons.fingerprint_rounded,
+                                                  ),
+                                            label: Text(
+                                              l10n.isArabic
+                                                  ? 'الدخول بالبصمة'
+                                                  : 'Sign in with fingerprint',
+                                            ),
+                                          ),
+                                          if (!_biometricCredentialAvailable)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: SafeContractsSpacing.xs,
+                                              ),
+                                              child: Text(
+                                                l10n.isArabic
+                                                    ? 'بعد أول دخول بكلمة المرور سيطلب منك التطبيق تفعيل البصمة.'
+                                                    : 'After your first password sign-in, the app will ask you to enable fingerprint.',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  color:
+                                                      SafeContractsVisual.muted,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ],
                                     ),
                                   ),

@@ -27,6 +27,11 @@ void main() {
         controller.content.headline.resolve('ar'), 'خبرة إعلانية تصنع الفرق');
     expect(controller.content.services.single.key, 'strategy');
     expect(controller.content.phones, <String>['01000272232']);
+    expect(controller.content.images.single.id, 17);
+    expect(
+      controller.content.images.single.url,
+      'https://example.test/uploads/landing-one.webp',
+    );
     controller.dispose();
   });
 
@@ -60,6 +65,30 @@ void main() {
 
     expect(
       () => MobileLandingContent.fromJson(payload),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('landing images reject unsafe URLs and duplicate attachment IDs', () {
+    final unsafeUrl = _payload();
+    (unsafeUrl['images']! as List<Object?>)[0] = <String, Object?>{
+      'id': 17,
+      'url': 'javascript:alert(1)',
+      'alt': '',
+    };
+    expect(
+      () => MobileLandingContent.fromJson(unsafeUrl),
+      throwsA(isA<FormatException>()),
+    );
+
+    final duplicateIds = _payload();
+    (duplicateIds['images']! as List<Object?>).add(<String, Object?>{
+      'id': 17,
+      'url': 'https://example.test/uploads/landing-two.webp',
+      'alt': 'Second image',
+    });
+    expect(
+      () => MobileLandingContent.fromJson(duplicateIds),
       throwsA(isA<FormatException>()),
     );
   });
@@ -115,6 +144,13 @@ Map<String, Object?> _payload() => <String, Object?>{
           'ar': '57 خاتم المرسلين، الجيزة',
         },
       },
+      'images': <Object?>[
+        <String, Object?>{
+          'id': 17,
+          'url': 'https://example.test/uploads/landing-one.webp',
+          'alt': 'حملة إعلانية للكنزي',
+        },
+      ],
       'sign_in_label': <String, Object?>{
         'en': 'Sign in',
         'ar': 'تسجيل الدخول',

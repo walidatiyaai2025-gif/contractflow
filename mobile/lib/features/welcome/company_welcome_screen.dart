@@ -93,7 +93,18 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   onLanguageChanged: widget.onLanguageChanged,
                                 ),
                                 const SizedBox(height: SafeContractsSpacing.xl),
-                                const _BrandMedallion(),
+                                if (content.images.isEmpty)
+                                  const _BrandMedallion()
+                                else
+                                  _LandingImageGallery(
+                                    key: ValueKey<String>(
+                                      content.images
+                                          .map((image) => image.id)
+                                          .join(','),
+                                    ),
+                                    images: content.images,
+                                    languageCode: widget.languageCode,
+                                  ),
                                 const SizedBox(height: SafeContractsSpacing.lg),
                                 Text.rich(
                                   TextSpan(
@@ -196,8 +207,6 @@ final class _AlkenzyCompanyWelcomeScreenState
                                       ? 'استخدم بيانات النظام الحقيقية لاتخاذ قرارات تشغيلية أوضح.'
                                       : 'Use live system data for focused operational decisions.',
                                 ),
-                                const SizedBox(height: SafeContractsSpacing.md),
-                                const _ProgressDots(),
                                 const SizedBox(height: SafeContractsSpacing.md),
                                 SafeContractsButton(
                                   key: const Key('companyWelcomeSignIn'),
@@ -354,6 +363,223 @@ final class _BrandMedallion extends StatelessWidget {
   }
 }
 
+final class _LandingImageGallery extends StatefulWidget {
+  const _LandingImageGallery({
+    required this.images,
+    required this.languageCode,
+    super.key,
+  });
+
+  final List<MobileLandingImage> images;
+  final String languageCode;
+
+  @override
+  State<_LandingImageGallery> createState() => _LandingImageGalleryState();
+}
+
+final class _LandingImageGalleryState extends State<_LandingImageGallery> {
+  late final PageController _pageController;
+  var _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(
+      viewportFraction: widget.images.length > 1 ? 0.94 : 1,
+    );
+  }
+
+  @override
+  void didUpdateWidget(_LandingImageGallery oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_currentPage >= widget.images.length) {
+      _currentPage = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pageController.hasClients) _pageController.jumpToPage(0);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final arabic = widget.languageCode.toLowerCase().startsWith('ar');
+    return Column(
+      children: [
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: SafeContractsVisual.surface,
+              borderRadius: BorderRadius.circular(SafeContractsRadii.lg),
+              border: Border.all(color: SafeContractsVisual.champagne),
+              boxShadow: SafeContractsShadows.card,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(SafeContractsRadii.lg - 1),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  PageView.builder(
+                    key: const Key('companyWelcomeImageCarousel'),
+                    controller: _pageController,
+                    itemCount: widget.images.length,
+                    onPageChanged: (index) {
+                      if (mounted) setState(() => _currentPage = index);
+                    },
+                    itemBuilder: (context, index) {
+                      final image = widget.images[index];
+                      final fallbackLabel = arabic
+                          ? 'صورة اللاندنج ${index + 1}'
+                          : 'Landing image ${index + 1}';
+                      return Semantics(
+                        image: true,
+                        label: image.alt.isEmpty ? fallbackLabel : image.alt,
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.only(
+                            end: widget.images.length > 1 ? 7 : 0,
+                          ),
+                          child: Image.network(
+                            image.url,
+                            key: Key('companyWelcomeImage-${image.id}'),
+                            fit: BoxFit.cover,
+                            filterQuality: FilterQuality.medium,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return const ColoredBox(
+                                color: SafeContractsVisual.surfaceWarm,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: SafeContractsVisual.roseGold,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return _LandingImageFallback(
+                                label: image.alt.isEmpty
+                                    ? fallbackLabel
+                                    : image.alt,
+                                arabic: arabic,
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const PositionedDirectional(
+                    top: 10,
+                    start: 10,
+                    child: SafeContractsBrandMark(
+                      size: 42,
+                      borderRadius: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (widget.images.length > 1) ...[
+          const SizedBox(height: SafeContractsSpacing.sm),
+          Semantics(
+            key: const Key('companyWelcomeImagePosition'),
+            label: arabic
+                ? 'الصورة ${_currentPage + 1} من ${widget.images.length}'
+                : 'Image ${_currentPage + 1} of ${widget.images.length}',
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List<Widget>.generate(
+                widget.images.length,
+                (index) => AnimatedContainer(
+                  key: Key('companyWelcomeImageDot-$index'),
+                  duration: SafeContractsMotion.fast,
+                  width: index == _currentPage ? 18 : 7,
+                  height: 7,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: index == _currentPage
+                        ? SafeContractsVisual.navy
+                        : SafeContractsVisual.outline,
+                    borderRadius:
+                        BorderRadius.circular(SafeContractsRadii.pill),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+final class _LandingImageFallback extends StatelessWidget {
+  const _LandingImageFallback({
+    required this.label,
+    required this.arabic,
+  });
+
+  final String label;
+  final bool arabic;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[
+            SafeContractsVisual.surfaceWarm,
+            SafeContractsVisual.navySoft,
+          ],
+        ),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(SafeContractsSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.image_not_supported_outlined,
+                color: SafeContractsVisual.roseGoldDark,
+                size: 34,
+              ),
+              const SizedBox(height: SafeContractsSpacing.xs),
+              Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: SafeContractsVisual.navy,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: SafeContractsSpacing.xxs),
+              Text(
+                arabic ? 'تعذر تحميل الصورة' : 'Image unavailable',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SafeContractsVisual.muted,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 final class _ReferenceFeatureTile extends StatelessWidget {
   const _ReferenceFeatureTile({
     required this.icon,
@@ -409,32 +635,6 @@ final class _ReferenceFeatureTile extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-final class _ProgressDots extends StatelessWidget {
-  const _ProgressDots();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List<Widget>.generate(
-        4,
-        (index) => AnimatedContainer(
-          duration: SafeContractsMotion.fast,
-          width: index == 0 ? 18 : 7,
-          height: 7,
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          decoration: BoxDecoration(
-            color: index == 0
-                ? SafeContractsVisual.navy
-                : SafeContractsVisual.outline,
-            borderRadius: BorderRadius.circular(SafeContractsRadii.pill),
-          ),
-        ),
       ),
     );
   }

@@ -8,7 +8,7 @@ This plan governs the Premium redesign of the **SafeContracts / Alkenzy ADV Word
 
 Worker #1, #2 and #3 are **not released** until all of the following are present together on `main` and the validator passes:
 
-1. seven locked reference binaries under `assets/design/plugin-redesign/reference/`;
+1. the locked reference binaries under `assets/design/plugin-redesign/reference/`;
 2. `REFERENCE_MANIFEST.json` with verified SHA-256 values;
 3. `PLUGIN_UI_CONSTITUTION.md`;
 4. `PLUGIN_UI_SCREEN_MATRIX.md`;
@@ -46,7 +46,7 @@ No worker may take a screen because another worker is blocked or idle. Ownership
 
 ## 4. Locked references and visual authority
 
-The seven reference files are immutable after this baseline lands. Their exact bytes are guarded by SHA-256 in `REFERENCE_MANIFEST.json`. A visual change requires explicit project-owner approval, a new Reference ID, a manifest update and re-review of affected screens.
+The locked reference files are immutable after they land. Their exact bytes are guarded by SHA-256 in `REFERENCE_MANIFEST.json`. The project owner's 2026-08-25 Dashboard request added REF_008 without altering historical REF_003 and returned SC-001 to re-review.
 
 Every matrix row has one controlling Reference ID. The reference controls layout hierarchy, density, spacing, palette, card language, forms, tables, charts, statuses and navigation language. Real repository/backend values and permissions always override mock values shown in artwork.
 

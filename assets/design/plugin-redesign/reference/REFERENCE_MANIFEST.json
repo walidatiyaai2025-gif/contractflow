@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "manifest_version": "1.0.0",
+  "manifest_version": "1.1.0",
   "project": "ALKENZY ADV / Safe Contracts — Premium WordPress Plugin Redesign",
   "baseline_date": "2026-08-24",
   "default_policy": "LOCKED_IMMUTABLE_UNLESS_OWNER_APPROVES_NEW_REFERENCE_ID",
@@ -41,6 +41,18 @@
       "scope": ["Dashboard", "Summary Cards", "Filters", "Financial Overview", "Contract Distribution", "Charts"],
       "source_upload": "ChatGPT Image Aug 24, 2026, 11_05_17 AM (1).png",
       "notes": "Detailed WordPress dashboard visual baseline."
+    },
+    {
+      "id": "REF_008",
+      "file": "REF_008_WordPress_Dashboard_Monthly_Flow.jpg",
+      "status": "LOCKED",
+      "approved": true,
+      "sha256": "0108f21b5a73cbe0c45b733d31d30964a13d1847675c725bd3b92d28ad62942e",
+      "width": 1738,
+      "height": 2048,
+      "scope": ["Dashboard", "Summary Cards", "Filters", "Financial Overview", "Monthly Cash Flow", "Follow-up Visibility", "Demo Data Controls"],
+      "source_upload": "Gemini_Generated_Image_2q42gc2q42gc2q42.jpg",
+      "notes": "Owner-approved Dashboard successor reference. It supersedes REF_003 for SC-001 only and adds the monthly financial-flow composition while real server data and permissions remain authoritative."
     },
     {
       "id": "REF_004",
