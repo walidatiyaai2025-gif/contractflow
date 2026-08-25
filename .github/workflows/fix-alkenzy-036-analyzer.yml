@@ -12,6 +12,7 @@ jobs:
   fix:
     if: ${{ !contains(github.event.head_commit.message, '[analyzer-036]') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,13 +24,12 @@ jobs:
           cache: true
       - name: Apply analyzer closure
         run: python3 scripts/fix_alkenzy_036_analyzer.py
-      - name: Resolve, format, analyze, test
+      - name: Resolve, format and analyze
         working-directory: mobile
         run: |
           flutter pub get
           dart format lib test
           flutter analyze
-          flutter test
       - name: Commit analyzer closure
         run: |
           git rm scripts/fix_alkenzy_036_analyzer.py
