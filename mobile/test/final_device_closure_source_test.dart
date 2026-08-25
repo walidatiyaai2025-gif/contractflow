@@ -8,7 +8,8 @@ void main() {
         () {
       final login =
           File('lib/features/auth/login_screen.dart').readAsStringSync();
-      final auth = File('lib/features/auth/mobile_auth.dart').readAsStringSync();
+      final auth =
+          File('lib/features/auth/mobile_auth.dart').readAsStringSync();
       final tokenStore =
           File('lib/core/auth/mobile_token_store.dart').readAsStringSync();
       final biometric =
