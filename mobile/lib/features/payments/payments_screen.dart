@@ -23,6 +23,7 @@ final class PaymentsScreen extends StatefulWidget {
     this.canEnterCollection = false,
     this.onEditExpectedDate,
     this.onRecordCollection,
+    this.onDataChanged,
     this.refreshRevision = 0,
     super.key,
   });
@@ -35,6 +36,7 @@ final class PaymentsScreen extends StatefulWidget {
   final bool canEnterCollection;
   final PaymentAction? onEditExpectedDate;
   final PaymentAction? onRecordCollection;
+  final VoidCallback? onDataChanged;
   final int refreshRevision;
 
   @override
@@ -146,7 +148,10 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
         ),
       ),
     );
-    if (mounted) unawaited(_load(_pageNumber));
+    if (mounted) {
+      unawaited(_load(_pageNumber));
+      widget.onDataChanged?.call();
+    }
   }
 
   Future<void> _editExpectedDate(SafeContractsPayment payment) async {
@@ -227,6 +232,7 @@ final class _PaymentsScreenState extends State<PaymentsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.scL10n.collectionRecorded(receipt.id))),
     );
+    widget.onDataChanged?.call();
   }
 
   void _showApiError(SafeContractsApiException error) {

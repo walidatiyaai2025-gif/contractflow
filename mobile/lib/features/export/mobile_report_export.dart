@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:arabic_reshaper/arabic_reshaper.dart';
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -424,7 +423,7 @@ final class MobileReportDocumentBuilder {
 
     pw.Widget cellText(String value, {required bool header}) {
       final rtl = _containsArabic(value);
-      final rendered = rtl ? ArabicReshaper.instance.reshape(value) : value;
+      final rendered = value;
       return pw.Directionality(
         textDirection: rtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
         child: pw.Text(

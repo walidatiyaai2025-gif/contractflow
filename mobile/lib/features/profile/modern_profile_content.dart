@@ -12,6 +12,9 @@ final class ModernProfileContent extends StatelessWidget {
     required this.onLanguageChanged,
     required this.onLogout,
     required this.onUserGuide,
+    required this.avatarUrl,
+    required this.avatarUploading,
+    required this.onAvatarUpload,
     super.key,
   });
 
@@ -22,6 +25,9 @@ final class ModernProfileContent extends StatelessWidget {
   final ValueChanged<String> onLanguageChanged;
   final VoidCallback onLogout;
   final VoidCallback onUserGuide;
+  final String? avatarUrl;
+  final bool avatarUploading;
+  final VoidCallback onAvatarUpload;
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +38,23 @@ final class ModernProfileContent extends StatelessWidget {
           final content = Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ProfileHero(session: session),
-              const SizedBox(height: 10),
+              ProfileHero(session: session, avatarUrlOverride: avatarUrl),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  key: const Key('profileChangePhoto'),
+                  onPressed: avatarUploading ? null : onAvatarUpload,
+                  icon: avatarUploading
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.photo_camera_outlined),
+                  label: Text(
+                      ar ? 'تغيير الصورة الشخصية' : 'Change profile photo'),
+                ),
+              ),
+              const SizedBox(height: 4),
               _EmployeeDetails(session: session, isArabic: ar),
               const SizedBox(height: 10),
               ProfileLanguageControl(

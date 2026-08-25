@@ -21,6 +21,7 @@ final class SuppliersScreen extends StatefulWidget {
 final class _SuppliersScreenState extends State<SuppliersScreen> {
   final _searchController = TextEditingController();
   String _status = '';
+  int _visibleLimit = 30;
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
     if (oldWidget.controller != widget.controller) {
       _searchController.text = widget.controller.searchQuery;
       _status = '';
+      _visibleLimit = 30;
       unawaited(widget.controller.ensureLoaded());
     }
   }
@@ -45,12 +47,15 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
     super.dispose();
   }
 
-  List<SafeContractsSupplier> get _visibleSuppliers {
+  List<SafeContractsSupplier> get _filteredSuppliers {
     if (_status.isEmpty) return widget.controller.suppliers;
     return widget.controller.suppliers
         .where((supplier) => supplier.status == _status)
         .toList(growable: false);
   }
+
+  List<SafeContractsSupplier> get _visibleSuppliers =>
+      _filteredSuppliers.take(_visibleLimit).toList(growable: false);
 
   Future<void> _openEditor([SafeContractsSupplier? supplier]) async {
     final draft = await showModalBottomSheet<SupplierDraft>(
@@ -134,7 +139,8 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
-        final visible = _visibleSuppliers;
+        final filtered = _filteredSuppliers;
+        final visible = filtered.take(_visibleLimit).toList(growable: false);
         return LayoutBuilder(
           builder: (context, constraints) {
             final split = constraints.maxWidth >= 900;
@@ -149,19 +155,32 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
                       searchController: _searchController,
                       status: _status,
                       visibleCount: visible.length,
-                      onStatusChanged: (value) =>
-                          setState(() => _status = value),
+                      onStatusChanged: (value) => setState(() {
+                        _status = value;
+                        _visibleLimit = 30;
+                      }),
                       onCreate: widget.controller.canCreate
                           ? () => unawaited(_openEditor())
                           : null,
                     ),
                   Expanded(
-                    child: _SupplierBody(
-                      controller: widget.controller,
-                      suppliers: visible,
-                      split: split,
-                      onEdit: (supplier) => unawaited(_openEditor(supplier)),
-                      onArchive: (supplier) => unawaited(_archive(supplier)),
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        if (!mobileDetail &&
+                            notification.metrics.extentAfter <= 360 &&
+                            _visibleLimit < filtered.length) {
+                          setState(() => _visibleLimit =
+                              (_visibleLimit + 30).clamp(0, filtered.length));
+                        }
+                        return false;
+                      },
+                      child: _SupplierBody(
+                        controller: widget.controller,
+                        suppliers: visible,
+                        split: split,
+                        onEdit: (supplier) => unawaited(_openEditor(supplier)),
+                        onArchive: (supplier) => unawaited(_archive(supplier)),
+                      ),
                     ),
                   ),
                 ],
