@@ -1,19 +1,59 @@
 # ALKENZY ADV — Bug Closure Constitution
 
-This document is mandatory for the 101-item ALKENZY ADV mobile bug/UX closure pass.
+This document is mandatory for the 101-item ALKENZY ADV mobile bug/UX closure pass and remains binding for all later Alkenzy ADV mobile release work where applicable.
 
 ## Source of truth
 
 Every Lead, Worker and QA agent MUST read these files before changing code:
 
 1. `AGENTS.md`
-2. `docs/mobile-redesign/ALKENZY_ADV_BUG_CLOSURE_CONSTITUTION.md`
-3. `docs/mobile-redesign/ALKENZY_ADV_BUG_UX_REGISTER_2026-08-24.md`
-4. `docs/mobile-redesign/MOBILE_UI_REFERENCE.md`
-5. `docs/mobile-redesign/MOBILE_UI_SCREEN_MATRIX.md`
-6. `docs/mobile-redesign/MOBILE_UI_PROGRESS.md`
+2. `docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md`
+3. `docs/mobile-redesign/ALKENZY_ADV_BUG_CLOSURE_CONSTITUTION.md`
+4. `docs/mobile-redesign/ALKENZY_ADV_BUG_UX_REGISTER_2026-08-24.md`
+5. `docs/mobile-redesign/MOBILE_UI_REFERENCE.md`
+6. `docs/mobile-redesign/MOBILE_UI_SCREEN_MATRIX.md`
+7. `docs/mobile-redesign/MOBILE_UI_PROGRESS.md`
 
 The canonical operational bug register contains **101 items: P0=5, P1=71, P2=25**. No agent may invent, drop, renumber, silently merge, or close an item outside the register.
+
+## Permanent mobile release lineage lock — effective 2026-08-25
+
+The project owner has approved **Alkenzy ADV `0.3.5+9`** as the current mobile release baseline.
+
+Locked identity:
+
+- approved release: `0.3.5+9`;
+- immutable baseline branch: `release/alkenzy-adv-mobile-0.3.5`;
+- exact approved functional source commit: `458e3580d07eb182224c3652bb18d3c82b87adbd`;
+- original owner-approved lineage ancestor: `3d4dcd2205b5cfa7d0814e5635db577ee5dcefed`;
+- exact-head Quality Gates run: `32813745920` (`Quality Gates #1513`);
+- approved APK SHA-256: `0ad0558fc993aa1b462280d44bfefe42bb0e44768670558e03e481b3b6408874`;
+- authoritative baseline record: `docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md`.
+
+From this point forward:
+
+1. Every new Alkenzy ADV mobile modification MUST start from `release/alkenzy-adv-mobile-0.3.5` or a commit proven to be its descendant.
+2. Starting from an older commit, stale PR head, abandoned worker branch, historical APK branch, or any pre-`0.3.5+9` snapshot is forbidden.
+3. No future worker may wholesale-copy an older mobile file over the approved baseline. Ports must be surgical and must preserve all accepted behavior unless the project owner explicitly requests removal.
+4. `0.3.5+9` is consumed forever. It may not be reused for another APK.
+5. The next user-facing APK must be **at least `0.3.6+10`** unless the project owner explicitly chooses a higher semantic version. Both the versionName and build number must advance.
+6. The version bump must be committed before final APK build. APK filename, CI artifact metadata, checksum, release notes and handoff message must agree on that version.
+7. Before release handoff, the Lead must record that the locked release baseline is an ancestor of the new functional release lineage.
+8. A later APK becomes the new baseline only after explicit project-owner approval and an update to `ALKENZY_ADV_RELEASE_BASELINE.md`; lineage must move forward and may never reset to an older base.
+
+Mandatory block for every post-`0.3.5+9` mobile PR and handoff:
+
+```text
+[ALKENZY-ADV-RELEASE-LINEAGE-LOCK]
+PREVIOUS-APPROVED-RELEASE: 0.3.5+9
+BASELINE-BRANCH: release/alkenzy-adv-mobile-0.3.5
+BASELINE-COMMIT: 458e3580d07eb182224c3652bb18d3c82b87adbd
+NEW-VERSION: <must differ from 0.3.5+9>
+BASELINE-ANCESTOR-VERIFIED: YES
+NO-STALE-BRANCH-REPLACEMENT: YES
+```
+
+This release-lineage section supersedes any older base/SHA instruction in this document whenever they conflict. Its purpose is to guarantee that accepted changes cannot disappear in a later APK because work restarted from an obsolete snapshot.
 
 ## Universal execution flag
 
@@ -175,9 +215,9 @@ A Worker may continue independent P1/P2 work while another P0 is in QA, but the 
 ## Shared-file conflict rules
 
 - Never resolve conflicts by wholesale replacement of a shared file.
-- Preserve already-integrated Dashboard Two, premium contract routing, Worker #1 foundation/navigation, Worker #2 customers/suppliers/contracts, Worker #3 payments/finance/operations, and server-authoritative behavior.
+- Preserve already-integrated Dashboard Two, premium contract routing, Worker #1 foundation/navigation, Worker #2 customers/suppliers/contracts, Worker #3 payments/finance/operations, and server-authoritative behavior unless the locked release baseline explicitly supersedes an older closure-era implementation.
 - Shared primitives must remain backwards compatible unless the Lead explicitly coordinates all consumers.
-- Every conflict resolution must be surgical and traceable to bug IDs.
+- Every conflict resolution must be surgical and traceable to bug IDs or to an explicitly approved post-release change.
 
 ## Branch / PR naming
 
@@ -195,6 +235,8 @@ Every PR title must contain:
 `[ALKENZY-BUGFIX][W#][Bxxx-Bxxx]`
 
 Each PR body must list exact bug IDs and their current status.
+
+For all post-`0.3.5+9` mobile work, the PR body must additionally include the `[ALKENZY-ADV-RELEASE-LINEAGE-LOCK]` block defined above and the new mobile version.
 
 ## Mandatory Worker checkpoint format
 
@@ -259,5 +301,7 @@ The redesign/bug closure may be declared complete only when:
 - final screenshot/reference evidence complete;
 - `MOBILE_UI_SCREEN_MATRIX.md` and `MOBILE_UI_PROGRESS.md` match reality;
 - release-candidate Android build succeeds from that exact head.
+
+For later releases, release acceptance additionally requires compliance with the permanent release-lineage lock: ancestor verification, a new version/build number, and preservation of the previous approved release behavior unless an explicit owner-approved change supersedes it.
 
 Do not call an APK production-verified unless the repository’s separate signing/UAT requirements in `AGENTS.md` are also satisfied.
