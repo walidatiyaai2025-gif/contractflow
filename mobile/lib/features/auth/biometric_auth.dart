@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 
 final class MobileBiometricAuth {
@@ -8,12 +9,15 @@ final class MobileBiometricAuth {
 
   Future<bool> isAvailable() async {
     try {
-      if (!await _localAuth.isDeviceSupported()) return false;
-      if (!await _localAuth.canCheckBiometrics) return false;
-      final methods = await _localAuth.getAvailableBiometrics();
-      return methods.isNotEmpty;
-    } on Object {
+      if (await _localAuth.canCheckBiometrics) return true;
+      if (await _localAuth.isDeviceSupported()) return true;
       return false;
+    } on Object {
+      // Some Android vendors can fail the capability probe even though the
+      // system biometric prompt is available. Keep the fingerprint entry
+      // visible on Android and let authenticate() return the authoritative
+      // result from the OS.
+      return defaultTargetPlatform == TargetPlatform.android;
     }
   }
 
@@ -21,8 +25,8 @@ final class MobileBiometricAuth {
     try {
       return await _localAuth.authenticate(
         localizedReason: isArabic
-            ? 'استخدم بصمة الإصبع أو قفل الجهاز للدخول إلى Alkenzy ADV'
-            : 'Use your biometric or device credential to unlock Alkenzy ADV',
+            ? 'استخدم بصمة الإصبع للدخول إلى Alkenzy ADV'
+            : 'Use your fingerprint to unlock Alkenzy ADV',
         options: const AuthenticationOptions(
           biometricOnly: true,
           stickyAuth: true,
