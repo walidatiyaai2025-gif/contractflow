@@ -1,0 +1,38 @@
+name: Materialize Alkenzy 0.3.6 Infinite Lists
+
+on:
+  push:
+    branches:
+      - feat/alkenzy-adv-mobile-0.3.6-live-scroll
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ !contains(github.event.head_commit.message, '[lists-036]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-adv-mobile-0.3.6-live-scroll
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Materialize server-authoritative scroll lists
+        run: python3 scripts/materialize_infinite_lists_036.py
+      - name: Resolve and format
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+      - name: Commit source
+        run: |
+          git rm scripts/materialize_infinite_lists_036.py
+          git config user.name "alkenzy-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add mobile
+          git commit -m "fix(mobile): infinite-scroll all paged list surfaces [lists-036]"
+          git push origin HEAD:feat/alkenzy-adv-mobile-0.3.6-live-scroll
