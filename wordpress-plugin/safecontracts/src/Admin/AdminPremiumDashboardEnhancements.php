@@ -81,9 +81,9 @@ final class AdminPremiumDashboardEnhancements
                 });
             });
 
-            const previousLabel = <?php echo wp_json_encode(__('Previous currency', 'safecontracts')); ?>;
-            const nextLabel = <?php echo wp_json_encode(__('Next currency', 'safecontracts')); ?>;
-            const carouselLabel = <?php echo wp_json_encode(__('Currency carousel', 'safecontracts')); ?>;
+            const previousLabel = <?php echo wp_json_encode(__('Previous', 'safecontracts')); ?>;
+            const nextLabel = <?php echo wp_json_encode(__('Next', 'safecontracts')); ?>;
+            const carouselLabel = <?php echo wp_json_encode(__('Currency', 'safecontracts')); ?>;
             const isRtl = getComputedStyle(document.documentElement).direction === 'rtl';
 
             const enhanceRail = (rail, itemSelector) => {
