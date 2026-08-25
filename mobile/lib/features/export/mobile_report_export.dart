@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
@@ -268,8 +267,9 @@ final class MobileReportRepository {
 
   String _cell(Object? value) {
     if (value == null) return '';
-    if (value is String || value is num || value is bool)
+    if (value is String || value is num || value is bool) {
       return value.toString();
+    }
     return jsonEncode(value);
   }
 }
