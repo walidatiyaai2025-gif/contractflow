@@ -15,6 +15,7 @@ if (! is_object($wpdb)) {
 
 $errors = $wpdb->prefix . 'safecontracts_import_errors';
 $runs = $wpdb->prefix . 'safecontracts_import_runs';
+$deliveries = $wpdb->prefix . 'safecontracts_notification_deliveries';
 
 $assert = static function (bool $condition, string $message): void {
     if (! $condition) {
@@ -39,10 +40,10 @@ $assert($updated || (string) get_option(Migrator::VERSION_OPTION, '') === '1.21.
 
 (new Migrator())->maybeMigrate();
 
-$assert((string) get_option(Migrator::VERSION_OPTION, '') === '1.22.0', 'Repair migration did not advance the database version to 1.22.0.');
+$assert((string) get_option(Migrator::VERSION_OPTION, '') === '1.23.0', 'Repair path did not advance the database version through 1.22.0 to 1.23.0.');
 $assert(
     (string) $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $errors)) === $errors,
-    'Repair migration did not recreate safecontracts_import_errors.'
+    '1.22.0 repair migration did not recreate safecontracts_import_errors.'
 );
 
 $rows = $wpdb->get_results(
@@ -50,6 +51,13 @@ $rows = $wpdb->get_results(
     ARRAY_A
 );
 $assert(is_array($rows), 'Repaired import-errors table is not readable with the required schema.');
-$assert(trim((string) $wpdb->last_error) === '', 'Database error remained after import-errors schema repair: ' . (string) $wpdb->last_error);
 
-echo "SafeContracts historical import-errors schema drift repaired successfully (1.21.0 -> 1.22.0).\n";
+$deliveryColumns = $wpdb->get_col("SHOW COLUMNS FROM {$deliveries}", 0);
+$assert(is_array($deliveryColumns), 'Notification delivery columns are not readable after 1.23.0 migration.');
+foreach (['resource_type', 'resource_id', 'contract_id'] as $column) {
+    $assert(in_array($column, $deliveryColumns, true), '1.23.0 notification activity migration is missing ' . $column . '.');
+}
+
+$assert(trim((string) $wpdb->last_error) === '', 'Database error remained after schema repair path: ' . (string) $wpdb->last_error);
+
+echo "SafeContracts historical schema drift repaired successfully (1.21.0 -> 1.22.0 -> 1.23.0).\n";
