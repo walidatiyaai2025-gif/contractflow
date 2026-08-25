@@ -2,7 +2,7 @@
 Contributors: safecontracts-team
 Requires at least: 6.5
 Requires PHP: 8.1
-Stable tag: 0.3.8
+Stable tag: 0.3.9
 License: Proprietary project code
 
 SafeContracts is the WordPress backend and administration platform for contract receivables tracking.
