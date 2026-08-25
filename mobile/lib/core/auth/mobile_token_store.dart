@@ -25,6 +25,15 @@ final class SecureMobileTokenStore implements MobileTokenStore {
 
   Future<bool> hasPersistentToken() async => (await readPersistent()) != null;
 
+  Future<void> persistCurrentForBiometric() async {
+    final token = _sessionValue?.trim();
+    if (token == null || token.isEmpty) {
+      throw const StateError('No authenticated session is available to secure.');
+    }
+    await _storage.write(key: storageKey, value: token);
+    _persistentUnlocked = true;
+  }
+
   void unlockPersistent() {
     _persistentUnlocked = true;
   }
