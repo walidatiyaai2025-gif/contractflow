@@ -81,6 +81,94 @@ final class AdminPremiumDashboardEnhancements
                 });
             });
 
+            const previousLabel = <?php echo wp_json_encode(__('Previous currency', 'safecontracts')); ?>;
+            const nextLabel = <?php echo wp_json_encode(__('Next currency', 'safecontracts')); ?>;
+            const carouselLabel = <?php echo wp_json_encode(__('Currency carousel', 'safecontracts')); ?>;
+            const isRtl = getComputedStyle(document.documentElement).direction === 'rtl';
+
+            const enhanceRail = (rail, itemSelector) => {
+                if (!(rail instanceof HTMLElement) || rail.dataset.safecontractsCarousel === '1') return;
+                const items = [...rail.querySelectorAll(`:scope > ${itemSelector}`)].filter((item) => item instanceof HTMLElement);
+                if (items.length <= 1) return;
+
+                rail.dataset.safecontractsCarousel = '1';
+                rail.setAttribute('role', 'region');
+                rail.setAttribute('aria-label', carouselLabel);
+                rail.setAttribute('tabindex', '0');
+
+                const controls = document.createElement('div');
+                controls.className = 'safecontracts-dashboard-carousel__controls';
+
+                const previous = document.createElement('button');
+                previous.type = 'button';
+                previous.className = 'button';
+                previous.setAttribute('aria-label', previousLabel);
+                previous.textContent = isRtl ? '›' : '‹';
+
+                const status = document.createElement('span');
+                status.className = 'safecontracts-dashboard-carousel__status';
+                status.setAttribute('aria-live', 'polite');
+
+                const next = document.createElement('button');
+                next.type = 'button';
+                next.className = 'button';
+                next.setAttribute('aria-label', nextLabel);
+                next.textContent = isRtl ? '‹' : '›';
+
+                controls.append(previous, status, next);
+                rail.insertAdjacentElement('afterend', controls);
+
+                let index = 0;
+                const sync = () => {
+                    status.textContent = `${index + 1} / ${items.length}`;
+                    previous.disabled = index === 0;
+                    next.disabled = index === items.length - 1;
+                };
+                const go = (targetIndex) => {
+                    index = Math.max(0, Math.min(items.length - 1, targetIndex));
+                    items[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                    sync();
+                };
+
+                previous.addEventListener('click', () => go(index - 1));
+                next.addEventListener('click', () => go(index + 1));
+                rail.addEventListener('keydown', (event) => {
+                    if (event.key === 'ArrowLeft') {
+                        event.preventDefault();
+                        go(index + (isRtl ? 1 : -1));
+                    } else if (event.key === 'ArrowRight') {
+                        event.preventDefault();
+                        go(index + (isRtl ? -1 : 1));
+                    } else if (event.key === 'Home') {
+                        event.preventDefault();
+                        go(0);
+                    } else if (event.key === 'End') {
+                        event.preventDefault();
+                        go(items.length - 1);
+                    }
+                });
+                sync();
+            };
+
+            dashboard.querySelectorAll('.safecontracts-dashboard-v2__lane-grid').forEach((rail) => {
+                enhanceRail(rail, '.safecontracts-dashboard-v2__money-card');
+            });
+            dashboard.querySelectorAll('.safecontracts-dashboard-v2__net-grid').forEach((rail) => {
+                enhanceRail(rail, '.safecontracts-dashboard-v2__net-card');
+            });
+
+            const monthlyFlow = dashboard.querySelector('.safecontracts-dashboard-monthly-flow');
+            if (monthlyFlow instanceof HTMLElement) {
+                const currencyCards = [...monthlyFlow.children].filter((child) => child.matches?.('.safecontracts-dashboard-monthly-flow__currency'));
+                if (currencyCards.length > 1) {
+                    const rail = document.createElement('div');
+                    rail.className = 'safecontracts-dashboard-monthly-flow__currency-rail';
+                    monthlyFlow.insertBefore(rail, currencyCards[0]);
+                    currencyCards.forEach((card) => rail.append(card));
+                    enhanceRail(rail, '.safecontracts-dashboard-monthly-flow__currency');
+                }
+            }
+
             const fab = document.getElementById('safecontracts-premium-fab');
             const button = fab?.querySelector('.safecontracts-premium-fab__button');
             const closeFab = () => {
