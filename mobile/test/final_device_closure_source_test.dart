@@ -5,9 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('final device closure source contracts', () {
     test('biometric login is visible and remembered token is gated', () {
-      final login = File('lib/features/auth/login_screen.dart').readAsStringSync();
-      final tokenStore = File('lib/core/auth/mobile_token_store.dart').readAsStringSync();
-      final biometric = File('lib/features/auth/biometric_auth.dart').readAsStringSync();
+      final login =
+          File('lib/features/auth/login_screen.dart').readAsStringSync();
+      final tokenStore =
+          File('lib/core/auth/mobile_token_store.dart').readAsStringSync();
+      final biometric =
+          File('lib/features/auth/biometric_auth.dart').readAsStringSync();
 
       expect(login, contains("Key('biometricLogin')"));
       expect(login, contains('الدخول بالبصمة'));
@@ -18,8 +21,10 @@ void main() {
     });
 
     test('reports expose required data sets and Excel Word PDF formats', () {
-      final export = File('lib/features/export/mobile_report_export.dart').readAsStringSync();
-      final screen = File('lib/features/export/mobile_excel_export_screen.dart').readAsStringSync();
+      final export = File('lib/features/export/mobile_report_export.dart')
+          .readAsStringSync();
+      final screen = File('lib/features/export/mobile_excel_export_screen.dart')
+          .readAsStringSync();
 
       for (final report in <String>[
         'contracts',
@@ -39,8 +44,10 @@ void main() {
       expect(screen, isNot(contains('Saved in app cache:')));
     });
 
-    test('Android bridge uses explicit document picker instead of silent cache', () {
-      final activity = File('android-release/MainActivity.kt').readAsStringSync();
+    test('Android bridge uses explicit document picker instead of silent cache',
+        () {
+      final activity =
+          File('android-release/MainActivity.kt').readAsStringSync();
       expect(activity, contains('safecontracts/files'));
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('FlutterFragmentActivity'));
