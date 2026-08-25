@@ -49,7 +49,7 @@ function sc_att_expect(string $class, callable $fn, string $message): void
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_att_assert(is_callable($activate), 'attachment validation can activate plugin');
 $activate();
-sc_att_assert(Migrator::LATEST_VERSION === '1.21.0', 'multi-attachment schema advances plugin database contract to 1.21.0');
+sc_att_assert(Migrator::LATEST_VERSION === '1.22.0', 'plugin database contract advances to 1.22.0 while attachments remain the 1.21.0 migration');
 $schemaSql = implode("\n", $GLOBALS['sc_test_dbdelta']);
 sc_att_assert(str_contains($schemaSql, 'wp_safecontracts_entity_attachments'), 'entity attachment table is created');
 sc_att_assert(str_contains($schemaSql, 'UNIQUE KEY entity_media (entity_type, entity_id, media_id)'), 'duplicate entity/media links are prevented');
@@ -117,14 +117,14 @@ sc_att_assert(str_contains($paymentsPage, 'enctype="multipart/form-data"') && st
 sc_att_assert(str_contains($collectionsPage, 'enctype="multipart/form-data"') && str_contains($collectionsPage, "EntityAttachmentService::COLLECTION"), 'collection backend supports multi-file upload and listing');
 sc_att_assert(str_contains($collectionsPage, "__('Files', 'safecontracts')"), 'collection ledger exposes attachments directly in backend table');
 
-// Production currently reports database 1.20.0. The migration map intentionally
-// permits a direct guarded 1.20.0 -> 1.21.0 upgrade without requiring a fake
-// 1.20 migration entry.
+// Production at 1.20.0 must still traverse the guarded 1.21.0 attachment
+// migration and the additive 1.22.0 import-errors repair in order.
 $GLOBALS['sc_test_options'][Migrator::VERSION_OPTION] = '1.20.0';
 $GLOBALS['sc_test_dbdelta'] = [];
 $GLOBALS['sc_test_queries'] = [];
 (new Migrator())->maybeMigrate();
-sc_att_assert(($GLOBALS['sc_test_options'][Migrator::VERSION_OPTION] ?? '') === '1.21.0', 'production database 1.20.0 upgrades directly to 1.21.0');
-sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_dbdelta']), 'wp_safecontracts_entity_attachments'), '1.20 to 1.21 upgrade creates attachment schema');
+sc_att_assert(($GLOBALS['sc_test_options'][Migrator::VERSION_OPTION] ?? '') === '1.22.0', 'production database 1.20.0 upgrades through 1.21.0 to latest 1.22.0');
+sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_dbdelta']), 'wp_safecontracts_entity_attachments'), '1.20 to latest upgrade creates attachment schema at the 1.21.0 stage');
+sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'CREATE TABLE wp_safecontracts_import_errors'), '1.20 to latest upgrade also executes the 1.22.0 import-errors repair stage');
 
 echo "SafeContracts entity attachment tests passed ({$tests} assertions).\n";
