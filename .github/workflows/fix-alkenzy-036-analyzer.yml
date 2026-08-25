@@ -1,0 +1,40 @@
+name: Fix Alkenzy 0.3.6 Analyzer
+
+on:
+  push:
+    branches:
+      - feat/alkenzy-adv-mobile-0.3.6-live-scroll
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, '[analyzer-036]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-adv-mobile-0.3.6-live-scroll
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Apply analyzer closure
+        run: python3 scripts/fix_alkenzy_036_analyzer.py
+      - name: Resolve, format, analyze, test
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+          flutter analyze
+          flutter test
+      - name: Commit analyzer closure
+        run: |
+          git rm scripts/fix_alkenzy_036_analyzer.py
+          git config user.name "alkenzy-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add mobile
+          git commit -m "fix(mobile): close 0.3.6 analyzer and list regressions [analyzer-036]"
+          git push origin HEAD:feat/alkenzy-adv-mobile-0.3.6-live-scroll
