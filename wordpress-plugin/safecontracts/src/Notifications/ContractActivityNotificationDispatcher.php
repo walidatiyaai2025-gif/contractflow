@@ -152,6 +152,17 @@ final class ContractActivityNotificationDispatcher
             return;
         }
 
+        // Archived payments are intentionally excluded by PaymentRepository::find().
+        // Resolve their parent directly and deep-link to the still-available
+        // contract instead of dropping the archive activity notification.
+        if ($hook === 'safecontracts_payment_archived') {
+            $contractId = $this->contractIdForAnyPayment($paymentId);
+            if ($contractId > 0) {
+                $this->notifyContract($contractId, $this->eventCode($hook), $label, 'contract', $contractId, $paymentId);
+            }
+            return;
+        }
+
         // updateEditable() deliberately emits both details_changed and
         // dates_changed for integration compatibility. Send only one user
         // notification for that single save action.
@@ -281,6 +292,20 @@ final class ContractActivityNotificationDispatcher
         } catch (Throwable $error) {
             $this->recordFailure($eventCode, $contractId, $paymentId, $error);
         }
+    }
+
+    private function contractIdForAnyPayment(int $paymentId): int
+    {
+        global $wpdb;
+        if (! is_object($wpdb) || ! method_exists($wpdb, 'get_var') || ! method_exists($wpdb, 'prepare')) {
+            return 0;
+        }
+        $table = $wpdb->prefix . 'safecontracts_scheduled_payments';
+        $contractId = $wpdb->get_var($wpdb->prepare(
+            "SELECT contract_id FROM {$table} WHERE id = %d LIMIT 1",
+            $paymentId
+        ));
+        return max(0, (int) $contractId);
     }
 
     private function paymentIdForCollection(int $collectionId): int
