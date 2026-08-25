@@ -26,6 +26,7 @@ final class AdminShell
     public const REDESIGN_SUMMARY_CARDS_STYLE_HANDLE = 'safecontracts-plugin-redesign-summary-cards';
     public const REDESIGN_NAVIGATION_STYLE_HANDLE = 'safecontracts-plugin-redesign-navigation';
     public const REDESIGN_LEAD_SCREENS_STYLE_HANDLE = 'safecontracts-plugin-redesign-lead-screens';
+    public const REDESIGN_DASHBOARD_FIDELITY_STYLE_HANDLE = 'safecontracts-plugin-redesign-dashboard-fidelity';
 
     public static function register(): void
     {
@@ -109,6 +110,12 @@ final class AdminShell
             self::REDESIGN_LEAD_SCREENS_STYLE_HANDLE,
             SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/lead-screens.css',
             [self::REDESIGN_NAVIGATION_STYLE_HANDLE],
+            SAFECONTRACTS_VERSION
+        );
+        wp_enqueue_style(
+            self::REDESIGN_DASHBOARD_FIDELITY_STYLE_HANDLE,
+            SAFECONTRACTS_URL . 'assets/admin/plugin-redesign/dashboard-release-fidelity.css',
+            [self::REDESIGN_LEAD_SCREENS_STYLE_HANDLE],
             SAFECONTRACTS_VERSION
         );
 
