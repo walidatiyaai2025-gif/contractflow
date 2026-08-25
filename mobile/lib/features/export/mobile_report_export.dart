@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
-import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -269,7 +268,8 @@ final class MobileReportRepository {
 
   String _cell(Object? value) {
     if (value == null) return '';
-    if (value is String || value is num || value is bool) return value.toString();
+    if (value is String || value is num || value is bool)
+      return value.toString();
     return jsonEncode(value);
   }
 }
@@ -280,8 +280,7 @@ final class MobileReportDocumentBuilder {
     MobileReportFormat format,
   ) async {
     final date = DateTime.now().toIso8601String().substring(0, 10);
-    final filename =
-        'Alkenzy-${data.type.fileStem}-$date.${format.extension}';
+    final filename = 'Alkenzy-${data.type.fileStem}-$date.${format.extension}';
     final bytes = switch (format) {
       MobileReportFormat.xlsx => _xlsx(data),
       MobileReportFormat.docx => _docx(data),
@@ -435,7 +434,8 @@ final class MobileReportDocumentBuilder {
                       .map(
                         (value) => pw.Padding(
                           padding: const pw.EdgeInsets.all(4),
-                          child: pw.Text(value, style: const pw.TextStyle(fontSize: 7)),
+                          child: pw.Text(value,
+                              style: const pw.TextStyle(fontSize: 7)),
                         ),
                       )
                       .toList(growable: false),
