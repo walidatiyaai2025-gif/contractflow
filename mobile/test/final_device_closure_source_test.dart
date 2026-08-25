@@ -4,9 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('final device closure source contracts', () {
-    test('biometric login is visible and remembered token is gated', () {
+    test('biometric login is visible, enrolled explicitly, and token is gated',
+        () {
       final login =
           File('lib/features/auth/login_screen.dart').readAsStringSync();
+      final auth = File('lib/features/auth/mobile_auth.dart').readAsStringSync();
       final tokenStore =
           File('lib/core/auth/mobile_token_store.dart').readAsStringSync();
       final biometric =
@@ -15,7 +17,11 @@ void main() {
       expect(login, contains("Key('biometricLogin')"));
       expect(login, contains('الدخول بالبصمة'));
       expect(login, contains('Sign in with fingerprint'));
+      expect(login, contains('_offerBiometricEnrollment'));
+      expect(login, contains('_biometricCredentialAvailable'));
+      expect(auth, contains('bool rememberMe = false'));
       expect(tokenStore, contains('if (!_persistentUnlocked) return null'));
+      expect(tokenStore, contains('persistCurrentForBiometric'));
       expect(tokenStore, contains('unlockPersistent'));
       expect(biometric, contains('biometricOnly: true'));
     });
@@ -39,6 +45,9 @@ void main() {
       for (final format in <String>['xlsx', 'docx', 'pdf']) {
         expect(export, contains('MobileReportFormat.$format'));
       }
+      expect(export, contains('pw.TextDirection.rtl'));
+      expect(export, contains('<w:bidi/>'));
+      expect(export, contains('readingOrder="2"'));
       expect(screen, contains('التقارير والطباعة'));
       expect(screen, contains('Android Save As'));
       expect(screen, isNot(contains('Saved in app cache:')));
