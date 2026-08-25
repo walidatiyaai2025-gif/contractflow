@@ -155,17 +155,19 @@ final class _AlkenzyCompanyWelcomeScreenState
                                         );
                                       },
                                     ),
-                                    const DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                          colors: [
-                                            Color(0x33000C1A),
-                                            Color(0x11000C1A),
-                                            Color(0xCC001523),
-                                          ],
-                                          stops: [0, 0.58, 1],
+                                    const IgnorePointer(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              Color(0x33000C1A),
+                                              Color(0x11000C1A),
+                                              Color(0xCC001523),
+                                            ],
+                                            stops: [0, 0.58, 1],
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -173,22 +175,24 @@ final class _AlkenzyCompanyWelcomeScreenState
                                       top: narrow ? 54 : 68,
                                       start: 26,
                                       end: 26,
-                                      child: Text(
-                                        arabic
-                                            ? 'مستقبل القيادة،\nهنا الآن'
-                                            : 'The future of leadership,\nis here now',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: narrow ? 34 : 42,
-                                          height: 1.18,
-                                          fontWeight: FontWeight.w900,
-                                          shadows: const [
-                                            Shadow(
-                                              color: Color(0x66000000),
-                                              blurRadius: 18,
-                                            ),
-                                          ],
+                                      child: IgnorePointer(
+                                        child: Text(
+                                          arabic
+                                              ? 'مستقبل القيادة،\nهنا الآن'
+                                              : 'The future of leadership,\nis here now',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: narrow ? 34 : 42,
+                                            height: 1.18,
+                                            fontWeight: FontWeight.w900,
+                                            shadows: const [
+                                              Shadow(
+                                                color: Color(0x66000000),
+                                                blurRadius: 18,
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -196,19 +200,21 @@ final class _AlkenzyCompanyWelcomeScreenState
                                       start: 24,
                                       end: 24,
                                       bottom: 28,
-                                      child: Align(
-                                        alignment:
-                                            AlignmentDirectional.bottomEnd,
-                                        child: Text(
-                                          arabic
-                                              ? 'مرحباً بك في\n${SafeContractsBrand.name}'
-                                              : 'Welcome to\n${SafeContractsBrand.name}',
-                                          textAlign: TextAlign.start,
-                                          style: TextStyle(
-                                            color: const Color(0xFFF0C77B),
-                                            fontSize: narrow ? 21 : 25,
-                                            height: 1.12,
-                                            fontWeight: FontWeight.w900,
+                                      child: IgnorePointer(
+                                        child: Align(
+                                          alignment:
+                                              AlignmentDirectional.bottomEnd,
+                                          child: Text(
+                                            arabic
+                                                ? 'مرحباً بك في\n${SafeContractsBrand.name}'
+                                                : 'Welcome to\n${SafeContractsBrand.name}',
+                                            textAlign: TextAlign.start,
+                                            style: TextStyle(
+                                              color: const Color(0xFFF0C77B),
+                                              fontSize: narrow ? 21 : 25,
+                                              height: 1.12,
+                                              fontWeight: FontWeight.w900,
+                                            ),
                                           ),
                                         ),
                                       ),
