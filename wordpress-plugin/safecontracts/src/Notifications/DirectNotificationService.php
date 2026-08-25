@@ -39,8 +39,8 @@ final class DirectNotificationService
         if ($userId <= 0 || (! $push && ! $email)) {
             throw new InvalidArgumentException('Direct notification requires a user and at least one delivery channel.');
         }
-        $title = trim(sanitize_text_field($title));
-        $body = trim(sanitize_textarea_field($body));
+        $title = trim(function_exists('sanitize_text_field') ? sanitize_text_field($title) : strip_tags($title));
+        $body = trim(function_exists('sanitize_textarea_field') ? sanitize_textarea_field($body) : strip_tags($body));
         if ($title === '' || strlen($title) > 191 || $body === '' || strlen($body) > 4000) {
             throw new InvalidArgumentException('Direct notification title or body is invalid.');
         }
