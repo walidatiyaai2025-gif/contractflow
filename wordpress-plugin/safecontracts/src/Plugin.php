@@ -50,6 +50,7 @@ use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\MigrationGuard;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Diagnostics\RuntimeInspector;
+use SafeContracts\Notifications\ContractActivityNotificationDispatcher;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Presence\PresenceService;
@@ -109,6 +110,7 @@ final class Plugin
         PresenceService::register();
         FirebaseAccessTokenProvider::register();
         NotificationScheduler::register();
+        ContractActivityNotificationDispatcher::register();
         ContractHistoryRecorder::register();
         AuditRecorder::register();
         ContractArchiveAuditRecorder::register();
