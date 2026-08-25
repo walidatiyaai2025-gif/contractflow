@@ -1,0 +1,54 @@
+name: Materialize Alkenzy 0.3.6 Mobile Closure
+
+on:
+  push:
+    branches:
+      - feat/alkenzy-adv-mobile-0.3.6-live-scroll
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ !contains(github.event.head_commit.message, '[materialized-036]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/alkenzy-adv-mobile-0.3.6-live-scroll
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Apply committed runtime transforms
+        run: python3 scripts/apply_alkenzy_036.py
+      - name: Remove build-time source mutation
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('scripts/bootstrap_android.sh')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace('PATCHER="$ROOT/scripts/apply_alkenzy_036.py"\n', '')
+          text = text.replace(' "$MAIN_ACTIVITY_TEMPLATE" "$PATCHER"; do', ' "$MAIN_ACTIVITY_TEMPLATE"; do')
+          block = '''# Apply the forward-only 0.3.6 mobile source transforms before Flutter compiles
+          # the release candidate. The patcher is idempotent and fails closed if the
+          # locked 0.3.5 source contract has unexpectedly changed.
+          python3 "$PATCHER"
+
+          '''
+          text = text.replace(block, '')
+          path.write_text(text, encoding='utf-8')
+      - name: Resolve and format exact source
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+      - name: Commit materialized source
+        run: |
+          git rm scripts/apply_alkenzy_036.py
+          git config user.name "alkenzy-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add mobile scripts/bootstrap_android.sh
+          git commit -m "fix(mobile): materialize 0.3.6 runtime closure [materialized-036]"
+          git push origin HEAD:feat/alkenzy-adv-mobile-0.3.6-live-scroll
