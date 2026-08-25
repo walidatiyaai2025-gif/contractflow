@@ -17,7 +17,8 @@ final class MobileExcelExportScreen extends StatefulWidget {
       _MobileExcelExportScreenState();
 }
 
-final class _MobileExcelExportScreenState extends State<MobileExcelExportScreen> {
+final class _MobileExcelExportScreenState
+    extends State<MobileExcelExportScreen> {
   late final MobileReportExportController _reports;
 
   @override
@@ -190,7 +191,9 @@ final class _MobileExcelExportScreenState extends State<MobileExcelExportScreen>
                     : const Icon(Icons.download_rounded),
                 label: Text(
                   busy
-                      ? (l10n.isArabic ? 'جاري تجهيز الملف…' : 'Preparing file…')
+                      ? (l10n.isArabic
+                          ? 'جاري تجهيز الملف…'
+                          : 'Preparing file…')
                       : (l10n.isArabic
                           ? 'تنزيل / طباعة ${_reports.format.name.toUpperCase()}'
                           : 'Download / print ${_reports.format.name.toUpperCase()}'),
@@ -306,12 +309,10 @@ final class _Message extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = error
-        ? SafeContractsVisual.redDeep
-        : SafeContractsVisual.greenDeep;
-    final background = error
-        ? SafeContractsVisual.redSoft
-        : SafeContractsVisual.greenSoft;
+    final color =
+        error ? SafeContractsVisual.redDeep : SafeContractsVisual.greenDeep;
+    final background =
+        error ? SafeContractsVisual.redSoft : SafeContractsVisual.greenSoft;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
