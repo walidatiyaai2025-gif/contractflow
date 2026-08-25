@@ -5,8 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('approved 3d4dcd final APK contracts', () {
     test('dashboard keeps the approved compact single-row KPI design', () {
-      final source =
-          File('lib/features/dashboard/dashboard_screen.dart').readAsStringSync();
+      final source = File('lib/features/dashboard/dashboard_screen.dart')
+          .readAsStringSync();
 
       expect(source, contains('Total account balance'));
       expect(source, contains('height: 70'));
@@ -20,8 +20,8 @@ void main() {
     });
 
     test('only the authoritative dashboard is exposed in navigation', () {
-      final policy =
-          File('lib/features/navigation/navigation_policy.dart').readAsStringSync();
+      final policy = File('lib/features/navigation/navigation_policy.dart')
+          .readAsStringSync();
       expect(
         policy,
         isNot(
@@ -33,8 +33,8 @@ void main() {
     });
 
     test('contracts keep compact filters sort pagination and working tabs', () {
-      final contracts =
-          File('lib/features/contracts/contracts_screen.dart').readAsStringSync();
+      final contracts = File('lib/features/contracts/contracts_screen.dart')
+          .readAsStringSync();
       final details = File(
         'lib/features/contracts/premium_contract_details_screen.dart',
       ).readAsStringSync();
@@ -49,7 +49,8 @@ void main() {
       expect(details, contains('TabBarView('));
     });
 
-    test('drawer/header fixes stay present without changing dashboard layout', () {
+    test('drawer/header fixes stay present without changing dashboard layout',
+        () {
       final shell =
           File('lib/features/navigation/app_shell.dart').readAsStringSync();
       expect(shell, contains('indicatorColor: Colors.white'));
@@ -62,9 +63,10 @@ void main() {
           File('lib/features/auth/login_screen.dart').readAsStringSync();
       final tokenStore =
           File('lib/core/auth/mobile_token_store.dart').readAsStringSync();
-      final report =
-          File('lib/features/export/mobile_report_export.dart').readAsStringSync();
-      final activity = File('android-release/MainActivity.kt').readAsStringSync();
+      final report = File('lib/features/export/mobile_report_export.dart')
+          .readAsStringSync();
+      final activity =
+          File('android-release/MainActivity.kt').readAsStringSync();
       final pubspec = File('pubspec.yaml').readAsStringSync();
 
       expect(login, contains("Key('biometricLogin')"));
