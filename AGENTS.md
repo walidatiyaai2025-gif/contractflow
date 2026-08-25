@@ -19,16 +19,33 @@ These instructions apply to every contributor, coding agent, release operator an
 - Preserve existing API behavior, permissions, business rules, fields and workflows while changing presentation.
 - Update the screen matrix and progress document before handing unfinished redesign work to another contributor.
 
+## ALKENZY ADV mobile release lineage lock — mandatory
+
+The current project-approved Alkenzy ADV Android release is **`0.3.5+9`**. Its immutable baseline is recorded in `docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md` and anchored by branch `release/alkenzy-adv-mobile-0.3.5` with exact approved functional source commit `458e3580d07eb182224c3652bb18d3c82b87adbd`.
+
+Rules for every future Alkenzy ADV mobile request, worker, PR and APK:
+
+- Start from `release/alkenzy-adv-mobile-0.3.5` or from a commit proven to be its descendant. Do not start from an older commit, stale PR, abandoned worker branch or historical APK branch.
+- `0.3.5+9` is consumed. Never reuse versionName `0.3.5` or build number `9` for another APK.
+- The next user-facing APK must be **at least `0.3.6+10`** unless the project owner explicitly selects a higher semantic version; both the versionName and build number must advance.
+- Commit the version bump before the final release build. APK filename, artifact metadata, checksum record and handoff text must all identify the same version.
+- Never resolve a future change by wholesale-copying an older mobile file over this baseline. Port changes surgically and preserve all accepted behavior unless the project owner explicitly requests removal.
+- Before release handoff, verify and record that the locked baseline is an ancestor of the new functional release lineage.
+- A later approved APK supersedes this baseline only when the project owner explicitly accepts it and `docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md` is updated in the same governance change.
+
+This release-lineage lock overrides any older mobile base/SHA instruction when the two conflict. The purpose is forward-only development: no accepted Alkenzy ADV change may disappear because a later worker restarted from an older snapshot.
+
 ## Mandatory ALKENZY ADV 101-item bug closure constitution
 
 For the current ALKENZY ADV mobile closure pass, every Lead, Worker, QA agent and automation that changes or validates mobile behavior MUST read and obey, in this order:
 
 1. `AGENTS.md`
-2. `docs/mobile-redesign/ALKENZY_ADV_BUG_CLOSURE_CONSTITUTION.md`
-3. `docs/mobile-redesign/ALKENZY_ADV_BUG_UX_REGISTER_2026-08-24.md`
-4. `docs/mobile-redesign/MOBILE_UI_REFERENCE.md`
-5. `docs/mobile-redesign/MOBILE_UI_SCREEN_MATRIX.md`
-6. `docs/mobile-redesign/MOBILE_UI_PROGRESS.md`
+2. `docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md`
+3. `docs/mobile-redesign/ALKENZY_ADV_BUG_CLOSURE_CONSTITUTION.md`
+4. `docs/mobile-redesign/ALKENZY_ADV_BUG_UX_REGISTER_2026-08-24.md`
+5. `docs/mobile-redesign/MOBILE_UI_REFERENCE.md`
+6. `docs/mobile-redesign/MOBILE_UI_SCREEN_MATRIX.md`
+7. `docs/mobile-redesign/MOBILE_UI_PROGRESS.md`
 
 The bug register is frozen at **101 items (P0=5, P1=71, P2=25)** for this pass. The constitution owns the no-overlap Worker assignment, P0-first order, status flags, acceptance requirements and final zero-items gate.
 
