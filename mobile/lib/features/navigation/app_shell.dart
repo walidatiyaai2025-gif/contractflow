@@ -217,27 +217,31 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: SafeContractsBrand.name,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: SafeContractsBrand.name,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                    TextSpan(
-                      text: '  •  ${_label(l10n, _selected)}',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.76),
-                        fontWeight: FontWeight.w600,
+                      TextSpan(
+                        text: '  •  ${_label(l10n, _selected)}',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.76),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -245,6 +249,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       ),
       drawer: NavigationDrawer(
         backgroundColor: SafeContractsVisual.navyDeep,
+        indicatorColor: Colors.white.withValues(alpha: 0.14),
         selectedIndex: widget.policy.destinations.indexOf(_selected),
         onDestinationSelected: (index) {
           final destination = widget.policy.destinations[index];
@@ -298,12 +303,25 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           ),
           ...widget.policy.destinations.map(
             (destination) => NavigationDrawerDestination(
-              icon: Icon(_icon(destination)),
+              icon: Icon(
+                _icon(destination),
+                color: Colors.white.withValues(alpha: 0.84),
+              ),
               selectedIcon: Icon(
                 _icon(destination),
-                color: SafeContractsVisual.navy,
+                color: Colors.white,
               ),
-              label: Text(_label(l10n, destination)),
+              label: Text(
+                _label(l10n, destination),
+                style: TextStyle(
+                  color: Colors.white.withValues(
+                    alpha: destination == _selected ? 1.0 : 0.84,
+                  ),
+                  fontWeight: destination == _selected
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
@@ -352,7 +370,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               tooltip: l10n.isArabic ? 'إضافة جديدة' : 'Quick add',
               onPressed: () => unawaited(_showQuickAdd(quickAdds)),
             ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: bottomDestinations.isEmpty
           ? null
           : _SafeContractsBottomNavigation(
