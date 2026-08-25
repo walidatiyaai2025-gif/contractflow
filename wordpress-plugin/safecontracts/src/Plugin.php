@@ -110,13 +110,16 @@ final class Plugin
         PresenceService::register();
         FirebaseAccessTokenProvider::register();
         NotificationScheduler::register();
-        ContractActivityNotificationDispatcher::register();
         ContractHistoryRecorder::register();
         AuditRecorder::register();
         ContractArchiveAuditRecorder::register();
         NotificationCenterAuditRecorder::register();
         NotificationScheduleAuditRecorder::register();
         SafeDeletionAuditRecorder::register();
+        // Activity notifications observe committed domain events after all
+        // history/audit subscribers so notification delivery cannot interfere
+        // with authoritative audit recording or its isolated test fixtures.
+        ContractActivityNotificationDispatcher::register();
         LoginBranding::register();
         EmailSettingsPage::register();
         NavigationCleanup::register();
