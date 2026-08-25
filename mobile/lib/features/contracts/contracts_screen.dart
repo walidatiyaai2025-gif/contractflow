@@ -1139,34 +1139,6 @@ final class _ContractCreateSheetState extends State<_ContractCreateSheet> {
   }
 }
 
-final class _Pagination extends StatelessWidget {
-  const _Pagination({required this.controller, required this.page});
-  final ContractsController controller;
-  final ContractPage page;
-
-  @override
-  Widget build(BuildContext context) {
-    final ar = context.scL10n.isArabic;
-    return SafeArea(
-      top: false,
-      child: CompactPagination(
-        page: page.page,
-        totalPages: page.totalPages,
-        total: page.total,
-        isLoading: controller.pageRequestInFlight,
-        previousLabel: context.scL10n.t('Previous'),
-        nextLabel: context.scL10n.t('Next'),
-        onPrevious:
-            page.page <= 1 ? null : () => unawaited(controller.previousPage()),
-        onNext: page.page >= page.totalPages
-            ? null
-            : () => unawaited(controller.nextPage()),
-        resultLabelBuilder: (total) => ar ? '$total نتيجة' : '$total results',
-      ),
-    );
-  }
-}
-
 final class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.status});
   final String status;

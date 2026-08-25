@@ -48,9 +48,13 @@ final class _FollowUpsScreenState extends State<FollowUpsScreen> {
 
   void _loadNextOnScroll() {
     final page = _page;
-    if (page == null || !page.hasMore || _requestInFlight) return;
+    if (page == null || !page.hasMore || _requestInFlight) {
+      return;
+    }
     if (!_scrollController.hasClients ||
-        _scrollController.position.extentAfter > 360) return;
+        _scrollController.position.extentAfter > 360) {
+      return;
+    }
     unawaited(_load(page.page + 1, background: true));
   }
 
@@ -945,59 +949,6 @@ final class _FollowUpDialogState extends State<_FollowUpDialog> {
           label: Text(l10n.t('Record')),
         ),
       ],
-    );
-  }
-}
-
-final class _FollowUpPaging extends StatelessWidget {
-  const _FollowUpPaging({
-    required this.page,
-    required this.loading,
-    required this.onPrevious,
-    required this.onNext,
-  });
-
-  final FollowUpQueuePage page;
-  final bool loading;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-      child: SafeContractsSurface(
-        elevated: false,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: l10n.t('Previous page'),
-              onPressed: loading ? null : onPrevious,
-              icon: Icon(
-                rtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                l10n.pageNumber(page.page),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-            IconButton(
-              tooltip: l10n.t('Next page'),
-              onPressed: loading ? null : onNext,
-              icon: Icon(
-                rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

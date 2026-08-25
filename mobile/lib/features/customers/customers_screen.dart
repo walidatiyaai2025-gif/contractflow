@@ -344,7 +344,6 @@ final class _CustomerList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final page = controller.currentPage!;
     if (customers.isEmpty) {
       return _StateMessage(
         icon: Icons.manage_search_rounded,
@@ -1164,55 +1163,6 @@ final class _CustomerEditorState extends State<_CustomerEditor> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-final class _Pagination extends StatelessWidget {
-  const _Pagination({
-    required this.page,
-    required this.busy,
-    required this.onPrevious,
-    required this.onNext,
-  });
-  final CustomerPage page;
-  final bool busy;
-  final Future<void> Function() onPrevious;
-  final Future<void> Function() onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: WrapAlignment.center,
-          children: [
-            OutlinedButton.icon(
-              onPressed:
-                  busy || page.page <= 1 ? null : () => unawaited(onPrevious()),
-              icon: const Icon(
-                Icons.chevron_left_rounded,
-              ),
-              label: Text(context.scL10n.t('Previous')),
-            ),
-            Text(context.scL10n.pageShown(page.page, page.customers.length)),
-            OutlinedButton.icon(
-              onPressed: busy || !page.hasMore || page.page >= 5
-                  ? null
-                  : () => unawaited(onNext()),
-              icon: const Icon(
-                Icons.chevron_right_rounded,
-              ),
-              label: Text(context.scL10n.t('Next')),
-            ),
-          ],
         ),
       ),
     );

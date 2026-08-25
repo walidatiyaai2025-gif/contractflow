@@ -54,9 +54,6 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
         .toList(growable: false);
   }
 
-  List<SafeContractsSupplier> get _visibleSuppliers =>
-      _filteredSuppliers.take(_visibleLimit).toList(growable: false);
-
   Future<void> _openEditor([SafeContractsSupplier? supplier]) async {
     final draft = await showModalBottomSheet<SupplierDraft>(
       context: context,

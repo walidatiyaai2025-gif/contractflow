@@ -100,7 +100,12 @@ final class CustomerPage {
     final customers =
         values.map(SafeContractsCustomer.fromData).toList(growable: false);
     final meta = envelope.meta;
-    final page = _boundedInt(meta['page'], 'meta.page', minimum: 1, maximum: 5);
+    final page = _boundedInt(
+      meta['page'],
+      'meta.page',
+      minimum: 1,
+      maximum: 1000000,
+    );
     final perPage = _boundedInt(
       meta['per_page'],
       'meta.per_page',
@@ -155,8 +160,8 @@ final class CustomersRepository {
     required int perPage,
     required String order,
   }) async {
-    if (page < 1 || page > 5) {
-      throw ArgumentError('Customer page must be between 1 and 5.');
+    if (page < 1 || page > 1000000) {
+      throw ArgumentError('Customer page is outside the supported range.');
     }
     if (perPage < 1 || perPage > 100) {
       throw ArgumentError('Customer page size must be between 1 and 100.');
@@ -278,9 +283,10 @@ final class CustomersController extends ChangeNotifier {
           customers: List<SafeContractsCustomer>.unmodifiable(merged.values),
           page: next.page,
           perPage: next.perPage,
-          total: next.total,
-          totalPages: next.totalPages,
+          sort: next.sort,
+          order: next.order,
           hasMore: next.hasMore,
+          boundedWindow: next.boundedWindow,
           scope: next.scope,
         );
       } else {

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/branding/safe_contracts_brand.dart';
 import '../ui/safecontracts_design.dart';
-import '../ui/safecontracts_tokens.dart';
 import 'mobile_landing.dart';
 
 final class AlkenzyCompanyWelcomeScreen extends StatefulWidget {
