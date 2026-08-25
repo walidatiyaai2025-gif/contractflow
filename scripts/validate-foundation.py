@@ -157,6 +157,7 @@ def validate_ci_contract() -> int:
     workflow = (ROOT / ".github/workflows/quality-gates.yml").read_text(encoding="utf-8")
     required_commands = (
         "python3 scripts/validate-foundation.py",
+        "python3 scripts/validate-release-version.py",
         "./scripts/test-php.sh",
         "dart format lib test",
         "git diff --exit-code -- lib test",

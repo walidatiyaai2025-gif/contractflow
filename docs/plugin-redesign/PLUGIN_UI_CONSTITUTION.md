@@ -353,6 +353,29 @@ Only after this foundation lands may Worker #1, #2 and #3 begin parallel impleme
 
 ---
 
+# 26. APPROVED RELEASE BASELINE AND VERSION CONTROL
+
+The project owner approves the integrated PR `#652` source as the forward-only ALKENZY ADV baseline:
+
+```text
+APPROVED PRODUCT RELEASE: 0.3.6+10
+APPROVED PLUGIN VERSION: 0.3.6
+APPROVED FUNCTIONAL SOURCE: 9171f1c357822f9118eb8058aab6fb145c475fc3
+IMMUTABLE BASELINE BRANCH: release/alkenzy-adv-mobile-0.3.6
+PREVIOUS APPROVED MOBILE SOURCE: 458e3580d07eb182224c3652bb18d3c82b87adbd
+PREVIOUS BASELINE ANCESTOR VERIFIED: YES
+```
+
+Every future plugin, mobile, design or bug-fix implementation MUST start from `release/alkenzy-adv-mobile-0.3.6` or a commit proven to be its descendant. Starting from an older branch, stale PR head, abandoned worker line or historical release snapshot is forbidden. Accepted visible changes, server-authoritative behavior, B084 pagination fields and prior approved mobile fixes must not disappear during conflict resolution.
+
+Every later user-facing production change MUST increment the unified semantic product version before merge. `wordpress-plugin/safecontracts/safecontracts.php`, its readme stable tag, `mobile/pubspec.yaml`, footer output, CI artifact names and release metadata must agree. The mobile build number must also increase. The default next release is at least `0.3.7+11`; reuse of `0.3.6+10` is forbidden.
+
+Use semantic versioning: PATCH for backward-compatible fixes, MINOR for backward-compatible features and MAJOR for breaking changes. CI MUST run `python3 scripts/validate-release-version.py` and fail a production-code PR that does not move forward from its base version.
+
+The WordPress admin footer on SafeContracts pages MUST show the canonical plugin version so the approved build can be verified visually in the delivered UI.
+
+---
+
 # IMPLEMENTED BASELINE APPENDIX — 2026-08-24
 
 | Reference | File | Primary role |

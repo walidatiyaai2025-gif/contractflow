@@ -11,13 +11,19 @@ permissions:
 jobs:
   repository-standards:
     runs-on: ubuntu-latest
+    env:
+      ALKENZY_RELEASE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
       - name: Validate repository foundation
         run: python3 scripts/validate-foundation.py
+      - name: Enforce forward-only release version
+        run: python3 scripts/validate-release-version.py
 
   backend-foundation:
     runs-on: ubuntu-latest

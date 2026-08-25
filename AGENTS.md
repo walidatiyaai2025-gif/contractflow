@@ -21,19 +21,19 @@ These instructions apply to every contributor, coding agent, release operator an
 
 ## ALKENZY ADV mobile release lineage lock — mandatory
 
-The current project-approved Alkenzy ADV Android release is **`0.3.5+9`**. Its immutable baseline is recorded in `docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md` and anchored by branch `release/alkenzy-adv-mobile-0.3.5` with exact approved functional source commit `458e3580d07eb182224c3652bb18d3c82b87adbd`.
+The current project-approved Alkenzy ADV release is **`0.3.6+10`** (plugin `0.3.6`). Its immutable source baseline is recorded in `docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md` and anchored by branch `release/alkenzy-adv-mobile-0.3.6` with exact approved functional source commit `9171f1c357822f9118eb8058aab6fb145c475fc3`.
 
 Rules for every future Alkenzy ADV mobile request, worker, PR and APK:
 
-- Start from `release/alkenzy-adv-mobile-0.3.5` or from a commit proven to be its descendant. Do not start from an older commit, stale PR, abandoned worker branch or historical APK branch.
-- `0.3.5+9` is consumed. Never reuse versionName `0.3.5` or build number `9` for another APK.
-- The next user-facing APK must be **at least `0.3.6+10`** unless the project owner explicitly selects a higher semantic version; both the versionName and build number must advance.
+- Start from `release/alkenzy-adv-mobile-0.3.6` or from a commit proven to be its descendant. Do not start from an older commit, stale PR, abandoned worker branch or historical APK branch.
+- `0.3.6+10` is consumed. Never reuse versionName `0.3.6` or build number `10` for another APK.
+- The next user-facing release must be **at least `0.3.7+11`** unless the project owner explicitly selects a higher semantic version; the plugin version, mobile versionName and mobile build number must all advance together.
 - Commit the version bump before the final release build. APK filename, artifact metadata, checksum record and handoff text must all identify the same version.
 - Never resolve a future change by wholesale-copying an older mobile file over this baseline. Port changes surgically and preserve all accepted behavior unless the project owner explicitly requests removal.
 - Before release handoff, verify and record that the locked baseline is an ancestor of the new functional release lineage.
 - A later approved APK supersedes this baseline only when the project owner explicitly accepts it and `docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md` is updated in the same governance change.
 
-This release-lineage lock overrides any older mobile base/SHA instruction when the two conflict. The purpose is forward-only development: no accepted Alkenzy ADV change may disappear because a later worker restarted from an older snapshot.
+This release-lineage lock overrides any older mobile/plugin base or SHA instruction when the two conflict. The purpose is forward-only development: no accepted Alkenzy ADV change may disappear because a later worker restarted from an older snapshot.
 
 ## Mandatory ALKENZY ADV 101-item bug closure constitution
 

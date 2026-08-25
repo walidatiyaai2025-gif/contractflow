@@ -16,39 +16,40 @@ Every Lead, Worker and QA agent MUST read these files before changing code:
 
 The canonical operational bug register contains **101 items: P0=5, P1=71, P2=25**. No agent may invent, drop, renumber, silently merge, or close an item outside the register.
 
-## Permanent mobile release lineage lock — effective 2026-08-25
+## Permanent release lineage lock — superseded baseline effective 2026-08-25
 
-The project owner has approved **Alkenzy ADV `0.3.5+9`** as the current mobile release baseline.
+The project owner has approved **Alkenzy ADV `0.3.6+10`** (plugin `0.3.6`) as the current release baseline. It supersedes `0.3.5+9` without deleting that release from the ancestry history.
 
 Locked identity:
 
-- approved release: `0.3.5+9`;
-- immutable baseline branch: `release/alkenzy-adv-mobile-0.3.5`;
-- exact approved functional source commit: `458e3580d07eb182224c3652bb18d3c82b87adbd`;
+- approved release: `0.3.6+10`;
+- approved plugin version: `0.3.6`;
+- immutable baseline branch: `release/alkenzy-adv-mobile-0.3.6`;
+- exact approved functional source commit: `9171f1c357822f9118eb8058aab6fb145c475fc3`;
+- previous approved release: `0.3.5+9` at `458e3580d07eb182224c3652bb18d3c82b87adbd`;
 - original owner-approved lineage ancestor: `3d4dcd2205b5cfa7d0814e5635db577ee5dcefed`;
-- exact-head Quality Gates run: `32813745920` (`Quality Gates #1513`);
-- approved APK SHA-256: `0ad0558fc993aa1b462280d44bfefe42bb0e44768670558e03e481b3b6408874`;
+- approval and merge vehicle: PR `#652`;
 - authoritative baseline record: `docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md`.
 
 From this point forward:
 
-1. Every new Alkenzy ADV mobile modification MUST start from `release/alkenzy-adv-mobile-0.3.5` or a commit proven to be its descendant.
-2. Starting from an older commit, stale PR head, abandoned worker branch, historical APK branch, or any pre-`0.3.5+9` snapshot is forbidden.
+1. Every new Alkenzy ADV modification MUST start from `release/alkenzy-adv-mobile-0.3.6` or a commit proven to be its descendant.
+2. Starting from an older commit, stale PR head, abandoned worker branch, historical APK branch, or any pre-`0.3.6+10` snapshot is forbidden.
 3. No future worker may wholesale-copy an older mobile file over the approved baseline. Ports must be surgical and must preserve all accepted behavior unless the project owner explicitly requests removal.
-4. `0.3.5+9` is consumed forever. It may not be reused for another APK.
-5. The next user-facing APK must be **at least `0.3.6+10`** unless the project owner explicitly chooses a higher semantic version. Both the versionName and build number must advance.
+4. `0.3.6+10` is consumed forever. It may not be reused for another release.
+5. The next user-facing release must be **at least `0.3.7+11`** unless the project owner explicitly chooses a higher semantic version. Plugin version, versionName and build number must advance together.
 6. The version bump must be committed before final APK build. APK filename, CI artifact metadata, checksum, release notes and handoff message must agree on that version.
 7. Before release handoff, the Lead must record that the locked release baseline is an ancestor of the new functional release lineage.
-8. A later APK becomes the new baseline only after explicit project-owner approval and an update to `ALKENZY_ADV_RELEASE_BASELINE.md`; lineage must move forward and may never reset to an older base.
+8. A later release becomes the new baseline only after explicit project-owner approval and an update to `ALKENZY_ADV_RELEASE_BASELINE.md`; lineage must move forward and may never reset to an older base.
 
-Mandatory block for every post-`0.3.5+9` mobile PR and handoff:
+Mandatory block for every post-`0.3.6+10` PR and handoff:
 
 ```text
 [ALKENZY-ADV-RELEASE-LINEAGE-LOCK]
-PREVIOUS-APPROVED-RELEASE: 0.3.5+9
-BASELINE-BRANCH: release/alkenzy-adv-mobile-0.3.5
-BASELINE-COMMIT: 458e3580d07eb182224c3652bb18d3c82b87adbd
-NEW-VERSION: <must differ from 0.3.5+9>
+PREVIOUS-APPROVED-RELEASE: 0.3.6+10
+BASELINE-BRANCH: release/alkenzy-adv-mobile-0.3.6
+BASELINE-COMMIT: 9171f1c357822f9118eb8058aab6fb145c475fc3
+NEW-VERSION: <must be at least 0.3.7+11>
 BASELINE-ANCESTOR-VERIFIED: YES
 NO-STALE-BRANCH-REPLACEMENT: YES
 ```
@@ -236,7 +237,7 @@ Every PR title must contain:
 
 Each PR body must list exact bug IDs and their current status.
 
-For all post-`0.3.5+9` mobile work, the PR body must additionally include the `[ALKENZY-ADV-RELEASE-LINEAGE-LOCK]` block defined above and the new mobile version.
+For all post-`0.3.6+10` work, the PR body must additionally include the `[ALKENZY-ADV-RELEASE-LINEAGE-LOCK]` block defined above and the new unified product version.
 
 ## Mandatory Worker checkpoint format
 

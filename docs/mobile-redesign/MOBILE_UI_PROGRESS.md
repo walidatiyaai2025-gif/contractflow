@@ -2,9 +2,15 @@
 
 ## Current redesign status
 
-Active stacked implementation branch: `feat/alkenzy-mobile-reference-redesign`.
+Current project-approved source release: `0.3.6+10` (plugin `0.3.6`).
 
-Base: PR #624 branch `feat/alkenzy-0.3.2-premium-final` so the locked-reference work extends rather than overwrites the active premium 0.3.2 implementation.
+Forward-only baseline: `release/alkenzy-adv-mobile-0.3.6` at functional source `9171f1c357822f9118eb8058aab6fb145c475fc3`. The previous approved `0.3.5+9` source `458e3580d07eb182224c3652bb18d3c82b87adbd` is verified as a real ancestor and remains preserved in release history.
+
+All future work must branch from this baseline or a proven descendant and must increment the unified version; the default next version is at least `0.3.7+11`.
+
+Historical stacked implementation branch: `feat/alkenzy-mobile-reference-redesign`.
+
+Historical base: PR #624 branch `feat/alkenzy-0.3.2-premium-final`. It is retained only as provenance and MUST NOT be used as the base for future work.
 
 Tracking issue: #626.
 

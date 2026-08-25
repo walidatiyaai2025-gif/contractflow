@@ -14,6 +14,10 @@
 - Foundation Plugin Design Reference Guard: `PASS`
 - Foundation Quality Gates: `PASS`
 - Implementation start gate: `RELEASED`
+- Current approved product release: `0.3.6+10`
+- Approved plugin version: `0.3.6`
+- Approved functional source: `9171f1c357822f9118eb8058aab6fb145c475fc3`
+- Forward-only baseline branch: `release/alkenzy-adv-mobile-0.3.6`
 
 All redesign branches must preserve `FOUNDATION_SHA=f671f436d9fd357de1a79089c29ec700d0572e78` as their common ancestry contract. The locked references remain immutable.
 
@@ -22,7 +26,7 @@ All redesign branches must preserve `FOUNDATION_SHA=f671f436d9fd357de1a79089c29e
 - Branch: `feat/alkenzy-mobile-landing-media`
 - PR: `#652`
 - Frozen scope: SC-001 through SC-012 only, plus protected shared PHP/CSS/JS/navigation/governance surfaces.
-- Current implementation state: `IN PROGRESS — OWNER-APPROVED REF_008 DASHBOARD RE-REVIEW`
+- Current implementation state: `OWNER-APPROVED RELEASE 0.3.6+10 — PR #652; MERGE REQUIRES EXACT-HEAD ALL GREEN`
 
 ### Owner-approved 2026-08-25 Dashboard continuation
 
