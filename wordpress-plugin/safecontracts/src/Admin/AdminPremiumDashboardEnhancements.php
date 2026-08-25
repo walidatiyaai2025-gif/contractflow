@@ -182,7 +182,7 @@ final class AdminPremiumDashboardEnhancements
                 dashboard.querySelector('.safecontracts-dashboard-followups'),
                 dashboard.querySelector('.safecontracts-dashboard-demo'),
             ].filter((section) => section instanceof HTMLElement);
-            if (secondarySections.length && !dashboard.querySelector('.safecontracts-dashboard-secondary')) {
+            if (desktopReferenceLayout && secondarySections.length && !dashboard.querySelector('.safecontracts-dashboard-secondary')) {
                 const details = document.createElement('details');
                 details.className = 'safecontracts-dashboard-secondary';
                 const summary = document.createElement('summary');
