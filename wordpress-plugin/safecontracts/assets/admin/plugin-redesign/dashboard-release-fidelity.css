@@ -81,17 +81,101 @@
   opacity: .45;
 }
 
-/* Keep the executive three-column composition stable even when the dataset
- * contains several currencies. Each column owns one visible currency card at
- * a time, matching REF_008's compact information density. */
-@media (min-width: 1181px) {
-  .safecontracts-premium-three-column {
-    align-items: start;
-  }
+/* REF_008 uses one tall accounting lane and a two-column contract area with
+ * the monthly chart directly beneath those contract lanes. JS only moves the
+ * already server-rendered monthly section into this grid; no financial value
+ * is recalculated or hidden. */
+.safecontracts-premium-three-column.safecontracts-dashboard-reference-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1.08fr) !important;
+  grid-template-areas:
+    "receivable payable net"
+    "flow flow net";
+  align-items: stretch !important;
+  gap: 14px !important;
+}
 
-  .safecontracts-premium-three-column > .safecontracts-dashboard-v2__lane,
-  .safecontracts-premium-three-column > .safecontracts-dashboard-v2__net-section {
-    min-width: 0;
+html[dir="rtl"] .safecontracts-premium-three-column.safecontracts-dashboard-reference-grid {
+  grid-template-areas:
+    "net payable receivable"
+    "net flow flow";
+}
+
+.safecontracts-dashboard-reference-grid > .safecontracts-dashboard-v2__lane--receivable {
+  grid-area: receivable;
+}
+
+.safecontracts-dashboard-reference-grid > .safecontracts-dashboard-v2__lane--payable {
+  grid-area: payable;
+}
+
+.safecontracts-dashboard-reference-grid > .safecontracts-dashboard-v2__net-section {
+  grid-area: net;
+}
+
+.safecontracts-dashboard-reference-grid > .safecontracts-dashboard-monthly-flow {
+  grid-area: flow;
+  min-width: 0;
+  margin-top: 0 !important;
+}
+
+.safecontracts-dashboard-reference-grid > .safecontracts-dashboard-v2__lane,
+.safecontracts-dashboard-reference-grid > .safecontracts-dashboard-v2__net-section,
+.safecontracts-dashboard-reference-grid > .safecontracts-dashboard-monthly-flow {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Follow-up evidence and demo tooling remain fully available, but REF_008 is
+ * an executive dashboard rather than an operations dump. Progressive JS wraps
+ * those secondary tools in this closed-by-default disclosure. */
+.safecontracts-dashboard-secondary {
+  margin-top: 16px;
+  border: 1px solid var(--sc-ui-line);
+  border-radius: var(--sc-ui-radius-lg);
+  background: rgba(255,255,255,.9);
+  box-shadow: var(--sc-ui-shadow-xs);
+}
+
+.safecontracts-dashboard-secondary > summary {
+  cursor: pointer;
+  padding: 12px 16px;
+  color: var(--sc-ui-navy-900);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.safecontracts-dashboard-secondary[open] > summary {
+  border-bottom: 1px solid var(--sc-ui-line);
+}
+
+.safecontracts-dashboard-secondary__body {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.safecontracts-dashboard-secondary__body > .safecontracts-dashboard-followups,
+.safecontracts-dashboard-secondary__body > .safecontracts-dashboard-demo {
+  margin-top: 0;
+}
+
+@media (min-width: 1181px) {
+  .safecontracts-dashboard-reference-grid > .safecontracts-dashboard-v2__net-section {
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 1180px) {
+  .safecontracts-premium-three-column.safecontracts-dashboard-reference-grid,
+  html[dir="rtl"] .safecontracts-premium-three-column.safecontracts-dashboard-reference-grid {
+    grid-template-columns: minmax(0,1fr) !important;
+    grid-template-areas:
+      "receivable"
+      "payable"
+      "net"
+      "flow";
   }
 }
 
@@ -102,5 +186,9 @@
 
   .safecontracts-dashboard-carousel__status {
     flex: 1 1 auto;
+  }
+
+  .safecontracts-dashboard-secondary > summary {
+    padding-inline: 12px;
   }
 }
