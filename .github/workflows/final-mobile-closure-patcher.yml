@@ -1,0 +1,214 @@
+name: Final Mobile Closure Patcher
+
+on:
+  push:
+    branches: [fix/alkenzy-final-device-closure-from-3d4dcd]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[final-mobile-patcher]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/alkenzy-final-device-closure-from-3d4dcd
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Apply biometric login and Android release contracts
+        shell: python
+        run: |
+          from pathlib import Path
+
+          login = Path('mobile/lib/features/auth/login_screen.dart')
+          text = login.read_text(encoding='utf-8')
+          if "../../core/auth/mobile_token_store.dart" not in text:
+              text = text.replace(
+                  "import '../../core/branding/safe_contracts_brand.dart';\n",
+                  "import '../../core/auth/mobile_token_store.dart';\nimport '../../core/branding/safe_contracts_brand.dart';\n",
+                  1,
+              )
+          if "import 'biometric_auth.dart';" not in text:
+              text = text.replace(
+                  "import 'mobile_auth.dart';\n",
+                  "import 'biometric_auth.dart';\nimport 'mobile_auth.dart';\n",
+                  1,
+              )
+
+          marker = "  bool _obscurePassword = true;\n  bool _bootstrapping = false;\n"
+          replacement = """  bool _obscurePassword = true;
+  bool _bootstrapping = false;
+  bool _biometricAvailable = false;
+  bool _biometricBusy = false;
+  final MobileBiometricAuth _biometricAuth = MobileBiometricAuth();
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_refreshBiometricAvailability());
+  }
+
+  Future<void> _refreshBiometricAvailability() async {
+    final store = widget.controller.repository.tokenStore;
+    if (store is! SecureMobileTokenStore) return;
+    final hasRememberedSession = await store.hasPersistentToken();
+    final available = hasRememberedSession && await _biometricAuth.isAvailable();
+    if (mounted) setState(() => _biometricAvailable = available);
+  }
+
+  Future<void> _submitBiometric() async {
+    if (_biometricBusy || _bootstrapping) return;
+    final store = widget.controller.repository.tokenStore;
+    if (store is! SecureMobileTokenStore) return;
+    setState(() => _biometricBusy = true);
+    try {
+      final authenticated = await _biometricAuth.authenticate(
+        isArabic: context.scL10n.isArabic,
+      );
+      if (!authenticated || !mounted) return;
+      store.unlockPersistent();
+      setState(() => _bootstrapping = true);
+      await widget.onAuthenticated();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _biometricBusy = false;
+          _bootstrapping = false;
+        });
+      }
+    }
+  }
+"""
+          if '_refreshBiometricAvailability' not in text:
+              if marker not in text:
+                  raise SystemExit('login state marker not found')
+              text = text.replace(marker, replacement, 1)
+
+          button_marker = """                                        SafeContractsButton(
+                                          key: const Key('loginSubmit'),
+                                          label: l10n.t(
+                                            submitting
+                                                ? 'Signing in…'
+                                                : 'Sign in',
+                                          ),
+                                          icon: Icons.login_rounded,
+                                          loading: submitting,
+                                          onPressed: submitting
+                                              ? null
+                                              : () => unawaited(_submit()),
+                                          variant: SafeContractsButtonVariant
+                                              .primary,
+                                        ),
+"""
+          biometric_block = button_marker + """                                        if (_biometricAvailable) ...[
+                                          const SizedBox(
+                                            height: SafeContractsSpacing.md,
+                                          ),
+                                          Row(
+                                            children: [
+                                              const Expanded(child: Divider()),
+                                              Padding(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: SafeContractsSpacing.sm,
+                                                ),
+                                                child: Text(
+                                                  l10n.isArabic ? 'أو' : 'OR',
+                                                  style: const TextStyle(
+                                                    color: SafeContractsVisual.muted,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                              ),
+                                              const Expanded(child: Divider()),
+                                            ],
+                                          ),
+                                          const SizedBox(
+                                            height: SafeContractsSpacing.md,
+                                          ),
+                                          OutlinedButton.icon(
+                                            key: const Key('biometricLogin'),
+                                            onPressed: submitting || _biometricBusy
+                                                ? null
+                                                : () => unawaited(_submitBiometric()),
+                                            icon: _biometricBusy
+                                                ? const SizedBox.square(
+                                                    dimension: 18,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  )
+                                                : const Icon(Icons.fingerprint_rounded),
+                                            label: Text(
+                                              l10n.isArabic
+                                                  ? 'الدخول بالبصمة'
+                                                  : 'Sign in with fingerprint',
+                                            ),
+                                          ),
+                                        ],
+"""
+          if "key: const Key('biometricLogin')" not in text:
+              if button_marker not in text:
+                  raise SystemExit('login button marker not found')
+              text = text.replace(button_marker, biometric_block, 1)
+          login.write_text(text, encoding='utf-8')
+
+          bootstrap = Path('scripts/bootstrap_android.sh')
+          text = bootstrap.read_text(encoding='utf-8')
+          permission_marker = """permissions = [
+    'android.permission.INTERNET',
+    'android.permission.POST_NOTIFICATIONS',
+]
+"""
+          permission_replacement = """permissions = [
+    'android.permission.INTERNET',
+    'android.permission.POST_NOTIFICATIONS',
+    'android.permission.USE_BIOMETRIC',
+]
+"""
+          if 'android.permission.USE_BIOMETRIC' not in text:
+              if permission_marker not in text:
+                  raise SystemExit('Android permission marker not found')
+              text = text.replace(permission_marker, permission_replacement, 1)
+          notification_guard = """grep -Fq 'safecontracts/notifications' \"$MAIN_ACTIVITY_TARGET\" || {
+  echo \"FAIL: Android release activity is missing foreground notification bridge\" >&2
+  exit 1
+}
+"""
+          extra_guards = notification_guard + """grep -Fq 'safecontracts/files' \"$MAIN_ACTIVITY_TARGET\" || {
+  echo \"FAIL: Android release activity is missing explicit document Save As bridge\" >&2
+  exit 1
+}
+grep -Fq 'FlutterFragmentActivity' \"$MAIN_ACTIVITY_TARGET\" || {
+  echo \"FAIL: Android release activity is not biometric-compatible\" >&2
+  exit 1
+}
+grep -Fq 'android.permission.USE_BIOMETRIC' \"$MANIFEST\" || {
+  echo \"FAIL: Android release manifest is missing USE_BIOMETRIC permission\" >&2
+  exit 1
+}
+"""
+          if "missing explicit document Save As bridge" not in text:
+              if notification_guard not in text:
+                  raise SystemExit('Android activity guard marker not found')
+              text = text.replace(notification_guard, extra_guards, 1)
+          bootstrap.write_text(text, encoding='utf-8')
+      - name: Resolve, format and lock dependencies
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format lib test
+      - name: Commit deterministic closure patch
+        run: |
+          git config user.name "alkenzy-final-closure-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add mobile/lib mobile/test mobile/pubspec.lock scripts/bootstrap_android.sh
+          if git diff --cached --quiet; then
+            echo "No patch changes required"
+            exit 0
+          fi
+          git commit -m "fix(mobile): finish biometric and report closure [final-mobile-patcher]"
+          git push origin HEAD:fix/alkenzy-final-device-closure-from-3d4dcd
