@@ -1,0 +1,81 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('approved 3d4dcd final APK contracts', () {
+    test('dashboard keeps the approved compact single-row KPI design', () {
+      final source =
+          File('lib/features/dashboard/dashboard_screen.dart').readAsStringSync();
+
+      expect(source, contains('Total account balance'));
+      expect(source, contains('height: 70'));
+      expect(
+        source,
+        contains('Expanded(child: _CompactKpiCard(item: items[index]))'),
+      );
+      expect(source, contains('_DashboardTabs(controller: controller)'));
+      expect(source, contains('_TabSwipeRegion('));
+      expect(source, isNot(contains('final columns = compact ? 2 : 4')));
+    });
+
+    test('only the authoritative dashboard is exposed in navigation', () {
+      final policy =
+          File('lib/features/navigation/navigation_policy.dart').readAsStringSync();
+      expect(
+        policy,
+        isNot(
+          contains(
+            'MobileDestination.dashboard,\n        MobileDestination.dashboardTwo,\n        MobileDestination.customers',
+          ),
+        ),
+      );
+    });
+
+    test('contracts keep compact filters sort pagination and working tabs', () {
+      final contracts =
+          File('lib/features/contracts/contracts_screen.dart').readAsStringSync();
+      final details = File(
+        'lib/features/contracts/premium_contract_details_screen.dart',
+      ).readAsStringSync();
+
+      expect(contracts, contains('_CustomerFilterMenu('));
+      expect(contracts, contains('_SortMenu('));
+      expect(contracts, contains('CompactPagination('));
+      expect(contracts, contains('controller.previousPage()'));
+      expect(contracts, contains('controller.nextPage()'));
+      expect(details, contains('DefaultTabController('));
+      expect(details, contains('length: 4'));
+      expect(details, contains('TabBarView('));
+    });
+
+    test('drawer/header fixes stay present without changing dashboard layout', () {
+      final shell =
+          File('lib/features/navigation/app_shell.dart').readAsStringSync();
+      expect(shell, contains('indicatorColor: Colors.white'));
+      expect(shell, contains('TextOverflow.clip'));
+      expect(shell, contains('FloatingActionButtonLocation.endFloat'));
+    });
+
+    test('biometric login and explicit document downloads are packaged', () {
+      final login =
+          File('lib/features/auth/login_screen.dart').readAsStringSync();
+      final tokenStore =
+          File('lib/core/auth/mobile_token_store.dart').readAsStringSync();
+      final report =
+          File('lib/features/export/mobile_report_export.dart').readAsStringSync();
+      final activity = File('android-release/MainActivity.kt').readAsStringSync();
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+
+      expect(login, contains("Key('biometricLogin')"));
+      expect(tokenStore, contains('unlockPersistent'));
+      expect(report, contains('MobileReportFormat.xlsx'));
+      expect(report, contains('MobileReportFormat.docx'));
+      expect(report, contains('MobileReportFormat.pdf'));
+      expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
+      expect(activity, contains('safecontracts/files'));
+      expect(activity, isNot(contains('safecontracts_exports')));
+      expect(pubspec, contains('version: 0.3.3+7'));
+    });
+  });
+}
