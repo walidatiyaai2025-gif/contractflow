@@ -37,8 +37,12 @@ foreach ([
     'safecontracts_payment_details_changed',
     'safecontracts_payment_dates_changed',
     'safecontracts_payment_status_changed',
+    'safecontracts_payment_archived',
     'safecontracts_financial_settlement_recorded',
+    'safecontracts_collection_archived',
     'safecontracts_followup_recorded',
+    'safecontracts_entity_attachment_added',
+    'safecontracts_entity_attachment_removed',
     "\$contract['accountant_user_id']",
     "'resource_type' => \$resourceType",
     "'contract_id' => \$contractId",
@@ -48,6 +52,9 @@ foreach ([
 }
 $assertContains("if (\$oldValue === '0.0000')", $dispatcher, 'contract creation must not duplicate the base-value activity notification');
 $assertContains('paymentDetailsHandled', $dispatcher, 'payment editable saves must suppress duplicate date notifications');
+$assertContains("if (\$entityType === 'contract')", $dispatcher, 'contract entity attachments must notify the responsible accountant');
+$assertContains("if (\$entityType === 'payment')", $dispatcher, 'payment entity attachments must notify the responsible accountant');
+$assertContains("if (\$entityType === 'collection')", $dispatcher, 'settlement entity attachments must resolve back to the contract payment');
 
 $direct = $read('wordpress-plugin/safecontracts/src/Notifications/DirectNotificationService.php');
 foreach ([
@@ -86,4 +93,4 @@ $mobile = $read('mobile/lib/features/notifications/notifications.dart');
 $assertContains('_nonNegativeInt(', $mobile, 'mobile inbox must accept direct/contract notifications with payment_id=0');
 $assertContains('SafeContractsDeepLinkDestination.payments', $mobile, 'payment deep-link authorization must remain strict');
 
-echo "Contract/payment/settlement/follow-up activity notification coverage checks passed.\n";
+echo "Contract/payment/settlement/follow-up/attachment activity notification coverage checks passed.\n";
