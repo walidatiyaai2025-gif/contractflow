@@ -8,18 +8,24 @@ FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
 ALKENZY_APP_ASSET="$ROOT/mobile/assets/brand/alkenzy_adv.png"
 ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.png"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
+PATCHER="$ROOT/scripts/apply_alkenzy_036.py"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE" "$PATCHER"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
   fi
 done
+
+# Apply the forward-only 0.3.6 mobile source transforms before Flutter compiles
+# the release candidate. The patcher is idempotent and fails closed if the
+# locked 0.3.5 source contract has unexpectedly changed.
+python3 "$PATCHER"
 
 cmp -s "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" || {
   echo "FAIL: in-app and launcher Alkenzy identities must use the same supplied logo bytes" >&2
@@ -58,10 +64,6 @@ PY
 
 cd "$MOBILE"
 
-# Flutter owns the platform boilerplate version. Recreate it from the exact
-# Flutter stable toolchain used by CI, then restore the repository's release
-# signing, networking, Firebase, notification presentation, biometric access,
-# explicit document download, and Safe Contracts runtime contracts.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -193,53 +195,17 @@ for required in \
   fi
 done
 
-grep -Fq 'android.permission.INTERNET' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing INTERNET permission" >&2
-  exit 1
-}
-grep -Fq 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing POST_NOTIFICATIONS permission" >&2
-  exit 1
-}
-grep -Fq 'android.permission.USE_BIOMETRIC' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing USE_BIOMETRIC permission" >&2
-  exit 1
-}
-grep -Fq 'android:label="Alkenzy ADV"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing Alkenzy ADV label" >&2
-  exit 1
-}
-grep -Fq 'android:icon="@drawable/alkenzy_launcher"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing Alkenzy launcher icon" >&2
-  exit 1
-}
-grep -Fq 'android:roundIcon="@drawable/alkenzy_launcher"' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing Alkenzy round launcher icon" >&2
-  exit 1
-}
-grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
-  echo "FAIL: Android release manifest is missing high-importance notification channel metadata" >&2
-  exit 1
-}
-grep -Fq 'safecontracts/notifications' "$MAIN_ACTIVITY_TARGET" || {
-  echo "FAIL: Android release activity is missing foreground notification bridge" >&2
-  exit 1
-}
-grep -Fq 'safecontracts/files' "$MAIN_ACTIVITY_TARGET" || {
-  echo "FAIL: Android release activity is missing explicit document Save As bridge" >&2
-  exit 1
-}
-grep -Fq 'FlutterFragmentActivity' "$MAIN_ACTIVITY_TARGET" || {
-  echo "FAIL: Android release activity is not biometric-compatible" >&2
-  exit 1
-}
-grep -Fq 'id("com.google.gms.google-services")' android/app/build.gradle.kts || {
-  echo "FAIL: Android app does not apply Google Services Gradle plugin" >&2
-  exit 1
-}
-grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SETTINGS" || {
-  echo "FAIL: Android settings do not declare Google Services Gradle plugin" >&2
-  exit 1
-}
+grep -Fq 'android.permission.INTERNET' "$MANIFEST" || { echo "FAIL: Android release manifest is missing INTERNET permission" >&2; exit 1; }
+grep -Fq 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || { echo "FAIL: Android release manifest is missing POST_NOTIFICATIONS permission" >&2; exit 1; }
+grep -Fq 'android.permission.USE_BIOMETRIC' "$MANIFEST" || { echo "FAIL: Android release manifest is missing USE_BIOMETRIC permission" >&2; exit 1; }
+grep -Fq 'android:label="Alkenzy ADV"' "$MANIFEST" || { echo "FAIL: Android release manifest is missing Alkenzy ADV label" >&2; exit 1; }
+grep -Fq 'android:icon="@drawable/alkenzy_launcher"' "$MANIFEST" || { echo "FAIL: Android release manifest is missing Alkenzy launcher icon" >&2; exit 1; }
+grep -Fq 'android:roundIcon="@drawable/alkenzy_launcher"' "$MANIFEST" || { echo "FAIL: Android release manifest is missing Alkenzy round launcher icon" >&2; exit 1; }
+grep -Fq 'safe_contracts_alerts' "$MANIFEST" || { echo "FAIL: Android release manifest is missing high-importance notification channel metadata" >&2; exit 1; }
+grep -Fq 'safecontracts/notifications' "$MAIN_ACTIVITY_TARGET" || { echo "FAIL: Android release activity is missing foreground notification bridge" >&2; exit 1; }
+grep -Fq 'safecontracts/files' "$MAIN_ACTIVITY_TARGET" || { echo "FAIL: Android release activity is missing explicit document Save As bridge" >&2; exit 1; }
+grep -Fq 'FlutterFragmentActivity' "$MAIN_ACTIVITY_TARGET" || { echo "FAIL: Android release activity is not biometric-compatible" >&2; exit 1; }
+grep -Fq 'id("com.google.gms.google-services")' android/app/build.gradle.kts || { echo "FAIL: Android app does not apply Google Services Gradle plugin" >&2; exit 1; }
+grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SETTINGS" || { echo "FAIL: Android settings do not declare Google Services Gradle plugin" >&2; exit 1; }
 
-echo "Alkenzy ADV Android scaffold bootstrapped with launcher identity, biometric login, explicit document Save As, high-importance notifications, release signing, INTERNET, and Firebase contracts."
+echo "Alkenzy ADV Android scaffold bootstrapped with 0.3.6 runtime closure, launcher identity, biometric login, explicit document Save As, high-importance notifications, release signing, INTERNET, and Firebase contracts."
