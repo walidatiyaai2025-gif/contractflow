@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+import 'package:arabic_reshaper/arabic_reshaper.dart';
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../core/api/api_client.dart';
@@ -299,15 +301,16 @@ final class MobileReportDocumentBuilder {
     for (var rowIndex = 0; rowIndex < allRows.length; rowIndex++) {
       final cells = <String>[];
       for (final value in allRows[rowIndex]) {
-        final isHeader = rowIndex == 0;
+        final header = rowIndex == 0;
         final rtl = _containsArabic(value);
-        final styleId = isHeader ? (rtl ? 3 : 1) : (rtl ? 2 : 0);
+        final styleId = header ? (rtl ? 3 : 1) : (rtl ? 2 : 0);
         cells.add(
           '<c t="inlineStr" s="$styleId"><is><t xml:space="preserve">${_xml(value)}</t></is></c>',
         );
       }
       sheetRows.add('<row>${cells.join()}</row>');
     }
+
     final archive = Archive()
       ..addFile(_textFile(
         '[Content_Types].xml',
@@ -354,8 +357,7 @@ final class MobileReportDocumentBuilder {
             '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
             '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="right" readingOrder="2"/></xf>'
             '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="right" readingOrder="2"/></xf>'
-            '</cellXfs>'
-            '</styleSheet>',
+            '</cellXfs></styleSheet>',
       ))
       ..addFile(_textFile(
         'xl/worksheets/sheet1.xml',
@@ -370,13 +372,12 @@ final class MobileReportDocumentBuilder {
   Uint8List _docx(MobileReportData data) {
     String wordCell(String value, {bool bold = false}) {
       final rtl = _containsArabic(value);
-      final paragraphProperties =
-          rtl ? '<w:pPr><w:bidi/><w:jc w:val="right"/></w:pPr>' : '';
-      final runProperties = StringBuffer('<w:rPr>');
-      if (bold) runProperties.write('<w:b/>');
-      if (rtl) runProperties.write('<w:rtl/>');
-      runProperties.write('</w:rPr>');
-      return '<w:tc><w:p>$paragraphProperties<w:r>${runProperties.toString()}'
+      final p = rtl ? '<w:pPr><w:bidi/><w:jc w:val="right"/></w:pPr>' : '';
+      final r = StringBuffer('<w:rPr>');
+      if (bold) r.write('<w:b/>');
+      if (rtl) r.write('<w:rtl/>');
+      r.write('</w:rPr>');
+      return '<w:tc><w:p>$p<w:r>${r.toString()}'
           '<w:t xml:space="preserve">${_xml(value)}</w:t></w:r></w:p></w:tc>';
     }
 
@@ -423,35 +424,47 @@ final class MobileReportDocumentBuilder {
 
     pw.Widget cellText(String value, {required bool header}) {
       final rtl = _containsArabic(value);
-      return pw.Text(
-        value,
+      final rendered = rtl ? ArabicReshaper.instance.reshape(value) : value;
+      return pw.Directionality(
         textDirection: rtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
-        textAlign: rtl ? pw.TextAlign.right : pw.TextAlign.left,
-        style: pw.TextStyle(
-          font: header ? medium : regular,
-          fontSize: header ? 8 : 7,
+        child: pw.Text(
+          rendered,
+          textDirection: rtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+          textAlign: rtl ? pw.TextAlign.right : pw.TextAlign.left,
+          style: pw.TextStyle(
+            font: header ? medium : regular,
+            fontSize: header ? 7 : 6,
+          ),
         ),
       );
     }
 
+    final widths = <int, pw.TableColumnWidth>{
+      for (var i = 0; i < data.columns.length; i++)
+        i: const pw.FlexColumnWidth(1),
+    };
+
     document.addPage(
       pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(18),
         theme: pw.ThemeData.withFont(base: regular, bold: medium),
         build: (context) => <pw.Widget>[
           pw.Text(
             data.type.title,
             textDirection: pw.TextDirection.ltr,
-            style: pw.TextStyle(font: medium, fontSize: 18),
+            style: pw.TextStyle(font: medium, fontSize: 16),
           ),
-          pw.SizedBox(height: 12),
+          pw.SizedBox(height: 10),
           pw.Table(
-            border: pw.TableBorder.all(width: 0.4),
+            columnWidths: widths,
+            border: pw.TableBorder.all(width: 0.35),
             children: <pw.TableRow>[
               pw.TableRow(
                 children: data.columns
                     .map(
                       (value) => pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
+                        padding: const pw.EdgeInsets.all(3),
                         child: cellText(value, header: true),
                       ),
                     )
@@ -462,7 +475,7 @@ final class MobileReportDocumentBuilder {
                   children: row
                       .map(
                         (value) => pw.Padding(
-                          padding: const pw.EdgeInsets.all(4),
+                          padding: const pw.EdgeInsets.all(3),
                           child: cellText(value, header: false),
                         ),
                       )
