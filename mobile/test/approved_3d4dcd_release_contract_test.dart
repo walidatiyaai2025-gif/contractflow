@@ -58,12 +58,13 @@ void main() {
       expect(shell, contains('FloatingActionButtonLocation.endFloat'));
     });
 
-    test('biometric enrollment remember default and RTL reports are packaged',
-        () {
+    test('biometric, remember-off and shaped RTL reports are packaged', () {
       final login =
           File('lib/features/auth/login_screen.dart').readAsStringSync();
       final auth =
           File('lib/features/auth/mobile_auth.dart').readAsStringSync();
+      final biometric =
+          File('lib/features/auth/biometric_auth.dart').readAsStringSync();
       final tokenStore =
           File('lib/core/auth/mobile_token_store.dart').readAsStringSync();
       final report = File('lib/features/export/mobile_report_export.dart')
@@ -74,19 +75,22 @@ void main() {
 
       expect(login, contains("Key('biometricLogin')"));
       expect(login, contains('_offerBiometricEnrollment'));
-      expect(login, contains('_biometricCredentialAvailable'));
       expect(auth, contains('bool rememberMe = false'));
+      expect(auth, contains('rememberMe = false;'));
+      expect(biometric, contains('TargetPlatform.android'));
       expect(tokenStore, contains('persistCurrentForBiometric'));
       expect(report, contains('MobileReportFormat.xlsx'));
       expect(report, contains('MobileReportFormat.docx'));
       expect(report, contains('MobileReportFormat.pdf'));
+      expect(report, contains('ArabicReshaper.instance.reshape'));
       expect(report, contains('pw.TextDirection.rtl'));
+      expect(report, contains('PdfPageFormat.a4.landscape'));
       expect(report, contains('<w:bidi/>'));
       expect(report, contains('readingOrder="2"'));
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('safecontracts/files'));
       expect(activity, isNot(contains('safecontracts_exports')));
-      expect(pubspec, contains('version: 0.3.4+8'));
+      expect(pubspec, contains('version: 0.3.5+9'));
     });
   });
 }
