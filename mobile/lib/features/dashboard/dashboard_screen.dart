@@ -81,12 +81,9 @@ final class DashboardScreen extends StatelessWidget {
                 ],
                 _CompactSummary(kpis: overview.kpis, currency: currency),
                 const SizedBox(height: 8),
-                SizedBox(
-                  height: 70,
-                  child: _CompactKpiRow(
-                    kpis: overview.kpis,
-                    currency: currency,
-                  ),
+                _CompactKpiRow(
+                  kpis: overview.kpis,
+                  currency: currency,
                 ),
                 const SizedBox(height: 8),
                 _GlobalPeriodFilter(controller: controller),
@@ -290,14 +287,26 @@ final class _CompactKpiRow extends StatelessWidget {
         color: SafeContractsVisual.roseGold,
       ),
     ];
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var index = 0; index < items.length; index++) ...[
-          Expanded(child: _CompactKpiCard(item: items[index])),
-          if (index != items.length - 1) const SizedBox(width: 5),
-        ],
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 620;
+        final columns = compact ? 2 : 4;
+        final spacing = compact ? 8.0 : 6.0;
+        final cardWidth =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: cardWidth,
+                height: compact ? 94 : 76,
+                child: _CompactKpiCard(item: item),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -362,8 +371,8 @@ final class _CompactKpiCard extends StatelessWidget {
             maxLines: 2,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: SafeContractsVisual.muted,
-                  fontSize: 8.5,
-                  height: 1.05,
+                  fontSize: 10.5,
+                  height: 1.12,
                   fontWeight: FontWeight.w700,
                 ),
           ),
