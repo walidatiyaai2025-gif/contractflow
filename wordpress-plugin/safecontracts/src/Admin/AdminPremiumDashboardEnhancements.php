@@ -84,6 +84,7 @@ final class AdminPremiumDashboardEnhancements
             const previousLabel = <?php echo wp_json_encode(__('Previous', 'safecontracts')); ?>;
             const nextLabel = <?php echo wp_json_encode(__('Next', 'safecontracts')); ?>;
             const carouselLabel = <?php echo wp_json_encode(__('Currency', 'safecontracts')); ?>;
+            const actionsLabel = <?php echo wp_json_encode(__('Actions', 'safecontracts')); ?>;
             const isRtl = getComputedStyle(document.documentElement).direction === 'rtl';
 
             const enhanceRail = (rail, itemSelector) => {
@@ -157,6 +158,7 @@ final class AdminPremiumDashboardEnhancements
                 enhanceRail(rail, '.safecontracts-dashboard-v2__net-card');
             });
 
+            const financialGrid = dashboard.querySelector('.safecontracts-premium-three-column');
             const monthlyFlow = dashboard.querySelector('.safecontracts-dashboard-monthly-flow');
             if (monthlyFlow instanceof HTMLElement) {
                 const currencyCards = [...monthlyFlow.children].filter((child) => child.matches?.('.safecontracts-dashboard-monthly-flow__currency'));
@@ -167,6 +169,32 @@ final class AdminPremiumDashboardEnhancements
                     currencyCards.forEach((card) => rail.append(card));
                     enhanceRail(rail, '.safecontracts-dashboard-monthly-flow__currency');
                 }
+                if (financialGrid instanceof HTMLElement) {
+                    financialGrid.classList.add('safecontracts-dashboard-reference-grid');
+                    financialGrid.append(monthlyFlow);
+                }
+            }
+
+            const secondarySections = [
+                dashboard.querySelector('.safecontracts-dashboard-followups'),
+                dashboard.querySelector('.safecontracts-dashboard-demo'),
+            ].filter((section) => section instanceof HTMLElement);
+            if (secondarySections.length && !dashboard.querySelector('.safecontracts-dashboard-secondary')) {
+                const details = document.createElement('details');
+                details.className = 'safecontracts-dashboard-secondary';
+                const summary = document.createElement('summary');
+                summary.textContent = actionsLabel;
+                const body = document.createElement('div');
+                body.className = 'safecontracts-dashboard-secondary__body';
+                details.append(summary, body);
+                if (financialGrid instanceof HTMLElement) {
+                    financialGrid.insertAdjacentElement('afterend', details);
+                } else if (monthlyFlow instanceof HTMLElement) {
+                    monthlyFlow.insertAdjacentElement('afterend', details);
+                } else {
+                    dashboard.append(details);
+                }
+                secondarySections.forEach((section) => body.append(section));
             }
 
             const fab = document.getElementById('safecontracts-premium-fab');
