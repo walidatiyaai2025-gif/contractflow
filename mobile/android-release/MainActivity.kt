@@ -1,22 +1,29 @@
 package com.safecontracts.safecontracts_mobile
 
+import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     companion object {
-        private const val METHOD_CHANNEL = "safecontracts/notifications"
+        private const val NOTIFICATION_METHOD_CHANNEL = "safecontracts/notifications"
+        private const val FILE_METHOD_CHANNEL = "safecontracts/files"
+        private const val SAVE_DOCUMENT_REQUEST = 7012
         private const val NOTIFICATION_CHANNEL_ID = "safe_contracts_alerts"
         private const val NOTIFICATION_CHANNEL_NAME = "Safe Contracts Alerts"
     }
+
+    private var pendingSaveResult: MethodChannel.Result? = null
+    private var pendingSaveBytes: ByteArray? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,23 +32,97 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
-            .setMethodCallHandler { call, result ->
-                if (call.method != "showNotification") {
-                    result.notImplemented()
-                    return@setMethodCallHandler
-                }
-                val title = call.argument<String>("title")?.trim().orEmpty()
-                val body = call.argument<String>("body")?.trim().orEmpty()
-                val iconKey = call.argument<String>("iconKey")?.trim().orEmpty()
-                val id = call.argument<Int>("id") ?: (System.currentTimeMillis() and 0x7fffffff).toInt()
-                if (title.isEmpty() || body.isEmpty()) {
-                    result.error("invalid_notification", "Notification title and body are required.", null)
-                    return@setMethodCallHandler
-                }
-                showNotification(id, title, body, iconKey)
-                result.success(true)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            NOTIFICATION_METHOD_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            if (call.method != "showNotification") {
+                result.notImplemented()
+                return@setMethodCallHandler
             }
+            val title = call.argument<String>("title")?.trim().orEmpty()
+            val body = call.argument<String>("body")?.trim().orEmpty()
+            val iconKey = call.argument<String>("iconKey")?.trim().orEmpty()
+            val id = call.argument<Int>("id") ?: (System.currentTimeMillis() and 0x7fffffff).toInt()
+            if (title.isEmpty() || body.isEmpty()) {
+                result.error("invalid_notification", "Notification title and body are required.", null)
+                return@setMethodCallHandler
+            }
+            showNotification(id, title, body, iconKey)
+            result.success(true)
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            FILE_METHOD_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            if (call.method != "saveDocument") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            if (pendingSaveResult != null) {
+                result.error("save_in_progress", "Another report download is already open.", null)
+                return@setMethodCallHandler
+            }
+            val filename = call.argument<String>("filename")?.trim().orEmpty()
+            val mimeType = call.argument<String>("mimeType")?.trim().orEmpty()
+            val bytes = call.argument<ByteArray>("bytes")
+            if (filename.isEmpty() || mimeType.isEmpty() || bytes == null || bytes.isEmpty()) {
+                result.error("invalid_document", "Report filename, MIME type and content are required.", null)
+                return@setMethodCallHandler
+            }
+
+            pendingSaveResult = result
+            pendingSaveBytes = bytes
+            try {
+                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = mimeType
+                    putExtra(Intent.EXTRA_TITLE, filename)
+                }
+                startActivityForResult(intent, SAVE_DOCUMENT_REQUEST)
+            } catch (error: Exception) {
+                clearPendingSave()
+                result.error("save_unavailable", error.message ?: "Unable to open Android Save As.", null)
+            }
+        }
+    }
+
+    @Deprecated("Deprecated in Android API; retained for Flutter Activity result compatibility.")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != SAVE_DOCUMENT_REQUEST) return
+
+        val result = pendingSaveResult
+        val bytes = pendingSaveBytes
+        if (result == null || bytes == null) {
+            clearPendingSave()
+            return
+        }
+
+        if (resultCode != Activity.RESULT_OK || data?.data == null) {
+            clearPendingSave()
+            result.success(null)
+            return
+        }
+
+        val uri = data.data!!
+        try {
+            contentResolver.openOutputStream(uri, "w")?.use { stream ->
+                stream.write(bytes)
+                stream.flush()
+            } ?: throw IllegalStateException("Android did not provide a writable document stream.")
+            clearPendingSave()
+            result.success(uri.toString())
+        } catch (error: Exception) {
+            clearPendingSave()
+            result.error("save_failed", error.message ?: "Unable to write the report file.", null)
+        }
+    }
+
+    private fun clearPendingSave() {
+        pendingSaveResult = null
+        pendingSaveBytes = null
     }
 
     private fun ensureNotificationChannel() {
