@@ -69,13 +69,14 @@ final class _SafeContractsLoginScreenState
     if (_biometricBusy || _bootstrapping) return;
     final store = widget.controller.repository.tokenStore;
     if (store is! SecureMobileTokenStore) return;
+    final isArabic = context.scL10n.isArabic;
     final hasCredential = await store.hasPersistentToken();
     if (!hasCredential) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            context.scL10n.isArabic
+            isArabic
                 ? 'سجّل الدخول بكلمة المرور مرة واحدة، ثم فعّل البصمة عندما يطلب التطبيق ذلك.'
                 : 'Sign in with your password once, then enable fingerprint when the app asks.',
           ),
@@ -86,7 +87,7 @@ final class _SafeContractsLoginScreenState
     setState(() => _biometricBusy = true);
     try {
       final authenticated = await _biometricAuth.authenticate(
-        isArabic: context.scL10n.isArabic,
+        isArabic: isArabic,
       );
       if (!authenticated || !mounted) return;
       store.unlockPersistent();
