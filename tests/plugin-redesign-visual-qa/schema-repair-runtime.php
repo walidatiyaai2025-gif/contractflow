@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 use SafeContracts\Database\Migrator;
 
 if (! defined('ABSPATH')) {
