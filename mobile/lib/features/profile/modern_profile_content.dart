@@ -15,6 +15,7 @@ final class ModernProfileContent extends StatelessWidget {
     this.avatarUrl,
     this.avatarUploading = false,
     this.onAvatarUpload,
+    this.onPrivacyLegal,
     super.key,
   });
 
@@ -28,6 +29,7 @@ final class ModernProfileContent extends StatelessWidget {
   final String? avatarUrl;
   final bool avatarUploading;
   final VoidCallback? onAvatarUpload;
+  final VoidCallback? onPrivacyLegal;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +64,22 @@ final class ModernProfileContent extends StatelessWidget {
                 languageCode: languageCode,
                 onLanguageChanged: onLanguageChanged,
               ),
+              if (onPrivacyLegal != null) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: const Key('profilePrivacyLegal'),
+                    onPressed: onPrivacyLegal,
+                    icon: const Icon(Icons.shield_outlined),
+                    label: Text(
+                      ar
+                          ? 'الخصوصية والمعلومات القانونية'
+                          : 'Privacy & legal',
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               ProfilePrimaryActions(
                 onLogout: onLogout,
