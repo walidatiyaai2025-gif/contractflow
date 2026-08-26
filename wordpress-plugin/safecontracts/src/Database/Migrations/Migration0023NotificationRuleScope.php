@@ -12,8 +12,7 @@ use SafeContracts\Database\ProductionMigration;
  *
  * Legacy rows remain all/all so upgrading cannot silently narrow or broaden
  * deliveries. Administrators can opt into customer/supplier and
- * receivable/payable scope on rules without encoding business semantics in
- * the rule name.
+ * receivable/payable scope without encoding business semantics in rule names.
  */
 final class Migration0023NotificationRuleScope implements ProductionMigration
 {
@@ -28,34 +27,31 @@ final class Migration0023NotificationRuleScope implements ProductionMigration
             throw new RuntimeException('SafeContracts notification-rule scope preflight could not read the rules table.');
         }
         $this->assertNoDatabaseError($wpdb, 'SafeContracts notification-rule scope preflight failed.');
+        $this->addedCounterpartyType = ! $this->columnExists($wpdb, $table, 'counterparty_type');
+        $this->addedFinancialDirection = ! $this->columnExists($wpdb, $table, 'financial_direction');
     }
 
     public function up(object $wpdb): void
     {
+        if (! function_exists('dbDelta')) {
+            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        }
+
         $table = $wpdb->prefix . 'safecontracts_notification_rules';
+        $charset = method_exists($wpdb, 'get_charset_collate') ? $wpdb->get_charset_collate() : '';
 
-        if (! $this->columnExists($wpdb, $table, 'counterparty_type')) {
-            $result = $wpdb->query(
-                "ALTER TABLE {$table} ADD COLUMN counterparty_type varchar(16) NOT NULL DEFAULT 'all' AFTER trigger_type"
-            );
-            if ($result === false) {
-                throw new RuntimeException('SafeContracts could not add notification counterparty scope.');
-            }
-            $this->addedCounterpartyType = true;
-        }
-
-        if (! $this->columnExists($wpdb, $table, 'financial_direction')) {
-            $result = $wpdb->query(
-                "ALTER TABLE {$table} ADD COLUMN financial_direction varchar(16) NOT NULL DEFAULT 'all' AFTER counterparty_type"
-            );
-            if ($result === false) {
-                throw new RuntimeException('SafeContracts could not add notification financial-direction scope.');
-            }
-            $this->addedFinancialDirection = true;
-        }
+        // dbDelta keeps this additive/idempotent on both fresh and upgraded
+        // installations and avoids duplicate-column failures after interruption.
+        dbDelta("CREATE TABLE {$table} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            counterparty_type varchar(16) NOT NULL DEFAULT 'all',
+            financial_direction varchar(16) NOT NULL DEFAULT 'all',
+            PRIMARY KEY  (id)
+        ) {$charset};");
+        $this->assertNoDatabaseError($wpdb, 'SafeContracts could not add notification-rule scope columns.');
 
         // Keep all historical rules behavior-compatible. Scope is explicit and
-        // opt-in; rule names/codes are presentation identifiers, not authority.
+        // opt-in; rule names/codes remain identifiers rather than authority.
         $result = $wpdb->query(
             "UPDATE {$table}
              SET counterparty_type = 'all'
@@ -78,19 +74,19 @@ final class Migration0023NotificationRuleScope implements ProductionMigration
     public function verify(object $wpdb): void
     {
         $table = $wpdb->prefix . 'safecontracts_notification_rules';
-        foreach (['counterparty_type', 'financial_direction'] as $column) {
-            if (! $this->columnExists($wpdb, $table, $column)) {
-                throw new RuntimeException('SafeContracts notification-rule scope verification is missing column: ' . $column);
-            }
-        }
-
-        $invalid = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$table}
+        $rows = $wpdb->get_results(
+            "SELECT id, counterparty_type, financial_direction
+             FROM {$table}
              WHERE counterparty_type NOT IN ('all','customer','supplier')
-                OR financial_direction NOT IN ('all','receivable','payable')"
+                OR financial_direction NOT IN ('all','receivable','payable')
+             LIMIT 1",
+            ARRAY_A
         );
+        if (! is_array($rows)) {
+            throw new RuntimeException('SafeContracts notification-rule scope verification could not read scoped columns.');
+        }
         $this->assertNoDatabaseError($wpdb, 'SafeContracts notification-rule scope verification failed.');
-        if ((int) $invalid !== 0) {
+        if ($rows !== []) {
             throw new RuntimeException('SafeContracts notification-rule scope verification found invalid persisted values.');
         }
     }
