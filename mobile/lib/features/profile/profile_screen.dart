@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config/mobile_config.dart';
 import '../help/mobile_user_guide_screen.dart';
@@ -38,6 +39,8 @@ final class ProfileScreen extends StatefulWidget {
 final class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _imagePicker = ImagePicker();
 
+  bool get _isArabic => widget.languageCode.trim().toLowerCase() == 'ar';
+
   Future<void> _changeAvatar() async {
     final picked = await _imagePicker.pickImage(
       source: ImageSource.gallery,
@@ -61,7 +64,7 @@ final class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.languageCode == 'ar'
+            _isArabic
                 ? 'تم تحديث الصورة الشخصية.'
                 : 'Profile photo updated.',
           ),
@@ -87,6 +90,95 @@ final class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _openPublicLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null ||
+        !(uri.scheme == 'https' || uri.scheme == 'http') ||
+        uri.host.isEmpty) {
+      return;
+    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isArabic
+                ? 'تعذر فتح الرابط. حاول مرة أخرى.'
+                : 'Unable to open this link. Try again.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showPrivacyAndLegal() async {
+    final links = widget.config.storeLinks;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 12),
+          children: [
+            ListTile(
+              title: Text(
+                _isArabic
+                    ? 'الخصوصية والمعلومات القانونية'
+                    : 'Privacy & legal',
+              ),
+              subtitle: Text(
+                _isArabic
+                    ? 'روابط Alkenzy ADV الرسمية المنشورة من خادم النظام.'
+                    : 'Official Alkenzy ADV links published by the service.',
+              ),
+            ),
+            if (links.privacyPolicy.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.privacy_tip_outlined),
+                title: Text(_isArabic ? 'سياسة الخصوصية' : 'Privacy policy'),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_openPublicLink(links.privacyPolicy));
+                },
+              ),
+            if (links.accountDeletion.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.person_remove_outlined),
+                title: Text(_isArabic ? 'طلب حذف الحساب' : 'Account deletion'),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_openPublicLink(links.accountDeletion));
+                },
+              ),
+            if (links.support.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.support_agent_rounded),
+                title: Text(_isArabic ? 'الدعم الفني' : 'Support'),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_openPublicLink(links.support));
+                },
+              ),
+            if (links.terms.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.description_outlined),
+                title: Text(_isArabic ? 'شروط الاستخدام' : 'Terms of use'),
+                trailing: const Icon(Icons.open_in_new_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_openPublicLink(links.terms));
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -101,6 +193,9 @@ final class _ProfileScreenState extends State<ProfileScreen> {
             widget.controller.avatarUrlOverride ?? widget.session.avatarUrl,
         avatarUploading: widget.controller.avatarUploadInFlight,
         onAvatarUpload: () => unawaited(_changeAvatar()),
+        onPrivacyLegal: widget.config.storeLinks.hasAny
+            ? () => unawaited(_showPrivacyAndLegal())
+            : null,
       ),
     );
   }
