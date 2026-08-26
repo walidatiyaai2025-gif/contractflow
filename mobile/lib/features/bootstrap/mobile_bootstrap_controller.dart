@@ -139,15 +139,10 @@ final class MobileBootstrapController extends ChangeNotifier {
         canExport: policy.destinations.contains(MobileDestination.export),
       );
 
-      await Future.wait<void>(<Future<void>>[
-        dashboard.load(),
-        if (customers.canAccess) customers.ensureLoaded(),
-        if (suppliers.canAccess) suppliers.ensureLoaded(),
-        if (contracts.canAccess) contracts.ensureLoaded(),
-        if (finance.canAccess) finance.ensureLoaded(),
-        if (notifications.canAccess) notifications.ensureLoaded(),
-        profile.ensureLoaded(),
-      ]);
+      // Keep initial authenticated boot fast: the dashboard is authoritative for
+      // first paint; list/profile/finance controllers load lazily when their
+      // destination is opened and retain their existing ensureLoaded guards.
+      await dashboard.load();
 
       state = MobileBootstrapState.ready;
       notifyListeners();
