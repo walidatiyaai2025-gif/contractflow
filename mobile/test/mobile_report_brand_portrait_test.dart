@@ -12,7 +12,7 @@ void main() {
     expect(report, contains("'ALKENZY ADV'"));
     expect(report, contains('pageFormat: PdfPageFormat.a4,'));
     expect(report, isNot(contains('PdfPageFormat.a4.landscape')));
-    expect(report, contains('Generated: $generatedDate'));
+    expect(report, contains('Generated: \$generatedDate'));
     expect(report, contains('ArabicReshaper.instance.reshape'));
     expect(report, contains('pw.TextDirection.rtl'));
   });
