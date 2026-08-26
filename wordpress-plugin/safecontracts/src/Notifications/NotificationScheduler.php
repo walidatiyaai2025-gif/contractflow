@@ -16,6 +16,13 @@ final class NotificationScheduler
         add_filter('cron_schedules', [self::class, 'cronSchedules']);
         add_action('init', [self::class, 'ensureScheduled']);
         add_action(self::HOOK, [self::class, 'run']);
+
+        // Keep the persisted schedule current at the same transaction boundary
+        // as payment business events. WP-Cron remains the durable safety net.
+        add_action('safecontracts_payment_created', [self::class, 'reconcilePayment'], 10, 1);
+        add_action('safecontracts_payment_dates_changed', [self::class, 'reconcilePayment'], 10, 1);
+        add_action('safecontracts_payment_status_changed', [self::class, 'reconcilePayment'], 10, 1);
+        add_action('safecontracts_payment_settled', [self::class, 'reconcilePayment'], 10, 1);
     }
 
     /** @param array<string,array<string,mixed>> $schedules @return array<string,array<string,mixed>> */
@@ -44,6 +51,22 @@ final class NotificationScheduler
             } catch (Throwable $error) {
                 error_log('SafeContracts notification schedule seed failed: ' . $error->getMessage());
             }
+        }
+    }
+
+    public static function reconcilePayment(mixed $paymentId): void
+    {
+        $paymentId = (int) $paymentId;
+        if ($paymentId <= 0) {
+            return;
+        }
+        try {
+            (new NotificationPaymentScheduleReconciler())->reconcile($paymentId);
+        } catch (Throwable $error) {
+            // Payment writes are authoritative and must not be rolled back just
+            // because schedule maintenance is temporarily unavailable. Cron will
+            // retry from source-of-truth payment data on its next run.
+            error_log('SafeContracts payment notification reconciliation failed for payment #' . $paymentId . ': ' . $error->getMessage());
         }
     }
 
