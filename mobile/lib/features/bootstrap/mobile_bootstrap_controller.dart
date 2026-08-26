@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
+import '../ads/mobile_ads.dart';
 import '../config/mobile_config.dart';
 import '../contracts/contracts.dart';
 import '../customers/customers.dart';
@@ -62,6 +65,7 @@ final class MobileBootstrapController extends ChangeNotifier {
       final session = nextSessionController.session;
       if (nextSessionController.state != SessionState.authenticated ||
           session == null) {
+        SafeContractsMobileAds.instance.disable();
         message = nextSessionController.errorMessage ??
             'SafeContracts mobile access requires an authorized session.';
         state = nextSessionController.state == SessionState.error
@@ -78,6 +82,7 @@ final class MobileBootstrapController extends ChangeNotifier {
           nextConfigController.state == MobileConfigState.error;
 
       final config = nextConfigController.config;
+      unawaited(SafeContractsMobileAds.instance.configure(config.ads));
       final policy = MobileNavigationPolicy.resolve(session, config);
       navigationPolicy = policy;
       final dashboard = DashboardController(
@@ -152,7 +157,9 @@ final class MobileBootstrapController extends ChangeNotifier {
   }
 
   void signOutLocalState() {
+    SafeContractsMobileAds.instance.disable();
     sessionController?.reset();
+    configController?.dispose();
     dashboardController?.dispose();
     customersController?.dispose();
     suppliersController?.dispose();
@@ -161,6 +168,7 @@ final class MobileBootstrapController extends ChangeNotifier {
     notificationsController?.dispose();
     profileController?.dispose();
     excelExportController?.dispose();
+    configController = null;
     dashboardController = null;
     customersController = null;
     suppliersController = null;
@@ -177,6 +185,7 @@ final class MobileBootstrapController extends ChangeNotifier {
 
   @override
   void dispose() {
+    SafeContractsMobileAds.instance.disable();
     sessionController?.dispose();
     configController?.dispose();
     dashboardController?.dispose();

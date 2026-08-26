@@ -34,10 +34,18 @@ require_once SAFECONTRACTS_DIR . 'src/Admin/MoneyPresentationFunctions.php';
 \SafeContracts\Translations\CompleteArabicDefaults::register();
 \SafeContracts\Translations\FeatureArabicDefaults::register();
 \SafeContracts\Translations\PremiumPolishArabicDefaults::register();
+\SafeContracts\Translations\MobileAdvertisingArabicDefaults::register();
 \SafeContracts\Translations\ArabicRuntimeSafety::register();
+\SafeContracts\PublicSite\AppStorePages::register();
 
 register_activation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Activator::class, 'activate']);
 register_deactivation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Deactivator::class, 'deactivate']);
+
+add_action('admin_menu', [\SafeContracts\Admin\PlayReviewAccount::class, 'registerPage'], 35);
+add_action('admin_post_' . \SafeContracts\Admin\PlayReviewAccount::CREATE_ACTION, [\SafeContracts\Admin\PlayReviewAccount::class, 'handleCreate']);
+add_action('admin_post_' . \SafeContracts\Admin\PlayReviewAccount::DISABLE_ACTION, [\SafeContracts\Admin\PlayReviewAccount::class, 'handleDisable']);
+add_action('admin_menu', [\SafeContracts\Admin\MobileAdvertisingPage::class, 'register'], 36);
+add_action('admin_post_' . \SafeContracts\Admin\MobileAdvertisingPage::SAVE_ACTION, [\SafeContracts\Admin\MobileAdvertisingPage::class, 'handleSave']);
 
 // Keep technical slugs/namespaces backward-compatible while normalizing every
 // Safe Contracts gettext surface shown by the plugin to the approved name.
