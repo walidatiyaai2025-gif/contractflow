@@ -39,6 +39,8 @@ require_once SAFECONTRACTS_DIR . 'src/Admin/MoneyPresentationFunctions.php';
 register_activation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Activator::class, 'activate']);
 register_deactivation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Deactivator::class, 'deactivate']);
 
+// Keep technical slugs/namespaces backward-compatible while normalizing every
+// Safe Contracts gettext surface shown by the plugin to the approved name.
 add_filter('gettext', static function (string $translation, string $text, string $domain): string {
     if ($domain !== 'safecontracts') {
         return $translation;
@@ -51,6 +53,8 @@ add_action('plugins_loaded', static function (): void {
     \SafeContracts\Plugin::instance()->boot();
     \SafeContracts\Admin\AdminPremiumDashboardEnhancements::register();
     \SafeContracts\Admin\AdminFinancePremiumEnhancements::register();
+    // Email delivery configuration is intentionally a dedicated admin page,
+    // separate from the operational Notification Center.
     \SafeContracts\Admin\EmailSettingsPage::register();
     \SafeContracts\Admin\NotificationCenterPage::registerInboxActions();
 });
