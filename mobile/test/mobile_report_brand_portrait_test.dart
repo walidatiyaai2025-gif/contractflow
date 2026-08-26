@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('PDF reports keep ALKENZY identity in portrait without losing RTL', () {
-    final report =
-        File('lib/features/export/mobile_report_export.dart').readAsStringSync();
+    final report = File('lib/features/export/mobile_report_export.dart')
+        .readAsStringSync();
 
     expect(report, contains("rootBundle.load('assets/brand/alkenzy_adv.png')"));
     expect(report, contains('pw.MemoryImage('));
