@@ -59,6 +59,7 @@ use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\ControlledInputArabicDefaults;
 use SafeContracts\Translations\FeatureArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
+use SafeContracts\Translations\MobileAdvertisingArabicDefaults;
 use SafeContracts\Translations\NotificationCenterArabicDefaults;
 use SafeContracts\Translations\NotificationScheduleArabicDefaults;
 use SafeContracts\Translations\ProductionUxArabicDefaults;
@@ -94,6 +95,7 @@ final class Plugin
         ProductionUxArabicDefaults::register();
         MigrationRecoveryArabicDefaults::register();
         ControlledInputArabicDefaults::register();
+        MobileAdvertisingArabicDefaults::register();
         NotificationScheduleArabicDefaults::register();
         NotificationCenterArabicDefaults::register();
         RuntimeLabels::register();
