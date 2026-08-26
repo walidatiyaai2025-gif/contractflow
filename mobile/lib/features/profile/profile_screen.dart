@@ -64,9 +64,7 @@ final class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _isArabic
-                ? 'تم تحديث الصورة الشخصية.'
-                : 'Profile photo updated.',
+            _isArabic ? 'تم تحديث الصورة الشخصية.' : 'Profile photo updated.',
           ),
         ),
       );
@@ -123,9 +121,7 @@ final class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             ListTile(
               title: Text(
-                _isArabic
-                    ? 'الخصوصية والمعلومات القانونية'
-                    : 'Privacy & legal',
+                _isArabic ? 'الخصوصية والمعلومات القانونية' : 'Privacy & legal',
               ),
               subtitle: Text(
                 _isArabic
