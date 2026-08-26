@@ -49,11 +49,12 @@ function sc_att_expect(string $class, callable $fn, string $message): void
 $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_att_assert(is_callable($activate), 'attachment validation can activate plugin');
 $activate();
-sc_att_assert(Migrator::LATEST_VERSION === '1.23.0', 'plugin database contract advances through notification activity context 1.23.0');
+sc_att_assert(Migrator::LATEST_VERSION === '1.24.0', 'plugin database contract advances through notification rule scope 1.24.0');
 $schemaSql = implode("\n", $GLOBALS['sc_test_dbdelta']);
 sc_att_assert(str_contains($schemaSql, 'wp_safecontracts_entity_attachments'), 'entity attachment table is created');
 sc_att_assert(str_contains($schemaSql, 'UNIQUE KEY entity_media (entity_type, entity_id, media_id)'), 'duplicate entity/media links are prevented');
 sc_att_assert(str_contains($schemaSql, 'KEY entity_order (entity_type, entity_id, display_order, id)'), 'attachment listing has deterministic entity ordering index');
+sc_att_assert(str_contains($schemaSql, "counterparty_type varchar(16) NOT NULL DEFAULT 'all'") && str_contains($schemaSql, "financial_direction varchar(16) NOT NULL DEFAULT 'all'"), 'notification rule scope migration adds explicit counterparty and financial-direction columns');
 $querySql = implode("\n", $GLOBALS['sc_test_queries']);
 sc_att_assert(str_contains($querySql, "SELECT 'contract', contract_id, media_id"), 'existing contract attachment links are copied forward');
 sc_att_assert(str_contains($querySql, "SELECT 'collection', id, proof_media_id"), 'legacy collection proof links are copied forward');
@@ -120,14 +121,16 @@ sc_att_assert(str_contains($collectionsPage, 'enctype="multipart/form-data"') &&
 sc_att_assert(str_contains($collectionsPage, "__('Files', 'safecontracts')"), 'collection ledger exposes attachments directly in backend table');
 
 // Production at 1.20.0 must still traverse the guarded 1.21.0 attachment,
-// 1.22.0 import-errors repair, and 1.23.0 notification-context migrations in order.
+// 1.22.0 import-errors repair, 1.23.0 notification-context, and 1.24.0
+// notification-rule-scope migrations in order.
 $GLOBALS['sc_test_options'][Migrator::VERSION_OPTION] = '1.20.0';
 $GLOBALS['sc_test_dbdelta'] = [];
 $GLOBALS['sc_test_queries'] = [];
 (new Migrator())->maybeMigrate();
-sc_att_assert(($GLOBALS['sc_test_options'][Migrator::VERSION_OPTION] ?? '') === '1.23.0', 'production database 1.20.0 upgrades through 1.21.0 and 1.22.0 to latest 1.23.0');
+sc_att_assert(($GLOBALS['sc_test_options'][Migrator::VERSION_OPTION] ?? '') === '1.24.0', 'production database 1.20.0 upgrades through 1.21.0, 1.22.0 and 1.23.0 to latest 1.24.0');
 sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_dbdelta']), 'wp_safecontracts_entity_attachments'), '1.20 to latest upgrade creates attachment schema at the 1.21.0 stage');
 sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'CREATE TABLE wp_safecontracts_import_errors'), '1.20 to latest upgrade executes the 1.22.0 import-errors repair stage');
 sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_queries']), 'ADD COLUMN resource_type'), '1.20 to latest upgrade executes the 1.23.0 notification activity-context stage');
+sc_att_assert(str_contains(implode("\n", $GLOBALS['sc_test_dbdelta']), "counterparty_type varchar(16) NOT NULL DEFAULT 'all'"), '1.20 to latest upgrade executes the 1.24.0 notification-rule-scope stage');
 
 echo "SafeContracts entity attachment tests passed ({$tests} assertions).\n";
