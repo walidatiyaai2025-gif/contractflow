@@ -19,6 +19,8 @@ final class SafeContractsSession {
     required this.scope,
     required this.capabilities,
     this.displayName,
+    this.email,
+    this.phone,
     this.avatarUrl,
   });
 
@@ -28,6 +30,8 @@ final class SafeContractsSession {
   final SafeContractsDataScope scope;
   final Map<String, bool> capabilities;
   final String? displayName;
+  final String? email;
+  final String? phone;
   final String? avatarUrl;
 
   bool can(String capability) => capabilities[capability] ?? false;
@@ -75,7 +79,10 @@ final class SafeContractsSession {
       userId: userId,
       scope: scope,
       capabilities: Map<String, bool>.unmodifiable(capabilities),
-      displayName: _optionalDisplayName(data['display_name']),
+      displayName:
+          _optionalText(data['display_name'], 'session.display_name', 160),
+      email: _optionalText(data['email'], 'session.email', 254),
+      phone: _optionalText(data['phone'], 'session.phone', 64),
       avatarUrl: _optionalAvatarUrl(data['avatar_url']),
     );
   }
@@ -126,28 +133,23 @@ final class SessionController extends ChangeNotifier {
 }
 
 int _positiveInt(Object? value, String field) {
-  if (value is int && value > 0) {
-    return value;
-  }
+  if (value is int && value > 0) return value;
   if (value is String) {
     final parsed = int.tryParse(value);
-    if (parsed != null && parsed > 0) {
-      return parsed;
-    }
+    if (parsed != null && parsed > 0) return parsed;
   }
   throw FormatException('$field must be a positive integer.');
 }
 
-String? _optionalDisplayName(Object? value) {
+String? _optionalText(Object? value, String field, int maxLength) {
   if (value == null || value == '') return null;
   if (value is! String) {
-    throw const FormatException(
-        'session.display_name must be a string or null.');
+    throw FormatException('$field must be a string or null.');
   }
   final normalized = value.trim();
   if (normalized.isEmpty) return null;
-  if (normalized.length > 160) {
-    throw const FormatException('session.display_name is too long.');
+  if (normalized.length > maxLength) {
+    throw FormatException('$field is too long.');
   }
   return normalized;
 }
@@ -172,8 +174,6 @@ String? _optionalAvatarUrl(Object? value) {
 }
 
 bool _validCapabilityName(String value) {
-  if (value.isEmpty || value.length > 80) {
-    return false;
-  }
+  if (value.isEmpty || value.length > 80) return false;
   return RegExp(r'^safecontracts_[a-z0-9_]+$').hasMatch(value);
 }

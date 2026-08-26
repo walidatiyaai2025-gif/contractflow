@@ -26,11 +26,33 @@ final class NotificationsScreen extends StatefulWidget {
 
 final class _NotificationsScreenState extends State<NotificationsScreen> {
   _NotificationFilter _filter = _NotificationFilter.all;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_loadNextOnScroll);
     unawaited(widget.controller.ensureLoaded());
+  }
+
+  void _loadNextOnScroll() {
+    final page = widget.controller.currentPage;
+    if (page == null ||
+        !page.hasMore ||
+        widget.controller.state == NotificationsLoadState.loading) {
+      return;
+    }
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentAfter > 360) {
+      return;
+    }
+    unawaited(widget.controller.nextPage());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -89,6 +111,7 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
             onRefresh: controller.refresh,
             color: SafeContractsVisual.navy,
             child: ListView(
+              controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 28),
               children: [
@@ -191,7 +214,6 @@ final class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                   ),
                 const SizedBox(height: 4),
-                _PagingControls(controller: controller),
               ],
             ),
           ),
@@ -790,59 +812,6 @@ final class _RefreshWarning extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(message, style: Theme.of(context).textTheme.bodySmall),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-final class _PagingControls extends StatelessWidget {
-  const _PagingControls({required this.controller});
-
-  final NotificationsController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.scL10n;
-    final page = controller.currentPage;
-    if (page == null) return const SizedBox.shrink();
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    return SafeContractsSurface(
-      elevated: false,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 10,
-        runSpacing: 8,
-        children: [
-          OutlinedButton.icon(
-            onPressed: page.page > 1
-                ? () => unawaited(controller.previousPage())
-                : null,
-            icon: Icon(rtl ? Icons.chevron_right : Icons.chevron_left),
-            label: Text(l10n.t('Previous')),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: SafeContractsVisual.navySoft,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              l10n.pageNumber(page.page),
-              style: const TextStyle(
-                color: SafeContractsVisual.navy,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          OutlinedButton.icon(
-            onPressed:
-                page.hasMore ? () => unawaited(controller.nextPage()) : null,
-            icon: Icon(rtl ? Icons.chevron_left : Icons.chevron_right),
-            label: Text(l10n.t('Next')),
           ),
         ],
       ),

@@ -113,8 +113,6 @@ final class DashboardKpis {
     required this.remainingTotal,
     required this.overdueExposure,
     required this.collectedTotal,
-    this.currencyGroupCount = 1,
-    this.currencyCode,
   });
 
   final int contractCount;
@@ -122,48 +120,29 @@ final class DashboardKpis {
   final String remainingTotal;
   final String overdueExposure;
   final String collectedTotal;
-  final int currencyGroupCount;
-  final String? currencyCode;
-
-  bool get isMultiCurrency => currencyGroupCount > 1;
 
   factory DashboardKpis.fromData(Object? value) {
     final data = apiObjectMap(value, 'dashboard.kpis');
-    final currencyGroupCount = data['currency_group_count'] == null
-        ? 1
-        : _nonNegativeInt(
-            data['currency_group_count'],
-            'dashboard.kpis.currency_group_count',
-          );
     return DashboardKpis(
       contractCount: _nonNegativeInt(
         data['contract_count'],
         'dashboard.kpis.contract_count',
       ),
-      scheduledTotal: _dashboardMoneyText(
+      scheduledTotal: _moneyText(
         data['scheduled_total'],
         'dashboard.kpis.scheduled_total',
-        currencyGroupCount,
       ),
-      remainingTotal: _dashboardMoneyText(
+      remainingTotal: _moneyText(
         data['remaining_total'],
         'dashboard.kpis.remaining_total',
-        currencyGroupCount,
       ),
-      overdueExposure: _dashboardMoneyText(
+      overdueExposure: _moneyText(
         data['overdue_exposure'],
         'dashboard.kpis.overdue_exposure',
-        currencyGroupCount,
       ),
-      collectedTotal: _dashboardMoneyText(
+      collectedTotal: _moneyText(
         data['collected_total'],
         'dashboard.kpis.collected_total',
-        currencyGroupCount,
-      ),
-      currencyGroupCount: currencyGroupCount,
-      currencyCode: _optionalText(
-        data['currency_code'],
-        'dashboard.kpis.currency_code',
       ),
     );
   }
@@ -334,22 +313,27 @@ final class DashboardRecord {
   factory DashboardRecord.payment(Object? value) {
     final data = apiObjectMap(value, 'payments.item');
     final id = _positiveInt(data['id'], 'payment.id');
+    final status = _optionalText(data['status'], 'payment.status');
+    final original = _optionalMoneyText(
+      data['original_amount'],
+      'payment.original_amount',
+    );
+    final paid = _optionalMoneyText(data['paid_amount'], 'payment.paid_amount');
+    final remaining = _optionalMoneyText(
+      data['remaining_amount'],
+      'payment.remaining_amount',
+    );
+    final settledAmount = status == 'paid' ? (paid ?? original) : remaining;
     return DashboardRecord(
       id: id,
       type: DashboardRecordType.payment,
       title: _optionalText(data['reference'], 'payment.reference') ??
           'Payment #$id',
-      status: _optionalText(data['status'], 'payment.status'),
+      status: status,
       date: _optionalDate(data['due_date'], 'payment.due_date'),
       customerName: _counterpartyName(data, 'payment'),
-      remainingAmount: _optionalMoneyText(
-        data['remaining_amount'],
-        'payment.remaining_amount',
-      ),
-      amount: _optionalMoneyText(
-        data['original_amount'],
-        'payment.original_amount',
-      ),
+      remainingAmount: settledAmount,
+      amount: status == 'paid' ? (paid ?? original) : original,
     );
   }
 
@@ -479,20 +463,6 @@ String? _counterpartyName(Map<String, Object?> data, String fieldPrefix) {
       ) ??
       _optionalText(data['supplier_name'], '$fieldPrefix.supplier_name') ??
       _optionalText(data['customer_name'], '$fieldPrefix.customer_name');
-}
-
-String _dashboardMoneyText(
-  Object? value,
-  String field,
-  int currencyGroupCount,
-) {
-  if (value == null && currencyGroupCount > 1) {
-    // The server deliberately withholds a cross-currency grand total. The
-    // existing money formatter treats an em dash as unavailable and does not
-    // append a misleading configured currency token.
-    return '—';
-  }
-  return _moneyText(value, field);
 }
 
 String _moneyText(Object? value, String field) {

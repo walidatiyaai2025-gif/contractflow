@@ -27,10 +27,7 @@ final class SafeContractsNotification {
   factory SafeContractsNotification.fromData(Object? value) {
     final data = apiObjectMap(value, 'notification');
     final id = _positiveInt(data['id'], 'notification.id');
-    // Generic contract/direct notifications are intentionally not tied to a
-    // payment. The backend represents that legacy column as 0 while the
-    // authorized deep_link carries the actual contract/follow-up resource.
-    final paymentId = _nonNegativeInt(
+    final paymentId = _positiveInt(
       data['payment_id'],
       'notification.payment_id',
     );
@@ -50,8 +47,9 @@ final class SafeContractsNotification {
     if (data['deep_link'] != null && deepLink == null) {
       throw const FormatException('notification.deep_link is invalid.');
     }
-    if (deepLink?.destination == SafeContractsDeepLinkDestination.payments &&
-        (paymentId <= 0 || deepLink!.resourceId != paymentId)) {
+    if (deepLink != null &&
+        (deepLink.destination != SafeContractsDeepLinkDestination.payments ||
+            deepLink.resourceId != paymentId)) {
       throw const FormatException(
         'notification.deep_link does not match the authorized payment.',
       );
@@ -94,7 +92,7 @@ final class NotificationPage {
     }
 
     final meta = envelope.meta;
-    final page = _boundedInt(meta['page'], 'meta.page', 1, 5);
+    final page = _boundedInt(meta['page'], 'meta.page', 1, 1000000);
     final perPage = _boundedInt(meta['per_page'], 'meta.per_page', 1, 50);
     if (meta['scope'] != 'current_user') {
       throw const FormatException('notification scope metadata is invalid.');
@@ -119,8 +117,8 @@ final class NotificationsRepository {
     required int page,
     required int perPage,
   }) async {
-    if (page < 1 || page > 5) {
-      throw ArgumentError('Notification page must be between 1 and 5.');
+    if (page < 1 || page > 1000000) {
+      throw ArgumentError('Notification page is outside the supported range.');
     }
     if (perPage < 1 || perPage > 50) {
       throw ArgumentError('Notification page size must be between 1 and 50.');
@@ -181,17 +179,29 @@ final class NotificationsController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (page < 1 || page > 5) {
-      return;
-    }
+    if (page < 1 || page > 1000000) return;
 
-    currentPage = null;
+    final previous = currentPage;
     state = NotificationsLoadState.loading;
     errorMessage = null;
     notifyListeners();
     try {
       final nextPage = await repository.loadPage(page: page, perPage: pageSize);
-      currentPage = nextPage;
+      if (page > 1 && previous != null) {
+        final merged = <int, SafeContractsNotification>{
+          for (final item in previous.notifications) item.id: item,
+          for (final item in nextPage.notifications) item.id: item,
+        };
+        currentPage = NotificationPage(
+          notifications:
+              List<SafeContractsNotification>.unmodifiable(merged.values),
+          page: nextPage.page,
+          perPage: nextPage.perPage,
+          hasMore: nextPage.hasMore,
+        );
+      } else {
+        currentPage = nextPage;
+      }
       _readIds.addAll(
         nextPage.notifications
             .where((item) => item.isRead)
@@ -199,18 +209,18 @@ final class NotificationsController extends ChangeNotifier {
       );
       state = NotificationsLoadState.ready;
     } on SafeContractsApiException catch (error) {
-      currentPage = null;
+      currentPage = previous;
       errorMessage = error.message;
       state = NotificationsLoadState.error;
     } on Object catch (error) {
-      currentPage = null;
+      currentPage = previous;
       errorMessage = error.toString();
       state = NotificationsLoadState.error;
     }
     notifyListeners();
   }
 
-  Future<void> refresh() => loadPage(currentPage?.page ?? 1);
+  Future<void> refresh() => loadPage(1);
 
   Future<void> previousPage() async {
     final page = currentPage?.page ?? 1;
@@ -221,8 +231,36 @@ final class NotificationsController extends ChangeNotifier {
 
   Future<void> nextPage() async {
     final page = currentPage;
-    if (page != null && page.hasMore && page.page < 5) {
+    if (page != null && page.hasMore) {
       await loadPage(page.page + 1);
+    }
+  }
+
+  Future<void> refreshSilently() async {
+    if (!canAccess) return;
+    final previous = currentPage;
+    try {
+      final first = await repository.loadPage(page: 1, perPage: pageSize);
+      if (previous != null && previous.page > 1) {
+        final merged = <int, SafeContractsNotification>{
+          for (final item in first.notifications) item.id: item,
+          for (final item in previous.notifications) item.id: item,
+        };
+        currentPage = NotificationPage(
+          notifications:
+              List<SafeContractsNotification>.unmodifiable(merged.values),
+          page: previous.page,
+          perPage: first.perPage,
+          hasMore: previous.hasMore,
+        );
+      } else {
+        currentPage = first;
+      }
+      state = NotificationsLoadState.ready;
+      errorMessage = null;
+      notifyListeners();
+    } on Object {
+      // Preserve last good snapshot during background refresh failures.
     }
   }
 
@@ -259,18 +297,6 @@ int _positiveInt(Object? value, String field) {
   };
   if (parsed == null || parsed <= 0) {
     throw FormatException('$field must be a positive integer.');
-  }
-  return parsed;
-}
-
-int _nonNegativeInt(Object? value, String field) {
-  final parsed = switch (value) {
-    final int value => value,
-    final String value => int.tryParse(value),
-    _ => null,
-  };
-  if (parsed == null || parsed < 0) {
-    throw FormatException('$field must be a non-negative integer.');
   }
   return parsed;
 }
