@@ -41,7 +41,8 @@ void main() {
     controller.dispose();
   });
 
-  test('SC-P9-010 paging and order changes remain server-bound', () async {
+  test('SC-P9-010 paging accumulates rows and order changes remain server-bound',
+      () async {
     final transport = FakeApiTransport(_customerHandler);
     final controller = CustomersController(
       repository: CustomersRepository(_client(transport)),
@@ -53,7 +54,8 @@ void main() {
     await controller.nextPage();
 
     expect(controller.currentPage?.page, 2);
-    expect(controller.currentPage?.customers.single.name, 'Beta');
+    expect(controller.currentPage?.customers, hasLength(2));
+    expect(controller.currentPage?.customers.last.name, 'Beta');
     expect(controller.currentPage?.hasMore, isFalse);
 
     await controller.setOrder('desc');
