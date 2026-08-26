@@ -19,7 +19,7 @@ $assert = static function (bool $condition, string $message) use (&$tests): void
 };
 
 $assert(str_contains($migrator, "use SafeContracts\\Database\\Migrations\\Migration0023ImportErrorsRepair;"), 'Migrator imports the schema repair migration');
-$assert(str_contains($migrator, "public const LATEST_VERSION = '1.23.0';"), 'database latest version advances beyond the 1.22.0 repair to 1.23.0');
+$assert(str_contains($migrator, "public const LATEST_VERSION = '1.24.0';"), 'database latest version advances beyond the repair path through current 1.24.0');
 $assert(str_contains($migrator, "'1.22.0' => Migration0023ImportErrorsRepair::class"), 'repair migration remains registered at 1.22.0');
 $assert(str_contains($repair, 'implements ProductionMigration'), 'repair is governed as a production migration');
 $assert(str_contains($repair, 'safecontracts_import_runs'), 'repair requires the existing import-runs schema');
@@ -31,8 +31,9 @@ $assert(str_contains($workflow, 'Verify historical import-errors schema repair')
 $assert(str_contains($workflow, 'schema-repair-runtime.php'), 'visual QA invokes the repair runtime script');
 $assert(str_contains($runtime, "Migrator::VERSION_OPTION, '1.21.0'"), 'runtime reproduces the historical 1.21.0 database state');
 $assert(str_contains($runtime, 'DROP TABLE IF EXISTS {$errors}'), 'runtime reproduces the exact missing-table drift');
-$assert(str_contains($runtime, "=== '1.23.0'"), 'runtime requires the full repair path to advance through 1.22.0 to current 1.23.0');
-$assert(str_contains($runtime, "'resource_type', 'resource_id', 'contract_id'"), 'runtime also verifies the additive 1.23.0 notification context after the 1.22.0 repair');
-$assert(str_contains($demo, "'safecontracts_import_errors'"), 'demo generator continues to require all 22 real tables instead of bypassing the missing table');
+$assert(str_contains($runtime, "=== '1.24.0'"), 'runtime requires the full repair path to advance through 1.22.0/1.23.0 to current 1.24.0');
+$assert(str_contains($runtime, "'resource_type', 'resource_id', 'contract_id'"), 'runtime verifies the additive 1.23.0 notification activity context after the 1.22.0 repair');
+$assert(str_contains($runtime, "'counterparty_type', 'financial_direction'"), 'runtime verifies the additive 1.24.0 notification rule scope after the repair path');
+$assert(str_contains($demo, "'safecontracts_import_errors'"), 'demo generator continues to require all real tables instead of bypassing the missing table');
 
 echo "SafeContracts demo import-errors schema repair regression passed ({$tests} assertions).\n";
