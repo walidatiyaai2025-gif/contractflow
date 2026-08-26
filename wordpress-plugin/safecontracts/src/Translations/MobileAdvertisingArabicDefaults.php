@@ -8,6 +8,15 @@ final class MobileAdvertisingArabicDefaults
 {
     /** @var array<string,string> */
     private const MAP = [
+        'Mobile Advertising' => 'إعلانات الموبايل',
+        'Mobile advertising configuration is invalid. Review the provider identifiers.' => 'إعدادات إعلانات الموبايل غير صالحة. راجع معرّفات مزودي الإعلانات.',
+        'Mobile advertising configuration saved.' => 'تم حفظ إعدادات إعلانات الموبايل.',
+        'Mobile monetization' => 'تحقيق الدخل من تطبيق الموبايل',
+        'Save Mobile Advertising' => 'حفظ إعدادات إعلانات الموبايل',
+        'Switch between Google AdMob and AppLovin MAX remotely. Advertising stays disabled by default and production identifiers remain server-managed.' => 'بدّل عن بُعد بين Google AdMob وAppLovin MAX. تظل الإعلانات معطلة افتراضيًا وتبقى معرّفات الإنتاج مُدارة من الخادم.',
+        'The AdMob App ID remains part of the signed Android build. Never paste AppLovin management/API keys here; only the mobile SDK key is accepted.' => 'يبقى معرّف تطبيق AdMob جزءًا من حزمة Android الموقعة. لا تلصق مفاتيح إدارة أو API الخاصة بـAppLovin هنا؛ يُقبل فقط مفتاح SDK للموبايل.',
+        'Use these public URLs in Google Play Console and the advertising-provider privacy configuration.' => 'استخدم هذه الروابط العامة في Google Play Console وإعدادات الخصوصية لدى مزود الإعلانات.',
+        'You do not have permission to manage mobile advertising.' => 'ليست لديك صلاحية إدارة إعلانات الموبايل.',
         'Advertising (Google AdMob)' => 'الإعلانات (Google AdMob)',
         'Advertising providers' => 'مزودو الإعلانات',
         'Advertising provider' => 'مزود الإعلانات',
