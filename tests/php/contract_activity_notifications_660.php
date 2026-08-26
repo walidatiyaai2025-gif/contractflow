@@ -83,8 +83,15 @@ foreach ([
 }
 
 $migrator = $read('wordpress-plugin/safecontracts/src/Database/Migrator.php');
-$assertContains("public const LATEST_VERSION = '1.23.0';", $migrator, 'notification activity context must be a forward-only migration');
-$assertContains('Migration0024NotificationActivityContext::class', $migrator, 'notification activity migration must be registered');
+$assertContains("public const LATEST_VERSION = '1.24.0';", $migrator, 'notification activity context must remain in the current forward-only migration chain');
+$assertContains("'1.23.0' => Migration0024NotificationActivityContext::class", $migrator, 'notification activity migration must remain registered at 1.23.0');
+$assertContains("'1.24.0' => Migration0025NotificationRuleScope::class", $migrator, 'subsequent notification-rule scope migration must advance the chain without replacing activity context');
+
+$activityMigration = $read('wordpress-plugin/safecontracts/src/Database/Migrations/Migration0024NotificationActivityContext.php');
+$assertContains('implements ProductionMigration', $activityMigration, 'notification activity context must remain governed as a production migration');
+foreach (['resource_type', 'resource_id', 'contract_id', 'resource_lookup'] as $marker) {
+    $assertContains($marker, $activityMigration, 'notification activity migration must preserve delivery context schema: ' . $marker);
+}
 
 $plugin = $read('wordpress-plugin/safecontracts/src/Plugin.php');
 $assertContains('ContractActivityNotificationDispatcher::register();', $plugin, 'activity dispatcher must be wired at plugin boot');
