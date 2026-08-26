@@ -95,6 +95,8 @@ final class Migrator
         $current = (string) get_option(self::VERSION_OPTION, '0.0.0');
         $this->guard->assertDatabaseCompatible($current, $this->latestVersion);
 
+        // Keep the released P10 production invariant explicit while retaining
+        // an injectable latest version for isolated migration-guard tests.
         $needsMigration = $this->latestVersion === self::LATEST_VERSION
             ? version_compare($current, self::LATEST_VERSION, '<')
             : version_compare($current, $this->latestVersion, '<');
@@ -120,6 +122,8 @@ final class Migrator
         }
 
         $this->guard->withLock(function () use ($wpdb, &$current): void {
+            // Re-read after acquiring the single-writer lock in case another
+            // request completed the migration immediately before this one.
             $current = (string) get_option(self::VERSION_OPTION, '0.0.0');
             $this->guard->assertDatabaseCompatible($current, $this->latestVersion);
 
