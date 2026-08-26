@@ -28,13 +28,14 @@ use SafeContracts\Database\Migrations\Migration0021ProductionBaseline;
 use SafeContracts\Database\Migrations\Migration0022EntityAttachments;
 use SafeContracts\Database\Migrations\Migration0023ImportErrorsRepair;
 use SafeContracts\Database\Migrations\Migration0024NotificationActivityContext;
+use SafeContracts\Database\Migrations\Migration0025NotificationRuleScope;
 use RuntimeException;
 use Throwable;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.23.0';
+    public const LATEST_VERSION = '1.24.0';
 
     /**
      * All migrations introduced after this already-released baseline must use
@@ -68,6 +69,7 @@ final class Migrator
         '1.21.0' => Migration0022EntityAttachments::class,
         '1.22.0' => Migration0023ImportErrorsRepair::class,
         '1.23.0' => Migration0024NotificationActivityContext::class,
+        '1.24.0' => Migration0025NotificationRuleScope::class,
     ];
 
     /** @var array<string, class-string<Migration>> */
@@ -93,8 +95,6 @@ final class Migrator
         $current = (string) get_option(self::VERSION_OPTION, '0.0.0');
         $this->guard->assertDatabaseCompatible($current, $this->latestVersion);
 
-        // Keep the released P10 production invariant explicit while retaining
-        // an injectable latest version for isolated migration-guard tests.
         $needsMigration = $this->latestVersion === self::LATEST_VERSION
             ? version_compare($current, self::LATEST_VERSION, '<')
             : version_compare($current, $this->latestVersion, '<');
@@ -120,8 +120,6 @@ final class Migrator
         }
 
         $this->guard->withLock(function () use ($wpdb, &$current): void {
-            // Re-read after acquiring the single-writer lock in case another
-            // request completed the migration immediately before this one.
             $current = (string) get_option(self::VERSION_OPTION, '0.0.0');
             $this->guard->assertDatabaseCompatible($current, $this->latestVersion);
 
