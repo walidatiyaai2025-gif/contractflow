@@ -27,7 +27,7 @@ final class SafeContractsNotification {
   factory SafeContractsNotification.fromData(Object? value) {
     final data = apiObjectMap(value, 'notification');
     final id = _positiveInt(data['id'], 'notification.id');
-    final paymentId = _positiveInt(
+    final paymentId = _nonNegativeInt(
       data['payment_id'],
       'notification.payment_id',
     );
@@ -48,10 +48,9 @@ final class SafeContractsNotification {
       throw const FormatException('notification.deep_link is invalid.');
     }
     if (deepLink != null &&
-        (deepLink.destination != SafeContractsDeepLinkDestination.payments ||
-            deepLink.resourceId != paymentId)) {
+        !_notificationDeepLinkMatches(data, paymentId, deepLink)) {
       throw const FormatException(
-        'notification.deep_link does not match the authorized payment.',
+        'notification.deep_link does not match the authorized resource.',
       );
     }
 
@@ -289,6 +288,40 @@ final class NotificationsController extends ChangeNotifier {
   }
 }
 
+bool _notificationDeepLinkMatches(
+  Map<String, Object?> data,
+  int paymentId,
+  SafeContractsDeepLink deepLink,
+) {
+  final rawResourceType = data['resource_type'];
+  if (rawResourceType != null && rawResourceType is! String) {
+    return false;
+  }
+  final resourceType = rawResourceType is String
+      ? rawResourceType.trim().toLowerCase()
+      : '';
+  final rawResourceId = data['resource_id'];
+  final resourceId = _optionalPositiveInt(rawResourceId);
+  if (rawResourceId != null && resourceId == null) {
+    return false;
+  }
+
+  return switch (deepLink.destination) {
+    SafeContractsDeepLinkDestination.payments =>
+      paymentId > 0 &&
+          deepLink.resourceId == paymentId &&
+          (resourceType.isEmpty ||
+              (resourceType == 'payment' &&
+                  (resourceId == null || resourceId == paymentId))),
+    SafeContractsDeepLinkDestination.contracts =>
+      resourceType == 'contract' && resourceId == deepLink.resourceId,
+    SafeContractsDeepLinkDestination.followUps =>
+      resourceType == 'followup' && resourceId == deepLink.resourceId,
+    SafeContractsDeepLinkDestination.customers =>
+      resourceType == 'customer' && resourceId == deepLink.resourceId,
+  };
+}
+
 int _positiveInt(Object? value, String field) {
   final parsed = switch (value) {
     final int value => value,
@@ -299,6 +332,28 @@ int _positiveInt(Object? value, String field) {
     throw FormatException('$field must be a positive integer.');
   }
   return parsed;
+}
+
+int _nonNegativeInt(Object? value, String field) {
+  final parsed = switch (value) {
+    final int value => value,
+    final String value => int.tryParse(value),
+    _ => null,
+  };
+  if (parsed == null || parsed < 0) {
+    throw FormatException('$field must be a non-negative integer.');
+  }
+  return parsed;
+}
+
+int? _optionalPositiveInt(Object? value) {
+  if (value == null) return null;
+  final parsed = switch (value) {
+    final int value => value,
+    final String value => int.tryParse(value),
+    _ => null,
+  };
+  return parsed != null && parsed > 0 ? parsed : null;
 }
 
 int _boundedInt(Object? value, String field, int minimum, int maximum) {
