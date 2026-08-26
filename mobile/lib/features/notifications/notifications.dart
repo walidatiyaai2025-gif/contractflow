@@ -297,9 +297,8 @@ bool _notificationDeepLinkMatches(
   if (rawResourceType != null && rawResourceType is! String) {
     return false;
   }
-  final resourceType = rawResourceType is String
-      ? rawResourceType.trim().toLowerCase()
-      : '';
+  final resourceType =
+      rawResourceType is String ? rawResourceType.trim().toLowerCase() : '';
   final rawResourceId = data['resource_id'];
   final resourceId = _optionalPositiveInt(rawResourceId);
   if (rawResourceId != null && resourceId == null) {
@@ -307,12 +306,11 @@ bool _notificationDeepLinkMatches(
   }
 
   return switch (deepLink.destination) {
-    SafeContractsDeepLinkDestination.payments =>
-      paymentId > 0 &&
-          deepLink.resourceId == paymentId &&
-          (resourceType.isEmpty ||
-              (resourceType == 'payment' &&
-                  (resourceId == null || resourceId == paymentId))),
+    SafeContractsDeepLinkDestination.payments => paymentId > 0 &&
+        deepLink.resourceId == paymentId &&
+        (resourceType.isEmpty ||
+            (resourceType == 'payment' &&
+                (resourceId == null || resourceId == paymentId))),
     SafeContractsDeepLinkDestination.contracts =>
       resourceType == 'contract' && resourceId == deepLink.resourceId,
     SafeContractsDeepLinkDestination.followUps =>
