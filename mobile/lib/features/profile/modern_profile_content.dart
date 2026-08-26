@@ -73,9 +73,7 @@ final class ModernProfileContent extends StatelessWidget {
                     onPressed: onPrivacyLegal,
                     icon: const Icon(Icons.shield_outlined),
                     label: Text(
-                      ar
-                          ? 'الخصوصية والمعلومات القانونية'
-                          : 'Privacy & legal',
+                      ar ? 'الخصوصية والمعلومات القانونية' : 'Privacy & legal',
                     ),
                   ),
                 ),
