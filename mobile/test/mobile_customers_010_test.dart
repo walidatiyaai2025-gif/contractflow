@@ -41,7 +41,8 @@ void main() {
     controller.dispose();
   });
 
-  test('SC-P9-010 paging accumulates rows and order changes remain server-bound',
+  test(
+      'SC-P9-010 paging accumulates rows and order changes remain server-bound',
       () async {
     final transport = FakeApiTransport(_customerHandler);
     final controller = CustomersController(
