@@ -12,9 +12,9 @@ final class ModernProfileContent extends StatelessWidget {
     required this.onLanguageChanged,
     required this.onLogout,
     required this.onUserGuide,
-    required this.avatarUrl,
-    required this.avatarUploading,
-    required this.onAvatarUpload,
+    this.avatarUrl,
+    this.avatarUploading = false,
+    this.onAvatarUpload,
     super.key,
   });
 
@@ -27,7 +27,7 @@ final class ModernProfileContent extends StatelessWidget {
   final VoidCallback onUserGuide;
   final String? avatarUrl;
   final bool avatarUploading;
-  final VoidCallback onAvatarUpload;
+  final VoidCallback? onAvatarUpload;
 
   @override
   Widget build(BuildContext context) {
