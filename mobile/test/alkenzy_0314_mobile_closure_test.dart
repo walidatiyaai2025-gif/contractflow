@@ -81,6 +81,17 @@ void main() {
       );
     });
 
+    test('profile displays the installed APK version instead of stale hard-coded text',
+        () {
+      final profile = File('lib/features/profile/modern_profile_content.dart')
+          .readAsStringSync();
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      expect(profile, contains('PackageInfo.fromPlatform()'));
+      expect(profile, contains("'\${package.version}+\${package.buildNumber}'"));
+      expect(profile, isNot(contains("static const appVersion = '0.3.12+17'")));
+      expect(pubspec, contains('version: 0.3.15+20'));
+    });
+
     test('PDF report is premium Arabic RTL rather than English-header output',
         () {
       final report = File('lib/features/export/mobile_report_export.dart')
