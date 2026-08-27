@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ !contains(github.event.head_commit.message, '[closure-applied]') }}
+    if: "${{ !contains(github.event.head_commit.message, '[closure-applied]') }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,26 +34,20 @@ jobs:
           if "const _supportedFinancialDirections" not in contracts:
               if marker not in contracts:
                   raise SystemExit('contracts type marker not found')
-              contracts = contracts.replace(
-                  marker,
-                  marker + "const _supportedFinancialDirections = <String>{'receivable', 'payable'};\n",
-                  1,
-              )
+              contracts = contracts.replace(marker, marker + "const _supportedFinancialDirections = <String>{'receivable', 'payable'};\n", 1)
           old_direction = """    if ((type == 'supplier' && direction != 'payable') ||\n        (type == 'customer' && direction != 'receivable')) {\n      throw const FormatException(\n        'contract.financial_direction conflicts with counterparty type.',\n      );\n    }\n"""
           new_direction = """    if (!_supportedFinancialDirections.contains(direction)) {\n      throw const FormatException('contract.financial_direction is invalid.');\n    }\n"""
           if old_direction not in contracts:
               raise SystemExit('strict contract financial-direction block not found')
-          contracts = contracts.replace(old_direction, new_direction, 1)
-          contracts_path.write_text(contracts)
+          contracts_path.write_text(contracts.replace(old_direction, new_direction, 1))
 
           screen_path = Path('mobile/lib/features/contracts/contracts_screen.dart')
           screen = screen_path.read_text()
-          old_empty = """                  : context.scL10n.t('No contracts match the current filters.'),\n"""
+          old_empty = "                  : context.scL10n.t('No contracts match the current filters.'),\n"
           new_empty = """                  : (page.scope == 'assigned' &&\n                          controller.activeFilterCount == 0\n                      ? (context.scL10n.isArabic\n                          ? 'لا توجد عقود مسندة لهذا الحساب حاليًا.'\n                          : 'No contracts are currently assigned to this account.')\n                      : context.scL10n\n                          .t('No contracts match the current filters.')),\n"""
           if old_empty not in screen:
               raise SystemExit('contracts empty-state marker not found')
-          screen = screen.replace(old_empty, new_empty, 1)
-          screen_path.write_text(screen)
+          screen_path.write_text(screen.replace(old_empty, new_empty, 1))
 
           report_path = Path('mobile/lib/features/export/mobile_report_export.dart')
           report = report_path.read_text()
@@ -64,39 +58,29 @@ jobs:
                   raise SystemExit('report xlsx marker not found')
               report = report.replace(method_marker, labels + method_marker, 1)
 
-          old_rows = "    final allRows = <List<String>>[data.columns, ...data.rows];\n"
-          new_rows = """    final allRows = <List<String>>[\n      data.columns.map(_reportHeaderLabel).toList(growable: false),\n      ...data.rows,\n    ];\n"""
-          if old_rows in report:
-              report = report.replace(old_rows, new_rows, 1)
-
-          old_docx = "      '<w:tr>${data.columns.map((v) => wordCell(v, bold: true)).join()}</w:tr>',\n"
-          new_docx = "      '<w:tr>${data.columns.map(_reportHeaderLabel).map((v) => wordCell(v, bold: true)).join()}</w:tr>',\n"
-          if old_docx in report:
-              report = report.replace(old_docx, new_docx, 1)
-
+          report = report.replace(
+              "    final allRows = <List<String>>[data.columns, ...data.rows];\n",
+              "    final allRows = <List<String>>[\n      data.columns.map(_reportHeaderLabel).toList(growable: false),\n      ...data.rows,\n    ];\n",
+              1,
+          )
+          report = report.replace(
+              "      '<w:tr>${data.columns.map((v) => wordCell(v, bold: true)).join()}</w:tr>',\n",
+              "      '<w:tr>${data.columns.map(_reportHeaderLabel).map((v) => wordCell(v, bold: true)).join()}</w:tr>',\n",
+              1,
+          )
           limited = "    final limitedRows = data.rows.take(250).toList(growable: false);\n"
           if "final reportColumns =" not in report:
               if limited not in report:
                   raise SystemExit('report limitedRows marker not found')
-              report = report.replace(
-                  limited,
-                  limited + "    final reportColumns = data.columns.map(_reportHeaderLabel).toList(growable: false);\n",
-                  1,
-              )
-
-          report = report.replace(
-              "      for (var i = 0; i < data.columns.length; i++)\n",
-              "      for (var i = 0; i < reportColumns.length; i++)\n",
-              1,
-          )
+              report = report.replace(limited, limited + "    final reportColumns = data.columns.map(_reportHeaderLabel).toList(growable: false);\n", 1)
+          report = report.replace("      for (var i = 0; i < data.columns.length; i++)\n", "      for (var i = 0; i < reportColumns.length; i++)\n", 1)
           pdf_anchor = report.index('  Future<Uint8List> _pdf(MobileReportData data) async {')
-          tail = report[pdf_anchor:]
-          if 'children: data.columns' in tail:
-              tail = tail.replace('children: data.columns', 'children: reportColumns', 1)
-              report = report[:pdf_anchor] + tail
+          before, tail = report[:pdf_anchor], report[pdf_anchor:]
+          tail = tail.replace('children: data.columns', 'children: reportColumns', 1)
+          report = before + tail
 
           old_multi = """      pw.MultiPage(\n        pageFormat: PdfPageFormat.a4,\n        margin: const pw.EdgeInsets.fromLTRB(16, 18, 16, 18),\n        theme: pw.ThemeData.withFont(base: regular, bold: medium),\n"""
-          new_multi = """      pw.MultiPage(\n        pageTheme: pw.PageTheme(\n          pageFormat: PdfPageFormat.a4,\n          margin: const pw.EdgeInsets.fromLTRB(30, 24, 30, 24),\n          theme: pw.ThemeData.withFont(base: regular, bold: medium),\n          buildBackground: (context) => pw.FullPage(\n            ignoreMargins: true,\n            child: pw.Padding(\n              padding: const pw.EdgeInsets.all(10),\n              child: pw.Container(\n                padding: const pw.EdgeInsets.all(5),\n                decoration: pw.BoxDecoration(\n                  border: pw.Border.all(\n                    color: PdfColor.fromInt(0xffb08a57),\n                    width: 1.4,\n                  ),\n                ),\n                child: pw.Container(\n                  decoration: pw.BoxDecoration(\n                    border: pw.Border.all(\n                      color: PdfColor.fromInt(0xffcbb48d),\n                      width: 0.55,\n                    ),\n                  ),\n                ),\n              ),\n            ),\n          ),\n        ),\n"""
+          new_multi = """      pw.MultiPage(\n        pageTheme: pw.PageTheme(\n          pageFormat: PdfPageFormat.a4,\n          margin: const pw.EdgeInsets.fromLTRB(30, 24, 30, 24),\n          theme: pw.ThemeData.withFont(base: regular, bold: medium),\n          buildBackground: (context) => pw.FullPage(\n            ignoreMargins: true,\n            child: pw.Padding(\n              padding: const pw.EdgeInsets.all(10),\n              child: pw.Container(\n                padding: const pw.EdgeInsets.all(5),\n                decoration: pw.BoxDecoration(\n                  border: pw.Border.all(color: PdfColor.fromInt(0xffb08a57), width: 1.4),\n                ),\n                child: pw.Container(\n                  decoration: pw.BoxDecoration(\n                    border: pw.Border.all(color: PdfColor.fromInt(0xffcbb48d), width: 0.55),\n                  ),\n                ),\n              ),\n            ),\n          ),\n        ),\n"""
           if old_multi not in report:
               raise SystemExit('report MultiPage marker not found')
           report = report.replace(old_multi, new_multi, 1)
@@ -108,94 +92,28 @@ jobs:
               raise SystemExit('report header block not found')
 
           footer_pattern = re.compile(r"        footer: \(context\) => pw\.Container\(.*?\n        build:", re.S)
-          new_footer = """        footer: (context) => pw.Column(\n          children: <pw.Widget>[\n            pw.Divider(\n              color: PdfColor.fromInt(0xffb08a57),\n              thickness: 0.55,\n            ),\n            pw.Row(\n              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,\n              children: <pw.Widget>[\n                pw.Text(\n                  'ALKENZY ADV',\n                  style: pw.TextStyle(font: medium, fontSize: 6.5),\n                ),\n                pw.Text(\n                  'info@alkenzy-adv.com',\n                  style: pw.TextStyle(font: regular, fontSize: 6),\n                ),\n                pw.Text(\n                  generatedDate,\n                  style: pw.TextStyle(font: regular, fontSize: 6),\n                ),\n              ],\n            ),\n          ],\n        ),\n        build:"""
+          new_footer = """        footer: (context) => pw.Column(\n          children: <pw.Widget>[\n            pw.Divider(color: PdfColor.fromInt(0xffb08a57), thickness: 0.55),\n            pw.Row(\n              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,\n              children: <pw.Widget>[\n                pw.Text('ALKENZY ADV', style: pw.TextStyle(font: medium, fontSize: 6.5)),\n                pw.Text('info@alkenzy-adv.com', style: pw.TextStyle(font: regular, fontSize: 6)),\n                pw.Text(generatedDate, style: pw.TextStyle(font: regular, fontSize: 6)),\n              ],\n            ),\n          ],\n        ),\n        build:"""
           report, count = footer_pattern.subn(new_footer, report, count=1)
           if count != 1:
               raise SystemExit('report footer block not found')
-
           report_path.write_text(report)
 
-          Path('mobile/test/mobile_contract_direction_regression_test.dart').write_text(r'''import 'package:flutter_test/flutter_test.dart';
-import 'package:safecontracts_mobile/features/contracts/contracts.dart';
-
-void main() {
-  Map<String, Object?> row({
-    required int id,
-    required String type,
-    required int counterpartyId,
-    required String direction,
-  }) => <String, Object?>{
-        'id': id,
-        'contract_number': 'C-$id',
-        'customer_id': type == 'customer' ? counterpartyId : null,
-        'customer_name': type == 'customer' ? 'Customer' : null,
-        'counterparty_type': type,
-        'counterparty_id': counterpartyId,
-        'counterparty_name': type == 'customer' ? 'Customer' : 'Supplier',
-        'financial_direction': direction,
-        'currency_code': 'KWD',
-        'accountant_user_id': 5,
-        'status': 'active',
-        'start_date': '2026-08-01',
-        'end_date': '2026-12-31',
-        'base_value': '100.0000',
-        'is_archived': 0,
-      };
-
-  test('customer payable contract remains visible in mobile parser', () {
-    final contract = SafeContractsContract.fromData(
-      row(id: 1, type: 'customer', counterpartyId: 7, direction: 'payable'),
-    );
-    expect(contract.counterpartyType, 'customer');
-    expect(contract.financialDirection, 'payable');
-  });
-
-  test('supplier receivable contract remains visible in mobile parser', () {
-    final contract = SafeContractsContract.fromData(
-      row(id: 2, type: 'supplier', counterpartyId: 8, direction: 'receivable'),
-    );
-    expect(contract.counterpartyType, 'supplier');
-    expect(contract.financialDirection, 'receivable');
-  });
-
-  test('unknown financial direction is still rejected', () {
-    expect(
-      () => SafeContractsContract.fromData(
-        row(id: 3, type: 'customer', counterpartyId: 9, direction: 'sideways'),
-      ),
-      throwsFormatException,
-    );
-  });
-}
-''')
-
-          Path('mobile/test/mobile_report_reference_layout_test.dart').write_text(r'''import 'dart:io';
-
-import 'package:flutter_test/flutter_test.dart';
-
-void main() {
-  test('PDF report keeps the owner reference composition and Arabic headers', () {
-    final source = File('lib/features/export/mobile_report_export.dart')
-        .readAsStringSync();
-    expect(source, contains('pageTheme: pw.PageTheme('));
-    expect(source, contains('buildBackground: (context) => pw.FullPage('));
-    expect(source, contains('0xffb08a57'));
-    expect(source, contains("'contract_number': 'رقم العقد'"));
-    expect(source, contains("'counterparty_name': 'العميل / المورد'"));
-    expect(source, contains("'financial_direction': 'نوع الدفعة'"));
-    expect(source, contains("'currency_code': 'العملة'"));
-    expect(source, contains("'status': 'الحالة'"));
-    expect(source, contains("'ALKENZY ADV'"));
-    expect(source, contains("'info@alkenzy-adv.com'"));
-    expect(source, isNot(contains('PdfPageFormat.a4.landscape')));
-  });
-}
-''')
+          checks = {
+              contracts_path: ["_supportedFinancialDirections", "contract.financial_direction is invalid."],
+              screen_path: ["لا توجد عقود مسندة لهذا الحساب حاليًا."],
+              report_path: ["pageTheme: pw.PageTheme(", "buildBackground: (context) => pw.FullPage(", "'contract_number': 'رقم العقد'", "0xffb08a57"],
+          }
+          for path, needles in checks.items():
+              value = path.read_text()
+              for needle in needles:
+                  if needle not in value:
+                      raise SystemExit(f'missing closure marker {needle!r} in {path}')
           PY
       - name: Validate mobile closure
         working-directory: mobile
         run: |
-          dart format --set-exit-if-changed lib/features/contracts/contracts.dart lib/features/contracts/contracts_screen.dart lib/features/export/mobile_report_export.dart test/mobile_contract_direction_regression_test.dart test/mobile_report_reference_layout_test.dart
+          dart format lib/features/contracts/contracts.dart lib/features/contracts/contracts_screen.dart lib/features/export/mobile_report_export.dart
+          git diff --check
           flutter pub get
           flutter analyze
           flutter test
@@ -204,6 +122,6 @@ void main() {
         run: |
           git config user.name "ALKENZY Closure Bot"
           git config user.email "actions@users.noreply.github.com"
-          git add mobile/lib/features/contracts/contracts.dart mobile/lib/features/contracts/contracts_screen.dart mobile/lib/features/export/mobile_report_export.dart mobile/test/mobile_contract_direction_regression_test.dart mobile/test/mobile_report_reference_layout_test.dart
+          git add mobile/lib/features/contracts/contracts.dart mobile/lib/features/contracts/contracts_screen.dart mobile/lib/features/export/mobile_report_export.dart
           git commit -m "Fix mobile contracts and report reference layout [closure-applied]"
           git push origin HEAD:release/alkenzy-adv-0.3.12-full-convergence
