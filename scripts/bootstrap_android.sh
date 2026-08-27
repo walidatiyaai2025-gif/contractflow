@@ -8,13 +8,14 @@ FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
 ALKENZY_APP_ASSET="$ROOT/mobile/assets/brand/alkenzy_adv.png"
 ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.png"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
+APPLOVIN_PATCHER="$ROOT/scripts/patch_applovin_compile_sdk.py"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE" "$APPLOVIN_PATCHER"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
@@ -242,4 +243,9 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "Alkenzy ADV Android scaffold bootstrapped with launcher identity, biometric login, explicit document Save As, high-importance notifications, release signing, INTERNET, and Firebase contracts."
+# AppLovin MAX 4.6.4 still declares compileSdk 31 in its cached Android
+# plugin. Patch it immediately after Flutter materializes the dependency index
+# so every build path (Quality Gates, release APK, AAB) compiles against API 36.
+python3 "$APPLOVIN_PATCHER"
+
+echo "Alkenzy ADV Android scaffold bootstrapped with launcher identity, biometric login, explicit document Save As, high-importance notifications, release signing, INTERNET, Firebase contracts, and AppLovin API 36 compatibility."
