@@ -62,9 +62,10 @@ jobs:
           find wordpress-plugin/safecontracts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null
           python3 scripts/package_plugin.py build --output dist/SafeContracts-0.3.12.zip
           python3 scripts/package_plugin.py check dist/SafeContracts-0.3.12.zip
-          unzip -l dist/SafeContracts-0.3.12.zip | grep -Fq 'assets/sounds/banknote-counter-106014.mp3'
-          unzip -l dist/SafeContracts-0.3.12.zip | grep -Fq 'assets/sounds/cashier-quotka-chingquot-sound-effect-129698.mp3'
-          unzip -l dist/SafeContracts-0.3.12.zip | grep -Fq 'assets/sounds/universfield-coin-drop-229314.mp3'
+          unzip -Z1 dist/SafeContracts-0.3.12.zip > "$RUNNER_TEMP/alkenzy-plugin-files.txt"
+          grep -Fq 'assets/sounds/banknote-counter-106014.mp3' "$RUNNER_TEMP/alkenzy-plugin-files.txt"
+          grep -Fq 'assets/sounds/cashier-quotka-chingquot-sound-effect-129698.mp3' "$RUNNER_TEMP/alkenzy-plugin-files.txt"
+          grep -Fq 'assets/sounds/universfield-coin-drop-229314.mp3' "$RUNNER_TEMP/alkenzy-plugin-files.txt"
 
       - name: Flutter quality
         working-directory: mobile
@@ -116,10 +117,12 @@ jobs:
           set -euo pipefail
           APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
           test -s "$APK"
-          unzip -Z1 "$APK" > "$RUNNER_TEMP/alkenzy-apk-files.txt"
-          grep -Fxq 'res/raw/banknote_counter.mp3' "$RUNNER_TEMP/alkenzy-apk-files.txt"
-          grep -Fxq 'res/raw/cashier_ka_ching.mp3' "$RUNNER_TEMP/alkenzy-apk-files.txt"
-          grep -Fxq 'res/raw/coin_drop.mp3' "$RUNNER_TEMP/alkenzy-apk-files.txt"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -n "$AAPT"
+          "$AAPT" dump resources "$APK" > "$RUNNER_TEMP/alkenzy-apk-resources.txt"
+          grep -Fq 'raw/banknote_counter' "$RUNNER_TEMP/alkenzy-apk-resources.txt"
+          grep -Fq 'raw/cashier_ka_ching' "$RUNNER_TEMP/alkenzy-apk-resources.txt"
+          grep -Fq 'raw/coin_drop' "$RUNNER_TEMP/alkenzy-apk-resources.txt"
           cp "$APK" "dist/Alkenzy-ADV-${VERSION_NAME}-sys.alkenzy.com.apk"
           sha256sum "dist/SafeContracts-0.3.12.zip" "dist/Alkenzy-ADV-${VERSION_NAME}-sys.alkenzy.com.apk" | tee dist/SHA256SUMS.txt
           printf 'source_sha=%s\nplugin_version=0.3.12\nmobile_version=%s\napi=%s\n' "$SOURCE_SHA" "$MOBILE_VERSION" "$SC_PRODUCTION_API_BASE_URL" > dist/RELEASE-CANDIDATE.txt
