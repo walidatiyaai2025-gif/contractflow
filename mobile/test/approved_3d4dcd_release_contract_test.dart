@@ -18,8 +18,12 @@ void main() {
       expect(source, contains('_TabSwipeRegion('));
       expect(source, contains('DashboardRecordType.collection => record.amount'));
       expect(source, isNot(contains('final columns = compact ? 2 : 4')));
-      expect(source,
-          isNot(contains('final amount = record.remainingAmount ?? record.amount;')));
+      expect(
+        source,
+        isNot(
+          contains('final amount = record.remainingAmount ?? record.amount;'),
+        ),
+      );
     });
 
     test('only the authoritative dashboard is exposed in navigation', () {
