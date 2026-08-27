@@ -29,7 +29,10 @@ void main() {
       final card = screen.substring(cardStart, thumbnailStart);
 
       expect(card, contains("ValueKey('contractCard-\${contract.id}')"));
-      expect(card, contains('constraints: const BoxConstraints(minHeight: 164)'));
+      expect(
+        card,
+        contains('constraints: const BoxConstraints(minHeight: 164)'),
+      );
       expect(card, contains('crossAxisAlignment: CrossAxisAlignment.start'));
       expect(card, contains('height: 164'));
       expect(card, contains('mainAxisSize: MainAxisSize.min'));
@@ -82,7 +85,9 @@ void main() {
       );
       expect(
         dashboard,
-        isNot(contains('final amount = record.remainingAmount ?? record.amount;')),
+        isNot(
+          contains('final amount = record.remainingAmount ?? record.amount;'),
+        ),
       );
     });
 
