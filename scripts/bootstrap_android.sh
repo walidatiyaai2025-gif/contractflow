@@ -9,17 +9,29 @@ ALKENZY_APP_ASSET="$ROOT/mobile/assets/brand/alkenzy_adv.png"
 ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.png"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
 APPLOVIN_PATCHER="$ROOT/scripts/patch_applovin_compile_sdk.py"
+SOUND_MATERIALIZER="$ROOT/scripts/materialize_notification_sounds.sh"
+ANDROID_SOUND_SOURCE="$ROOT/mobile/android-release/raw"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE" "$APPLOVIN_PATCHER"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE" "$APPLOVIN_PATCHER" "$SOUND_MATERIALIZER"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
   fi
+done
+
+# Reconstruct the exact owner-supplied notification sounds from immutable,
+# pinned source commits and fail closed on any checksum drift.
+bash "$SOUND_MATERIALIZER"
+for sound in banknote_counter cashier_ka_ching coin_drop; do
+  test -s "$ANDROID_SOUND_SOURCE/$sound.mp3" || {
+    echo "FAIL: verified Android notification sound is missing: $sound" >&2
+    exit 1
+  }
 done
 
 cmp -s "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" || {
@@ -75,6 +87,16 @@ cp "$FIREBASE_CONFIG" android/app/google-services.json
 MAIN_ACTIVITY_TARGET="android/app/src/main/kotlin/com/safecontracts/safecontracts_mobile/MainActivity.kt"
 mkdir -p "$(dirname "$MAIN_ACTIVITY_TARGET")"
 cp "$MAIN_ACTIVITY_TEMPLATE" "$MAIN_ACTIVITY_TARGET"
+
+RAW_TARGET="android/app/src/main/res/raw"
+mkdir -p "$RAW_TARGET"
+for sound in banknote_counter cashier_ka_ching coin_drop; do
+  cp "$ANDROID_SOUND_SOURCE/$sound.mp3" "$RAW_TARGET/$sound.mp3"
+  cmp -s "$ANDROID_SOUND_SOURCE/$sound.mp3" "$RAW_TARGET/$sound.mp3" || {
+    echo "FAIL: generated Android raw sound differs from verified source: $sound" >&2
+    exit 1
+  }
+done
 
 SETTINGS="android/settings.gradle.kts"
 python3 - "$SETTINGS" <<'PY'
@@ -187,7 +209,10 @@ for required in \
   android/app/google-services.json \
   android/app/src/main/AndroidManifest.xml \
   "$MAIN_ACTIVITY_TARGET" \
-  "$LAUNCHER_ICON"; do
+  "$LAUNCHER_ICON" \
+  "$RAW_TARGET/banknote_counter.mp3" \
+  "$RAW_TARGET/cashier_ka_ching.mp3" \
+  "$RAW_TARGET/coin_drop.mp3"; do
   if [[ ! -e "$required" ]]; then
     echo "FAIL: generated Android scaffold missing $required" >&2
     exit 1
@@ -222,6 +247,18 @@ grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing high-importance notification channel metadata" >&2
   exit 1
 }
+grep -Fq 'safe_contracts_alerts_banknote_counter' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity is missing banknote notification channel" >&2
+  exit 1
+}
+grep -Fq 'safe_contracts_alerts_cashier_ka_ching' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity is missing cashier notification channel" >&2
+  exit 1
+}
+grep -Fq 'safe_contracts_alerts_coin_drop' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity is missing coin-drop notification channel" >&2
+  exit 1
+}
 grep -Fq 'safecontracts/notifications' "$MAIN_ACTIVITY_TARGET" || {
   echo "FAIL: Android release activity is missing foreground notification bridge" >&2
   exit 1
@@ -248,4 +285,4 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
 # so every build path (Quality Gates, release APK, AAB) compiles against API 36.
 python3 "$APPLOVIN_PATCHER"
 
-echo "Alkenzy ADV Android scaffold bootstrapped with launcher identity, biometric login, explicit document Save As, high-importance notifications, release signing, INTERNET, Firebase contracts, and AppLovin API 36 compatibility."
+echo "Alkenzy ADV Android scaffold bootstrapped with launcher identity, biometric login, explicit document Save As, per-sound high-importance notifications, release signing, INTERNET, Firebase contracts, and AppLovin API 36 compatibility."
