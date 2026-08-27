@@ -80,6 +80,7 @@ final class NotificationScheduleService
         for ($attemptNo = 0; $attemptNo <= $repeatMax; $attemptNo++) {
             foreach ($payments as $payment) {
                 try {
+                    $payment = NotificationPaymentScope::canonicalize($payment);
                     $target = NotificationRule::targetDate($rule, $payment['due_date'] ?? '', $attemptNo);
                     if ($notBefore !== null && $target < $notBefore) {
                         continue;
@@ -129,6 +130,7 @@ final class NotificationScheduleService
             $this->recordDispatch($scheduleId, $row, 'skipped', $actorId, $manual, 0, 0, 'rule_or_payment_unavailable');
             return true;
         }
+        $payment = NotificationPaymentScope::canonicalize($payment);
 
         try {
             $attemptNo = max(0, (int) ($row['attempt_no'] ?? 0));
