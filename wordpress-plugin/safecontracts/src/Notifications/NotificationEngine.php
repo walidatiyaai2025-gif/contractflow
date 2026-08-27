@@ -84,6 +84,7 @@ final class NotificationEngine
         $pushData = [
             'payment_id' => $paymentId,
             'rule_code' => (string) ($rule['code'] ?? ''),
+            'template_code' => $templateCode,
             'attempt_no' => $attemptNo,
             'icon_key' => $rendered['icon_key'],
         ];
