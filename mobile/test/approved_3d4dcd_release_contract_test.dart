@@ -16,7 +16,10 @@ void main() {
       );
       expect(source, contains('_DashboardTabs(controller: controller)'));
       expect(source, contains('_TabSwipeRegion('));
-      expect(source, contains('DashboardRecordType.collection => record.amount'));
+      expect(
+        source,
+        contains('DashboardRecordType.collection => record.amount'),
+      );
       expect(source, isNot(contains('final columns = compact ? 2 : 4')));
       expect(
         source,
