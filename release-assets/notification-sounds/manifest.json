@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "assets": [
+    {
+      "key": "cashier_ka_ching",
+      "source_filename": "u_byub5wd934-cashier-quotka-chingquot.mp3.mpeg",
+      "android_filename": "cashier_ka_ching.mp3",
+      "sha256": "ae6702f67ca39475db2f82ea71cb93e681049785813e12b0dd5b801485a45ee7"
+    },
+    {
+      "key": "banknote_counter",
+      "source_filename": "freesound_community-banknote-counter-106014.mp3(2).mpeg",
+      "android_filename": "banknote_counter_106014.mp3",
+      "sha256": "a4ad3ee6d20c83d352e7cd8d9a937998862eebca8e833df7d1e1c2f8ca7511f4"
+    },
+    {
+      "key": "coin_drop",
+      "source_filename": "universfield-coin-drop-229314.mp3(2).mpeg",
+      "android_filename": "coin_drop_229314.mp3",
+      "sha256": "af8a9ec4d8b718703980c28b58c851aacf515da9fc1e2d90ac592d1295d0ef76"
+    }
+  ]
+}
