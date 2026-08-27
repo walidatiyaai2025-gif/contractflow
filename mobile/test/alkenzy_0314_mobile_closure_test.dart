@@ -19,6 +19,24 @@ void main() {
       expect(activation, contains('await loadPage(1)'));
     });
 
+    test('mobile contract cards never require an unbounded vertical flex', () {
+      final screen = File('lib/features/contracts/contracts_screen.dart')
+          .readAsStringSync();
+      final cardStart = screen.indexOf('final class _ContractCard');
+      final thumbnailStart = screen.indexOf('final class _ContractThumbnail');
+      expect(cardStart, greaterThanOrEqualTo(0));
+      expect(thumbnailStart, greaterThan(cardStart));
+      final card = screen.substring(cardStart, thumbnailStart);
+
+      expect(card, contains("ValueKey('contractCard-\${contract.id}')"));
+      expect(card, contains('constraints: const BoxConstraints(minHeight: 164)'));
+      expect(card, contains('crossAxisAlignment: CrossAxisAlignment.start'));
+      expect(card, contains('height: 164'));
+      expect(card, contains('mainAxisSize: MainAxisSize.min'));
+      expect(card, isNot(contains('const Spacer()')));
+      expect(card, isNot(contains('CrossAxisAlignment.stretch')));
+    });
+
     test('Collections destination reads the actual settlement ledger', () {
       final shell =
           File('lib/features/navigation/app_shell.dart').readAsStringSync();
