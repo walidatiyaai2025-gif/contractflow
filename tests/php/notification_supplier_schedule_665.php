@@ -134,7 +134,7 @@ final class SC_665_SupplierScheduleWpdb
                     'id' => '1',
                     'code' => 'payment_due_soon',
                     'title_template' => 'Payment due soon',
-                    'body_template' => '{{counterparty_name}} payment {{payment_reference}} is due {{due_date}}.',
+                    'body_template' => '{{customer_name}} payment {{payment_reference}} is due {{due_date}}.',
                     'email_subject_template' => 'Payment due soon',
                     'email_body_template' => '{{contract_number}} payment {{payment_reference}} has {{remaining_amount}} remaining.',
                     'icon_key' => 'warning',
