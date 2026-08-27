@@ -34,7 +34,8 @@ Future<void> _initializeRuntimeServices() async {
         exception: error,
         stack: stackTrace,
         library: 'SafeContracts runtime services',
-        context: ErrorDescription('initializing Firebase/FCM after first paint'),
+        context:
+            ErrorDescription('initializing Firebase/FCM after first paint'),
       ),
     );
   }
