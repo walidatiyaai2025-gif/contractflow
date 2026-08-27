@@ -16,7 +16,10 @@ void main() {
       );
       expect(source, contains('_DashboardTabs(controller: controller)'));
       expect(source, contains('_TabSwipeRegion('));
-      expect(source, contains('DashboardRecordType.collection => record.amount'));
+      expect(
+        source,
+        contains('DashboardRecordType.collection => record.amount'),
+      );
       expect(source, isNot(contains('final columns = compact ? 2 : 4')));
       expect(
         source,
@@ -104,10 +107,13 @@ void main() {
       expect(report, contains('readingOrder="2"'));
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('safecontracts/files'));
-      expect(activity, isNot(contains('safecontracts_exports'));
+      expect(activity, isNot(contains('safecontracts_exports')));
       expect(pubspec, contains('version: 0.3.15+20'));
       expect(profile, contains('PackageInfo.fromPlatform()'));
-      expect(profile, isNot(contains("static const appVersion = '0.3.12+17'")));
+      expect(
+        profile,
+        isNot(contains("static const appVersion = '0.3.12+17'")),
+      );
     });
   });
 }
