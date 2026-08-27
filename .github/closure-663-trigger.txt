@@ -1,0 +1,2 @@
+PR #663 final closure trigger
+report background + contracts visibility + notification sound settings
