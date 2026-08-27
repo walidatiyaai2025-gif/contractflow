@@ -7,5 +7,7 @@ const Set<String> supportedNotificationSoundKeys = <String>{
 
 String notificationSoundKeyFromData(Map<String, String> data) {
   final candidate = (data['sound_key'] ?? 'default').trim().toLowerCase();
-  return supportedNotificationSoundKeys.contains(candidate) ? candidate : 'default';
+  return supportedNotificationSoundKeys.contains(candidate)
+      ? candidate
+      : 'default';
 }
