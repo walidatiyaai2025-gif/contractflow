@@ -61,6 +61,26 @@ void main() {
       expect(screen, contains('سجل التحصيلات الفعلي'));
     });
 
+    test('landing Collections tab never replaces settlement amount with zero remaining balance',
+        () {
+      final dashboard = File('lib/features/dashboard/dashboard_screen.dart')
+          .readAsStringSync();
+      expect(
+        dashboard,
+        contains('DashboardRecordType.collection => record.amount'),
+      );
+      expect(
+        dashboard,
+        contains(
+          'DashboardRecordType.payment => record.remainingAmount ?? record.amount',
+        ),
+      );
+      expect(
+        dashboard,
+        isNot(contains('final amount = record.remainingAmount ?? record.amount;')),
+      );
+    });
+
     test('PDF report is premium Arabic RTL rather than English-header output',
         () {
       final report = File('lib/features/export/mobile_report_export.dart')
