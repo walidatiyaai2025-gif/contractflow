@@ -28,7 +28,9 @@ final class NotificationScheduleService
     public function sync(int $paymentLimit = 5000): int
     {
         $rules = $this->rules->all(true);
-        $payments = $this->schedule->candidatePayments($paymentLimit);
+        $payments = NotificationPaymentScope::canonicalizeMany(
+            $this->schedule->candidatePayments($paymentLimit)
+        );
         $count = 0;
 
         foreach ($rules as $rule) {
@@ -61,7 +63,9 @@ final class NotificationScheduleService
             return 0;
         }
 
-        $payments = $this->schedule->candidatePayments($paymentLimit);
+        $payments = NotificationPaymentScope::canonicalizeMany(
+            $this->schedule->candidatePayments($paymentLimit)
+        );
         $timezone = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
         $today = new DateTimeImmutable('today', $timezone);
         $count = $this->syncRule($rule, $payments, $today);
@@ -80,7 +84,6 @@ final class NotificationScheduleService
         for ($attemptNo = 0; $attemptNo <= $repeatMax; $attemptNo++) {
             foreach ($payments as $payment) {
                 try {
-                    $payment = NotificationPaymentScope::canonicalize($payment);
                     $target = NotificationRule::targetDate($rule, $payment['due_date'] ?? '', $attemptNo);
                     if ($notBefore !== null && $target < $notBefore) {
                         continue;
