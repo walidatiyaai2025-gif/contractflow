@@ -115,9 +115,9 @@ final class NotificationSoundSettings
     public static function androidSound(string $soundKey): string
     {
         return match ($soundKey) {
-            self::SOUND_BANKNOTE_COUNTER => 'banknote_counter_106014',
+            self::SOUND_BANKNOTE_COUNTER => 'banknote_counter',
             self::SOUND_CASHIER_KA_CHING => 'cashier_ka_ching',
-            self::SOUND_COIN_DROP => 'coin_drop_229314',
+            self::SOUND_COIN_DROP => 'coin_drop',
             default => 'default',
         };
     }
