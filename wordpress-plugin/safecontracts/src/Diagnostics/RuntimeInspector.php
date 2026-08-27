@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SafeContracts\Diagnostics;
 
+use DomainException;
+use InvalidArgumentException;
 use RuntimeException;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Roles\Capabilities;
@@ -19,6 +21,7 @@ final class RuntimeInspector
 {
     public const OPTION = 'safecontracts_runtime_inspector_events_v1';
     public const MAX_EVENTS = 50;
+    public const EVENT_SCHEMA_VERSION = 2;
 
     /** @var array{id:string,operation:string,stage:string,context:array<string,mixed>}|null */
     private static $current = null;
@@ -75,14 +78,24 @@ final class RuntimeInspector
             'stage' => 'unknown',
             'context' => [],
         ];
+        $dbError = self::databaseError();
         $event = [
+            'schema_version' => self::EVENT_SCHEMA_VERSION,
             'id' => $current['id'],
             'occurred_at_utc' => gmdate('c'),
             'operation' => $current['operation'],
             'stage' => $current['stage'],
+            'classification' => self::classifyFailure($error, $dbError),
+            'root_cause' => self::rootCause($error),
             'exception_class' => get_class($error),
+            'exception_code' => $error->getCode(),
+            'exception_chain' => self::exceptionChain($error),
             'message' => self::boundedText($error->getMessage(), 1000),
-            'db_error' => self::databaseError(),
+            'source' => [
+                'file' => basename($error->getFile()),
+                'line' => $error->getLine(),
+            ],
+            'db_error' => $dbError,
             'user_id' => function_exists('get_current_user_id') ? (int) get_current_user_id() : 0,
             'request' => self::requestSnapshot(),
             'capabilities' => self::capabilitySnapshot(),
@@ -97,10 +110,15 @@ final class RuntimeInspector
         return self::$capturedId;
     }
 
+    /**
+     * Finish the active trace but deliberately preserve a captured correlation ID
+     * until the request redirect is filtered. This keeps the user-visible link
+     * bound to the exact exception instead of replacing it with a generic
+     * safecontracts_status fallback event.
+     */
     public static function finish(): void
     {
         self::$current = null;
-        self::$capturedId = null;
     }
 
     /** @return list<array<string,mixed>> */
@@ -116,7 +134,8 @@ final class RuntimeInspector
     public static function clear(): void
     {
         update_option(self::OPTION, [], false);
-        self::finish();
+        self::$current = null;
+        self::$capturedId = null;
     }
 
     /**
@@ -214,6 +233,7 @@ final class RuntimeInspector
             'db_latest' => Migrator::LATEST_VERSION,
             'php_version' => PHP_VERSION,
             'wordpress_version' => isset($wp_version) ? (string) $wp_version : 'unknown',
+            'wordpress_timezone' => function_exists('wp_timezone_string') ? (string) wp_timezone_string() : '',
         ];
     }
 
@@ -221,18 +241,7 @@ final class RuntimeInspector
     private static function capabilitySnapshot(): array
     {
         $result = [];
-        foreach ([
-            Capabilities::ACCESS,
-            Capabilities::MANAGE_SYSTEM,
-            Capabilities::MANAGE_REFERENCE_DATA,
-            Capabilities::VIEW_ALL,
-            Capabilities::VIEW_ASSIGNED,
-            Capabilities::VIEW_SUPPLIERS,
-            Capabilities::MANAGE_SUPPLIERS,
-            Capabilities::CREATE_CONTRACTS,
-            Capabilities::EDIT_CONTRACTS,
-            Capabilities::ASSIGN_CONTRACTS,
-        ] as $capability) {
+        foreach (Capabilities::all() as $capability) {
             $result[$capability] = function_exists('current_user_can') && current_user_can($capability);
         }
         return $result;
@@ -245,7 +254,44 @@ final class RuntimeInspector
             'method' => self::boundedText((string) ($_SERVER['REQUEST_METHOD'] ?? ''), 16),
             'page' => sanitize_key((string) ($_REQUEST['page'] ?? '')),
             'action' => self::requestAction(),
+            'input' => self::requestInputSnapshot(),
         ];
+    }
+
+    /** @return array<string,mixed> */
+    private static function requestInputSnapshot(): array
+    {
+        $allowed = [
+            'payment_id',
+            'collection_id',
+            'contract_id',
+            'customer_id',
+            'supplier_id',
+            'counterparty_id',
+            'payment_method_id',
+            'entity_id',
+            'attachment_id',
+            'media_id',
+            'accountant_user_id',
+            'amount',
+            'original_amount',
+            'due_date',
+            'expected_payment_date',
+            'collection_date',
+            'financial_direction',
+            'status',
+        ];
+        $snapshot = [];
+        foreach ($allowed as $key) {
+            if (! array_key_exists($key, $_REQUEST) || ! is_scalar($_REQUEST[$key])) {
+                continue;
+            }
+            $value = self::boundedText((string) $_REQUEST[$key], 120);
+            if ($value !== '') {
+                $snapshot[$key] = $value;
+            }
+        }
+        return $snapshot;
     }
 
     private static function requestAction(): string
@@ -279,6 +325,53 @@ final class RuntimeInspector
             return '';
         }
         return self::boundedText((string) $wpdb->last_error, 1000);
+    }
+
+    /** @return list<array{class:string,code:int|string,message:string}> */
+    private static function exceptionChain(Throwable $error): array
+    {
+        $chain = [];
+        $current = $error;
+        for ($depth = 0; $depth < 4 && $current !== null; $depth++) {
+            $chain[] = [
+                'class' => get_class($current),
+                'code' => $current->getCode(),
+                'message' => self::boundedText($current->getMessage(), 1000),
+            ];
+            $current = $current->getPrevious();
+        }
+        return $chain;
+    }
+
+    private static function rootCause(Throwable $error): string
+    {
+        $current = $error;
+        for ($depth = 0; $depth < 8 && $current->getPrevious() !== null; $depth++) {
+            $current = $current->getPrevious();
+        }
+        $message = self::boundedText($current->getMessage(), 1000);
+        return $message !== '' ? $message : get_class($current);
+    }
+
+    private static function classifyFailure(Throwable $error, string $dbError): string
+    {
+        if ($dbError !== '') {
+            return 'database';
+        }
+        if ($error instanceof InvalidArgumentException) {
+            return 'validation';
+        }
+        if ($error instanceof DomainException) {
+            $message = strtolower($error->getMessage());
+            if (str_contains($message, 'permission') || str_contains($message, 'scope') || str_contains($message, 'access')) {
+                return 'authorization';
+            }
+            return 'business_rule';
+        }
+        if ($error instanceof RuntimeException) {
+            return 'runtime';
+        }
+        return 'unexpected';
     }
 
     /** @param array<mixed> $values @return array<mixed> */

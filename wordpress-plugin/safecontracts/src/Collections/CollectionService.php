@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DomainException;
 use InvalidArgumentException;
 use SafeContracts\Contracts\ContractMoney;
+use SafeContracts\Diagnostics\RuntimeInspector;
 use SafeContracts\Payments\PaymentRepository;
 use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\Capabilities;
@@ -39,55 +40,114 @@ final class CollectionService
      */
     public function record(array $input): int
     {
+        RuntimeInspector::begin('settlement.record', [
+            'payment_id' => (int) ($input['payment_id'] ?? 0),
+            'payment_method_id' => (int) ($input['payment_method_id'] ?? 0),
+            'amount' => is_scalar($input['amount'] ?? null) ? (string) $input['amount'] : '',
+            'collection_date' => is_scalar($input['collection_date'] ?? null) ? (string) $input['collection_date'] : '',
+            'proof_media_id' => ($input['proof_media_id'] ?? null) === null ? null : (int) ($input['proof_media_id'] ?? 0),
+        ]);
+        try {
+            return $this->recordTraced($input);
+        } catch (Throwable $error) {
+            RuntimeInspector::capture($error);
+            throw $error;
+        } finally {
+            RuntimeInspector::finish();
+        }
+    }
+
+    /** @param array<string,mixed> $input */
+    private function recordTraced(array $input): int
+    {
+        RuntimeInspector::stage('settlement.record.authorization');
         $this->requireAny(
             [Capabilities::MANAGE_COLLECTIONS, Capabilities::MANAGE_FINANCE],
             'You do not have permission to record financial settlements.'
         );
 
+        RuntimeInspector::stage('settlement.record.payment_id');
         $paymentId = (int) ($input['payment_id'] ?? 0);
         if ($paymentId <= 0) {
             throw new InvalidArgumentException('Settlement payment ID must be positive.');
         }
 
+        RuntimeInspector::stage('settlement.record.amount', ['payment_id' => $paymentId]);
         $amount = ContractMoney::normalizeNonNegative($input['amount'] ?? '');
         if ($amount === '0.0000') {
             throw new InvalidArgumentException('Settlement amount must be greater than zero.');
         }
+
+        RuntimeInspector::stage('settlement.record.date', ['payment_id' => $paymentId, 'amount' => $amount]);
         $collectionDate = $this->normalizeDate($input['collection_date'] ?? null);
 
+        RuntimeInspector::stage('settlement.record.payment_method', ['payment_id' => $paymentId]);
         $paymentMethodId = (int) ($input['payment_method_id'] ?? 0);
         if ($paymentMethodId <= 0) {
             throw new InvalidArgumentException('Payment method is required for every settlement transaction.');
         }
 
+        RuntimeInspector::stage('settlement.record.optional_fields', [
+            'payment_id' => $paymentId,
+            'payment_method_id' => $paymentMethodId,
+            'amount' => $amount,
+            'collection_date' => $collectionDate,
+        ]);
         $reference = $this->normalizeOptionalText($input['reference'] ?? null, 191, 'Settlement reference');
         $details = $this->normalizeOptionalText($input['details'] ?? null, 5000, 'Settlement details');
         $proofMediaId = $this->normalizeProofMediaId($input['proof_media_id'] ?? null);
         $actorId = get_current_user_id();
 
+        RuntimeInspector::stage('settlement.record.transaction.begin', ['payment_id' => $paymentId]);
         $this->repository->beginTransaction();
         try {
+            RuntimeInspector::stage('settlement.record.payment.lock', ['payment_id' => $paymentId]);
             $payment = $this->repository->lockPayment($paymentId);
             if ($payment === null) {
                 throw new InvalidArgumentException('Settlement payment was not found.');
             }
+
+            RuntimeInspector::stage('settlement.record.scope', [
+                'payment_id' => $paymentId,
+                'accountant_user_id' => $payment['accountant_user_id'] ?? null,
+            ]);
             $this->assertScope($payment['accountant_user_id']);
+
+            RuntimeInspector::stage('settlement.record.payment_state', [
+                'payment_id' => $paymentId,
+                'payment_is_archived' => ! empty($payment['payment_is_archived']),
+                'contract_is_archived' => ! empty($payment['contract_is_archived']),
+            ]);
             if (! empty($payment['payment_is_archived'])) {
                 throw new DomainException('Settlements cannot be recorded against archived payments.');
             }
             if ($payment['contract_is_archived']) {
                 throw new DomainException('Settlements cannot be recorded against archived contracts.');
             }
+
+            RuntimeInspector::stage('settlement.record.payment_method.active', [
+                'payment_id' => $paymentId,
+                'payment_method_id' => $paymentMethodId,
+            ]);
             if (! $this->repository->paymentMethodIsActive($paymentMethodId)) {
                 throw new InvalidArgumentException('Settlement payment method must be an active SafeContracts payment method.');
             }
 
+            RuntimeInspector::stage('settlement.record.ledger.read', ['payment_id' => $paymentId]);
             $originalAmount = ContractMoney::normalizeNonNegative($payment['original_amount']);
             $storedPaid = ContractMoney::normalizeNonNegative($payment['paid_amount']);
             $storedRemaining = ContractMoney::normalizeNonNegative($payment['remaining_amount']);
             $storedStatus = PaymentStatus::normalize($payment['status']);
             $ledgerCollected = ContractMoney::normalizeNonNegative($this->repository->collectedTotal($paymentId));
 
+            RuntimeInspector::stage('settlement.record.ledger.integrity', [
+                'payment_id' => $paymentId,
+                'original_amount' => $originalAmount,
+                'stored_paid_amount' => $storedPaid,
+                'stored_remaining_amount' => $storedRemaining,
+                'ledger_settled_amount' => $ledgerCollected,
+                'stored_status' => $storedStatus,
+            ]);
             $this->assertStoredIntegrity(
                 $originalAmount,
                 $storedPaid,
@@ -96,16 +156,37 @@ final class CollectionService
                 $storedStatus
             );
 
+            RuntimeInspector::stage('settlement.record.payment_capacity', [
+                'payment_id' => $paymentId,
+                'amount' => $amount,
+                'original_amount' => $originalAmount,
+                'ledger_settled_amount' => $ledgerCollected,
+            ]);
             $newPaid = ContractMoney::add($ledgerCollected, $amount);
             if (ContractMoney::compare($newPaid, $originalAmount) > 0) {
                 // Keep the canonical P10 guard text stable for integrations and
                 // governance; the admin Arabic surface explains the limit in detail.
                 throw new DomainException('Collection amount exceeds the payment remaining balance.');
             }
+
+            RuntimeInspector::stage('settlement.record.contract_capacity', [
+                'payment_id' => $paymentId,
+                'amount' => $amount,
+                'contract_base_value' => $payment['contract_base_value'] ?? null,
+                'contract_settled_total' => $payment['contract_settled_total'] ?? null,
+            ]);
             $this->assertContractSettlementCapacity($payment, $amount);
             $newRemaining = ContractMoney::subtract($originalAmount, $newPaid);
             $newStatus = $newRemaining === '0.0000' ? PaymentStatus::PAID : PaymentStatus::PARTIALLY_PAID;
 
+            RuntimeInspector::stage('settlement.record.database.insert', [
+                'payment_id' => $paymentId,
+                'payment_method_id' => $paymentMethodId,
+                'amount' => $amount,
+                'new_paid_amount' => $newPaid,
+                'new_remaining_amount' => $newRemaining,
+                'new_status' => $newStatus,
+            ]);
             $collectionId = $this->repository->create(
                 $paymentId,
                 $payment['financial_direction'],
@@ -118,6 +199,14 @@ final class CollectionService
                 $proofMediaId,
                 $actorId
             );
+
+            RuntimeInspector::stage('settlement.record.payment.update', [
+                'payment_id' => $paymentId,
+                'collection_id' => $collectionId,
+                'new_paid_amount' => $newPaid,
+                'new_remaining_amount' => $newRemaining,
+                'new_status' => $newStatus,
+            ]);
             $this->repository->updatePaymentSettlement(
                 $paymentId,
                 $newPaid,
@@ -125,12 +214,26 @@ final class CollectionService
                 $newStatus,
                 $actorId
             );
+
+            RuntimeInspector::stage('settlement.record.transaction.commit', [
+                'payment_id' => $paymentId,
+                'collection_id' => $collectionId,
+            ]);
             $this->repository->commitTransaction();
         } catch (Throwable $error) {
+            RuntimeInspector::stage('settlement.record.transaction.rollback', [
+                'payment_id' => $paymentId,
+                'payment_method_id' => $paymentMethodId,
+                'amount' => $amount,
+            ]);
             $this->repository->rollbackTransaction();
             throw $error;
         }
 
+        RuntimeInspector::stage('settlement.record.events', [
+            'payment_id' => $paymentId,
+            'collection_id' => $collectionId,
+        ]);
         // Preserve the historical hook payload exactly for existing audit and integrations.
         do_action(
             'safecontracts_collection_recorded',
