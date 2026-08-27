@@ -1206,7 +1206,12 @@ final class _DashboardRecordTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.scL10n;
     final color = safeContractsStatusColor(record.status);
-    final amount = record.remainingAmount ?? record.amount;
+    final amount = switch (record.type) {
+      DashboardRecordType.collection => record.amount,
+      DashboardRecordType.contract => record.amount,
+      DashboardRecordType.payment => record.remainingAmount ?? record.amount,
+      DashboardRecordType.followUp => record.remainingAmount ?? record.amount,
+    };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
