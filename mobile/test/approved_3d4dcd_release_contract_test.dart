@@ -16,10 +16,7 @@ void main() {
       );
       expect(source, contains('_DashboardTabs(controller: controller)'));
       expect(source, contains('_TabSwipeRegion('));
-      expect(
-        source,
-        contains('DashboardRecordType.collection => record.amount'),
-      );
+      expect(source, contains('DashboardRecordType.collection => record.amount'));
       expect(source, isNot(contains('final columns = compact ? 2 : 4')));
       expect(
         source,
@@ -85,9 +82,8 @@ void main() {
       final activity =
           File('android-release/MainActivity.kt').readAsStringSync();
       final pubspec = File('pubspec.yaml').readAsStringSync();
-      final profile =
-          File('lib/features/profile/modern_profile_content.dart')
-              .readAsStringSync();
+      final profile = File('lib/features/profile/modern_profile_content.dart')
+          .readAsStringSync();
 
       expect(login, contains("Key('biometricLogin')"));
       expect(login, contains('_offerBiometricEnrollment'));
