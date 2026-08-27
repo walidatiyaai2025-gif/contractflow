@@ -69,42 +69,47 @@ void main() {
     });
 
     test(
-        'landing Collections tab never replaces settlement amount with zero remaining balance',
-        () {
-      final dashboard = File('lib/features/dashboard/dashboard_screen.dart')
-          .readAsStringSync();
-      expect(
-        dashboard,
-        contains('DashboardRecordType.collection => record.amount'),
-      );
-      expect(
-        dashboard,
-        contains(
-          'DashboardRecordType.payment => record.remainingAmount ?? record.amount',
-        ),
-      );
-      expect(
-        dashboard,
-        isNot(
-          contains('final amount = record.remainingAmount ?? record.amount;'),
-        ),
-      );
-    });
+      'landing Collections tab never replaces settlement amount with zero remaining balance',
+      () {
+        final dashboard = File('lib/features/dashboard/dashboard_screen.dart')
+            .readAsStringSync();
+        expect(
+          dashboard,
+          contains('DashboardRecordType.collection => record.amount'),
+        );
+        expect(
+          dashboard,
+          contains(
+            'DashboardRecordType.payment => record.remainingAmount ?? record.amount',
+          ),
+        );
+        expect(
+          dashboard,
+          isNot(
+            contains('final amount = record.remainingAmount ?? record.amount;'),
+          ),
+        );
+      },
+    );
 
     test(
-        'profile displays the installed APK version instead of stale hard-coded text',
-        () {
-      final profile = File('lib/features/profile/modern_profile_content.dart')
-          .readAsStringSync();
-      final pubspec = File('pubspec.yaml').readAsStringSync();
-      expect(profile, contains('PackageInfo.fromPlatform()'));
-      expect(profile, contains("'\${package.version}+\${package.buildNumber}'"));
-      expect(
-        profile,
-        isNot(contains("static const appVersion = '0.3.12+17'")),
-      );
-      expect(pubspec, contains('version: 0.3.15+20'));
-    });
+      'profile displays the installed APK version instead of stale hard-coded text',
+      () {
+        final profile = File('lib/features/profile/modern_profile_content.dart')
+            .readAsStringSync();
+        final pubspec = File('pubspec.yaml').readAsStringSync();
+        expect(profile, contains('PackageInfo.fromPlatform()'));
+        expect(
+          profile,
+          contains("'\${package.version}+\${package.buildNumber}'"),
+        );
+        expect(
+          profile,
+          isNot(contains("static const appVersion = '0.3.12+17'")),
+        );
+        expect(pubspec, contains('version: 0.3.15+20'));
+      },
+    );
 
     test('PDF report is premium Arabic RTL rather than English-header output',
         () {
