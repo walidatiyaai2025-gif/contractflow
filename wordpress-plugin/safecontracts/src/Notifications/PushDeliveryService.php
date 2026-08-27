@@ -11,7 +11,7 @@ use Throwable;
 final class PushDeliveryService
 {
     public const MAX_TRANSPORT_RETRIES = 3;
-    private const ALLOWED_DATA_KEYS = ['payment_id', 'rule_code', 'attempt_no', 'icon_key', 'financial_direction'];
+    private const ALLOWED_DATA_KEYS = ['payment_id', 'rule_code', 'template_code', 'attempt_no', 'icon_key', 'financial_direction'];
 
     public function __construct(
         private PushTransport $transport,
