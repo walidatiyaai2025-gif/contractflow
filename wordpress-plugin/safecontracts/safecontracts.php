@@ -37,7 +37,7 @@ register_deactivation_hook(SAFECONTRACTS_FILE, [\SafeContracts\Lifecycle\Deactiv
 
 add_action('admin_menu', [\SafeContracts\Admin\PlayReviewAccount::class, 'registerPage'], 35);
 add_action('admin_post_' . \SafeContracts\Admin\PlayReviewAccount::CREATE_ACTION, [\SafeContracts\Admin\PlayReviewAccount::class, 'handleCreate']);
-add_action('admin_post_' . \SafeContracts\Admin\PlayReviewAccount::DISABLE_ACTION, [\SafeContracts\Admin\PlayReviewAccount::class, 'handleDisable']);
+add_action('admin_post_' . \SafeContracts\Admin\PlayReviewAccount::DISABLE_ACTION, [\SafeContracts\Admin\Admin\PlayReviewAccount::class, 'handleDisable']);
 add_action('admin_menu', [\SafeContracts\Admin\MobileAdvertisingPage::class, 'register'], 36);
 add_action('admin_post_' . \SafeContracts\Admin\MobileAdvertisingPage::SAVE_ACTION, [\SafeContracts\Admin\MobileAdvertisingPage::class, 'handleSave']);
 add_action('admin_menu', [\SafeContracts\Admin\NotificationSoundSettingsPage::class, 'register'], 37);
