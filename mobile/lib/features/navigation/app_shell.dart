@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
+import '../collections/collections.dart';
+import '../collections/collections_screen.dart';
 import '../config/mobile_config.dart';
 import '../contracts/contract_details_screen.dart';
 import '../contracts/contract_edit_screen.dart';
 import '../contracts/contracts.dart';
+import '../contracts/contracts_activation.dart';
 import '../contracts/contracts_screen.dart';
 import '../contracts/premium_contract_details_screen.dart';
 import '../customers/customers.dart';
@@ -138,7 +141,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
           shellSnapshotChanged = true;
           break;
         case MobileDestination.contracts:
-          await widget.contractsController.refreshSilently();
+          await widget.contractsController.activateForVisibleTab();
           shellSnapshotChanged = true;
           break;
         case MobileDestination.finance:
@@ -169,8 +172,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
         setState(() {});
       }
     } on Object {
-      // Automatic refresh is deliberately non-disruptive. The last good data
-      // remains visible and manual refresh still exposes actionable failures.
+      // Automatic refresh is deliberately non-disruptive for populated screens.
+      // Empty/error Contracts snapshots use activateForVisibleTab(), which
+      // exposes a real load error instead of presenting a false empty state.
     } finally {
       _liveRefreshInFlight = false;
     }
@@ -441,16 +445,10 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               unawaited(widget.dashboardController.refreshSilently()),
           refreshRevision: _liveRefreshRevision,
         ),
-      MobileDestination.collections => PaymentsScreen(
-          repository: PaymentsRepository(apiClient),
+      MobileDestination.collections => CollectionsScreen(
+          repository: CollectionsRepository(apiClient),
           pageSize: widget.config.defaultPageSize,
           filters: widget.dashboardController.filters,
-          currency: widget.config.currency,
-          canManagePayments:
-              widget.session.can('safecontracts_manage_payments'),
-          canEnterCollection: widget.policy.canEnterCollection,
-          onDataChanged: () =>
-              unawaited(widget.dashboardController.refreshSilently()),
           refreshRevision: _liveRefreshRevision,
         ),
       MobileDestination.finance => FinanceScreen(

@@ -87,12 +87,15 @@ void main() {
       expect(report, contains('ArabicReshaper.instance.reshape'));
       expect(report, contains('pw.TextDirection.rtl'));
       expect(report, contains('PdfPageFormat.a4'));
+      expect(report, contains('تقرير العقود'));
+      expect(report, contains('تاريخ الإصدار'));
+      expect(report, isNot(contains("'Generated: \$generatedDate'")));
       expect(report, contains('<w:bidi/>'));
       expect(report, contains('readingOrder="2"'));
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('safecontracts/files'));
       expect(activity, isNot(contains('safecontracts_exports')));
-      expect(pubspec, contains('version: 0.3.13+18'));
+      expect(pubspec, contains('version: 0.3.14+19'));
     });
   });
 }

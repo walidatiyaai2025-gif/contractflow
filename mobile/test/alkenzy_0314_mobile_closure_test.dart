@@ -1,0 +1,55 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('ALKENZY 0.3.14 mobile closure', () {
+    test('bottom Contracts activation cannot preserve a false empty snapshot', () {
+      final shell = File('lib/features/navigation/app_shell.dart').readAsStringSync();
+      final activation = File('lib/features/contracts/contracts_activation.dart')
+          .readAsStringSync();
+
+      expect(shell, contains('activateForVisibleTab()'));
+      expect(activation, contains('state == ContractsLoadState.error'));
+      expect(activation, contains('page == null'));
+      expect(activation, contains('page.contracts.isEmpty'));
+      expect(activation, contains('await loadPage(1)'));
+    });
+
+    test('Collections destination reads the actual settlement ledger', () {
+      final shell = File('lib/features/navigation/app_shell.dart').readAsStringSync();
+      final model = File('lib/features/collections/collections.dart')
+          .readAsStringSync();
+      final screen = File('lib/features/collections/collections_screen.dart')
+          .readAsStringSync();
+
+      expect(shell, contains('MobileDestination.collections => CollectionsScreen('));
+      expect(shell, contains('repository: CollectionsRepository(apiClient)'));
+      expect(
+        shell,
+        isNot(contains('MobileDestination.collections => PaymentsScreen(')),
+      );
+      expect(model, contains("client.get(\n      'collections'"));
+      expect(model, contains("amount: _money(data['amount'], 'collection.amount')"));
+      expect(screen, contains('collection.amount'));
+      expect(screen, contains('المبلغ المدفوع'));
+      expect(screen, contains('المبلغ المحصل'));
+      expect(screen, contains('سجل التحصيلات الفعلي'));
+    });
+
+    test('PDF report is premium Arabic RTL rather than English-header output', () {
+      final report = File('lib/features/export/mobile_report_export.dart')
+          .readAsStringSync();
+
+      expect(report, contains("MobileReportType.contracts => 'تقرير العقود'"));
+      expect(report, contains("'نظام إدارة العقود والمستحقات'"));
+      expect(report, contains("'تاريخ الإصدار: \$generatedDate'"));
+      expect(report, contains("'عدد السجلات: \${data.rows.length}'"));
+      expect(report, contains('pw.TextDirection.rtl'));
+      expect(report, contains('PdfColor.fromInt(0xff102a43)'));
+      expect(report, contains('PdfColor.fromInt(0xffc8956c)'));
+      expect(report, contains('context.pageNumber'));
+      expect(report, isNot(contains("'Generated: \$generatedDate'")));
+    });
+  });
+}

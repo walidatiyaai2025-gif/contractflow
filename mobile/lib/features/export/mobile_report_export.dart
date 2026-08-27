@@ -40,6 +40,15 @@ extension MobileReportTypeInfo on MobileReportType {
         MobileReportType.attachments => 'Attachments report',
         MobileReportType.notifications => 'Notifications report',
       };
+
+  String get arabicTitle => switch (this) {
+        MobileReportType.contracts => 'تقرير العقود',
+        MobileReportType.payments => 'تقرير الدفعات',
+        MobileReportType.customers => 'تقرير العملاء',
+        MobileReportType.finance => 'التقرير المالي',
+        MobileReportType.attachments => 'تقرير المرفقات',
+        MobileReportType.notifications => 'تقرير الإشعارات',
+      };
 }
 
 extension MobileReportFormatInfo on MobileReportFormat {
@@ -277,6 +286,47 @@ final class MobileReportRepository {
 }
 
 final class MobileReportDocumentBuilder {
+  static const Map<String, String> _arabicColumns = <String, String>{
+    'id': 'الرقم',
+    'media_id': 'رقم الملف',
+    'contract_number': 'رقم العقد',
+    'counterparty_name': 'الطرف',
+    'status': 'الحالة',
+    'start_date': 'تاريخ البداية',
+    'end_date': 'تاريخ النهاية',
+    'base_value': 'قيمة العقد',
+    'currency_code': 'العملة',
+    'financial_direction': 'الاتجاه المالي',
+    'reference': 'المرجع',
+    'due_date': 'تاريخ الاستحقاق',
+    'expected_payment_date': 'تاريخ السداد المتوقع',
+    'original_amount': 'المبلغ الأصلي',
+    'paid_amount': 'المبلغ المدفوع',
+    'remaining_amount': 'المبلغ المتبقي',
+    'internal_code': 'الكود الداخلي',
+    'name': 'الاسم',
+    'contact_name': 'جهة الاتصال',
+    'email': 'البريد الإلكتروني',
+    'phone': 'الهاتف',
+    'is_active': 'نشط',
+    'obligation_count': 'عدد الالتزامات',
+    'original_total': 'إجمالي الالتزامات',
+    'settled_total': 'إجمالي المسدد',
+    'outstanding_total': 'إجمالي المتبقي',
+    'overdue_total': 'إجمالي المتأخر',
+    'due_today_total': 'مستحق اليوم',
+    'due_30_total': 'مستحق خلال 30 يومًا',
+    'label': 'اسم الملف',
+    'role': 'نوع المرفق',
+    'mime_type': 'نوع الملف',
+    'url': 'الرابط',
+    'created_at': 'تاريخ الإنشاء',
+    'payment_id': 'رقم الدفعة',
+    'template_code': 'قالب الإشعار',
+    'scheduled_for': 'تاريخ الجدولة',
+    'is_read': 'مقروء',
+  };
+
   Future<MobileReportDocument> build(
     MobileReportData data,
     MobileReportFormat format,
@@ -427,62 +477,131 @@ final class MobileReportDocumentBuilder {
     final generatedDate = DateTime.now().toIso8601String().substring(0, 10);
     final document = pw.Document();
     final limitedRows = data.rows.take(250).toList(growable: false);
+    final pageFormat =
+        data.columns.length > 6 ? PdfPageFormat.a4.landscape : PdfPageFormat.a4;
 
-    pw.Widget cellText(String value, {required bool header}) {
+    final navy = PdfColor.fromInt(0xff102a43);
+    final navyDeep = PdfColor.fromInt(0xff0b2238);
+    final cream = PdfColor.fromInt(0xfff7f1e8);
+    final creamRaised = PdfColor.fromInt(0xfffffbf5);
+    final rose = PdfColor.fromInt(0xffc8956c);
+    final ink = PdfColor.fromInt(0xff263238);
+    final muted = PdfColor.fromInt(0xff6d7478);
+    final contour = PdfColor.fromInt(0xffddd4c8);
+    final white = PdfColors.white;
+
+    String reshapeArabic(String value) =>
+        ArabicReshaper.instance.reshape(value);
+
+    pw.Widget arabicText(
+      String value, {
+      double fontSize = 8,
+      bool bold = false,
+      PdfColor? color,
+      pw.TextAlign align = pw.TextAlign.right,
+    }) {
+      return pw.Directionality(
+        textDirection: pw.TextDirection.rtl,
+        child: pw.Text(
+          reshapeArabic(value),
+          textDirection: pw.TextDirection.rtl,
+          textAlign: align,
+          style: pw.TextStyle(
+            font: bold ? medium : regular,
+            fontSize: fontSize,
+            color: color ?? ink,
+          ),
+        ),
+      );
+    }
+
+    pw.Widget cellText(
+      String value, {
+      required bool header,
+      PdfColor? color,
+    }) {
       final rtl = _containsArabic(value);
-      final rendered = rtl ? ArabicReshaper.instance.reshape(value) : value;
+      final rendered = rtl ? reshapeArabic(value) : value;
       return pw.Directionality(
         textDirection: rtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
         child: pw.Text(
           rendered,
           textDirection: rtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
           textAlign: rtl ? pw.TextAlign.right : pw.TextAlign.left,
+          maxLines: 4,
           style: pw.TextStyle(
             font: header ? medium : regular,
-            fontSize: header ? 5.4 : 4.8,
+            fontSize: header ? 7.1 : 6.7,
+            color: color ?? ink,
           ),
         ),
       );
     }
 
+    final visualIndexes = List<int>.generate(data.columns.length, (i) => i)
+        .reversed
+        .toList(growable: false);
     final widths = <int, pw.TableColumnWidth>{
-      for (var i = 0; i < data.columns.length; i++)
+      for (var i = 0; i < visualIndexes.length; i++)
         i: const pw.FlexColumnWidth(1),
     };
 
     document.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.fromLTRB(16, 18, 16, 18),
+        pageFormat: pageFormat,
+        margin: const pw.EdgeInsets.fromLTRB(24, 22, 24, 24),
         theme: pw.ThemeData.withFont(base: regular, bold: medium),
         header: (context) => pw.Container(
-          padding: const pw.EdgeInsets.only(bottom: 7),
-          margin: const pw.EdgeInsets.only(bottom: 7),
-          decoration: const pw.BoxDecoration(
-            border: pw.Border(
-              bottom: pw.BorderSide(width: 0.5, color: PdfColors.grey400),
-            ),
+          margin: const pw.EdgeInsets.only(bottom: 13),
+          decoration: pw.BoxDecoration(
+            color: navyDeep,
+            borderRadius: pw.BorderRadius.circular(9),
           ),
-          child: pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
+          child: pw.Stack(
             children: <pw.Widget>[
-              pw.Image(brand, width: 72),
-              pw.SizedBox(width: 10),
-              pw.Expanded(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+              pw.Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: pw.Container(width: 7, color: rose),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: <pw.Widget>[
-                    pw.Text(
-                      'ALKENZY ADV',
-                      style: pw.TextStyle(font: medium, fontSize: 12),
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: <pw.Widget>[
+                          arabicText(
+                            data.type.arabicTitle,
+                            fontSize: 15,
+                            bold: true,
+                            color: white,
+                          ),
+                          pw.SizedBox(height: 3),
+                          arabicText(
+                            'نظام إدارة العقود والمستحقات',
+                            fontSize: 8,
+                            color: PdfColor.fromInt(0xffe5ddd3),
+                          ),
+                        ],
+                      ),
                     ),
-                    pw.Text(
-                      data.type.title,
-                      style: pw.TextStyle(font: medium, fontSize: 9),
-                    ),
-                    pw.Text(
-                      'Generated: $generatedDate',
-                      style: pw.TextStyle(font: regular, fontSize: 6),
+                    pw.SizedBox(width: 15),
+                    pw.Container(
+                      width: 58,
+                      height: 46,
+                      padding: const pw.EdgeInsets.all(5),
+                      decoration: pw.BoxDecoration(
+                        color: creamRaised,
+                        borderRadius: pw.BorderRadius.circular(7),
+                      ),
+                      child: pw.Image(brand, fit: pw.BoxFit.contain),
                     ),
                   ],
                 ),
@@ -491,35 +610,92 @@ final class MobileReportDocumentBuilder {
           ),
         ),
         footer: (context) => pw.Container(
-          alignment: pw.Alignment.center,
-          padding: const pw.EdgeInsets.only(top: 6),
-          child: pw.Text(
-            'ALKENZY ADV | $generatedDate',
-            style: pw.TextStyle(font: regular, fontSize: 6),
+          margin: const pw.EdgeInsets.only(top: 10),
+          padding: const pw.EdgeInsets.only(top: 7),
+          decoration: pw.BoxDecoration(
+            border: pw.Border(top: pw.BorderSide(color: contour, width: 0.5)),
+          ),
+          child: pw.Row(
+            children: <pw.Widget>[
+              pw.Text(
+                'ALKENZY ADV  •  Safe Contracts',
+                style: pw.TextStyle(font: medium, fontSize: 6.5, color: navy),
+              ),
+              pw.Spacer(),
+              arabicText(
+                'صفحة ${context.pageNumber} من ${context.pagesCount}',
+                fontSize: 6.5,
+                bold: true,
+                color: muted,
+              ),
+            ],
           ),
         ),
         build: (context) => <pw.Widget>[
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+            decoration: pw.BoxDecoration(
+              color: cream,
+              borderRadius: pw.BorderRadius.circular(7),
+              border: pw.Border.all(color: contour, width: 0.5),
+            ),
+            child: pw.Row(
+              children: <pw.Widget>[
+                arabicText(
+                  'تاريخ الإصدار: $generatedDate',
+                  fontSize: 7,
+                  color: muted,
+                ),
+                pw.Spacer(),
+                arabicText(
+                  'عدد السجلات: ${data.rows.length}',
+                  fontSize: 7,
+                  bold: true,
+                  color: navy,
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 11),
           pw.Table(
             columnWidths: widths,
-            border: pw.TableBorder.all(width: 0.3),
+            border: pw.TableBorder.all(color: contour, width: 0.45),
             children: <pw.TableRow>[
               pw.TableRow(
-                children: data.columns
+                decoration: pw.BoxDecoration(color: navy),
+                children: visualIndexes
                     .map(
-                      (value) => pw.Padding(
-                        padding: const pw.EdgeInsets.all(2),
-                        child: cellText(value, header: true),
+                      (index) => pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 7,
+                        ),
+                        child: cellText(
+                          _arabicColumns[data.columns[index]] ??
+                              data.columns[index],
+                          header: true,
+                          color: white,
+                        ),
                       ),
                     )
                     .toList(growable: false),
               ),
-              ...limitedRows.map(
-                (row) => pw.TableRow(
-                  children: row
+              ...limitedRows.indexed.map(
+                (entry) => pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: entry.$1.isEven ? creamRaised : cream,
+                  ),
+                  children: visualIndexes
                       .map(
-                        (value) => pw.Padding(
-                          padding: const pw.EdgeInsets.all(2),
-                          child: cellText(value, header: false),
+                        (index) => pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 6,
+                          ),
+                          child: cellText(
+                            index < entry.$2.length ? entry.$2[index] : '',
+                            header: false,
+                          ),
                         ),
                       )
                       .toList(growable: false),
@@ -527,6 +703,22 @@ final class MobileReportDocumentBuilder {
               ),
             ],
           ),
+          if (data.rows.length > limitedRows.length) ...<pw.Widget>[
+            pw.SizedBox(height: 9),
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(
+                color: cream,
+                borderRadius: pw.BorderRadius.circular(6),
+              ),
+              child: arabicText(
+                'تم عرض أول ${limitedRows.length} سجلًا من إجمالي ${data.rows.length} سجلًا في ملف PDF.',
+                fontSize: 7,
+                color: muted,
+              ),
+            ),
+          ],
         ],
       ),
     );
