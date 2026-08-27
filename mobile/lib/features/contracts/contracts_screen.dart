@@ -717,21 +717,24 @@ final class _ContractCard extends StatelessWidget {
         : SafeContractsVisual.green;
     final progress = _termProgress(contract.startDate, contract.endDate);
     return Material(
+      key: ValueKey('contractCard-${contract.id}'),
       color: SafeContractsVisual.surface,
       borderRadius: BorderRadius.circular(SafeContractsVisual.radius),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Container(
+          constraints: const BoxConstraints(minHeight: 164),
           decoration: BoxDecoration(
             border: Border.all(color: SafeContractsVisual.outline),
             borderRadius: BorderRadius.circular(SafeContractsVisual.radius),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
                 width: 104,
+                height: 164,
                 child: FutureBuilder<ContractMedia?>(
                   future: media,
                   builder: (context, snapshot) => _ContractThumbnail(
@@ -744,6 +747,7 @@ final class _ContractCard extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
@@ -797,7 +801,7 @@ final class _ContractCard extends StatelessWidget {
                             ),
                         ],
                       ),
-                      const Spacer(),
+                      const SizedBox(height: 12),
                       if (contract.startDate != null ||
                           contract.endDate != null)
                         Text(
