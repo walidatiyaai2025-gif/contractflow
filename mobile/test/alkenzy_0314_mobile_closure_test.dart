@@ -45,23 +45,28 @@ void main() {
       final screen = File('lib/features/collections/collections_screen.dart')
           .readAsStringSync();
 
-      expect(shell,
-          contains('MobileDestination.collections => CollectionsScreen('));
+      expect(
+        shell,
+        contains('MobileDestination.collections => CollectionsScreen('),
+      );
       expect(shell, contains('repository: CollectionsRepository(apiClient)'));
       expect(
         shell,
         isNot(contains('MobileDestination.collections => PaymentsScreen(')),
       );
       expect(model, contains("client.get(\n      'collections'"));
-      expect(model,
-          contains("amount: _money(data['amount'], 'collection.amount')"));
+      expect(
+        model,
+        contains("amount: _money(data['amount'], 'collection.amount')"),
+      );
       expect(screen, contains('collection.amount'));
       expect(screen, contains('المبلغ المدفوع'));
       expect(screen, contains('المبلغ المحصل'));
       expect(screen, contains('سجل التحصيلات الفعلي'));
     });
 
-    test('landing Collections tab never replaces settlement amount with zero remaining balance',
+    test(
+        'landing Collections tab never replaces settlement amount with zero remaining balance',
         () {
       final dashboard = File('lib/features/dashboard/dashboard_screen.dart')
           .readAsStringSync();
@@ -81,14 +86,18 @@ void main() {
       );
     });
 
-    test('profile displays the installed APK version instead of stale hard-coded text',
+    test(
+        'profile displays the installed APK version instead of stale hard-coded text',
         () {
       final profile = File('lib/features/profile/modern_profile_content.dart')
           .readAsStringSync();
       final pubspec = File('pubspec.yaml').readAsStringSync();
       expect(profile, contains('PackageInfo.fromPlatform()'));
       expect(profile, contains("'\${package.version}+\${package.buildNumber}'"));
-      expect(profile, isNot(contains("static const appVersion = '0.3.12+17'")));
+      expect(
+        profile,
+        isNot(contains("static const appVersion = '0.3.12+17'")),
+      );
       expect(pubspec, contains('version: 0.3.15+20'));
     });
 
