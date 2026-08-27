@@ -21,7 +21,7 @@ dependencies:
   applovin_max: ^4.6.4
   image_picker: ^1.1.2
   local_auth: ^2.3.0
-  package_info_plus: 8.0.2
+  package_info_plus: ^8.0.2
   pdf: ^3.11.1
   url_launcher: ^6.3.2
 
