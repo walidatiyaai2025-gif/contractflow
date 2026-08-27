@@ -47,7 +47,8 @@ final class SafeContractsCollection {
       financialDirection: _direction(data['financial_direction']),
       currencyCode: _currency(data['currency_code']),
       amount: _money(data['amount'], 'collection.amount'),
-      collectionDate: _date(data['collection_date'], 'collection.collection_date'),
+      collectionDate:
+          _date(data['collection_date'], 'collection.collection_date'),
       paymentMethodName: _optionalText(data['payment_method_name']),
       reference: _optionalText(data['reference']),
       paymentReference: _optionalText(data['payment_reference']),
@@ -168,7 +169,8 @@ String _requiredText(Object? value, String field) {
 String? _optionalText(Object? value) {
   if (value == null || value == '') return null;
   if (value is! String) {
-    throw const FormatException('Optional collection text must be string or null.');
+    throw const FormatException(
+        'Optional collection text must be string or null.');
   }
   final text = value.trim();
   return text.isEmpty ? null : text;
@@ -178,14 +180,15 @@ String _money(Object? value, String field) {
   if (value is! String ||
       !RegExp(r'^\d+(?:\.\d{1,4})?$').hasMatch(value.trim()) ||
       value.length > 40) {
-    throw FormatException('$field must be a non-negative decimal money string.');
+    throw FormatException(
+        '$field must be a non-negative decimal money string.');
   }
   return value.trim();
 }
 
 String _direction(Object? value) {
-  final direction = _requiredText(value, 'collection.financial_direction')
-      .toLowerCase();
+  final direction =
+      _requiredText(value, 'collection.financial_direction').toLowerCase();
   if (direction != 'receivable' && direction != 'payable') {
     throw const FormatException('collection.financial_direction is invalid.');
   }
@@ -193,7 +196,8 @@ String _direction(Object? value) {
 }
 
 String _currency(Object? value) {
-  final currency = _requiredText(value, 'collection.currency_code').toUpperCase();
+  final currency =
+      _requiredText(value, 'collection.currency_code').toUpperCase();
   if (!RegExp(r'^[A-Z]{3}$').hasMatch(currency)) {
     throw const FormatException('collection.currency_code is invalid.');
   }
