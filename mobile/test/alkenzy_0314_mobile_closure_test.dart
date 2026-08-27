@@ -4,10 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ALKENZY 0.3.14 mobile closure', () {
-    test('bottom Contracts activation cannot preserve a false empty snapshot', () {
-      final shell = File('lib/features/navigation/app_shell.dart').readAsStringSync();
-      final activation = File('lib/features/contracts/contracts_activation.dart')
-          .readAsStringSync();
+    test('bottom Contracts activation cannot preserve a false empty snapshot',
+        () {
+      final shell =
+          File('lib/features/navigation/app_shell.dart').readAsStringSync();
+      final activation =
+          File('lib/features/contracts/contracts_activation.dart')
+              .readAsStringSync();
 
       expect(shell, contains('activateForVisibleTab()'));
       expect(activation, contains('state == ContractsLoadState.error'));
@@ -17,27 +20,31 @@ void main() {
     });
 
     test('Collections destination reads the actual settlement ledger', () {
-      final shell = File('lib/features/navigation/app_shell.dart').readAsStringSync();
-      final model = File('lib/features/collections/collections.dart')
-          .readAsStringSync();
+      final shell =
+          File('lib/features/navigation/app_shell.dart').readAsStringSync();
+      final model =
+          File('lib/features/collections/collections.dart').readAsStringSync();
       final screen = File('lib/features/collections/collections_screen.dart')
           .readAsStringSync();
 
-      expect(shell, contains('MobileDestination.collections => CollectionsScreen('));
+      expect(shell,
+          contains('MobileDestination.collections => CollectionsScreen('));
       expect(shell, contains('repository: CollectionsRepository(apiClient)'));
       expect(
         shell,
         isNot(contains('MobileDestination.collections => PaymentsScreen(')),
       );
       expect(model, contains("client.get(\n      'collections'"));
-      expect(model, contains("amount: _money(data['amount'], 'collection.amount')"));
+      expect(model,
+          contains("amount: _money(data['amount'], 'collection.amount')"));
       expect(screen, contains('collection.amount'));
       expect(screen, contains('المبلغ المدفوع'));
       expect(screen, contains('المبلغ المحصل'));
       expect(screen, contains('سجل التحصيلات الفعلي'));
     });
 
-    test('PDF report is premium Arabic RTL rather than English-header output', () {
+    test('PDF report is premium Arabic RTL rather than English-header output',
+        () {
       final report = File('lib/features/export/mobile_report_export.dart')
           .readAsStringSync();
 
