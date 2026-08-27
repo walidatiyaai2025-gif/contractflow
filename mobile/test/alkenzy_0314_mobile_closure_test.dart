@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('ALKENZY 0.3.14 mobile closure', () {
+  group('ALKENZY 0.3.15 mobile closure', () {
     test('bottom Contracts activation cannot preserve a false empty snapshot',
         () {
       final shell =
