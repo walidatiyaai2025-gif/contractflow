@@ -45,6 +45,7 @@ void main() {
       expect(contracts, contains('ScrollController'));
       expect(contracts, contains('_loadNextOnScroll'));
       expect(contracts, contains('controller.nextPage()'));
+      expect(contracts, contains("ValueKey('contractCard-\${contract.id}')"));
       expect(contracts, isNot(contains('CompactPagination(')));
       expect(details, contains('DefaultTabController('));
       expect(details, contains('length: 4'));
@@ -74,6 +75,9 @@ void main() {
       final activity =
           File('android-release/MainActivity.kt').readAsStringSync();
       final pubspec = File('pubspec.yaml').readAsStringSync();
+      final profile =
+          File('lib/features/profile/modern_profile_content.dart')
+              .readAsStringSync();
 
       expect(login, contains("Key('biometricLogin')"));
       expect(login, contains('_offerBiometricEnrollment'));
@@ -95,7 +99,9 @@ void main() {
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('safecontracts/files'));
       expect(activity, isNot(contains('safecontracts_exports')));
-      expect(pubspec, contains('version: 0.3.14+19'));
+      expect(pubspec, contains('version: 0.3.15+20'));
+      expect(profile, contains('PackageInfo.fromPlatform()'));
+      expect(profile, isNot(contains("static const appVersion = '0.3.12+17'")));
     });
   });
 }
