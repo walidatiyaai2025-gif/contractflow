@@ -63,6 +63,7 @@ final class FirebasePushTransport implements PushTransport
         $iconKey = sanitize_key((string) ($payload['icon_key'] ?? 'safe_contracts'));
         $soundSettings = new NotificationSoundSettings();
         $configuredSounds = $soundSettings->get();
+        $customSoundsEnabled = (bool) ($configuredSounds['enabled'] ?? false);
         $sound = $soundSettings->resolve($payload);
         $message = [
             'token' => $token,
@@ -84,10 +85,12 @@ final class FirebasePushTransport implements PushTransport
 
         $rawData = $payload['data'] ?? [];
         $data = $this->stringifyData(is_array($rawData) ? $rawData : []);
-        if ($data !== [] || ($configuredSounds['enabled'] ?? false)) {
+        if ($customSoundsEnabled) {
             $data['sound_key'] = $sound['sound_key'];
             $data['notification_category'] = $sound['category'];
             $data['channel_id'] = $sound['channel_id'];
+        }
+        if ($data !== []) {
             $message['data'] = $data;
         }
 
