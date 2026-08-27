@@ -416,7 +416,8 @@ final class _CollectionsLoading extends StatelessWidget {
             height: 146,
             decoration: BoxDecoration(
               color: SafeContractsVisual.surface,
-              borderRadius: BorderRadius.circular(SafeContractsVisual.compactRadius),
+              borderRadius:
+                  BorderRadius.circular(SafeContractsVisual.compactRadius),
               border: Border.all(color: SafeContractsVisual.outline),
             ),
             child: const Center(
