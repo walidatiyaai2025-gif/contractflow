@@ -137,6 +137,12 @@ final class RuntimeInspectorPage
                                 <td><strong><?php echo esc_html((string) ($event['operation'] ?? '')); ?></strong><br><code><?php echo esc_html((string) ($event['stage'] ?? '')); ?></code></td>
                                 <td><strong><?php echo esc_html((string) ($event['exception_class'] ?? '')); ?></strong><br><?php echo esc_html((string) ($event['message'] ?? '')); ?><?php if (! empty($event['db_error'])) : ?><br><strong><?php echo esc_html__('Database error:', 'safecontracts'); ?></strong> <?php echo esc_html((string) $event['db_error']); ?><?php endif; ?></td>
                                 <td><details><summary><?php echo esc_html__('Open diagnostic context', 'safecontracts'); ?></summary><pre><?php echo esc_html((string) json_encode([
+                                    'schema_version' => $event['schema_version'] ?? 1,
+                                    'classification' => $event['classification'] ?? '',
+                                    'root_cause' => $event['root_cause'] ?? ($event['message'] ?? ''),
+                                    'exception_code' => $event['exception_code'] ?? 0,
+                                    'exception_chain' => $event['exception_chain'] ?? [],
+                                    'source' => $event['source'] ?? [],
                                     'user_id' => $event['user_id'] ?? 0,
                                     'request' => $event['request'] ?? [],
                                     'capabilities' => array_keys(array_filter((array) ($event['capabilities'] ?? []))),
@@ -199,6 +205,7 @@ final class RuntimeInspectorPage
 
         return [
             'product' => 'ALKENZY ADV / SafeContracts',
+            'diagnostic_schema_version' => RuntimeInspector::EVENT_SCHEMA_VERSION,
             'generated_at_utc' => gmdate('c'),
             'download_filename' => 'alkenzy-runtime-inspector-' . gmdate('Ymd-His') . '.json',
             'current_user' => [
@@ -227,12 +234,18 @@ final class RuntimeInspectorPage
     private static function exportEvent(array $event): array
     {
         return [
+            'schema_version' => (int) ($event['schema_version'] ?? 1),
             'id' => (string) ($event['id'] ?? ''),
             'occurred_at_utc' => (string) ($event['occurred_at_utc'] ?? ''),
             'operation' => (string) ($event['operation'] ?? ''),
             'stage' => (string) ($event['stage'] ?? ''),
+            'classification' => (string) ($event['classification'] ?? ''),
+            'root_cause' => (string) ($event['root_cause'] ?? ($event['message'] ?? '')),
             'exception_class' => (string) ($event['exception_class'] ?? ''),
+            'exception_code' => $event['exception_code'] ?? 0,
+            'exception_chain' => (array) ($event['exception_chain'] ?? []),
             'message' => (string) ($event['message'] ?? ''),
+            'source' => (array) ($event['source'] ?? []),
             'db_error' => (string) ($event['db_error'] ?? ''),
             'user_id' => (int) ($event['user_id'] ?? 0),
             'request' => (array) ($event['request'] ?? []),
