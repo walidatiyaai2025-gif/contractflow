@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('ALKENZY 0.3.24 mobile closure', () {
+  group('ALKENZY 0.3.25 mobile closure', () {
     test('bottom Contracts activation cannot preserve a false empty snapshot',
         () {
       final shell =
@@ -107,7 +107,7 @@ void main() {
           profile,
           isNot(contains("static const appVersion = '0.3.12+17'")),
         );
-        expect(pubspec, contains('version: 0.3.24+24'));
+        expect(pubspec, contains('version: 0.3.25+25'));
       },
     );
 
