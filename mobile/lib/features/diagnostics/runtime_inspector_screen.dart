@@ -77,7 +77,9 @@ final class _MobileRuntimeInspectorScreenState
     final snapshot = _snapshot;
     if (snapshot == null) return;
     await Clipboard.setData(
-      ClipboardData(text: const JsonEncoder.withIndent('  ').convert(snapshot.raw)),
+      ClipboardData(
+        text: const JsonEncoder.withIndent('  ').convert(snapshot.raw),
+      ),
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -120,6 +122,7 @@ final class _MobileRuntimeInspectorScreenState
                   : _InspectorBody(
                       snapshot: _snapshot!,
                       isArabic: _ar,
+                      onRefresh: _load,
                     ),
     );
   }
@@ -158,7 +161,7 @@ final class RuntimeInspectorSnapshot {
     return RuntimeInspectorSnapshot(
       environment: Map<String, Object?>.unmodifiable(environment),
       events: List<RuntimeInspectorEvent>.unmodifiable(events),
-      retentionLimit: retentionLimit.clamp(1, 50),
+      retentionLimit: retentionLimit.clamp(1, 50).toInt(),
       raw: Map<String, Object?>.unmodifiable(data),
     );
   }
@@ -216,19 +219,20 @@ final class RuntimeInspectorEvent {
 }
 
 final class _InspectorBody extends StatelessWidget {
-  const _InspectorBody({required this.snapshot, required this.isArabic});
+  const _InspectorBody({
+    required this.snapshot,
+    required this.isArabic,
+    required this.onRefresh,
+  });
 
   final RuntimeInspectorSnapshot snapshot;
   final bool isArabic;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      onRefresh: () async {
-        final state = context.findAncestorStateOfType<
-            _MobileRuntimeInspectorScreenState>();
-        await state?._load();
-      },
+      onRefresh: onRefresh,
       child: ListView(
         padding: const EdgeInsets.all(14),
         children: [
@@ -301,10 +305,16 @@ final class _EnvironmentCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _kv(isArabic ? 'إصدار البلجن' : 'Plugin', pluginVersion),
-            _kv(isArabic ? 'قاعدة البيانات' : 'Database', '$dbVersion / $dbLatest'),
+            _kv(
+              isArabic ? 'قاعدة البيانات' : 'Database',
+              '$dbVersion / $dbLatest',
+            ),
             _kv('PHP', phpVersion),
             _kv('WordPress', wpVersion),
-            _kv(isArabic ? 'الأخطاء المسجلة' : 'Recorded failures', '$eventCount'),
+            _kv(
+              isArabic ? 'الأخطاء المسجلة' : 'Recorded failures',
+              '$eventCount',
+            ),
           ],
         ),
       ),
@@ -337,7 +347,9 @@ final class _EventCard extends StatelessWidget {
 
   Future<void> _copy(BuildContext context) async {
     await Clipboard.setData(
-      ClipboardData(text: const JsonEncoder.withIndent('  ').convert(event.raw)),
+      ClipboardData(
+        text: const JsonEncoder.withIndent('  ').convert(event.raw),
+      ),
     );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -368,13 +380,16 @@ final class _EventCard extends StatelessWidget {
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         children: [
           if (event.id.isNotEmpty)
-            _detail(isArabic ? 'Correlation ID' : 'Correlation ID', event.id),
+            _detail('Correlation ID', event.id),
           if (cause.isNotEmpty)
             _detail(isArabic ? 'السبب' : 'Root cause', cause),
           if (event.exceptionClass.isNotEmpty)
             _detail(isArabic ? 'الاستثناء' : 'Exception', event.exceptionClass),
           if (event.dbError.isNotEmpty)
-            _detail(isArabic ? 'خطأ قاعدة البيانات' : 'Database error', event.dbError),
+            _detail(
+              isArabic ? 'خطأ قاعدة البيانات' : 'Database error',
+              event.dbError,
+            ),
           if (event.source.isNotEmpty)
             _detail(
               isArabic ? 'المصدر' : 'Source',
@@ -485,7 +500,9 @@ int _intValue(Object? value, {required int fallback}) {
 Map<String, Object?> _optionalMap(Object? value) {
   if (value == null) return const <String, Object?>{};
   try {
-    return Map<String, Object?>.unmodifiable(apiObjectMap(value, 'diagnostic.map'));
+    return Map<String, Object?>.unmodifiable(
+      apiObjectMap(value, 'diagnostic.map'),
+    );
   } on FormatException {
     return const <String, Object?>{};
   }
