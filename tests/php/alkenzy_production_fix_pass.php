@@ -63,7 +63,7 @@ alkenzy_fix_assert(str_contains($contracts, 'if ($contracts !== [])'), 'contract
 alkenzy_fix_assert(str_contains($summaryInjector, 'ContractsPage::SLUG') && str_contains($summaryInjector, 'in_array($page'), 'contracts page is excluded from injected top summary cards');
 
 alkenzy_fix_assert(str_contains($schedule, 'LEFT JOIN {$suppliers} su'), 'notification scheduling joins suppliers');
-alkenzy_fix_assert(str_contains($schedule, "p.financial_direction IN ('receivable','payable')"), 'notification scheduling accepts both receivable and payable obligations');
+alkenzy_fix_assert(str_contains($schedule, 'p.financial_direction, p.currency_code') && ! str_contains($schedule, "AND p.financial_direction IN ('receivable','payable')"), 'notification scheduling admits valid and legacy obligations before direction canonicalization');
 alkenzy_fix_assert(str_contains($schedule, 'counterparty_name') && str_contains($schedule, 'supplier_name'), 'payable notifications receive supplier counterparty context');
 alkenzy_fix_assert(str_contains($schedule, 'ON DUPLICATE KEY UPDATE'), 'notification schedule remains idempotent');
 alkenzy_fix_assert(str_contains($engine, "'financial_direction' => \$direction") && str_contains($engine, "'counterparty_name' => \$counterpartyName"), 'notification engine carries direction-aware context into templates/payload');
