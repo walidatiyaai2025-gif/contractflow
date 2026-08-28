@@ -1,4 +1,4 @@
-name: ALKENZY 0.3.25 Contract Details Hotfix APK
+name: ALKENZY 0.3.26 Contract Details Fixed APK
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  build-hotfix-apk:
+  build-fixed-apk:
     runs-on: ubuntu-latest
     env:
       SC_PRODUCTION_API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
@@ -21,7 +21,7 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Apply contract details hotfix only
+      - name: Apply contract details fix and bump version
         shell: bash
         run: |
           set -euo pipefail
@@ -35,7 +35,7 @@ jobs:
           start = text.find(start_marker)
           end = text.find(end_marker, start)
           if start < 0 or end < 0:
-              raise SystemExit('FAIL: expected 0.3.25 contract detail loader was not found')
+              raise SystemExit('FAIL: contract detail loader was not found')
           new = """  Future<SafeContractsContract> loadContract(int id) async {
             if (id <= 0) throw ArgumentError('Contract ID must be positive.');
             try {
@@ -85,27 +85,33 @@ jobs:
           }
           """
           path.write_text(text[:start] + new + text[end:], encoding='utf-8')
+
+          pubspec = Path('mobile/pubspec.yaml')
+          pub = pubspec.read_text(encoding='utf-8')
+          if 'version: 0.3.25+25' not in pub:
+              raise SystemExit('FAIL: expected source version 0.3.25+25 was not found')
+          pubspec.write_text(pub.replace('version: 0.3.25+25', 'version: 0.3.26+26', 1), encoding='utf-8')
           PY
 
-      - name: Create hotfix signing key
+      - name: Create APK signing key
         shell: bash
         run: |
           set -euo pipefail
           keytool -genkeypair -v \
-            -keystore "$RUNNER_TEMP/alkenzy-hotfix.p12" \
+            -keystore "$RUNNER_TEMP/alkenzy-fixed.p12" \
             -storetype PKCS12 \
-            -storepass hotfix-only \
-            -keypass hotfix-only \
-            -alias alkenzy-hotfix \
+            -storepass fixed-only \
+            -keypass fixed-only \
+            -alias alkenzy-fixed \
             -keyalg RSA \
             -keysize 2048 \
             -validity 30 \
-            -dname "CN=ALKENZY 0.3.25 Hotfix, OU=Hotfix, O=ALKENZY, L=CI, ST=CI, C=US"
+            -dname "CN=ALKENZY 0.3.26 Fixed, OU=Fixed, O=ALKENZY, L=CI, ST=CI, C=US"
           {
-            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/alkenzy-hotfix.p12"
-            echo "SC_ANDROID_KEYSTORE_PASSWORD=hotfix-only"
-            echo "SC_ANDROID_KEY_ALIAS=alkenzy-hotfix"
-            echo "SC_ANDROID_KEY_PASSWORD=hotfix-only"
+            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/alkenzy-fixed.p12"
+            echo "SC_ANDROID_KEYSTORE_PASSWORD=fixed-only"
+            echo "SC_ANDROID_KEY_ALIAS=alkenzy-fixed"
+            echo "SC_ANDROID_KEY_PASSWORD=fixed-only"
           } >> "$GITHUB_ENV"
 
       - name: Materialize Android release platform
@@ -115,12 +121,12 @@ jobs:
           bash scripts/materialize_notification_sounds.sh
           bash scripts/bootstrap_android.sh
 
-      - name: Verify hotfix and build APK
+      - name: Verify and build fixed APK
         working-directory: mobile
         shell: bash
         run: |
           set -euo pipefail
-          test "$(awk '/^version:/{print $2; exit}' pubspec.yaml)" = "0.3.25+25"
+          test "$(awk '/^version:/{print $2; exit}' pubspec.yaml)" = "0.3.26+26"
           rm -f test/widget_test.dart
           flutter pub get
           dart format lib/features/contracts/contracts.dart
@@ -137,17 +143,17 @@ jobs:
           mkdir -p dist
           APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
           test -s "$APK"
-          cp "$APK" dist/Alkenzy-ADV-0.3.25-contract-details-hotfix.apk
-          sha256sum dist/Alkenzy-ADV-0.3.25-contract-details-hotfix.apk > dist/SHA256SUMS.txt
-          printf 'version=0.3.25+25\nsource=%s\nfix=contract-details-load\napi=%s\nsigning=hotfix-candidate\n' "$GITHUB_SHA" "$SC_PRODUCTION_API_BASE_URL" > dist/HOTFIX.txt
+          cp "$APK" dist/Alkenzy-ADV-0.3.26-FIXED.apk
+          sha256sum dist/Alkenzy-ADV-0.3.26-FIXED.apk > dist/SHA256SUMS.txt
+          printf 'version=0.3.26+26\nsource=%s\nfix=contract-details-load\napi=%s\n' "$GITHUB_SHA" "$SC_PRODUCTION_API_BASE_URL" > dist/FIXED.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: alkenzy-0.3.25-contract-details-hotfix-apk
+          name: alkenzy-0.3.26-fixed-apk
           path: |
-            dist/Alkenzy-ADV-0.3.25-contract-details-hotfix.apk
+            dist/Alkenzy-ADV-0.3.26-FIXED.apk
             dist/SHA256SUMS.txt
-            dist/HOTFIX.txt
+            dist/FIXED.txt
           if-no-files-found: error
           retention-days: 14
