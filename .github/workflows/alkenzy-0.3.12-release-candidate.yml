@@ -1,4 +1,4 @@
-name: ALKENZY 0.3.15 Release Candidate
+name: ALKENZY 0.3.21 Release Candidate
 
 on:
   pull_request:
@@ -46,8 +46,8 @@ jobs:
           MOBILE_VERSION="$(awk '/^version:/{print $2; exit}' mobile/pubspec.yaml)"
           VERSION_NAME="${MOBILE_VERSION%%+*}"
           PLUGIN_VERSION="$(sed -n "s/define('SAFECONTRACTS_VERSION', '\([^']*\)').*/\1/p" wordpress-plugin/safecontracts/safecontracts.php)"
-          test "$VERSION_NAME" = "0.3.15"
-          test "$MOBILE_VERSION" = "0.3.15+20"
+          test "$VERSION_NAME" = "0.3.21"
+          test "$MOBILE_VERSION" = "0.3.21+21"
           test "$PLUGIN_VERSION" = "$VERSION_NAME"
           echo "MOBILE_VERSION=$MOBILE_VERSION" >> "$GITHUB_ENV"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
@@ -61,9 +61,9 @@ jobs:
         run: |
           set -euo pipefail
           find wordpress-plugin/safecontracts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null
-          python3 scripts/package_plugin.py build --output dist/SafeContracts-0.3.15.zip
-          python3 scripts/package_plugin.py check dist/SafeContracts-0.3.15.zip
-          unzip -Z1 dist/SafeContracts-0.3.15.zip > "$RUNNER_TEMP/alkenzy-plugin-files.txt"
+          python3 scripts/package_plugin.py build --output dist/SafeContracts-0.3.21.zip
+          python3 scripts/package_plugin.py check dist/SafeContracts-0.3.21.zip
+          unzip -Z1 dist/SafeContracts-0.3.21.zip > "$RUNNER_TEMP/alkenzy-plugin-files.txt"
           grep -Fq 'assets/sounds/banknote-counter-106014.mp3' "$RUNNER_TEMP/alkenzy-plugin-files.txt"
           grep -Fq 'assets/sounds/cashier-quotka-chingquot-sound-effect-129698.mp3' "$RUNNER_TEMP/alkenzy-plugin-files.txt"
           grep -Fq 'assets/sounds/universfield-coin-drop-229314.mp3' "$RUNNER_TEMP/alkenzy-plugin-files.txt"
@@ -125,16 +125,16 @@ jobs:
           grep -Fq 'raw/cashier_ka_ching' "$RUNNER_TEMP/alkenzy-apk-resources.txt"
           grep -Fq 'raw/coin_drop' "$RUNNER_TEMP/alkenzy-apk-resources.txt"
           cp "$APK" "dist/Alkenzy-ADV-${VERSION_NAME}-sys.alkenzy.com.apk"
-          sha256sum "dist/SafeContracts-0.3.15.zip" "dist/Alkenzy-ADV-${VERSION_NAME}-sys.alkenzy.com.apk" | tee dist/SHA256SUMS.txt
-          printf 'source_sha=%s\nplugin_version=0.3.15\nmobile_version=%s\napi=%s\n' "$SOURCE_SHA" "$MOBILE_VERSION" "$SC_PRODUCTION_API_BASE_URL" > dist/RELEASE-CANDIDATE.txt
+          sha256sum "dist/SafeContracts-0.3.21.zip" "dist/Alkenzy-ADV-${VERSION_NAME}-sys.alkenzy.com.apk" | tee dist/SHA256SUMS.txt
+          printf 'source_sha=%s\nplugin_version=0.3.21\nmobile_version=%s\napi=%s\n' "$SOURCE_SHA" "$MOBILE_VERSION" "$SC_PRODUCTION_API_BASE_URL" > dist/RELEASE-CANDIDATE.txt
 
       - name: Upload plugin and APK
         uses: actions/upload-artifact@v4
         with:
-          name: alkenzy-0.3.15-release-candidate
+          name: alkenzy-0.3.21-release-candidate
           path: |
-            dist/SafeContracts-0.3.15.zip
-            dist/Alkenzy-ADV-0.3.15-sys.alkenzy.com.apk
+            dist/SafeContracts-0.3.21.zip
+            dist/Alkenzy-ADV-0.3.21-sys.alkenzy.com.apk
             dist/SHA256SUMS.txt
             dist/RELEASE-CANDIDATE.txt
           if-no-files-found: error
