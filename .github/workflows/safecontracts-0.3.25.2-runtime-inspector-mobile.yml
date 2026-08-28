@@ -1,0 +1,103 @@
+name: SafeContracts 0.3.25.2 Runtime Inspector + Mobile 0.3.27
+
+on:
+  push:
+    branches:
+      - fix/safecontracts-0.3.25.2-runtime-inspector
+
+permissions:
+  contents: read
+
+jobs:
+  build-inspector:
+    runs-on: ubuntu-latest
+    env:
+      SC_PRODUCTION_API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate and package plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -m1 'Version:' wordpress-plugin/safecontracts/safecontracts.php | awk '{print $3}')" = "0.3.25.2"
+          grep -q "RuntimeDiagnosticsController::register" wordpress-plugin/safecontracts/src/Rest/Router.php
+          grep -q "RuntimeInspector::capture" wordpress-plugin/safecontracts/src/Rest/ContractDetailHotfix.php
+          grep -q "safecontracts_manage_system" wordpress-plugin/safecontracts/src/Rest/RuntimeDiagnosticsController.php
+          find wordpress-plugin/safecontracts -name '*.php' -print0 | xargs -0 -n1 php -l
+          mkdir -p dist
+          (cd wordpress-plugin && zip -qr ../dist/SafeContracts-0.3.25.2-RUNTIME-INSPECTOR.zip safecontracts)
+          test -s dist/SafeContracts-0.3.25.2-RUNTIME-INSPECTOR.zip
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create APK signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/alkenzy-inspector.p12" \
+            -storetype PKCS12 \
+            -storepass inspector-only \
+            -keypass inspector-only \
+            -alias alkenzy-inspector \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 30 \
+            -dname "CN=ALKENZY Runtime Inspector, OU=Diagnostics, O=ALKENZY, L=CI, ST=CI, C=US"
+          {
+            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/alkenzy-inspector.p12"
+            echo "SC_ANDROID_KEYSTORE_PASSWORD=inspector-only"
+            echo "SC_ANDROID_KEY_ALIAS=alkenzy-inspector"
+            echo "SC_ANDROID_KEY_PASSWORD=inspector-only"
+          } >> "$GITHUB_ENV"
+
+      - name: Materialize Android release platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/materialize_notification_sounds.sh
+          bash scripts/bootstrap_android.sh
+
+      - name: Analyze and build mobile inspector APK
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(awk '/^version:/{print $2; exit}' pubspec.yaml)" = "0.3.27+27"
+          rm -f test/widget_test.dart
+          flutter pub get
+          dart format lib/features/diagnostics/runtime_inspector_screen.dart lib/features/profile/profile_screen.dart lib/features/profile/modern_profile_content.dart
+          flutter analyze
+          flutter build apk --release \
+            --dart-define=SC_ENV=production \
+            --dart-define=SC_API_BASE_URL="$SC_PRODUCTION_API_BASE_URL"
+
+      - name: Collect deliverables
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$APK"
+          cp "$APK" dist/Alkenzy-ADV-0.3.27-RUNTIME-INSPECTOR.apk
+          sha256sum \
+            dist/SafeContracts-0.3.25.2-RUNTIME-INSPECTOR.zip \
+            dist/Alkenzy-ADV-0.3.27-RUNTIME-INSPECTOR.apk \
+            > dist/SHA256SUMS.txt
+          printf 'plugin=0.3.25.2\nmobile=0.3.27+27\nfeature=admin-only-runtime-inspector\ncontract_detail_capture=enabled\napi=%s\nsource=%s\n' \
+            "$SC_PRODUCTION_API_BASE_URL" "$GITHUB_SHA" > dist/BUILD.txt
+
+      - name: Upload deliverables
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-runtime-inspector-0.3.25.2-0.3.27
+          path: |
+            dist/SafeContracts-0.3.25.2-RUNTIME-INSPECTOR.zip
+            dist/Alkenzy-ADV-0.3.27-RUNTIME-INSPECTOR.apk
+            dist/SHA256SUMS.txt
+            dist/BUILD.txt
+          if-no-files-found: error
+          retention-days: 14
