@@ -34,6 +34,6 @@ sc_diag_assert(str_contains($source, "'safecontracts_'"), 'table/option export i
 sc_diag_assert(str_contains($source, 'isSensitiveKey') && str_contains($source, "'[REDACTED]'"), 'diagnostic export redacts secret fields');
 sc_diag_assert(str_contains($source, 'password|passwd|secret|token|private[_-]?key|api[_-]?key|credential|service[_-]?account'), 'secret redaction covers passwords tokens credentials and private/API keys');
 sc_diag_assert(str_contains($source, "Content-Disposition: attachment; filename=\"safecontracts-diagnostic-db-"), 'diagnostic data downloads as a file');
-sc_diag_assert(str_contains($bootstrap, 'Version: 0.3.24') && str_contains($bootstrap, "SAFECONTRACTS_VERSION', '0.3.24'"), 'diagnostic export ships in forward plugin release 0.3.24');
+sc_diag_assert(str_contains($bootstrap, 'Version: 0.3.25') && str_contains($bootstrap, "SAFECONTRACTS_VERSION', '0.3.25'"), 'diagnostic export remains available in forward plugin release 0.3.25');
 
 echo "SafeContracts database diagnostic export regression passed ({$tests} assertions).\n";
