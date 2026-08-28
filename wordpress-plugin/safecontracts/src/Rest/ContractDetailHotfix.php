@@ -4,19 +4,18 @@ declare(strict_types=1);
 
 namespace SafeContracts\Rest;
 
+use DomainException;
+use InvalidArgumentException;
 use SafeContracts\Counterparties\CounterpartyReadRepository;
+use SafeContracts\Diagnostics\RuntimeInspector;
+use Throwable;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
 
 /**
- * 0.3.25 contract-detail compatibility repair.
- *
- * The contracts list already uses the server-authoritative contractPage()
- * query, while the single-contract route still used the legacy contracts()
- * read path. Reuse the same bounded query for /contracts/{id} so the detail
- * screen and the list have identical scope/schema behavior.
+ * 0.3.25 contract-detail compatibility repair with production diagnostics.
  */
 final class ContractDetailHotfix
 {
@@ -36,8 +35,15 @@ final class ContractDetailHotfix
             return $access;
         }
 
+        $id = 0;
         try {
             $id = ApiRequest::routeId($request);
+            RuntimeInspector::begin('rest.contract.detail', [
+                'contract_id' => $id,
+                'endpoint' => '/contracts/{id}',
+            ]);
+            RuntimeInspector::stage('contract_page.query');
+
             $page = (new CounterpartyReadRepository())->contractPage(
                 ['contract_id' => $id],
                 '',
@@ -47,8 +53,13 @@ final class ContractDetailHotfix
                 1
             );
 
+            RuntimeInspector::stage('contract_page.result', [
+                'row_count' => is_array($page['rows'] ?? null) ? count($page['rows']) : 0,
+                'total' => (int) ($page['total'] ?? 0),
+            ]);
             $rows = $page['rows'] ?? [];
             if ($rows === []) {
+                RuntimeInspector::finish();
                 return ApiResponse::notFound('Contract');
             }
 
@@ -80,22 +91,40 @@ final class ContractDetailHotfix
                 }
             }
 
+            RuntimeInspector::stage('response.ready', [
+                'returned_contract_id' => (int) ($data['id'] ?? 0),
+            ]);
+            RuntimeInspector::finish();
             return ApiResponse::ok($data, [
                 'scope' => ApiScope::mode(),
                 'contract_detail_source' => 'contract_page',
             ]);
-        } catch (\InvalidArgumentException $error) {
-            return ApiResponse::error('safecontracts_invalid_request', $error->getMessage(), 422);
-        } catch (\DomainException $error) {
-            return ApiResponse::error('safecontracts_scope_forbidden', $error->getMessage(), 403);
-        } catch (\Throwable $error) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[SafeContracts contract detail] ' . $error->getMessage());
-            }
+        } catch (InvalidArgumentException $error) {
+            $diagnosticId = RuntimeInspector::capture($error, ['contract_id' => $id]);
+            RuntimeInspector::finish();
+            return ApiResponse::error(
+                'safecontracts_invalid_request',
+                $error->getMessage(),
+                422,
+                ['diagnostic_id' => $diagnosticId]
+            );
+        } catch (DomainException $error) {
+            $diagnosticId = RuntimeInspector::capture($error, ['contract_id' => $id]);
+            RuntimeInspector::finish();
+            return ApiResponse::error(
+                'safecontracts_scope_forbidden',
+                $error->getMessage(),
+                403,
+                ['diagnostic_id' => $diagnosticId]
+            );
+        } catch (Throwable $error) {
+            $diagnosticId = RuntimeInspector::capture($error, ['contract_id' => $id]);
+            RuntimeInspector::finish();
             return ApiResponse::error(
                 'safecontracts_contract_detail_error',
                 __('Unable to load contract details.', 'safecontracts'),
-                500
+                500,
+                ['diagnostic_id' => $diagnosticId]
             );
         }
     }
