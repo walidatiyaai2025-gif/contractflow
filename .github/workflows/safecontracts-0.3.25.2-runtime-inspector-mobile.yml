@@ -23,7 +23,7 @@ jobs:
           test "$(grep -m1 'Version:' wordpress-plugin/safecontracts/safecontracts.php | awk '{print $3}')" = "0.3.25.2"
           grep -q "RuntimeDiagnosticsController::register" wordpress-plugin/safecontracts/src/Rest/Router.php
           grep -q "RuntimeInspector::capture" wordpress-plugin/safecontracts/src/Rest/ContractDetailHotfix.php
-          grep -q "safecontracts_manage_system" wordpress-plugin/safecontracts/src/Rest/RuntimeDiagnosticsController.php
+          grep -q "Capabilities::MANAGE_SYSTEM" wordpress-plugin/safecontracts/src/Rest/RuntimeDiagnosticsController.php
           find wordpress-plugin/safecontracts -name '*.php' -print0 | xargs -0 -n1 php -l
           mkdir -p dist
           (cd wordpress-plugin && zip -qr ../dist/SafeContracts-0.3.25.2-RUNTIME-INSPECTOR.zip safecontracts)
