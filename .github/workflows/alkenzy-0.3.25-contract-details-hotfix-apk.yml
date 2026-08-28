@@ -1,0 +1,163 @@
+name: ALKENZY 0.3.25 Contract Details Hotfix APK
+
+on:
+  push:
+    branches:
+      - fix/alkenzy-0.3.25-contract-details-apk
+
+permissions:
+  contents: read
+
+jobs:
+  build-hotfix-apk:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SC_PRODUCTION_API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Apply contract details hotfix only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('mobile/lib/features/contracts/contracts.dart')
+          text = path.read_text(encoding='utf-8')
+          old = """  Future<SafeContractsContract> loadContract(int id) async {
+            if (id <= 0) throw ArgumentError('Contract ID must be positive.');
+            final envelope = await client.get('contracts/$id');
+            final contract = SafeContractsContract.fromData(envelope.data);
+            if (contract.id != id) {
+              throw const FormatException('Contract detail ID does not match request.');
+            }
+            return contract;
+          }
+          """
+          new = """  Future<SafeContractsContract> loadContract(int id) async {
+            if (id <= 0) throw ArgumentError('Contract ID must be positive.');
+            try {
+              final envelope = await client.get('contracts/$id');
+              final contract = SafeContractsContract.fromData(envelope.data);
+              if (contract.id != id) {
+                throw const FormatException(
+                  'Contract detail ID does not match request.',
+                );
+              }
+              return contract;
+            } on SafeContractsApiException catch (error) {
+              if (error.statusCode == 401 || error.statusCode == 403) rethrow;
+              final fallback = await _loadContractFromList(id);
+              if (fallback != null) return fallback;
+              rethrow;
+            } on Object {
+              final fallback = await _loadContractFromList(id);
+              if (fallback != null) return fallback;
+              rethrow;
+            }
+          }
+
+          Future<SafeContractsContract?> _loadContractFromList(int id) async {
+            try {
+              final envelope = await client.get(
+                'contracts',
+                query: <String, String>{
+                  'contract_id': '$id',
+                  'page': '1',
+                  'per_page': '1',
+                  'sort': 'id',
+                  'order': 'desc',
+                },
+              );
+              final page = ContractPage.fromEnvelope(envelope);
+              for (final contract in page.contracts) {
+                if (contract.id == id) return contract;
+              }
+              return null;
+            } on SafeContractsApiException catch (error) {
+              if (error.statusCode == 401 || error.statusCode == 403) rethrow;
+              return null;
+            } on Object {
+              return null;
+            }
+          }
+          """
+          if old not in text:
+              raise SystemExit('FAIL: expected 0.3.25 contract detail loader was not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Prepare production signing
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.SC_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SC_ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SC_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "FAIL: production signing input $name is missing" >&2
+              exit 1
+            fi
+          done
+          mkdir -p "$RUNNER_TEMP/safecontracts-signing"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/safecontracts-signing/release.jks"
+          test -s "$RUNNER_TEMP/safecontracts-signing/release.jks"
+          {
+            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/safecontracts-signing/release.jks"
+            echo "SC_ANDROID_KEYSTORE_PASSWORD=$STORE_PASSWORD"
+            echo "SC_ANDROID_KEY_ALIAS=$KEY_ALIAS"
+            echo "SC_ANDROID_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Materialize Android release platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/materialize_notification_sounds.sh
+          bash scripts/bootstrap_android.sh
+
+      - name: Verify hotfix and build APK
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(awk '/^version:/{print $2; exit}' pubspec.yaml)" = "0.3.25+25"
+          flutter pub get
+          dart format lib/features/contracts/contracts.dart
+          flutter analyze
+          flutter test test/notification_sound_mapping_test.dart test/alkenzy_0314_mobile_closure_test.dart
+          flutter build apk --release \
+            --dart-define=SC_ENV=production \
+            --dart-define=SC_API_BASE_URL="$SC_PRODUCTION_API_BASE_URL"
+
+      - name: Collect APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$APK"
+          cp "$APK" dist/Alkenzy-ADV-0.3.25-contract-details-hotfix.apk
+          sha256sum dist/Alkenzy-ADV-0.3.25-contract-details-hotfix.apk > dist/SHA256SUMS.txt
+          printf 'version=0.3.25+25\nsource=%s\nfix=contract-details-load\napi=%s\n' "$GITHUB_SHA" "$SC_PRODUCTION_API_BASE_URL" > dist/HOTFIX.txt
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-0.3.25-contract-details-hotfix-apk
+          path: |
+            dist/Alkenzy-ADV-0.3.25-contract-details-hotfix.apk
+            dist/SHA256SUMS.txt
+            dist/HOTFIX.txt
+          if-no-files-found: error
+          retention-days: 14
