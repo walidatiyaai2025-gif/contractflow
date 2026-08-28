@@ -19,6 +19,7 @@ final class ModernProfileContent extends StatelessWidget {
     this.avatarUploading = false,
     this.onAvatarUpload,
     this.onPrivacyLegal,
+    this.onRuntimeInspector,
     super.key,
   });
 
@@ -31,6 +32,7 @@ final class ModernProfileContent extends StatelessWidget {
   final bool avatarUploading;
   final VoidCallback? onAvatarUpload;
   final VoidCallback? onPrivacyLegal;
+  final VoidCallback? onRuntimeInspector;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +67,20 @@ final class ModernProfileContent extends StatelessWidget {
                 languageCode: languageCode,
                 onLanguageChanged: onLanguageChanged,
               ),
+              if (onRuntimeInspector != null) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.tonalIcon(
+                    key: const Key('profileRuntimeInspector'),
+                    onPressed: onRuntimeInspector,
+                    icon: const Icon(Icons.monitor_heart_outlined),
+                    label: Text(
+                      ar ? 'فاحص التشغيل' : 'Runtime Inspector',
+                    ),
+                  ),
+                ),
+              ],
               if (onPrivacyLegal != null) ...[
                 const SizedBox(height: 10),
                 SizedBox(
