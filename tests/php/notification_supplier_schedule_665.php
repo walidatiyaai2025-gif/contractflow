@@ -37,6 +37,8 @@ final class SC_665_SupplierScheduleWpdb
     public string $prefix = 'wp_';
     /** @var list<string> */
     public array $mutations = [];
+    /** @var list<string> */
+    public array $reads = [];
     public string $dueDate;
     public string $contractDirection = 'receivable';
     public string $paymentDirection = 'payable';
@@ -65,6 +67,7 @@ final class SC_665_SupplierScheduleWpdb
     public function get_results(string $sql, mixed $output = null): array
     {
         unset($output);
+        $this->reads[] = $sql;
 
         if (str_contains($sql, 'FROM wp_safecontracts_contracts') && str_contains($sql, 'financial_direction')) {
             return [[
@@ -75,6 +78,16 @@ final class SC_665_SupplierScheduleWpdb
         }
 
         if (str_contains($sql, 'FROM wp_safecontracts_scheduled_payments p')) {
+            // Reproduce the old production bug: a SQL-level direction filter
+            // discards legacy rows before NotificationPaymentScope can apply
+            // the owning-contract fallback.
+            if (
+                str_contains($sql, "p.financial_direction IN ('receivable','payable')")
+                && ! in_array($this->paymentDirection, ['receivable', 'payable'], true)
+            ) {
+                return [];
+            }
+
             return [[
                 'id' => '77',
                 'contract_id' => '9',
@@ -223,6 +236,20 @@ $missingDirection['financial_direction'] = '';
 $fallbackCanonical = NotificationPaymentScope::canonicalize($missingDirection);
 sc_665_supplier_assert($fallbackCanonical['financial_direction'] === 'payable', 'contract direction is used only as fallback when the scheduled payment direction is missing');
 sc_665_supplier_assert(($fallbackCanonical['notification_direction_source'] ?? '') === 'contract_fallback', 'fallback diagnostics identify the contract as the direction source');
+
+// Production legacy case that previous releases did not cover: the payment
+// row itself has no direction. The repository must still return it so the
+// contract fallback can materialize the Supplier occurrence.
+$fakeWpdb->paymentDirection = '';
+$fakeWpdb->contractDirection = 'payable';
+$fakeWpdb->mutations = [];
+$fakeWpdb->reads = [];
+$legacyReconciled = (new NotificationPaymentScheduleReconciler())->reconcile(77);
+sc_665_supplier_assert($legacyReconciled === 1, 'legacy Supplier payment without a stored direction is not filtered out before contract fallback');
+$legacyReads = implode("\n", $fakeWpdb->reads);
+sc_665_supplier_assert(! str_contains($legacyReads, "p.financial_direction IN ('receivable','payable')"), 'schedule repository no longer applies a SQL direction filter before canonicalization');
+$legacyMutations = implode("\n", $fakeWpdb->mutations);
+sc_665_supplier_assert(str_contains($legacyMutations, 'INSERT INTO wp_safecontracts_notification_schedule'), 'legacy Supplier payment reaches the real pending schedule insert after contract fallback');
 
 $GLOBALS['wpdb'] = $originalWpdb;
 
