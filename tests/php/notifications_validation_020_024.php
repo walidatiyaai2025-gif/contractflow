@@ -150,7 +150,7 @@ sc_p5v3_assert($engine->plan($repeatRule, $settled, new DateTimeImmutable('2026-
 
 // SC-P5-021 — Notification templates.
 $allowed = NotificationTemplate::allowedPlaceholders();
-sc_p5v3_assert($allowed === ['customer_name', 'contract_number', 'payment_reference', 'due_date', 'remaining_amount', 'days_overdue'], 'SC-P5-021 template placeholder allow-list is explicit and stable');
+sc_p5v3_assert($allowed === ['customer_name', 'supplier_name', 'counterparty_name', 'financial_direction', 'currency_code', 'contract_number', 'payment_reference', 'due_date', 'remaining_amount', 'days_overdue'], 'SC-P5-021 template placeholder allow-list is explicit, Supplier-aware and stable');
 $template = NotificationTemplate::normalizeInput([
     'code' => 'validation-template',
     'title_template' => 'Contract {{contract_number}}',

@@ -45,6 +45,7 @@ final class NotificationPaymentScheduleReconciler
             do_action('safecontracts_notification_payment_schedule_reconciled', $paymentId, 0);
             return 0;
         }
+        $payment = NotificationPaymentScope::canonicalize($payment);
 
         $timezone = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
         $today = new DateTimeImmutable('today', $timezone);

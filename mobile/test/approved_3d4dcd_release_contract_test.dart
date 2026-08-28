@@ -16,7 +16,17 @@ void main() {
       );
       expect(source, contains('_DashboardTabs(controller: controller)'));
       expect(source, contains('_TabSwipeRegion('));
+      expect(
+        source,
+        contains('DashboardRecordType.collection => record.amount'),
+      );
       expect(source, isNot(contains('final columns = compact ? 2 : 4')));
+      expect(
+        source,
+        isNot(
+          contains('final amount = record.remainingAmount ?? record.amount;'),
+        ),
+      );
     });
 
     test('only the authoritative dashboard is exposed in navigation', () {
@@ -45,6 +55,7 @@ void main() {
       expect(contracts, contains('ScrollController'));
       expect(contracts, contains('_loadNextOnScroll'));
       expect(contracts, contains('controller.nextPage()'));
+      expect(contracts, contains("ValueKey('contractCard-\${contract.id}')"));
       expect(contracts, isNot(contains('CompactPagination(')));
       expect(details, contains('DefaultTabController('));
       expect(details, contains('length: 4'));
@@ -74,6 +85,8 @@ void main() {
       final activity =
           File('android-release/MainActivity.kt').readAsStringSync();
       final pubspec = File('pubspec.yaml').readAsStringSync();
+      final profile = File('lib/features/profile/modern_profile_content.dart')
+          .readAsStringSync();
 
       expect(login, contains("Key('biometricLogin')"));
       expect(login, contains('_offerBiometricEnrollment'));
@@ -87,12 +100,20 @@ void main() {
       expect(report, contains('ArabicReshaper.instance.reshape'));
       expect(report, contains('pw.TextDirection.rtl'));
       expect(report, contains('PdfPageFormat.a4'));
+      expect(report, contains('تقرير العقود'));
+      expect(report, contains('تاريخ الإصدار'));
+      expect(report, isNot(contains("'Generated: \$generatedDate'")));
       expect(report, contains('<w:bidi/>'));
       expect(report, contains('readingOrder="2"'));
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('safecontracts/files'));
       expect(activity, isNot(contains('safecontracts_exports')));
-      expect(pubspec, contains('version: 0.3.13+18'));
+      expect(pubspec, contains('version: 0.3.25+25'));
+      expect(profile, contains('PackageInfo.fromPlatform()'));
+      expect(
+        profile,
+        isNot(contains("static const appVersion = '0.3.12+17'")),
+      );
     });
   });
 }

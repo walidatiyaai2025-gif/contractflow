@@ -95,7 +95,7 @@ $templateService = (string) file_get_contents($root . '/wordpress-plugin/safecon
 $soundSettings = (string) file_get_contents($root . '/wordpress-plugin/safecontracts/src/Notifications/NotificationSoundSettings.php');
 sc_661_assert(str_contains($engine, "in_array(\$direction, ['receivable', 'payable'], true)"), 'Notification engine only emits canonical financial direction metadata.');
 sc_661_assert(str_contains($engine, "'template_code' => \$templateCode"), 'Notification engine carries the selected template code into scheduled push metadata.');
-sc_661_assert(str_contains($repository, "p.financial_direction IN ('receivable','payable')"), 'Scheduled payment source guarantees canonical financial direction values.');
+sc_661_assert(str_contains($repository, 'p.financial_direction, p.currency_code') && ! str_contains($repository, "AND p.financial_direction IN ('receivable','payable')"), 'Scheduled payment source preserves raw direction for canonicalization and does not discard legacy Supplier rows first.');
 sc_661_assert(str_contains($templateService, "'supplier_payment_due_soon' => 'payment_due_soon'"), 'Supplier due-soon rules can render through the compatible due-soon template when no dedicated template row exists.');
 sc_661_assert(str_contains($soundSettings, "'due_soon'"), 'Notification sound routing classifies supplier due-soon metadata as the due-reminder category.');
 

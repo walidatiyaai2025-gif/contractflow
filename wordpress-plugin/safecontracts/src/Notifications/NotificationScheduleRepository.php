@@ -36,7 +36,6 @@ final class NotificationScheduleRepository
                AND ((c.counterparty_type = 'customer' AND cu.id IS NOT NULL AND cu.is_active = 1)
                     OR (c.counterparty_type = 'supplier' AND su.id IS NOT NULL))
                AND p.remaining_amount > 0 AND p.status <> 'paid'
-               AND p.financial_direction IN ('receivable','payable')
              ORDER BY p.due_date ASC, p.id ASC
              LIMIT {$limit}",
             ARRAY_A
@@ -69,7 +68,6 @@ final class NotificationScheduleRepository
              WHERE p.id = %d AND p.is_archived = 0 AND c.is_archived = 0
                AND ((c.counterparty_type = 'customer' AND cu.id IS NOT NULL AND cu.is_active = 1)
                     OR (c.counterparty_type = 'supplier' AND su.id IS NOT NULL))
-               AND p.financial_direction IN ('receivable','payable')
              LIMIT 1",
             $paymentId
         ), ARRAY_A);

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../session/session_controller.dart';
 import '../ui/mobile_layout.dart';
 import '../ui/safecontracts_design.dart';
 import 'profile_identity_sections.dart';
+
+final Future<PackageInfo> _runtimePackageInfo = PackageInfo.fromPlatform();
 
 final class ModernProfileContent extends StatelessWidget {
   const ModernProfileContent({
@@ -18,8 +21,6 @@ final class ModernProfileContent extends StatelessWidget {
     this.onPrivacyLegal,
     super.key,
   });
-
-  static const appVersion = '0.3.12+17';
 
   final SafeContractsSession session;
   final String languageCode;
@@ -84,13 +85,22 @@ final class ModernProfileContent extends StatelessWidget {
                 onUserGuide: onUserGuide,
               ),
               const SizedBox(height: 8),
-              Text(
-                ar ? 'إصدار التطبيق $appVersion' : 'App version $appVersion',
-                key: const Key('profileAppVersion'),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: SafeContractsVisual.muted,
-                      fontWeight: FontWeight.w700,
-                    ),
+              FutureBuilder<PackageInfo>(
+                future: _runtimePackageInfo,
+                builder: (context, snapshot) {
+                  final package = snapshot.data;
+                  final version = package == null
+                      ? '…'
+                      : '${package.version}+${package.buildNumber}';
+                  return Text(
+                    ar ? 'إصدار التطبيق $version' : 'App version $version',
+                    key: const Key('profileAppVersion'),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: SafeContractsVisual.muted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  );
+                },
               ),
             ],
           );
