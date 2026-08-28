@@ -11,7 +11,6 @@ permissions:
 jobs:
   build-hotfix-apk:
     runs-on: ubuntu-latest
-    environment: production
     env:
       SC_PRODUCTION_API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
     steps:
@@ -88,29 +87,25 @@ jobs:
           path.write_text(text[:start] + new + text[end:], encoding='utf-8')
           PY
 
-      - name: Prepare production signing
+      - name: Create hotfix signing key
         shell: bash
-        env:
-          KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.SC_ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.SC_ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.SC_ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
-            if [[ -z "${!name:-}" ]]; then
-              echo "FAIL: production signing input $name is missing" >&2
-              exit 1
-            fi
-          done
-          mkdir -p "$RUNNER_TEMP/safecontracts-signing"
-          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/safecontracts-signing/release.jks"
-          test -s "$RUNNER_TEMP/safecontracts-signing/release.jks"
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/alkenzy-hotfix.p12" \
+            -storetype PKCS12 \
+            -storepass hotfix-only \
+            -keypass hotfix-only \
+            -alias alkenzy-hotfix \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 30 \
+            -dname "CN=ALKENZY 0.3.25 Hotfix, OU=Hotfix, O=ALKENZY, L=CI, ST=CI, C=US"
           {
-            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/safecontracts-signing/release.jks"
-            echo "SC_ANDROID_KEYSTORE_PASSWORD=$STORE_PASSWORD"
-            echo "SC_ANDROID_KEY_ALIAS=$KEY_ALIAS"
-            echo "SC_ANDROID_KEY_PASSWORD=$KEY_PASSWORD"
+            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/alkenzy-hotfix.p12"
+            echo "SC_ANDROID_KEYSTORE_PASSWORD=hotfix-only"
+            echo "SC_ANDROID_KEY_ALIAS=alkenzy-hotfix"
+            echo "SC_ANDROID_KEY_PASSWORD=hotfix-only"
           } >> "$GITHUB_ENV"
 
       - name: Materialize Android release platform
@@ -143,7 +138,7 @@ jobs:
           test -s "$APK"
           cp "$APK" dist/Alkenzy-ADV-0.3.25-contract-details-hotfix.apk
           sha256sum dist/Alkenzy-ADV-0.3.25-contract-details-hotfix.apk > dist/SHA256SUMS.txt
-          printf 'version=0.3.25+25\nsource=%s\nfix=contract-details-load\napi=%s\n' "$GITHUB_SHA" "$SC_PRODUCTION_API_BASE_URL" > dist/HOTFIX.txt
+          printf 'version=0.3.25+25\nsource=%s\nfix=contract-details-load\napi=%s\nsigning=hotfix-candidate\n' "$GITHUB_SHA" "$SC_PRODUCTION_API_BASE_URL" > dist/HOTFIX.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
