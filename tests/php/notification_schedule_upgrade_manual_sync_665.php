@@ -67,8 +67,8 @@ sc_665_sync_assert(
     'upgrade reconciliation remains outside the cron-registration guard and therefore does not wait for WP-Cron availability'
 );
 sc_665_sync_assert(
-    str_contains($bootstrap, 'Version: 0.3.23') && str_contains($bootstrap, "SAFECONTRACTS_VERSION', '0.3.23'"),
-    'upgrade/manual reconciliation ships only in forward release 0.3.23'
+    str_contains($bootstrap, 'Version: 0.3.24') && str_contains($bootstrap, "SAFECONTRACTS_VERSION', '0.3.24'"),
+    'upgrade/manual reconciliation ships only in forward release 0.3.24'
 );
 
 echo "SafeContracts notification upgrade/manual sync #665 passed ({$tests} assertions).\n";
