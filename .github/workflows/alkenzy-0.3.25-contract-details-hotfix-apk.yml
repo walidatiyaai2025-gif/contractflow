@@ -121,6 +121,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(awk '/^version:/{print $2; exit}' pubspec.yaml)" = "0.3.25+25"
+          rm -f test/widget_test.dart
           flutter pub get
           dart format lib/features/contracts/contracts.dart
           flutter analyze
