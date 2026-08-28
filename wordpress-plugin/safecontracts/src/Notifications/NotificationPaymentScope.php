@@ -8,15 +8,19 @@ use SafeContracts\Contracts\Counterparty;
 use SafeContracts\Payments\FinancialDirection;
 
 /**
- * Reconciles duplicated payment scope with its owning contract before a
- * notification rule is matched.
+ * Normalizes notification scope without silently rewriting a valid scheduled
+ * payment obligation.
  *
- * Financial direction is an independent accounting dimension: a customer may
- * legitimately be payable and a supplier may legitimately be receivable. The
- * owning contract is therefore authoritative; counterparty type must never be
- * used to invent a direction. Historical scheduled-payment rows can retain a
- * stale copy after migrations, which previously made supplier rules disappear
- * from the notification schedule.
+ * `financial_direction` is duplicated on contracts and scheduled payments.
+ * Once a scheduled payment has a valid receivable/payable value, that payment
+ * row is the authoritative obligation for notification matching. The owning
+ * contract remains authoritative for counterparty identity and is used only as
+ * a direction fallback when the payment row has no valid direction.
+ *
+ * This matters for historical production data where a payable Supplier payment
+ * can coexist with a stale receivable value on the owning contract. Replacing
+ * the payment direction from that stale contract value makes every
+ * supplier/payable notification rule disappear before schedule materialization.
  */
 final class NotificationPaymentScope
 {
@@ -25,7 +29,7 @@ final class NotificationPaymentScope
     {
         $contractId = (int) ($payment['contract_id'] ?? 0);
         if ($contractId <= 0) {
-            return $payment;
+            return self::apply($payment, null);
         }
 
         $scopes = self::contractScopes([$contractId]);
@@ -45,11 +49,8 @@ final class NotificationPaymentScope
                 $contractIds[$contractId] = $contractId;
             }
         }
-        if ($contractIds === []) {
-            return array_values($payments);
-        }
 
-        $scopes = self::contractScopes(array_values($contractIds));
+        $scopes = $contractIds === [] ? [] : self::contractScopes(array_values($contractIds));
         $normalized = [];
         foreach ($payments as $payment) {
             $contractId = (int) ($payment['contract_id'] ?? 0);
@@ -65,23 +66,43 @@ final class NotificationPaymentScope
      */
     private static function apply(array $payment, ?array $scope): array
     {
-        if ($scope === null) {
-            $payment['notification_scope_source'] = 'payment_row';
-            return $payment;
+        $paymentDirection = self::validDirection($payment['financial_direction'] ?? null);
+        $contractDirection = $scope === null ? null : self::validDirection($scope['financial_direction'] ?? null);
+
+        if ($paymentDirection !== null) {
+            $payment['financial_direction'] = $paymentDirection;
+            $payment['notification_direction_source'] = 'payment_row';
+        } elseif ($contractDirection !== null) {
+            $payment['financial_direction'] = $contractDirection;
+            $payment['notification_direction_source'] = 'contract_fallback';
+        } else {
+            $payment['notification_direction_source'] = 'unresolved';
         }
 
-        $direction = strtolower(trim($scope['financial_direction']));
-        if (in_array($direction, [FinancialDirection::RECEIVABLE, FinancialDirection::PAYABLE], true)) {
-            $payment['financial_direction'] = $direction;
+        if ($scope !== null) {
+            $counterpartyType = strtolower(trim((string) ($scope['counterparty_type'] ?? '')));
+            if (in_array($counterpartyType, [Counterparty::CUSTOMER, Counterparty::SUPPLIER], true)) {
+                $payment['counterparty_type'] = $counterpartyType;
+            }
         }
 
-        $counterpartyType = strtolower(trim($scope['counterparty_type']));
-        if (in_array($counterpartyType, [Counterparty::CUSTOMER, Counterparty::SUPPLIER], true)) {
-            $payment['counterparty_type'] = $counterpartyType;
-        }
+        $payment['notification_contract_direction'] = $contractDirection;
+        $payment['notification_direction_mismatch'] = $paymentDirection !== null
+            && $contractDirection !== null
+            && $paymentDirection !== $contractDirection;
+        $payment['notification_scope_source'] = $scope === null
+            ? 'payment_row'
+            : ($paymentDirection !== null ? 'payment_direction_contract_counterparty' : 'contract_fallback');
 
-        $payment['notification_scope_source'] = 'contract';
         return $payment;
+    }
+
+    private static function validDirection(mixed $value): ?string
+    {
+        $direction = strtolower(trim((string) $value));
+        return in_array($direction, [FinancialDirection::RECEIVABLE, FinancialDirection::PAYABLE], true)
+            ? $direction
+            : null;
     }
 
     /**
@@ -121,8 +142,7 @@ final class NotificationPaymentScope
             }
             $direction = strtolower(trim((string) ($row['financial_direction'] ?? '')));
             $counterpartyType = strtolower(trim((string) ($row['counterparty_type'] ?? '')));
-            if (! in_array($direction, [FinancialDirection::RECEIVABLE, FinancialDirection::PAYABLE], true)
-                || ! in_array($counterpartyType, [Counterparty::CUSTOMER, Counterparty::SUPPLIER], true)) {
+            if (! in_array($counterpartyType, [Counterparty::CUSTOMER, Counterparty::SUPPLIER], true)) {
                 continue;
             }
             $result[$id] = [
