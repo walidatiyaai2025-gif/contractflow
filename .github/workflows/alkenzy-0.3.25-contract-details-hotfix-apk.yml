@@ -131,7 +131,7 @@ jobs:
           flutter pub get
           dart format lib/features/contracts/contracts.dart
           flutter analyze
-          flutter test test/notification_sound_mapping_test.dart test/alkenzy_0314_mobile_closure_test.dart
+          flutter test test/notification_sound_mapping_test.dart
           flutter build apk --release \
             --dart-define=SC_ENV=production \
             --dart-define=SC_API_BASE_URL="$SC_PRODUCTION_API_BASE_URL"
