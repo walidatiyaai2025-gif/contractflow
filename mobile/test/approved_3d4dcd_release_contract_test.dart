@@ -108,7 +108,7 @@ void main() {
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('safecontracts/files'));
       expect(activity, isNot(contains('safecontracts_exports')));
-      expect(pubspec, contains('version: 0.3.15+20'));
+      expect(pubspec, contains('version: 0.3.21+21'));
       expect(profile, contains('PackageInfo.fromPlatform()'));
       expect(
         profile,
