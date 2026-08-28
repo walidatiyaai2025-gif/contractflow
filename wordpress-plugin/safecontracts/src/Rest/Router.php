@@ -38,6 +38,7 @@ final class Router
         ProfileAvatarController::register();
         PaymentMethodsController::register();
         DataController::register();
+        ContractDetailHotfix::register();
         FinanceController::register();
         DashboardController::register();
         ContractMediaController::register();
