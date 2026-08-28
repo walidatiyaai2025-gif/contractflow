@@ -1,70 +1,115 @@
 # ALKENZY ADV — Locked Mobile Release Baseline
 
-Status: **PROJECT-APPROVED SOURCE / LOCKED**
+Status: **PROJECT-OWNER APPROVED / LOCKED**
 
-This file defines the mandatory source lineage for every future Alkenzy ADV Android change and APK handoff.
+This file defines the mandatory source lineage for every future Alkenzy ADV WordPress plugin change, Android change, ZIP handoff and APK handoff.
 
-## Current approved release
+## Current approved unified release
+
+The project owner explicitly approved this release on **2026-08-28**:
 
 - Product: `Alkenzy ADV`
-- Approved unified release: `0.3.6+10`
-- Approved plugin version: `0.3.6`
-- Approved versionName: `0.3.6`
-- Approved build number: `10`
-- Immutable release baseline branch: `release/alkenzy-adv-mobile-0.3.6`
-- Exact approved functional source commit: `9171f1c357822f9118eb8058aab6fb145c475fc3`
-- Approval and merge vehicle: PR `#652`
-- Previous approved release: `0.3.5+9`
-- Previous approved functional source: `458e3580d07eb182224c3652bb18d3c82b87adbd`
-- Original owner-approved lineage ancestor: `3d4dcd2205b5cfa7d0814e5635db577ee5dcefed`
-- Approval date: `2026-08-25`
+- Approved WordPress plugin: **`0.3.25`**
+- Approved Android release: **`0.3.25+25`**
+- Approved versionName: `0.3.25`
+- Approved build number: `25`
+- Exact approved functional source commit: **`bebde8238e60bb98742564e901ebb345b4c0d69a`**
+- Source branch at approval: `fix/0.3.14-mobile-data-report-closure`
+- Approval / integration vehicle: PR `#665`
+- Exact successful release-candidate workflow: `ALKENZY 0.3.25 Release Candidate`, run `33135245766`
+- Release-candidate artifact: `alkenzy-0.3.25-release-candidate`
+- Production API recorded in artifact metadata: `https://sys.alkenzy.com/wp-json/safecontracts/v1/`
+- Plugin artifact: `SafeContracts-0.3.25.zip`
+- Plugin SHA-256: `efb85bc60d1346b71aa23afaee4d26230b95e3daec827686494931d62834455f`
+- APK artifact: `Alkenzy-ADV-0.3.25-sys.alkenzy.com.apk`
+- APK SHA-256: `1cd8876390d3ce86c56e56dd0af9181b40072ba26cfb545e824ba019c2682d91`
+- Previous locked baseline: `0.3.6+10`, source `9171f1c357822f9118eb8058aab6fb145c475fc3`
+- Git ancestry proof: previous `0.3.6+10` source is the merge-base and ancestor of the approved `0.3.25` source; comparison is `ahead_by=405`, `behind_by=0`.
 
-The approved source represented by this baseline contains the complete PR #652 Dashboard/mobile-landing/payment-follow-up/demo-data scope, B084 server-authoritative pagination, and the previous accepted biometric-login, Remember-me default-off, report/download, and Arabic RTL report corrections. Commit `458e3580d07eb182224c3652bb18d3c82b87adbd` is a real ancestor of the new functional source; it is not merely referenced in documentation.
+The `0.3.25 / 0.3.25+25` source therefore supersedes all earlier release baselines while preserving their ancestry. No later worker may restart from an older snapshot and silently lose accepted behavior.
 
-Exact-head CI artifacts prove the candidate build path. A production-signed APK remains subject to the separate signing, real-device and business-UAT gates in `AGENTS.md`; this source approval does not fabricate those external proofs.
+## Mandatory forward-only source rule
 
-## Mandatory forward-only rule
+Every future Alkenzy ADV modification MUST start from exact approved source commit:
 
-Every future Alkenzy ADV plugin or mobile modification MUST start from `release/alkenzy-adv-mobile-0.3.6` or from a commit that is proven to be a descendant of that release baseline. Starting a new change from any older commit, stale PR head, abandoned worker branch, historical APK branch, or pre-`0.3.6+10` snapshot is forbidden.
+`bebde8238e60bb98742564e901ebb345b4c0d69a`
 
-No future change may silently restore or wholesale-copy an older implementation over files from this release baseline. Porting from another branch must be surgical and must preserve all behavior already present in this baseline unless the project owner explicitly requests its removal.
+or from a commit that is proven to be its descendant.
+
+Forbidden starting points include:
+
+- repository `main` merely because it is the default branch, unless its selected commit is proven to contain this baseline;
+- an older release branch;
+- a stale PR head;
+- an abandoned Worker branch;
+- a historical APK/plugin branch;
+- any commit that cannot prove ancestry from the approved `0.3.25` functional source.
+
+If a candidate branch is not a descendant, the Lead MUST reconcile the intended change onto the approved baseline before implementation continues.
+
+No future change may wholesale-copy an older implementation over files from this release. Ports must be surgical and preserve all accepted `0.3.25` behavior unless the project owner explicitly requests removal or replacement.
 
 ## Mandatory version rule
 
-`0.3.6+10` is consumed and may never be reused for another release.
+`0.3.25` and build number `25` are consumed and may never be reused for a different build.
 
-For every APK handed to the project owner after this baseline:
+For every owner-facing release after this baseline:
 
-1. `wordpress-plugin/safecontracts/safecontracts.php` and `mobile/pubspec.yaml` MUST advance to the same new semantic product version; mobile MUST also use a strictly larger build number.
-2. The default next release is **at least `0.3.7+11`**. A higher semantic version is allowed, but `0.3.6` and build number `10` may not be reused.
-3. The version bump must be committed before the final release build is produced.
-4. The APK filename, CI artifact metadata, release notes, checksum record and handoff message must all identify the same version.
-5. A production-code PR is not release-ready if its version still equals `0.3.6+10` or duplicates any later consumed release number.
-6. `python3 scripts/validate-release-version.py` is the CI enforcement gate for canonical-version consistency and forward-only production changes.
+1. `wordpress-plugin/safecontracts/safecontracts.php` and `mobile/pubspec.yaml` MUST advance to the same new semantic product version.
+2. Mobile MUST use a strictly larger build number.
+3. The default next release is **at least `0.3.26+26`**. A higher forward version is allowed if explicitly selected, but no lower version may be used.
+4. The version bump must be committed before final release build generation.
+5. Plugin ZIP filename, APK filename, internal metadata, CI artifact metadata, checksum record and handoff text must all identify the same exact release lineage.
+6. Exact-source Quality Gates and release-readiness must pass before the release is described as verified or ready.
+7. A later approved release becomes the new baseline only after explicit project-owner acceptance and a governance update of this file. Lineage may move forward only.
 
-## Mandatory ancestry check
+## Mandatory ancestry block
 
-Every future mobile PR/handoff must record:
+Every future production PR and handoff must include:
 
 ```text
-ALKENZY-ADV-RELEASE-LINEAGE: LOCKED
-PREVIOUS-APPROVED-RELEASE: 0.3.6+10
-BASELINE-BRANCH: release/alkenzy-adv-mobile-0.3.6
-BASELINE-COMMIT: 9171f1c357822f9118eb8058aab6fb145c475fc3
-NEW-VERSION: <must be at least 0.3.7+11>
+[ALKENZY-ADV-RELEASE-LINEAGE-LOCK]
+PREVIOUS-APPROVED-PLUGIN: 0.3.25
+PREVIOUS-APPROVED-MOBILE: 0.3.25+25
+BASELINE-COMMIT: bebde8238e60bb98742564e901ebb345b4c0d69a
+NEW-VERSION: <must be at least 0.3.26+26>
 BASELINE-ANCESTOR-VERIFIED: YES
 NO-STALE-BRANCH-REPLACEMENT: YES
+PRESERVE-APPROVED-0.3.25-BEHAVIOR: YES
 ```
 
-The Lead must verify that the approved baseline is an ancestor of the new functional release lineage before declaring a later APK accepted.
+The Lead must verify the ancestry claim rather than merely copy the text.
 
-## Supersession
+## Artifact identity
 
-This baseline remains authoritative until the project owner explicitly approves a later release. When a later release is approved, update this file in the same governance change, preserving forward lineage from `0.3.6+10`. Never delete the lineage history by resetting to an earlier base.
+The owner-approved `0.3.25` release candidate was generated from the exact functional SHA above. Its release metadata records:
+
+```text
+source_sha=bebde8238e60bb98742564e901ebb345b4c0d69a
+plugin_version=0.3.25
+mobile_version=0.3.25+25
+api=https://sys.alkenzy.com/wp-json/safecontracts/v1/
+```
+
+Artifact checksums are immutable acceptance evidence for this baseline:
+
+```text
+efb85bc60d1346b71aa23afaee4d26230b95e3daec827686494931d62834455f  SafeContracts-0.3.25.zip
+1cd8876390d3ce86c56e56dd0af9181b40072ba26cfb545e824ba019c2682d91  Alkenzy-ADV-0.3.25-sys.alkenzy.com.apk
+```
+
+Do not label another binary as this approved release if its checksum differs.
+
+## Supersession precedence
+
+This file and the owner-approved baseline lock in root `AGENTS.md` supersede every older release-baseline/version/SHA statement elsewhere in the repository when they conflict, including historical `0.3.6+10` wording in the bug-closure constitution or older handoff documents.
+
+The older records remain useful as lineage history; they are not valid future starting baselines.
 
 ## Preserved release history
 
 | Release | Functional source | State |
 |---|---|---|
 | `0.3.5+9` | `458e3580d07eb182224c3652bb18d3c82b87adbd` | Superseded, preserved ancestor |
-| `0.3.6+10` | `9171f1c357822f9118eb8058aab6fb145c475fc3` | Current approved source baseline |
+| `0.3.6+10` | `9171f1c357822f9118eb8058aab6fb145c475fc3` | Superseded, proven ancestor |
+| `0.3.25+25` | `bebde8238e60bb98742564e901ebb345b4c0d69a` | **CURRENT PROJECT-OWNER APPROVED BASELINE** |
