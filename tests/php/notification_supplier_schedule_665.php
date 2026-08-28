@@ -8,6 +8,7 @@ require_once dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/safecontract
 use SafeContracts\Notifications\NotificationPaymentScheduleReconciler;
 use SafeContracts\Notifications\NotificationPaymentScope;
 use SafeContracts\Notifications\NotificationRule;
+use SafeContracts\Notifications\NotificationTemplate;
 use SafeContracts\Roles\RoleRegistrar;
 
 $tests = 0;
@@ -140,22 +141,23 @@ final class SC_665_SupplierScheduleWpdb
 
         if (str_contains($sql, 'FROM wp_safecontracts_notification_templates')) {
             if (str_contains($sql, "'supplier_payment_due_soon'")) {
-                return [];
-            }
-            if (str_contains($sql, "'payment_due_soon'")) {
+                // Exact production template shape from the 0.3.24 diagnostic
+                // export. Both supplier/counterparty and currency placeholders
+                // must render; silently falling back to the customer template
+                // would hide the production failure again.
                 return [[
-                    'id' => '1',
-                    'code' => 'payment_due_soon',
-                    'title_template' => 'Payment due soon',
-                    'body_template' => '{{customer_name}} payment {{payment_reference}} is due {{due_date}}.',
-                    'email_subject_template' => 'Payment due soon',
-                    'email_body_template' => '{{contract_number}} payment {{payment_reference}} has {{remaining_amount}} remaining.',
-                    'icon_key' => 'warning',
+                    'id' => '4',
+                    'code' => 'supplier_payment_due_soon',
+                    'title_template' => 'Supplier invoice due {{due_date}}',
+                    'body_template' => '{{counterparty_name}} · {{contract_number}} · {{payment_reference}} has {{currency_code}} {{remaining_amount}} remaining and is due {{due_date}}.',
+                    'email_subject_template' => 'Supplier invoice due {{due_date}} · {{contract_number}}',
+                    'email_body_template' => 'Supplier: {{counterparty_name}}. Contract: {{contract_number}}. Invoice/payment: {{payment_reference}}. Remaining: {{currency_code}} {{remaining_amount}}. Due: {{due_date}}.',
+                    'icon_key' => 'payment',
                     'is_active' => '1',
                     'created_by' => null,
                     'updated_by' => null,
-                    'created_at' => '2026-08-27 00:00:00',
-                    'updated_at' => '2026-08-27 00:00:00',
+                    'created_at' => '2026-08-20 09:59:39',
+                    'updated_at' => '2026-08-20 09:59:39',
                 ]];
             }
         }
@@ -215,9 +217,11 @@ sc_665_supplier_assert(($canonical['notification_direction_source'] ?? '') === '
 sc_665_supplier_assert(($canonical['notification_direction_mismatch'] ?? false) === true, 'payment/contract direction disagreement is surfaced instead of silently rewritten');
 sc_665_supplier_assert(($canonical['notification_contract_direction'] ?? '') === 'receivable', 'diagnostics retain the stale contract direction for investigation');
 sc_665_supplier_assert(NotificationRule::matchesPayment($supplierRule, $canonical, $today), 'Supplier payable rule still matches after canonicalization');
+sc_665_supplier_assert(in_array('counterparty_name', NotificationTemplate::allowedPlaceholders(), true), 'supplier counterparty placeholder is a governed notification-template token');
+sc_665_supplier_assert(in_array('currency_code', NotificationTemplate::allowedPlaceholders(), true), 'supplier currency placeholder is a governed notification-template token');
 
 $reconciled = (new NotificationPaymentScheduleReconciler())->reconcile(77);
-sc_665_supplier_assert($reconciled === 1, 'production-shaped Supplier payment materializes one real schedule occurrence');
+sc_665_supplier_assert($reconciled === 1, 'production-shaped Supplier payment and production Supplier template materialize one real schedule occurrence');
 $mutationSql = implode("\n", $fakeWpdb->mutations);
 sc_665_supplier_assert(str_contains($mutationSql, 'INSERT INTO wp_safecontracts_notification_schedule'), 'Supplier occurrence is persisted into the real notification schedule table');
 sc_665_supplier_assert(str_contains($mutationSql, "'supplier_payment_due_soon'"), 'persisted Supplier occurrence retains supplier_payment_due_soon for downstream sound routing');
@@ -253,4 +257,4 @@ sc_665_supplier_assert(str_contains($legacyMutations, 'INSERT INTO wp_safecontra
 
 $GLOBALS['wpdb'] = $originalWpdb;
 
-echo "SafeContracts supplier notification schedule production mismatch passed ({$tests} assertions).\n";
+echo "SafeContracts supplier notification schedule production template regression passed ({$tests} assertions).\n";
