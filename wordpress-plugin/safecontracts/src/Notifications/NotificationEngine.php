@@ -65,6 +65,7 @@ final class NotificationEngine
         $templateCode = NotificationRule::normalizeCode($rule['template_code'] ?? 'payment_due_soon');
         $counterpartyName = (string) ($payment['counterparty_name'] ?? $payment['customer_name'] ?? $payment['supplier_name'] ?? '');
         $direction = (string) ($payment['financial_direction'] ?? '');
+        $currencyCode = strtoupper(trim((string) ($payment['currency_code'] ?? '')));
         $renderContext = array_merge([
             // Preserve the historical customer_name token so existing templates
             // still render for supplier/payable rows while adding explicit,
@@ -73,6 +74,7 @@ final class NotificationEngine
             'supplier_name' => (string) ($payment['supplier_name'] ?? ''),
             'counterparty_name' => $counterpartyName,
             'financial_direction' => $direction,
+            'currency_code' => $currencyCode,
             'contract_number' => (string) ($payment['contract_number'] ?? ''),
             'payment_reference' => (string) ($payment['reference'] ?? ''),
             'due_date' => (string) ($payment['due_date'] ?? ''),
