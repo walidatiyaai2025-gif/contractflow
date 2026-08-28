@@ -1,0 +1,46 @@
+name: SafeContracts 0.3.25.1 Contract Detail Hotfix
+
+on:
+  push:
+    branches:
+      - fix/safecontracts-0.3.25-contract-detail-endpoint
+
+permissions:
+  contents: read
+
+jobs:
+  package-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate plugin hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "Version: 0.3.25.1" wordpress-plugin/safecontracts/safecontracts.php
+          grep -q "SAFECONTRACTS_VERSION', '0.3.25.1'" wordpress-plugin/safecontracts/safecontracts.php
+          grep -q "ContractDetailHotfix::register();" wordpress-plugin/safecontracts/src/Rest/Router.php
+          grep -q "contractPage(" wordpress-plugin/safecontracts/src/Rest/ContractDetailHotfix.php
+          find wordpress-plugin/safecontracts -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Package installable WordPress plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cd wordpress-plugin
+          zip -qr ../dist/SafeContracts-0.3.25.1-CONTRACT-DETAIL-FIX.zip safecontracts
+          cd ..
+          test -s dist/SafeContracts-0.3.25.1-CONTRACT-DETAIL-FIX.zip
+          sha256sum dist/SafeContracts-0.3.25.1-CONTRACT-DETAIL-FIX.zip > dist/SHA256SUMS.txt
+
+      - name: Upload plugin ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: safecontracts-0.3.25.1-contract-detail-fix
+          path: |
+            dist/SafeContracts-0.3.25.1-CONTRACT-DETAIL-FIX.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
