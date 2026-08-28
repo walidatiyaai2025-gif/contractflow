@@ -1,4 +1,4 @@
-name: SafeContracts 0.3.25.2 Runtime Inspector + Mobile 0.3.28
+name: SafeContracts 0.3.25.2 Runtime Inspector + Mobile 0.3.29
 
 on:
   push:
@@ -69,19 +69,23 @@ jobs:
           python3 scripts/apply_mobile_contract_detail_closure.py
           grep -q "MobileRuntimeDiagnostics" mobile/lib/features/contracts/contracts.dart
           grep -q "MobileDiagnosticsCard" mobile/lib/features/diagnostics/runtime_inspector_screen.dart
+          grep -q "initialContract: initialContract" mobile/lib/features/navigation/app_shell.dart
+          grep -q "unawaited(_hydrate(initial))" mobile/lib/features/contracts/premium_contract_details_screen.dart
 
       - name: Analyze and build mobile inspector APK
         working-directory: mobile
         shell: bash
         run: |
           set -euo pipefail
-          test "$(awk '/^version:/{print $2; exit}' pubspec.yaml)" = "0.3.28+28"
+          test "$(awk '/^version:/{print $2; exit}' pubspec.yaml)" = "0.3.29+29"
           rm -f test/widget_test.dart
           flutter pub get
           dart format \
             lib/features/contracts/contracts.dart \
+            lib/features/contracts/premium_contract_details_screen.dart \
             lib/features/diagnostics/mobile_runtime_diagnostics.dart \
             lib/features/diagnostics/runtime_inspector_screen.dart \
+            lib/features/navigation/app_shell.dart \
             lib/features/profile/profile_screen.dart \
             lib/features/profile/modern_profile_content.dart
           flutter analyze
@@ -95,21 +99,21 @@ jobs:
           set -euo pipefail
           APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
           test -s "$APK"
-          cp "$APK" dist/Alkenzy-ADV-0.3.28-CONTRACT-DETAIL-FIX.apk
+          cp "$APK" dist/Alkenzy-ADV-0.3.29-PREMIUM-CONTRACT-FIX.apk
           sha256sum \
             dist/SafeContracts-0.3.25.2-RUNTIME-INSPECTOR.zip \
-            dist/Alkenzy-ADV-0.3.28-CONTRACT-DETAIL-FIX.apk \
+            dist/Alkenzy-ADV-0.3.29-PREMIUM-CONTRACT-FIX.apk \
             > dist/SHA256SUMS.txt
-          printf 'plugin=0.3.25.2\nmobile=0.3.28+28\nfeature=admin-only-server-and-mobile-runtime-inspector\ncontract_detail_cached_fallback=enabled\ncontract_detail_filtered_fallback=enabled\napi=%s\nsource=%s\n' \
+          printf 'plugin=0.3.25.2\nmobile=0.3.29+29\nfeature=admin-only-server-and-mobile-runtime-inspector\npremium_contract_initial_snapshot=enabled\npremium_supplemental_hydration=non_blocking\ncontract_detail_filtered_fallback=enabled\napi=%s\nsource=%s\n' \
             "$SC_PRODUCTION_API_BASE_URL" "$GITHUB_SHA" > dist/BUILD.txt
 
       - name: Upload deliverables
         uses: actions/upload-artifact@v4
         with:
-          name: alkenzy-contract-detail-fix-0.3.28
+          name: alkenzy-premium-contract-fix-0.3.29
           path: |
             dist/SafeContracts-0.3.25.2-RUNTIME-INSPECTOR.zip
-            dist/Alkenzy-ADV-0.3.28-CONTRACT-DETAIL-FIX.apk
+            dist/Alkenzy-ADV-0.3.29-PREMIUM-CONTRACT-FIX.apk
             dist/SHA256SUMS.txt
             dist/BUILD.txt
           if-no-files-found: error
