@@ -38,6 +38,8 @@ final class SC_665_SupplierScheduleWpdb
     /** @var list<string> */
     public array $mutations = [];
     public string $dueDate;
+    public string $contractDirection = 'receivable';
+    public string $paymentDirection = 'payable';
 
     public function __construct(string $dueDate)
     {
@@ -67,7 +69,7 @@ final class SC_665_SupplierScheduleWpdb
         if (str_contains($sql, 'FROM wp_safecontracts_contracts') && str_contains($sql, 'financial_direction')) {
             return [[
                 'id' => '9',
-                'financial_direction' => 'payable',
+                'financial_direction' => $this->contractDirection,
                 'counterparty_type' => 'supplier',
             ]];
         }
@@ -80,9 +82,7 @@ final class SC_665_SupplierScheduleWpdb
                 'due_date' => $this->dueDate,
                 'remaining_amount' => '100.0000',
                 'status' => 'upcoming',
-                // Simulate a historical duplicated field that drifted from the
-                // authoritative contract direction.
-                'financial_direction' => 'receivable',
+                'financial_direction' => $this->paymentDirection,
                 'currency_code' => 'KWD',
                 'accountant_user_id' => null,
                 'contract_number' => 'SUP-2026-009',
@@ -162,15 +162,6 @@ $fakeWpdb = new SC_665_SupplierScheduleWpdb($dueDate);
 $GLOBALS['wpdb'] = $fakeWpdb;
 $GLOBALS['sc_test_users_by_role'][RoleRegistrar::MANAGER] = [42];
 
-$stalePayment = [
-    'id' => 77,
-    'contract_id' => 9,
-    'counterparty_type' => 'supplier',
-    'financial_direction' => 'receivable',
-    'due_date' => $dueDate,
-    'remaining_amount' => '100.0000',
-    'status' => 'upcoming',
-];
 $supplierRule = NotificationRule::normalizeInput([
     'code' => 'supplier_payable_due_1_day',
     'name' => 'Supplier payable - 1 day before due',
@@ -190,23 +181,49 @@ $supplierRule = NotificationRule::normalizeInput([
     'is_active' => true,
 ]);
 
+$productionShape = [
+    'id' => 77,
+    'contract_id' => 9,
+    'counterparty_type' => 'supplier',
+    'financial_direction' => 'payable',
+    'due_date' => $dueDate,
+    'remaining_amount' => '100.0000',
+    'status' => 'upcoming',
+];
+
 sc_665_supplier_assert(
-    ! NotificationRule::matchesPayment($supplierRule, $stalePayment, $today),
-    'the stale duplicated payment direction demonstrates the historical supplier schedule mismatch'
+    NotificationRule::matchesPayment($supplierRule, $productionShape, $today),
+    'the production Supplier payment itself is payable and matches the Supplier rule before contract normalization'
 );
-$canonical = NotificationPaymentScope::canonicalize($stalePayment);
-sc_665_supplier_assert($canonical['financial_direction'] === 'payable', 'contract-owned payable direction repairs the supplier notification scope');
-sc_665_supplier_assert($canonical['counterparty_type'] === 'supplier', 'contract-owned supplier type remains authoritative');
-sc_665_supplier_assert(($canonical['notification_scope_source'] ?? '') === 'contract', 'diagnostic scope source identifies contract reconciliation');
-sc_665_supplier_assert(NotificationRule::matchesPayment($supplierRule, $canonical, $today), 'supplier payable rule matches after contract-scope reconciliation');
+$canonical = NotificationPaymentScope::canonicalize($productionShape);
+sc_665_supplier_assert($canonical['financial_direction'] === 'payable', 'a valid payable payment direction is never overwritten by a stale receivable contract direction');
+sc_665_supplier_assert($canonical['counterparty_type'] === 'supplier', 'contract-owned supplier identity remains authoritative');
+sc_665_supplier_assert(($canonical['notification_direction_source'] ?? '') === 'payment_row', 'diagnostics identify the scheduled payment row as the direction authority');
+sc_665_supplier_assert(($canonical['notification_direction_mismatch'] ?? false) === true, 'payment/contract direction disagreement is surfaced instead of silently rewritten');
+sc_665_supplier_assert(($canonical['notification_contract_direction'] ?? '') === 'receivable', 'diagnostics retain the stale contract direction for investigation');
+sc_665_supplier_assert(NotificationRule::matchesPayment($supplierRule, $canonical, $today), 'Supplier payable rule still matches after canonicalization');
 
 $reconciled = (new NotificationPaymentScheduleReconciler())->reconcile(77);
-sc_665_supplier_assert($reconciled === 1, 'supplier due-soon reconciliation materializes one real schedule occurrence');
+sc_665_supplier_assert($reconciled === 1, 'production-shaped Supplier payment materializes one real schedule occurrence');
 $mutationSql = implode("\n", $fakeWpdb->mutations);
-sc_665_supplier_assert(str_contains($mutationSql, 'INSERT INTO wp_safecontracts_notification_schedule'), 'supplier occurrence is persisted into the real notification schedule table');
-sc_665_supplier_assert(str_contains($mutationSql, "'supplier_payment_due_soon'"), 'persisted supplier occurrence retains supplier_payment_due_soon for downstream sound routing');
-sc_665_supplier_assert(str_contains($mutationSql, "'pending'"), 'supplier occurrence enters the pending dispatch state');
+sc_665_supplier_assert(str_contains($mutationSql, 'INSERT INTO wp_safecontracts_notification_schedule'), 'Supplier occurrence is persisted into the real notification schedule table');
+sc_665_supplier_assert(str_contains($mutationSql, "'supplier_payment_due_soon'"), 'persisted Supplier occurrence retains supplier_payment_due_soon for downstream sound routing');
+sc_665_supplier_assert(str_contains($mutationSql, "'pending'"), 'Supplier occurrence enters the pending dispatch state');
+
+$fakeWpdb->contractDirection = 'payable';
+$reverseMismatch = $productionShape;
+$reverseMismatch['financial_direction'] = 'receivable';
+$reverseCanonical = NotificationPaymentScope::canonicalize($reverseMismatch);
+sc_665_supplier_assert($reverseCanonical['financial_direction'] === 'receivable', 'the reverse mismatch also preserves a valid scheduled-payment direction');
+sc_665_supplier_assert(($reverseCanonical['notification_direction_mismatch'] ?? false) === true, 'reverse mismatch is diagnostic instead of destructive');
+
+$fakeWpdb->contractDirection = 'payable';
+$missingDirection = $productionShape;
+$missingDirection['financial_direction'] = '';
+$fallbackCanonical = NotificationPaymentScope::canonicalize($missingDirection);
+sc_665_supplier_assert($fallbackCanonical['financial_direction'] === 'payable', 'contract direction is used only as fallback when the scheduled payment direction is missing');
+sc_665_supplier_assert(($fallbackCanonical['notification_direction_source'] ?? '') === 'contract_fallback', 'fallback diagnostics identify the contract as the direction source');
 
 $GLOBALS['wpdb'] = $originalWpdb;
 
-echo "SafeContracts supplier notification schedule #665 passed ({$tests} assertions).\n";
+echo "SafeContracts supplier notification schedule production mismatch passed ({$tests} assertions).\n";
