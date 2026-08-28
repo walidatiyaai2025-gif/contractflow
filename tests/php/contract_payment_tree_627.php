@@ -41,6 +41,6 @@ sc_627_assert(str_contains($plugin, 'ContractPaymentTree::register()'), 'plugin 
 sc_627_assert(str_contains($shell, 'contract-payment-tree.css') && str_contains($shell, 'CONTRACT_TREE_STYLE_HANDLE'), 'admin shell loads the dedicated contract tree stylesheet');
 sc_627_assert(str_contains($css, '.safecontracts-contract-payment-tree--receivable') && str_contains($css, '.safecontracts-contract-payment-tree--payable'), 'tree styling preserves the system green receivable and red payable visual language');
 sc_627_assert(str_contains($css, '.safecontracts-contract-payment-tree__edit'), 'tree stylesheet supports inline payment editor UX');
-sc_627_assert(str_contains($bootstrap, 'Version: 0.3.22') && str_contains($bootstrap, "SAFECONTRACTS_VERSION', '0.3.22'"), 'plugin version advances with the current integrated release candidate');
+sc_627_assert(str_contains($bootstrap, 'Version: 0.3.23') && str_contains($bootstrap, "SAFECONTRACTS_VERSION', '0.3.23'"), 'plugin version advances with the current integrated release candidate');
 
 echo "SafeContracts contract payment tree regression passed ({$tests} assertions).\n";
