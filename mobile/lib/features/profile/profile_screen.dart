@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/mobile_config.dart';
+import '../diagnostics/runtime_inspector_screen.dart';
 import '../help/mobile_user_guide_screen.dart';
 import '../navigation/navigation_policy.dart';
 import '../notifications/push_registration.dart';
@@ -40,6 +41,8 @@ final class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _imagePicker = ImagePicker();
 
   bool get _isArabic => widget.languageCode.trim().toLowerCase() == 'ar';
+  bool get _canInspectRuntime =>
+      widget.session.can('safecontracts_manage_system');
 
   Future<void> _changeAvatar() async {
     final picked = await _imagePicker.pickImage(
@@ -83,6 +86,19 @@ final class _ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute<void>(
         builder: (context) => MobileUserGuideScreen(
           destinations: policy.destinations,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openRuntimeInspector() async {
+    if (!_canInspectRuntime) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => MobileRuntimeInspectorScreen(
+          client: widget.controller.repository.client,
+          session: widget.session,
+          languageCode: widget.languageCode,
         ),
       ),
     );
@@ -185,6 +201,8 @@ final class _ProfileScreenState extends State<ProfileScreen> {
         onLanguageChanged: widget.onLanguageChanged,
         onLogout: widget.onClearSession,
         onUserGuide: () => unawaited(_openUserGuide()),
+        onRuntimeInspector:
+            _canInspectRuntime ? () => unawaited(_openRuntimeInspector()) : null,
         avatarUrl:
             widget.controller.avatarUrlOverride ?? widget.session.avatarUrl,
         avatarUploading: widget.controller.avatarUploadInFlight,
