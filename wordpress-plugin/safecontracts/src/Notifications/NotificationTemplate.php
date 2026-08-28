@@ -15,6 +15,10 @@ final class NotificationTemplate
     {
         return [
             'customer_name',
+            'supplier_name',
+            'counterparty_name',
+            'financial_direction',
+            'currency_code',
             'contract_number',
             'payment_reference',
             'due_date',
