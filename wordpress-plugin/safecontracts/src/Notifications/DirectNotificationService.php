@@ -23,14 +23,24 @@ final class DirectNotificationService
         $this->smtpTransport ??= new DirectSmtpTransport();
     }
 
-    /** @return array{push_sent:int,push_failed:int,email_sent:int,email_failed:int} */
-    public function send(int $userId, string $title, string $body, bool $push, bool $email, string $iconKey = 'safe_contracts'): array
-    {
+    /**
+     * @param array<string,mixed> $context
+     * @return array{push_sent:int,push_failed:int,email_sent:int,email_failed:int}
+     */
+    public function send(
+        int $userId,
+        string $title,
+        string $body,
+        bool $push,
+        bool $email,
+        string $iconKey = 'safe_contracts',
+        array $context = []
+    ): array {
         if ($userId <= 0 || (! $push && ! $email)) {
             throw new InvalidArgumentException('Direct notification requires a user and at least one delivery channel.');
         }
-        $title = trim(sanitize_text_field($title));
-        $body = trim(sanitize_textarea_field($body));
+        $title = trim(function_exists('sanitize_text_field') ? sanitize_text_field($title) : strip_tags($title));
+        $body = trim(function_exists('sanitize_textarea_field') ? sanitize_textarea_field($body) : strip_tags($body));
         if ($title === '' || strlen($title) > 191 || $body === '' || strlen($body) > 4000) {
             throw new InvalidArgumentException('Direct notification title or body is invalid.');
         }
@@ -38,6 +48,7 @@ final class DirectNotificationService
             throw new InvalidArgumentException('Direct notification icon is invalid.');
         }
 
+        $normalized = $this->normalizeContext($context);
         $result = ['push_sent' => 0, 'push_failed' => 0, 'email_sent' => 0, 'email_failed' => 0];
         $today = gmdate('Y-m-d');
 
@@ -48,7 +59,16 @@ final class DirectNotificationService
                     'title' => $title,
                     'body' => $body,
                     'icon_key' => $iconKey,
-                    'data' => ['rule_code' => 'manual_message', 'attempt_no' => 0, 'icon_key' => $iconKey],
+                    'data' => [
+                        'rule_code' => $normalized['event_code'],
+                        'event_code' => $normalized['event_code'],
+                        'attempt_no' => 0,
+                        'icon_key' => $iconKey,
+                        'contract_id' => $normalized['contract_id'],
+                        'payment_id' => $normalized['payment_id'],
+                        'resource_type' => $normalized['resource_type'] ?? '',
+                        'resource_id' => $normalized['resource_id'] ?? 0,
+                    ],
                 ]);
                 $success = ! empty($delivery['success']);
                 $errorCode = isset($delivery['error_code']) ? strtolower(trim((string) $delivery['error_code'])) : null;
@@ -65,16 +85,19 @@ final class DirectNotificationService
 
                 $this->deliveries->append(
                     null,
-                    0,
+                    $normalized['payment_id'],
                     $userId,
                     (int) $device['id'],
-                    'manual_message',
+                    $normalized['template_code'],
                     $today,
                     0,
                     $success ? 'sent' : 'failed',
                     isset($delivery['status_code']) ? (int) $delivery['status_code'] : null,
                     $errorCode,
-                    'push'
+                    'push',
+                    $normalized['resource_type'],
+                    $normalized['resource_id'],
+                    $normalized['contract_id'] > 0 ? $normalized['contract_id'] : null
                 );
             }
         }
@@ -104,10 +127,58 @@ final class DirectNotificationService
                 $error = isset($delivery['error_code']) && is_string($delivery['error_code']) ? $delivery['error_code'] : null;
             }
             $success ? $result['email_sent']++ : $result['email_failed']++;
-            $this->deliveries->append(null, 0, $userId, null, 'manual_message', $today, 0, $success ? 'sent' : 'failed', null, $error, 'email');
+            $this->deliveries->append(
+                null,
+                $normalized['payment_id'],
+                $userId,
+                null,
+                $normalized['template_code'],
+                $today,
+                0,
+                $success ? 'sent' : 'failed',
+                null,
+                $error,
+                'email',
+                $normalized['resource_type'],
+                $normalized['resource_id'],
+                $normalized['contract_id'] > 0 ? $normalized['contract_id'] : null
+            );
         }
 
-        do_action('safecontracts_direct_notification_sent', $userId, $result, get_current_user_id());
+        do_action('safecontracts_direct_notification_sent', $userId, $result, get_current_user_id(), $normalized);
         return $result;
+    }
+
+    /** @param array<string,mixed> $context @return array{event_code:string,template_code:string,contract_id:int,payment_id:int,resource_type:?string,resource_id:?int} */
+    private function normalizeContext(array $context): array
+    {
+        $eventCode = NotificationRule::normalizeCode($context['event_code'] ?? 'manual_message');
+        $templateCode = NotificationRule::normalizeCode($context['template_code'] ?? $eventCode);
+        $contractId = max(0, (int) ($context['contract_id'] ?? 0));
+        $paymentId = max(0, (int) ($context['payment_id'] ?? 0));
+
+        $resourceType = isset($context['resource_type']) ? strtolower(trim((string) $context['resource_type'])) : null;
+        if ($resourceType === '') {
+            $resourceType = null;
+        }
+        if ($resourceType !== null && ! in_array($resourceType, ['contract', 'payment', 'followup'], true)) {
+            throw new InvalidArgumentException('Direct notification resource type is invalid.');
+        }
+        $resourceId = isset($context['resource_id']) ? (int) $context['resource_id'] : null;
+        if ($resourceType !== null && ($resourceId === null || $resourceId <= 0)) {
+            throw new InvalidArgumentException('Direct notification resource ID must be positive when supplied.');
+        }
+        if ($resourceType === null) {
+            $resourceId = null;
+        }
+
+        return [
+            'event_code' => $eventCode,
+            'template_code' => $templateCode,
+            'contract_id' => $contractId,
+            'payment_id' => $paymentId,
+            'resource_type' => $resourceType,
+            'resource_id' => $resourceId,
+        ];
     }
 }
