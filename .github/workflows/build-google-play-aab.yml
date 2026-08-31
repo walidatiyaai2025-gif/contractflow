@@ -46,22 +46,39 @@ jobs:
             exit 1
           fi
 
-      - name: Require Google Play upload signing material
+      - name: Prepare Google Play upload signing material
         shell: bash
         env:
-          KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.SC_ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.SC_ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.SC_ANDROID_KEY_PASSWORD }}
-          CERT_SHA256: ${{ secrets.SC_ANDROID_CERT_SHA256 }}
+          SIGNING_BUNDLE_B64: ${{ secrets.SC_ANDROID_SIGNING_BUNDLE_B64 }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_SHA256; do
-            if [[ -z "${!name:-}" ]]; then
-              echo "FAIL: Google Play upload signing input $name is missing" >&2
-              exit 1
-            fi
-          done
+          if [[ -z "${SIGNING_BUNDLE_B64:-}" ]]; then
+            echo "FAIL: production environment secret SC_ANDROID_SIGNING_BUNDLE_B64 is missing" >&2
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/alkenzy-play-signing"
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ['RUNNER_TEMP']) / 'alkenzy-play-signing'
+          payload = json.loads(base64.b64decode(os.environ['SIGNING_BUNDLE_B64']).decode('utf-8'))
+          required = ('keystore_b64', 'store_password', 'key_alias', 'key_password', 'cert_sha256')
+          missing = [key for key in required if not str(payload.get(key, '')).strip()]
+          if missing:
+              raise SystemExit('FAIL: signing bundle is missing: ' + ', '.join(missing))
+
+          (root / 'upload.jks').write_bytes(base64.b64decode(payload['keystore_b64']))
+          for key in ('store_password', 'key_alias', 'key_password', 'cert_sha256'):
+              value = str(payload[key]).strip()
+              print(f'::add-mask::{value}')
+              (root / key).write_text(value, encoding='utf-8')
+          if not (root / 'upload.jks').stat().st_size:
+              raise SystemExit('FAIL: decoded upload keystore is empty')
+          PY
+          chmod 600 "$RUNNER_TEMP/alkenzy-play-signing/"*
 
       - name: Validate exact production API URL
         shell: bash
@@ -87,12 +104,9 @@ jobs:
       - name: Bootstrap Android release scaffold
         shell: bash
         env:
-          KEYSTORE_B64: ${{ secrets.SC_ANDROID_KEYSTORE_BASE64 }}
           SC_REQUIRE_PRODUCTION_ADMOB: "1"
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/alkenzy-play-signing"
-          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/alkenzy-play-signing/upload.jks"
           test -s "$RUNNER_TEMP/alkenzy-play-signing/upload.jks"
           ./scripts/bootstrap_android.sh
 
@@ -114,13 +128,13 @@ jobs:
       - name: Analyze, test and build production AAB
         working-directory: mobile
         shell: bash
-        env:
-          SC_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/alkenzy-play-signing/upload.jks
-          SC_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SC_ANDROID_KEYSTORE_PASSWORD }}
-          SC_ANDROID_KEY_ALIAS: ${{ secrets.SC_ANDROID_KEY_ALIAS }}
-          SC_ANDROID_KEY_PASSWORD: ${{ secrets.SC_ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          SIGNING_DIR="$RUNNER_TEMP/alkenzy-play-signing"
+          export SC_ANDROID_KEYSTORE_PATH="$SIGNING_DIR/upload.jks"
+          export SC_ANDROID_KEYSTORE_PASSWORD="$(cat "$SIGNING_DIR/store_password")"
+          export SC_ANDROID_KEY_ALIAS="$(cat "$SIGNING_DIR/key_alias")"
+          export SC_ANDROID_KEY_PASSWORD="$(cat "$SIGNING_DIR/key_password")"
           flutter analyze
           flutter test
           flutter build appbundle --release \
@@ -129,19 +143,18 @@ jobs:
 
       - name: Verify AAB signature and Play release contract
         shell: bash
-        env:
-          EXPECTED_CERT_SHA256: ${{ secrets.SC_ANDROID_CERT_SHA256 }}
         run: |
           set -euo pipefail
           AAB="mobile/build/app/outputs/bundle/release/app-release.aab"
           OUT="Alkenzy-ADV-0.3.29-GOOGLE-PLAY.aab"
+          EXPECTED_CERT_SHA256="$(cat "$RUNNER_TEMP/alkenzy-play-signing/cert_sha256")"
           test -s "$AAB"
           jarsigner -verify "$AAB"
           keytool -printcert -jarfile "$AAB" > "$RUNNER_TEMP/aab-cert.txt"
           ACTUAL="$(sed -n 's/^[[:space:]]*SHA256: //p' "$RUNNER_TEMP/aab-cert.txt" | head -1 | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
           EXPECTED="$(printf '%s' "$EXPECTED_CERT_SHA256" | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
           if [[ -z "$ACTUAL" || "$ACTUAL" != "$EXPECTED" ]]; then
-            echo "FAIL: AAB upload signer does not match SC_ANDROID_CERT_SHA256" >&2
+            echo "FAIL: AAB upload signer does not match the configured production upload certificate" >&2
             cat "$RUNNER_TEMP/aab-cert.txt" >&2
             exit 1
           fi
