@@ -111,7 +111,7 @@ final class PaymentPage {
     }
     return PaymentPage(
       payments: List<SafeContractsPayment>.unmodifiable(payments),
-      page: _boundedInt(meta['page'], 'meta.page', 1, 5),
+      page: _boundedInt(meta['page'], 'meta.page', 1, 1000000),
       perPage: _boundedInt(meta['per_page'], 'meta.per_page', 1, 100),
       hasMore: _boolish(meta['has_more'], 'meta.has_more'),
       sort: _requiredText(meta['sort'], 'meta.sort'),
@@ -173,8 +173,8 @@ final class PaymentsRepository {
     required int perPage,
     required DashboardFilters filters,
   }) async {
-    if (page < 1 || page > 5) {
-      throw ArgumentError('Payment page must be between 1 and 5.');
+    if (page < 1) {
+      throw ArgumentError('Payment page must be positive.');
     }
     filters.validate();
     final envelope = await client.get(

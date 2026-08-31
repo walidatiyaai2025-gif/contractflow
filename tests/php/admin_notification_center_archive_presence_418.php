@@ -119,12 +119,14 @@ $assertContains('ContractsPage::SLUG', $summaries, 'contract page must be explic
 $assertNotContains('if ($page === ContractsPage::SLUG)', $summaries, 'contract page must not create its own top summary card set');
 
 $fcm = $read('wordpress-plugin/safecontracts/src/Notifications/FirebasePushTransport.php');
+$soundSettings = $read('wordpress-plugin/safecontracts/src/Notifications/NotificationSoundSettings.php');
 $bootstrap = $read('scripts/bootstrap_android.sh');
 $activity = $read('mobile/android-release/MainActivity.kt');
 $presenter = $read('mobile/lib/features/notifications/notification_presenter.dart');
 $main = $read('mobile/lib/main.dart');
 $assertContains("'priority' => 'high'", $fcm, 'FCM must request high-priority Android delivery');
-$assertContains("'channel_id' => 'safe_contracts_alerts'", $fcm, 'FCM must target the visible Safe Contracts notification channel');
+$assertContains("'channel_id' => \$sound['channel_id']", $fcm, 'FCM must use the configured notification sound channel');
+$assertContains("default => 'safe_contracts_alerts'", $soundSettings, 'notification sound routing must preserve the visible default Safe Contracts channel');
 $assertContains('safe_contracts_alerts', $activity, 'Android must create the Safe Contracts notification channel');
 $assertContains('IMPORTANCE_HIGH', $activity, 'Android notification channel must be high importance');
 $assertContains('safecontracts/notifications', $activity, 'native foreground notification bridge must be present');

@@ -6,7 +6,7 @@ namespace SafeContracts\Notifications;
 
 final class NotificationRuleRepository
 {
-    private const SELECT_FIELDS = 'id, code, name, trigger_type, days_before, days_after, repeat_interval_days, max_repeats, recipient_roles_json, recipient_user_ids_json, escalation_roles_json, target_assigned_accountant, push_enabled, email_enabled, template_code, is_active, created_by, updated_by, created_at, updated_at';
+    private const SELECT_FIELDS = 'id, code, name, trigger_type, counterparty_type, financial_direction, days_before, days_after, repeat_interval_days, max_repeats, recipient_roles_json, recipient_user_ids_json, escalation_roles_json, target_assigned_accountant, push_enabled, email_enabled, template_code, is_active, created_by, updated_by, created_at, updated_at';
 
     /** @return list<array<string, mixed>> */
     public function all(bool $activeOnly = false): array
@@ -64,11 +64,13 @@ final class NotificationRuleRepository
 
         $wpdb->query($wpdb->prepare(
             "INSERT INTO {$table}
-                (code, name, trigger_type, days_before, days_after, repeat_interval_days, max_repeats, recipient_roles_json, recipient_user_ids_json, escalation_roles_json, target_assigned_accountant, push_enabled, email_enabled, template_code, is_active, created_by, updated_by, created_at, updated_at)
-             VALUES (%s, %s, %s, %d, %d, %d, %d, %s, %s, %s, %d, %d, %d, %s, %d, %d, %d, %s, %s)
+                (code, name, trigger_type, counterparty_type, financial_direction, days_before, days_after, repeat_interval_days, max_repeats, recipient_roles_json, recipient_user_ids_json, escalation_roles_json, target_assigned_accountant, push_enabled, email_enabled, template_code, is_active, created_by, updated_by, created_at, updated_at)
+             VALUES (%s, %s, %s, %s, %s, %d, %d, %d, %d, %s, %s, %s, %d, %d, %d, %s, %d, %d, %d, %s, %s)
              ON DUPLICATE KEY UPDATE
                 name = VALUES(name),
                 trigger_type = VALUES(trigger_type),
+                counterparty_type = VALUES(counterparty_type),
+                financial_direction = VALUES(financial_direction),
                 days_before = VALUES(days_before),
                 days_after = VALUES(days_after),
                 repeat_interval_days = VALUES(repeat_interval_days),
@@ -86,6 +88,8 @@ final class NotificationRuleRepository
             $rule['code'],
             $rule['name'],
             $rule['trigger_type'],
+            $rule['counterparty_type'],
+            $rule['financial_direction'],
             $rule['days_before'],
             $rule['days_after'],
             $rule['repeat_interval_days'],

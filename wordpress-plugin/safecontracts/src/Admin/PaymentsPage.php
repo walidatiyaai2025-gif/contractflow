@@ -357,6 +357,7 @@ final class PaymentsPage
         <section class="safecontracts-admin-card safecontracts-table-card safecontracts-payment-panel safecontracts-payment-panel--<?php echo esc_attr($class); ?>">
             <div class="safecontracts-payment-panel__heading"><h2><?php echo esc_html($title); ?></h2><span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr($class); ?>"><?php echo esc_html($receivable ? __('Money coming in', 'safecontracts') : __('Money going out', 'safecontracts')); ?></span></div>
             <?php if ($payments === []) : ?><p><?php echo esc_html($empty); ?></p><?php else : ?>
+            <div class="safecontracts-w2-table-scroll">
             <table class="widefat striped"><thead><tr>
                 <th><?php echo esc_html__('Due date', 'safecontracts'); ?></th>
                 <th><?php echo esc_html__('Contract', 'safecontracts'); ?></th>
@@ -385,6 +386,7 @@ final class PaymentsPage
                 </tr>
             <?php endforeach; ?>
             </tbody></table>
+            </div>
             <?php endif; ?>
         </section>
         <?php

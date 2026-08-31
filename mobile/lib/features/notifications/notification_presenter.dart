@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart';
 
+import 'notification_sound.dart';
+
 final class MobileNotificationPresenter {
   MobileNotificationPresenter._();
 
@@ -30,6 +32,7 @@ final class MobileNotificationPresenter {
     if (title.isEmpty || body.isEmpty) return;
 
     final iconKey = (message.data['icon_key'] ?? 'safe_contracts').trim();
+    final soundKey = notificationSoundKeyFromData(message.data);
     final stableId = message.messageId?.hashCode ??
         DateTime.now().millisecondsSinceEpoch.remainder(0x7fffffff);
     try {
@@ -38,13 +41,13 @@ final class MobileNotificationPresenter {
         'title': title,
         'body': body,
         'iconKey': iconKey,
+        'soundKey': soundKey,
       });
     } on PlatformException {
-      // The Firebase message is still available to the app even if the native
-      // presentation bridge is unavailable on a non-Android test platform.
+      // Firebase delivery remains authoritative even if native foreground
+      // presentation is unavailable on an unsupported/test platform.
     } on MissingPluginException {
-      // Unit/widget tests and unsupported platforms intentionally have no
-      // Android notification bridge.
+      // Unit/widget tests and unsupported platforms have no Android bridge.
     }
   }
 }

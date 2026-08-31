@@ -1,0 +1,65 @@
+name: Focused report contracts and sounds closure
+
+on:
+  push:
+    branches:
+      - release/alkenzy-adv-0.3.12-full-convergence
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[closure-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/alkenzy-adv-0.3.12-full-convergence
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Apply focused production closure
+        run: python3 .github/scripts/final_closure_663.py
+
+      - name: Validate mobile closure
+        working-directory: mobile
+        run: |
+          set -euo pipefail
+          dart format lib/features/contracts/contracts.dart lib/features/contracts/contracts_screen.dart lib/features/export/mobile_report_export.dart test/mobile_report_brand_portrait_test.dart test/contracts_scope_visibility_663_test.dart
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Validate plugin closure
+        run: |
+          set -euo pipefail
+          find wordpress-plugin/safecontracts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null
+          grep -Fq 'use SafeContracts\Admin\NotificationSoundSettingsPage;' wordpress-plugin/safecontracts/src/Plugin.php
+          grep -Fq 'NotificationSoundSettingsPage::SAVE_ACTION' wordpress-plugin/safecontracts/src/Plugin.php
+          test -s mobile/assets/brand/report_background.jpg
+          test "$(sha256sum mobile/assets/brand/report_background.jpg | awk '{print $1}')" = "8435e52a54c731e2a0baaa184c9d5d1e84b1579da234d12cdd228df2d7b7b1bd"
+          git diff --check
+
+      - name: Commit validated closure
+        run: |
+          set -euo pipefail
+          git config user.name "ALKENZY Closure Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add \
+            mobile/assets/brand/report_background.jpg \
+            mobile/lib/features/contracts/contracts.dart \
+            mobile/lib/features/contracts/contracts_screen.dart \
+            mobile/lib/features/export/mobile_report_export.dart \
+            mobile/test/mobile_report_brand_portrait_test.dart \
+            mobile/test/contracts_scope_visibility_663_test.dart \
+            wordpress-plugin/safecontracts/src/Plugin.php
+          if git diff --cached --quiet; then
+            echo 'Closure already applied; nothing to commit.'
+            exit 0
+          fi
+          git commit -m "Close report background contracts visibility and sound settings [closure-applied]"
+          git push origin HEAD:release/alkenzy-adv-0.3.12-full-convergence

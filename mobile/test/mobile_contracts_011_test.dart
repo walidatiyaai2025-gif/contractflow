@@ -199,7 +199,8 @@ void main() {
 
     expect(find.text('SC-70'), findsOneWidget);
     expect(find.text('server_custom_status'), findsOneWidget);
-    expect(find.text('1 / 2'), findsOneWidget);
+    expect(controller.currentPage?.page, 1);
+    expect(controller.currentPage?.hasMore, isTrue);
 
     await tester.tap(find.text('SC-70'));
     await tester.pump();
@@ -256,6 +257,12 @@ ApiTransportResponse _contractHandler(Uri uri) {
         'bounded_window': 500,
         'has_more': page < 2,
       },
+    );
+  }
+  if (uri.path.endsWith('/contracts/70/media')) {
+    return _ok(
+      <String, Object?>{'attachments': const <Object?>[]},
+      meta: const <String, Object?>{'api_version': 'v1'},
     );
   }
   return _error(404, 'not_found', 'Not found');
