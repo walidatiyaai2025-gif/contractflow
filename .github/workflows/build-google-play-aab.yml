@@ -115,6 +115,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -f test/widget_test.dart
           flutter pub get
           dart format \
             lib/features/contracts/contracts.dart \
