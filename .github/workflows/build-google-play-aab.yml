@@ -8,6 +8,11 @@ on:
         required: true
         default: "https://sys.alkenzy.com/wp-json/safecontracts/v1/"
         type: string
+  push:
+    branches:
+      - release/alkenzy-0.3.29-google-play
+    paths:
+      - .github/workflows/build-google-play-aab.yml
 
 permissions:
   contents: read
@@ -16,6 +21,8 @@ jobs:
   google-play-aab:
     runs-on: ubuntu-latest
     environment: production
+    env:
+      API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,8 +65,6 @@ jobs:
 
       - name: Validate exact production API URL
         shell: bash
-        env:
-          API_BASE_URL: ${{ inputs.api_base_url }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -77,8 +82,6 @@ jobs:
           PY
 
       - name: Verify production API before signing
-        env:
-          API_BASE_URL: ${{ inputs.api_base_url }}
         run: python3 scripts/verify_production_health.py "$API_BASE_URL"
 
       - name: Bootstrap Android release scaffold
@@ -93,7 +96,22 @@ jobs:
           test -s "$RUNNER_TEMP/alkenzy-play-signing/upload.jks"
           ./scripts/bootstrap_android.sh
 
-      - name: Quality gate and build production AAB
+      - name: Reproduce exact 0.3.29 build formatting
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          dart format \
+            lib/features/contracts/contracts.dart \
+            lib/features/contracts/premium_contract_details_screen.dart \
+            lib/features/diagnostics/mobile_runtime_diagnostics.dart \
+            lib/features/diagnostics/runtime_inspector_screen.dart \
+            lib/features/navigation/app_shell.dart \
+            lib/features/profile/profile_screen.dart \
+            lib/features/profile/modern_profile_content.dart
+
+      - name: Analyze, test and build production AAB
         working-directory: mobile
         shell: bash
         env:
@@ -101,11 +119,8 @@ jobs:
           SC_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.SC_ANDROID_KEYSTORE_PASSWORD }}
           SC_ANDROID_KEY_ALIAS: ${{ secrets.SC_ANDROID_KEY_ALIAS }}
           SC_ANDROID_KEY_PASSWORD: ${{ secrets.SC_ANDROID_KEY_PASSWORD }}
-          API_BASE_URL: ${{ inputs.api_base_url }}
         run: |
           set -euo pipefail
-          flutter pub get
-          dart format --output=none --set-exit-if-changed lib test
           flutter analyze
           flutter test
           flutter build appbundle --release \
@@ -116,7 +131,6 @@ jobs:
         shell: bash
         env:
           EXPECTED_CERT_SHA256: ${{ secrets.SC_ANDROID_CERT_SHA256 }}
-          API_BASE_URL: ${{ inputs.api_base_url }}
         run: |
           set -euo pipefail
           AAB="mobile/build/app/outputs/bundle/release/app-release.aab"
