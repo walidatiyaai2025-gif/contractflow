@@ -167,25 +167,16 @@ body[class*="_page_safecontracts-payment-methods"] .safecontracts-table-card {
     max-width: none;
   }
 
-  /* In RTL the final action column is the far-left column. Keep the control
-   * surface pinned to the visible edge of the dedicated scroller on routes
-   * with row actions so authorized controls remain reachable at 390px. */
+  /* Keep RTL actions in the table's normal flow. The dedicated scroller makes
+   * every control reachable; sticky positioning can place hundreds of action
+   * cells outside the viewport at WordPress' 600px breakpoint. */
   body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat th:last-child,
   body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat td:last-child,
   body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll table.widefat th:last-child,
   body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll table.widefat td:last-child {
-    position: sticky;
-    left: 0;
-    z-index: 3;
+    position: static;
     min-width: 116px;
     max-width: 132px;
-    background: #fffdfb !important;
-    box-shadow: 8px 0 12px -10px rgba(11, 41, 69, .45);
-  }
-  body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll table.widefat thead th:last-child,
-  body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll table.widefat thead th:last-child {
-    z-index: 4;
-    background: #f2e7dc !important;
   }
   body[class*="_page_safecontracts-payments"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions,
   body[class*="_page_safecontracts-payment-methods"] .safecontracts-w2-table-scroll .safecontracts-dashboard-table-actions {
