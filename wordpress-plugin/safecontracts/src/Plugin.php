@@ -50,6 +50,7 @@ use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\MigrationGuard;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Diagnostics\RuntimeInspector;
+use SafeContracts\Notifications\ContractActivityNotificationDispatcher;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Presence\PresenceService;
@@ -115,6 +116,10 @@ final class Plugin
         NotificationCenterAuditRecorder::register();
         NotificationScheduleAuditRecorder::register();
         SafeDeletionAuditRecorder::register();
+        // Activity notifications observe committed domain events after all
+        // history/audit subscribers so notification delivery cannot interfere
+        // with authoritative audit recording or its isolated test fixtures.
+        ContractActivityNotificationDispatcher::register();
         LoginBranding::register();
         EmailSettingsPage::register();
         NavigationCleanup::register();

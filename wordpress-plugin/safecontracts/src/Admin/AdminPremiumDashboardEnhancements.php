@@ -57,11 +57,150 @@ final class AdminPremiumDashboardEnhancements
             dashboard.dataset.premiumEnhanced = '1';
 
             dashboard.querySelectorAll('[data-safecontracts-confirm]').forEach((button) => {
-                button.closest('form')?.addEventListener('submit', (event) => {
+                const form = button.closest('form');
+                form?.addEventListener('submit', (event) => {
+                    if (form.dataset.safecontractsSubmitting === '1') {
+                        event.preventDefault();
+                        return;
+                    }
                     const message = button.getAttribute('data-safecontracts-confirm') || '';
-                    if (message && !window.confirm(message)) event.preventDefault();
+                    if (message && !window.confirm(message)) {
+                        event.preventDefault();
+                        return;
+                    }
+                    form.dataset.safecontractsSubmitting = '1';
+                    button.disabled = true;
+                    button.setAttribute('aria-busy', 'true');
+                    const busyLabel = button.getAttribute('data-safecontracts-busy-label') || '';
+                    if (busyLabel) {
+                        const icon = button.querySelector('.dashicons');
+                        button.replaceChildren();
+                        if (icon) button.append(icon);
+                        button.append(document.createTextNode(busyLabel));
+                    }
                 });
             });
+
+            const previousLabel = <?php echo wp_json_encode(__('Previous', 'safecontracts')); ?>;
+            const nextLabel = <?php echo wp_json_encode(__('Next', 'safecontracts')); ?>;
+            const carouselLabel = <?php echo wp_json_encode(__('Currency', 'safecontracts')); ?>;
+            const actionsLabel = <?php echo wp_json_encode(__('Actions', 'safecontracts')); ?>;
+            const isRtl = getComputedStyle(document.documentElement).direction === 'rtl';
+
+            const enhanceRail = (rail, itemSelector) => {
+                if (!(rail instanceof HTMLElement) || rail.dataset.safecontractsCarousel === '1') return;
+                const items = [...rail.querySelectorAll(`:scope > ${itemSelector}`)].filter((item) => item instanceof HTMLElement);
+                if (items.length <= 1) return;
+
+                rail.dataset.safecontractsCarousel = '1';
+                rail.setAttribute('role', 'region');
+                rail.setAttribute('aria-label', carouselLabel);
+                rail.setAttribute('tabindex', '0');
+
+                const controls = document.createElement('div');
+                controls.className = 'safecontracts-dashboard-carousel__controls';
+
+                const previous = document.createElement('button');
+                previous.type = 'button';
+                previous.className = 'button';
+                previous.setAttribute('aria-label', previousLabel);
+                previous.textContent = isRtl ? '›' : '‹';
+
+                const status = document.createElement('span');
+                status.className = 'safecontracts-dashboard-carousel__status';
+                status.setAttribute('aria-live', 'polite');
+
+                const next = document.createElement('button');
+                next.type = 'button';
+                next.className = 'button';
+                next.setAttribute('aria-label', nextLabel);
+                next.textContent = isRtl ? '‹' : '›';
+
+                controls.append(previous, status, next);
+                rail.insertAdjacentElement('afterend', controls);
+
+                let index = 0;
+                const sync = () => {
+                    status.textContent = `${index + 1} / ${items.length}`;
+                    previous.disabled = index === 0;
+                    next.disabled = index === items.length - 1;
+                };
+                const go = (targetIndex) => {
+                    index = Math.max(0, Math.min(items.length - 1, targetIndex));
+                    items[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                    sync();
+                };
+
+                previous.addEventListener('click', () => go(index - 1));
+                next.addEventListener('click', () => go(index + 1));
+                rail.addEventListener('keydown', (event) => {
+                    if (event.key === 'ArrowLeft') {
+                        event.preventDefault();
+                        go(index + (isRtl ? 1 : -1));
+                    } else if (event.key === 'ArrowRight') {
+                        event.preventDefault();
+                        go(index + (isRtl ? -1 : 1));
+                    } else if (event.key === 'Home') {
+                        event.preventDefault();
+                        go(0);
+                    } else if (event.key === 'End') {
+                        event.preventDefault();
+                        go(items.length - 1);
+                    }
+                });
+                sync();
+            };
+
+            dashboard.querySelectorAll('.safecontracts-dashboard-v2__lane-grid').forEach((rail) => {
+                enhanceRail(rail, '.safecontracts-dashboard-v2__money-card');
+            });
+            dashboard.querySelectorAll('.safecontracts-dashboard-v2__net-grid').forEach((rail) => {
+                enhanceRail(rail, '.safecontracts-dashboard-v2__net-card');
+            });
+
+            const financialGrid = dashboard.querySelector('.safecontracts-premium-three-column');
+            const monthlyFlow = dashboard.querySelector('.safecontracts-dashboard-monthly-flow');
+            const desktopReferenceLayout = window.matchMedia('(min-width: 1181px)').matches;
+            let referenceGridActive = false;
+            if (monthlyFlow instanceof HTMLElement) {
+                const currencyCards = [...monthlyFlow.children].filter((child) => child.matches?.('.safecontracts-dashboard-monthly-flow__currency'));
+                if (currencyCards.length > 1) {
+                    const rail = document.createElement('div');
+                    rail.className = 'safecontracts-dashboard-monthly-flow__currency-rail';
+                    monthlyFlow.insertBefore(rail, currencyCards[0]);
+                    currencyCards.forEach((card) => rail.append(card));
+                    enhanceRail(rail, '.safecontracts-dashboard-monthly-flow__currency');
+                }
+                if (desktopReferenceLayout && financialGrid instanceof HTMLElement) {
+                    financialGrid.classList.add('safecontracts-dashboard-reference-grid');
+                    financialGrid.append(monthlyFlow);
+                    referenceGridActive = true;
+                }
+            }
+
+            const secondarySections = [
+                dashboard.querySelector('.safecontracts-dashboard-followups'),
+                dashboard.querySelector('.safecontracts-dashboard-demo'),
+            ].filter((section) => section instanceof HTMLElement);
+            if (desktopReferenceLayout && secondarySections.length && !dashboard.querySelector('.safecontracts-dashboard-secondary')) {
+                const details = document.createElement('details');
+                details.className = 'safecontracts-dashboard-secondary';
+                const summary = document.createElement('summary');
+                summary.textContent = actionsLabel;
+                const body = document.createElement('div');
+                body.className = 'safecontracts-dashboard-secondary__body';
+                details.append(summary, body);
+                if (referenceGridActive && financialGrid instanceof HTMLElement) {
+                    financialGrid.insertAdjacentElement('afterend', details);
+                } else if (monthlyFlow instanceof HTMLElement) {
+                    monthlyFlow.insertAdjacentElement('afterend', details);
+                } else if (financialGrid instanceof HTMLElement) {
+                    financialGrid.insertAdjacentElement('afterend', details);
+                } else {
+                    dashboard.append(details);
+                }
+                secondarySections.forEach((section) => body.append(section));
+            }
 
             const fab = document.getElementById('safecontracts-premium-fab');
             const button = fab?.querySelector('.safecontracts-premium-fab__button');
