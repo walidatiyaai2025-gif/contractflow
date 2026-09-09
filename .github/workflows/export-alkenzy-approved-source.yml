@@ -1,0 +1,127 @@
+name: Export ALKENZY ADV Approved Source
+
+on:
+  push:
+    branches:
+      - export/alkenzy-approved-source-20260909
+    paths:
+      - .github/workflows/export-alkenzy-approved-source.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export-approved-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout export branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify locked source lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          FUNCTIONAL_SOURCE="1a02545546efbfa979659e405070dce05906f443"
+          STORE_RELEASE_HEAD="69a90d25b250498fe1604b862b70b7a3ab221a97"
+
+          git cat-file -e "${FUNCTIONAL_SOURCE}^{commit}"
+          git cat-file -e "${STORE_RELEASE_HEAD}^{commit}"
+          git merge-base --is-ancestor "$FUNCTIONAL_SOURCE" "$STORE_RELEASE_HEAD"
+          git merge-base --is-ancestor "$STORE_RELEASE_HEAD" HEAD
+
+          test "$(git show "$FUNCTIONAL_SOURCE:mobile/pubspec.yaml" | awk '/^version:/{print $2; exit}')" = "0.3.29+29"
+          git show "$FUNCTIONAL_SOURCE:wordpress-plugin/safecontracts/safecontracts.php" | grep -Fq 'Version: 0.3.25.2'
+          git show "$STORE_RELEASE_HEAD:.github/workflows/build-google-play-aab.yml" | grep -Fq 'FUNCTIONAL_SOURCE="1a02545546efbfa979659e405070dce05906f443"'
+          git show "$STORE_RELEASE_HEAD:.github/workflows/build-google-play-aab.yml" | grep -Fq 'com.safecontracts.safecontracts_mobile'
+          git show "$STORE_RELEASE_HEAD:.github/workflows/build-google-play-aab.yml" | grep -Fq 'https://sys.alkenzy.com/wp-json/safecontracts/v1/'
+
+          # The Google Play lane itself guarantees mobile functional parity to the certified source.
+          git diff --quiet "$FUNCTIONAL_SOURCE" "$STORE_RELEASE_HEAD" -- mobile scripts/bootstrap_android.sh
+
+      - name: Assemble exact approved baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          FUNCTIONAL_SOURCE="1a02545546efbfa979659e405070dce05906f443"
+          STORE_RELEASE_HEAD="69a90d25b250498fe1604b862b70b7a3ab221a97"
+          ROOT="ALKENZY_ADV_APPROVED_BASELINE_0.3.29"
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT/repository-functional-source" "$ROOT/google-play-release-engineering/.github/workflows"
+
+          # Full repository source tree from the exact functional source approved for 0.3.29.
+          git archive --format=tar "$FUNCTIONAL_SOURCE" | tar -xf - -C "$ROOT/repository-functional-source"
+
+          # Preserve the exact Google Play release engineering that pins the functional source.
+          git show "$STORE_RELEASE_HEAD:.github/workflows/build-google-play-aab.yml" > "$ROOT/google-play-release-engineering/.github/workflows/build-google-play-aab.yml"
+          git diff --name-status "$FUNCTIONAL_SOURCE" "$STORE_RELEASE_HEAD" > "$ROOT/google-play-release-engineering/DIFF_FROM_FUNCTIONAL_SOURCE.txt"
+          git log --format='%H %cI %s' "$FUNCTIONAL_SOURCE..$STORE_RELEASE_HEAD" > "$ROOT/google-play-release-engineering/RELEASE_ENGINEERING_COMMITS.txt"
+
+          cat > "$ROOT/START_HERE.md" <<'EOF'
+          # ALKENZY ADV — Approved Source Baseline
+
+          This archive is the forward-only source baseline for future ALKENZY ADV changes.
+
+          ## Locked application source
+          - Functional source commit: `1a02545546efbfa979659e405070dce05906f443`
+          - Frontend: `mobile/` — Flutter `0.3.29+29`
+          - Backend: `wordpress-plugin/safecontracts/` — WordPress SafeContracts plugin `0.3.25.2`
+          - Android package: `com.safecontracts.safecontracts_mobile`
+          - Production API: `https://sys.alkenzy.com/wp-json/safecontracts/v1/`
+          - Google Play target API: 36
+
+          ## Google Play release engineering
+          - Release branch: `release/alkenzy-0.3.29-google-play`
+          - Release-engineering head: `69a90d25b250498fe1604b862b70b7a3ab221a97`
+          - The release workflow locks mobile functionality to the functional source above and fails on mobile/bootstrap drift.
+
+          ## Future-change rule
+          All future ALKENZY ADV application modifications must start from the exact functional source in `repository-functional-source/` (or its forward descendants). Do not replace it with an older/stale branch.
+
+          Production signing keys, passwords, private Firebase credentials, keystores and other secrets are intentionally excluded.
+          EOF
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('ALKENZY_ADV_APPROVED_BASELINE_0.3.29')
+          manifest = {
+              'schema': 1,
+              'product': 'ALKENZY ADV',
+              'baseline_role': 'forward-only source of truth for future modifications',
+              'functional_source_commit': '1a02545546efbfa979659e405070dce05906f443',
+              'google_play_release_branch': 'release/alkenzy-0.3.29-google-play',
+              'google_play_release_head': '69a90d25b250498fe1604b862b70b7a3ab221a97',
+              'frontend': {'path': 'mobile/', 'technology': 'Flutter', 'version': '0.3.29+29'},
+              'backend': {'path': 'wordpress-plugin/safecontracts/', 'technology': 'WordPress/PHP', 'version': '0.3.25.2'},
+              'android_package': 'com.safecontracts.safecontracts_mobile',
+              'production_api': 'https://sys.alkenzy.com/wp-json/safecontracts/v1/',
+              'target_api': 36,
+              'secrets_included': False,
+              'future_change_rule': 'Start from this functional source or a verified forward descendant; never replace it with stale source.'
+          }
+          (root / 'BASELINE_MANIFEST.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Build source ZIP and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP="ALKENZY-ADV-APPROVED-SOURCE-0.3.29.zip"
+          rm -f "$ZIP" "$ZIP.sha256"
+          zip -qr "$ZIP" ALKENZY_ADV_APPROVED_BASELINE_0.3.29
+          sha256sum "$ZIP" > "$ZIP.sha256"
+          test -s "$ZIP"
+          unzip -t "$ZIP" >/dev/null
+          cat "$ZIP.sha256"
+
+      - name: Upload approved source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ALKENZY-ADV-APPROVED-SOURCE-0.3.29
+          path: |
+            ALKENZY-ADV-APPROVED-SOURCE-0.3.29.zip
+            ALKENZY-ADV-APPROVED-SOURCE-0.3.29.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
