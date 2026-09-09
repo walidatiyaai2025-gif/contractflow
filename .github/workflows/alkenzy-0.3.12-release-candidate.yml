@@ -1,0 +1,140 @@
+name: ALKENZY 0.3.13 Release Candidate
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'wordpress-plugin/safecontracts/**'
+      - 'scripts/bootstrap_android.sh'
+      - 'scripts/materialize_notification_sounds.sh'
+      - 'scripts/patch_applovin_compile_sdk.py'
+      - 'scripts/package_plugin.py'
+      - '.github/workflows/alkenzy-0.3.12-release-candidate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-release-candidates:
+    runs-on: ubuntu-latest
+    env:
+      SC_PRODUCTION_API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Capture exact source head
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          test "$SOURCE_SHA" = "${{ github.event.pull_request.head.sha }}"
+          echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+
+      - name: Validate versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          MOBILE_VERSION="$(awk '/^version:/{print $2; exit}' mobile/pubspec.yaml)"
+          VERSION_NAME="${MOBILE_VERSION%%+*}"
+          PLUGIN_VERSION="$(sed -n "s/define('SAFECONTRACTS_VERSION', '\([^']*\)').*/\1/p" wordpress-plugin/safecontracts/safecontracts.php)"
+          test "$VERSION_NAME" = "0.3.13"
+          test "$PLUGIN_VERSION" = "$VERSION_NAME"
+          echo "MOBILE_VERSION=$MOBILE_VERSION" >> "$GITHUB_ENV"
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+
+      - name: Materialize checksum-verified owner notification sounds
+        shell: bash
+        run: bash scripts/materialize_notification_sounds.sh
+
+      - name: PHP syntax and plugin package
+        shell: bash
+        run: |
+          set -euo pipefail
+          find wordpress-plugin/safecontracts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null
+          python3 scripts/package_plugin.py build --output dist/SafeContracts-0.3.13.zip
+          python3 scripts/package_plugin.py check dist/SafeContracts-0.3.13.zip
+          unzip -Z1 dist/SafeContracts-0.3.13.zip > "$RUNNER_TEMP/alkenzy-plugin-files.txt"
+          grep -Fq 'assets/sounds/banknote-counter-106014.mp3' "$RUNNER_TEMP/alkenzy-plugin-files.txt"
+          grep -Fq 'assets/sounds/cashier-quotka-chingquot-sound-effect-129698.mp3' "$RUNNER_TEMP/alkenzy-plugin-files.txt"
+          grep -Fq 'assets/sounds/universfield-coin-drop-229314.mp3' "$RUNNER_TEMP/alkenzy-plugin-files.txt"
+
+      - name: Flutter quality
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart format --output=none --set-exit-if-changed lib test
+          flutter analyze
+          flutter test test/notification_sound_mapping_test.dart
+
+      - name: Bootstrap Android release platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/bootstrap_android.sh
+
+      - name: Create candidate signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/alkenzy-candidate.p12" \
+            -storetype PKCS12 \
+            -storepass candidate-only \
+            -keypass candidate-only \
+            -alias alkenzy-candidate \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 2 \
+            -dname "CN=ALKENZY CI Candidate, OU=CI, O=ALKENZY, L=CI, ST=CI, C=US"
+          {
+            echo "SC_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/alkenzy-candidate.p12"
+            echo "SC_ANDROID_KEYSTORE_PASSWORD=candidate-only"
+            echo "SC_ANDROID_KEY_ALIAS=alkenzy-candidate"
+            echo "SC_ANDROID_KEY_PASSWORD=candidate-only"
+          } >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --release \
+            --dart-define=SC_ENV=production \
+            --dart-define=SC_API_BASE_URL="$SC_PRODUCTION_API_BASE_URL"
+
+      - name: Verify sound resources and collect release candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -n "$AAPT"
+          "$AAPT" dump resources "$APK" > "$RUNNER_TEMP/alkenzy-apk-resources.txt"
+          grep -Fq 'raw/banknote_counter' "$RUNNER_TEMP/alkenzy-apk-resources.txt"
+          grep -Fq 'raw/cashier_ka_ching' "$RUNNER_TEMP/alkenzy-apk-resources.txt"
+          grep -Fq 'raw/coin_drop' "$RUNNER_TEMP/alkenzy-apk-resources.txt"
+          cp "$APK" "dist/Alkenzy-ADV-${VERSION_NAME}-sys.alkenzy.com.apk"
+          sha256sum "dist/SafeContracts-0.3.13.zip" "dist/Alkenzy-ADV-${VERSION_NAME}-sys.alkenzy.com.apk" | tee dist/SHA256SUMS.txt
+          printf 'source_sha=%s\nplugin_version=0.3.13\nmobile_version=%s\napi=%s\n' "$SOURCE_SHA" "$MOBILE_VERSION" "$SC_PRODUCTION_API_BASE_URL" > dist/RELEASE-CANDIDATE.txt
+
+      - name: Upload plugin and APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-0.3.13-release-candidate
+          path: |
+            dist/SafeContracts-0.3.13.zip
+            dist/Alkenzy-ADV-0.3.13-sys.alkenzy.com.apk
+            dist/SHA256SUMS.txt
+            dist/RELEASE-CANDIDATE.txt
+          if-no-files-found: error
+          retention-days: 14

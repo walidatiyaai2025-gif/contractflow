@@ -72,6 +72,20 @@ final class RuntimeInspectorPage
         }
         $environment = RuntimeInspector::environmentSnapshot();
         $checks = self::checks();
+        $exportPayload = self::exportPayload($environment, $checks, $events);
+        $exportJson = wp_json_encode(
+            $exportPayload,
+            JSON_PRETTY_PRINT
+                | JSON_UNESCAPED_SLASHES
+                | JSON_UNESCAPED_UNICODE
+                | JSON_HEX_TAG
+                | JSON_HEX_AMP
+                | JSON_HEX_APOS
+                | JSON_HEX_QUOT
+        );
+        if (! is_string($exportJson) || $exportJson === '') {
+            $exportJson = '{}';
+        }
         ?>
         <div class="wrap safecontracts-settings" dir="auto">
             <div class="safecontracts-section-heading">
@@ -100,13 +114,16 @@ final class RuntimeInspectorPage
             <section class="safecontracts-admin-card safecontracts-table-card">
                 <div class="safecontracts-section-heading">
                     <div><h2><?php echo esc_html__('Recent runtime failures', 'safecontracts'); ?></h2><p class="description"><?php echo esc_html__('Retention is bounded to the most recent 50 events. Secrets, tokens, passwords, cookies, authorization headers, nonces and raw request bodies are never stored.', 'safecontracts'); ?></p></div>
-                    <?php if ($events !== []) : ?>
-                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                            <input type="hidden" name="action" value="<?php echo esc_attr(self::CLEAR_ACTION); ?>">
-                            <?php wp_nonce_field(self::CLEAR_ACTION); ?>
-                            <?php submit_button(__('Clear runtime history', 'safecontracts'), 'secondary', 'submit', false); ?>
-                        </form>
-                    <?php endif; ?>
+                    <div>
+                        <button type="button" class="button button-secondary" id="safecontracts-runtime-export"><?php echo esc_html__('Export runtime JSON', 'safecontracts'); ?></button>
+                        <?php if ($events !== []) : ?>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline-block;margin-inline-start:6px">
+                                <input type="hidden" name="action" value="<?php echo esc_attr(self::CLEAR_ACTION); ?>">
+                                <?php wp_nonce_field(self::CLEAR_ACTION); ?>
+                                <?php submit_button(__('Clear runtime history', 'safecontracts'), 'secondary', 'submit', false); ?>
+                            </form>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <?php if ($events === []) : ?>
                     <p><?php echo esc_html__('No runtime failures have been recorded.', 'safecontracts'); ?></p>
@@ -120,6 +137,12 @@ final class RuntimeInspectorPage
                                 <td><strong><?php echo esc_html((string) ($event['operation'] ?? '')); ?></strong><br><code><?php echo esc_html((string) ($event['stage'] ?? '')); ?></code></td>
                                 <td><strong><?php echo esc_html((string) ($event['exception_class'] ?? '')); ?></strong><br><?php echo esc_html((string) ($event['message'] ?? '')); ?><?php if (! empty($event['db_error'])) : ?><br><strong><?php echo esc_html__('Database error:', 'safecontracts'); ?></strong> <?php echo esc_html((string) $event['db_error']); ?><?php endif; ?></td>
                                 <td><details><summary><?php echo esc_html__('Open diagnostic context', 'safecontracts'); ?></summary><pre><?php echo esc_html((string) json_encode([
+                                    'schema_version' => $event['schema_version'] ?? 1,
+                                    'classification' => $event['classification'] ?? '',
+                                    'root_cause' => $event['root_cause'] ?? ($event['message'] ?? ''),
+                                    'exception_code' => $event['exception_code'] ?? 0,
+                                    'exception_chain' => $event['exception_chain'] ?? [],
+                                    'source' => $event['source'] ?? [],
                                     'user_id' => $event['user_id'] ?? 0,
                                     'request' => $event['request'] ?? [],
                                     'capabilities' => array_keys(array_filter((array) ($event['capabilities'] ?? []))),
@@ -132,7 +155,104 @@ final class RuntimeInspectorPage
                 <?php endif; ?>
             </section>
         </div>
+        <script type="application/json" id="safecontracts-runtime-export-data"><?php echo $exportJson; // JSON_HEX_* protects the script context. ?></script>
+        <script>
+        (() => {
+            const button = document.getElementById('safecontracts-runtime-export');
+            const source = document.getElementById('safecontracts-runtime-export-data');
+            if (!button || !source || typeof Blob === 'undefined' || !window.URL) {
+                return;
+            }
+
+            button.addEventListener('click', () => {
+                let payload;
+                try {
+                    payload = JSON.parse(source.textContent || '{}');
+                } catch (error) {
+                    return;
+                }
+
+                const json = JSON.stringify(payload, null, 2);
+                const blob = new Blob([json], {type: 'application/json;charset=utf-8'});
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = String(payload.download_filename || 'alkenzy-runtime-inspector.json');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.setTimeout(() => URL.revokeObjectURL(url), 0);
+            });
+        })();
+        </script>
         <?php
+    }
+
+    /**
+     * @param array<string,mixed> $environment
+     * @param list<array{label:string,state:string,detail:string}> $checks
+     * @param list<array<string,mixed>> $events
+     * @return array<string,mixed>
+     */
+    private static function exportPayload(array $environment, array $checks, array $events): array
+    {
+        $currentCapabilities = [];
+        foreach (Capabilities::all() as $capability) {
+            if (current_user_can($capability)) {
+                $currentCapabilities[] = $capability;
+            }
+        }
+
+        return [
+            'product' => 'ALKENZY ADV / SafeContracts',
+            'diagnostic_schema_version' => RuntimeInspector::EVENT_SCHEMA_VERSION,
+            'generated_at_utc' => gmdate('c'),
+            'download_filename' => 'alkenzy-runtime-inspector-' . gmdate('Ymd-His') . '.json',
+            'current_user' => [
+                'user_id' => get_current_user_id(),
+                'capabilities' => $currentCapabilities,
+            ],
+            'environment' => $environment,
+            'checks' => $checks,
+            'events' => array_map([self::class, 'exportEvent'], $events),
+            'privacy' => [
+                'sanitized' => true,
+                'excluded' => [
+                    'passwords',
+                    'tokens',
+                    'cookies',
+                    'authorization_headers',
+                    'nonces',
+                    'raw_request_bodies',
+                ],
+                'retention_limit' => RuntimeInspector::MAX_EVENTS,
+            ],
+        ];
+    }
+
+    /** @param array<string,mixed> $event @return array<string,mixed> */
+    private static function exportEvent(array $event): array
+    {
+        return [
+            'schema_version' => (int) ($event['schema_version'] ?? 1),
+            'id' => (string) ($event['id'] ?? ''),
+            'occurred_at_utc' => (string) ($event['occurred_at_utc'] ?? ''),
+            'operation' => (string) ($event['operation'] ?? ''),
+            'stage' => (string) ($event['stage'] ?? ''),
+            'classification' => (string) ($event['classification'] ?? ''),
+            'root_cause' => (string) ($event['root_cause'] ?? ($event['message'] ?? '')),
+            'exception_class' => (string) ($event['exception_class'] ?? ''),
+            'exception_code' => $event['exception_code'] ?? 0,
+            'exception_chain' => (array) ($event['exception_chain'] ?? []),
+            'message' => (string) ($event['message'] ?? ''),
+            'source' => (array) ($event['source'] ?? []),
+            'db_error' => (string) ($event['db_error'] ?? ''),
+            'user_id' => (int) ($event['user_id'] ?? 0),
+            'request' => (array) ($event['request'] ?? []),
+            'capabilities' => array_keys(array_filter((array) ($event['capabilities'] ?? []))),
+            'environment' => (array) ($event['environment'] ?? []),
+            'context' => (array) ($event['context'] ?? []),
+        ];
     }
 
     /** @return list<array{label:string,state:string,detail:string}> */

@@ -17,6 +17,8 @@ BASELINE_PATH = "docs/mobile-redesign/ALKENZY_ADV_RELEASE_BASELINE.md"
 CONSTITUTION_PATH = "docs/plugin-redesign/PLUGIN_UI_CONSTITUTION.md"
 AGENTS_PATH = "AGENTS.md"
 FUNCTIONAL_SOURCE = "9171f1c357822f9118eb8058aab6fb145c475fc3"
+APPROVED_BASELINE_VERSION = "0.3.6"
+APPROVED_BASELINE_BUILD = 10
 RELEASE_PREFIXES = (
     "assets/design/",
     "mobile/",
@@ -101,11 +103,11 @@ def validate_current() -> tuple[str, int, int]:
         fail(f"plugin stable tag {stable} does not match {plugin}")
     checks += 1
 
-    full = f"{mobile}+{build}"
+    baseline_full = f"{APPROVED_BASELINE_VERSION}+{APPROVED_BASELINE_BUILD}"
     required_markers = {
-        BASELINE_PATH: (f"Approved unified release: `{full}`", f"Exact approved functional source commit: `{FUNCTIONAL_SOURCE}`"),
-        CONSTITUTION_PATH: (f"APPROVED PRODUCT RELEASE: {full}", f"APPROVED FUNCTIONAL SOURCE: {FUNCTIONAL_SOURCE}"),
-        AGENTS_PATH: (f"release is **`{full}`**", f"exact approved functional source commit `{FUNCTIONAL_SOURCE}`"),
+        BASELINE_PATH: (f"Approved unified release: `{baseline_full}`", f"Exact approved functional source commit: `{FUNCTIONAL_SOURCE}`"),
+        CONSTITUTION_PATH: (f"APPROVED PRODUCT RELEASE: {baseline_full}", f"APPROVED FUNCTIONAL SOURCE: {FUNCTIONAL_SOURCE}"),
+        AGENTS_PATH: (f"release is **`{baseline_full}`**", f"exact approved functional source commit `{FUNCTIONAL_SOURCE}`"),
     }
     for path, markers in required_markers.items():
         content = read(path)
@@ -122,6 +124,9 @@ def validate_current() -> tuple[str, int, int]:
 
     git("merge-base", "--is-ancestor", FUNCTIONAL_SOURCE, "HEAD")
     checks += 1
+    if semver(plugin) < semver(APPROVED_BASELINE_VERSION) or build < APPROVED_BASELINE_BUILD:
+        fail(f"current candidate {plugin}+{build} regresses approved baseline {baseline_full}")
+    checks += 2
     return plugin, build, checks
 
 

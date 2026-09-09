@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/localization/runtime_translation_overrides.dart';
+import '../ads/mobile_ads_config.dart';
 
 final class MobileFeatureFlags {
   const MobileFeatureFlags({
@@ -41,12 +42,50 @@ final class MobileCurrencyConfig {
   }
 }
 
+final class MobileStoreLinks {
+  const MobileStoreLinks({
+    required this.privacyPolicy,
+    required this.terms,
+    required this.accountDeletion,
+    required this.support,
+  });
+
+  const MobileStoreLinks.defaults()
+      : privacyPolicy = '',
+        terms = '',
+        accountDeletion = '',
+        support = '';
+
+  final String privacyPolicy;
+  final String terms;
+  final String accountDeletion;
+  final String support;
+
+  bool get hasAny =>
+      privacyPolicy.isNotEmpty ||
+      terms.isNotEmpty ||
+      accountDeletion.isNotEmpty ||
+      support.isNotEmpty;
+
+  factory MobileStoreLinks.fromData(Object? value) {
+    final data = _optionalObjectMap(value, 'mobile_config.store_links');
+    return MobileStoreLinks(
+      privacyPolicy: _publicHttpUrl(data['privacy_policy']),
+      terms: _publicHttpUrl(data['terms']),
+      accountDeletion: _publicHttpUrl(data['account_deletion']),
+      support: _publicHttpUrl(data['support']),
+    );
+  }
+}
+
 final class SafeContractsMobileConfig {
   const SafeContractsMobileConfig({
     required this.supportText,
     required this.defaultPageSize,
     this.currency = const MobileCurrencyConfig.defaults(),
     required this.features,
+    this.ads = const MobileAdvertisingConfig.defaults(),
+    this.storeLinks = const MobileStoreLinks.defaults(),
     this.translationOverrides = const {
       'en': <String, String>{},
       'ar': <String, String>{},
@@ -58,6 +97,8 @@ final class SafeContractsMobileConfig {
         defaultPageSize = 25,
         currency = const MobileCurrencyConfig.defaults(),
         features = const MobileFeatureFlags.defaults(),
+        ads = const MobileAdvertisingConfig.defaults(),
+        storeLinks = const MobileStoreLinks.defaults(),
         translationOverrides = const {
           'en': <String, String>{},
           'ar': <String, String>{},
@@ -69,6 +110,8 @@ final class SafeContractsMobileConfig {
   final int defaultPageSize;
   final MobileCurrencyConfig currency;
   final MobileFeatureFlags features;
+  final MobileAdvertisingConfig ads;
+  final MobileStoreLinks storeLinks;
   final Map<String, Map<String, String>> translationOverrides;
 
   factory SafeContractsMobileConfig.fromData(Object? value) {
@@ -90,6 +133,8 @@ final class SafeContractsMobileConfig {
         pushNotifications: features['push_notifications'] == true,
         collectionEntry: features['collection_entry'] == true,
       ),
+      ads: MobileAdvertisingConfig.fromData(data['ads']),
+      storeLinks: MobileStoreLinks.fromData(data['store_links']),
       translationOverrides: <String, Map<String, String>>{
         'en': SafeContractsRuntimeTranslations.parseLanguage(
           translationData['en'],
@@ -168,6 +213,18 @@ String _currencySymbol(Object? value) {
     return '';
   }
   return normalized;
+}
+
+String _publicHttpUrl(Object? value) {
+  if (value is! String) return '';
+  final normalized = value.trim();
+  final uri = Uri.tryParse(normalized);
+  if (uri == null ||
+      !(uri.scheme == 'https' || uri.scheme == 'http') ||
+      uri.host.isEmpty) {
+    return '';
+  }
+  return uri.toString();
 }
 
 int _pageSize(Object? value) {

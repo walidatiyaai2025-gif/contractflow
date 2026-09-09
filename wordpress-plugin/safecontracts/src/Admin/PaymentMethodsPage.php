@@ -164,6 +164,7 @@ final class PaymentMethodsPage
             <div class="safecontracts-section-heading"><div><p class="safecontracts-admin-shell__eyebrow"><?php echo esc_html__('Reference data', 'safecontracts'); ?></p><h1><?php echo esc_html__('Payment Methods', 'safecontracts'); ?></h1></div></div>
             <div class="safecontracts-split-layout">
                 <section class="safecontracts-admin-card safecontracts-table-card">
+                    <div class="safecontracts-w2-table-scroll">
                     <table class="widefat striped">
                         <thead><tr><th><?php echo esc_html__('Code', 'safecontracts'); ?></th><th><?php echo esc_html__('Name', 'safecontracts'); ?></th><th><?php echo esc_html__('Status', 'safecontracts'); ?></th><th><?php echo esc_html__('Order', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead>
                         <tbody>
@@ -191,6 +192,7 @@ final class PaymentMethodsPage
                         <?php endforeach; ?>
                         </tbody>
                     </table>
+                    </div>
                 </section>
                 <section class="safecontracts-admin-card safecontracts-settings-card">
                     <h2><?php echo $selected ? esc_html__('Edit payment method', 'safecontracts') : esc_html__('Add payment method', 'safecontracts'); ?></h2>

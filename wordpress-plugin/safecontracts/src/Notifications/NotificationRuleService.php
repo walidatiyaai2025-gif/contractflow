@@ -152,15 +152,23 @@ final class NotificationRuleService
     /** @return array<string,mixed> */
     private function preserveExtendedFields(array $input): array
     {
-        if (array_key_exists('recipient_user_ids', $input) && array_key_exists('push_enabled', $input) && array_key_exists('email_enabled', $input)) {
+        $hasExtendedFields = array_key_exists('recipient_user_ids', $input)
+            && array_key_exists('push_enabled', $input)
+            && array_key_exists('email_enabled', $input)
+            && array_key_exists('counterparty_type', $input)
+            && array_key_exists('financial_direction', $input);
+        if ($hasExtendedFields) {
             return $input;
         }
+
         $code = sanitize_key((string) ($input['code'] ?? ''));
         if ($code === '') {
             return array_merge([
                 'recipient_user_ids' => [],
                 'push_enabled' => true,
                 'email_enabled' => false,
+                'counterparty_type' => NotificationRule::SCOPE_ALL,
+                'financial_direction' => NotificationRule::SCOPE_ALL,
             ], $input);
         }
         try {
@@ -172,6 +180,8 @@ final class NotificationRuleService
             'recipient_user_ids' => is_array($existing['recipient_user_ids'] ?? null) ? $existing['recipient_user_ids'] : [],
             'push_enabled' => $existing !== null ? ! empty($existing['push_enabled']) : true,
             'email_enabled' => $existing !== null ? ! empty($existing['email_enabled']) : false,
+            'counterparty_type' => (string) ($existing['counterparty_type'] ?? NotificationRule::SCOPE_ALL),
+            'financial_direction' => (string) ($existing['financial_direction'] ?? NotificationRule::SCOPE_ALL),
         ], $input);
     }
 

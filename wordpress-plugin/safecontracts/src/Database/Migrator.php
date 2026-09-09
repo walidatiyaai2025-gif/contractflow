@@ -26,13 +26,16 @@ use SafeContracts\Database\Migrations\Migration0019NullableLegacyCustomer;
 use SafeContracts\Database\Migrations\Migration0020NotificationRecipientRepair;
 use SafeContracts\Database\Migrations\Migration0021ProductionBaseline;
 use SafeContracts\Database\Migrations\Migration0022EntityAttachments;
+use SafeContracts\Database\Migrations\Migration0023ImportErrorsRepair;
+use SafeContracts\Database\Migrations\Migration0024NotificationActivityContext;
+use SafeContracts\Database\Migrations\Migration0025NotificationRuleScope;
 use RuntimeException;
 use Throwable;
 
 final class Migrator
 {
     public const VERSION_OPTION = 'safecontracts_db_version';
-    public const LATEST_VERSION = '1.21.0';
+    public const LATEST_VERSION = '1.24.0';
 
     /**
      * All migrations introduced after this already-released baseline must use
@@ -64,6 +67,9 @@ final class Migrator
         '1.19.0' => Migration0020NotificationRecipientRepair::class,
         '1.20.0' => Migration0021ProductionBaseline::class,
         '1.21.0' => Migration0022EntityAttachments::class,
+        '1.22.0' => Migration0023ImportErrorsRepair::class,
+        '1.23.0' => Migration0024NotificationActivityContext::class,
+        '1.24.0' => Migration0025NotificationRuleScope::class,
     ];
 
     /** @var array<string, class-string<Migration>> */

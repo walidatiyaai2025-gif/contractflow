@@ -10,6 +10,11 @@ use SafeContracts\Roles\Capabilities;
 
 final class NotificationTemplateService
 {
+    /** @var array<string,string> */
+    private const COMPATIBLE_TEMPLATE_FALLBACKS = [
+        'supplier_payment_due_soon' => 'payment_due_soon',
+    ];
+
     public function __construct(private ?NotificationTemplateRepository $repository = null)
     {
         $this->repository ??= new NotificationTemplateRepository();
@@ -29,7 +34,24 @@ final class NotificationTemplateService
     /** @return array{title:string,body:string,email_subject:string,email_body:string,icon_key:string} */
     public function render(string $code, array $context): array
     {
-        $template = $this->repository->findActiveByCode(NotificationRule::normalizeCode($code));
+        $normalizedCode = NotificationRule::normalizeCode($code);
+        $template = $this->repository->findActiveByCode($normalizedCode);
+
+        if ($template === null) {
+            // Respect an explicitly persisted inactive template. Compatibility
+            // fallback is only for historical/owner rule aliases that never had
+            // a dedicated template row, so they can still materialize schedules.
+            $storedTemplate = $this->repository->findByCode($normalizedCode);
+            if ($storedTemplate !== null) {
+                throw new InvalidArgumentException('Notification template was not found or is inactive.');
+            }
+
+            $fallbackCode = self::COMPATIBLE_TEMPLATE_FALLBACKS[$normalizedCode] ?? null;
+            if ($fallbackCode !== null) {
+                $template = $this->repository->findActiveByCode($fallbackCode);
+            }
+        }
+
         if ($template === null) {
             throw new InvalidArgumentException('Notification template was not found or is inactive.');
         }
