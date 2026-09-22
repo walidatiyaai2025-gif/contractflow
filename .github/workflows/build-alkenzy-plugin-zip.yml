@@ -1,0 +1,37 @@
+name: Build Alkenzy WordPress Plugin ZIP
+
+on:
+  push:
+    branches:
+      - "release/alkenzy-0.3.29-google-play"
+    paths:
+      - ".github/workflows/build-alkenzy-plugin-zip.yml"
+      - "wordpress-plugin/safecontracts/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build-plugin-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build installable WordPress plugin ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd wordpress-plugin
+          zip -qr "$GITHUB_WORKSPACE/alkenzy-adv-plugin-0.3.29-production-ads.zip" safecontracts
+          cd "$GITHUB_WORKSPACE"
+          test -s alkenzy-adv-plugin-0.3.29-production-ads.zip
+          unzip -l alkenzy-adv-plugin-0.3.29-production-ads.zip | grep -F "safecontracts/safecontracts.php"
+          sha256sum alkenzy-adv-plugin-0.3.29-production-ads.zip > alkenzy-adv-plugin-0.3.29-production-ads.zip.sha256
+      - name: Upload plugin ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-adv-plugin-0.3.29-production-ads
+          path: |
+            alkenzy-adv-plugin-0.3.29-production-ads.zip
+            alkenzy-adv-plugin-0.3.29-production-ads.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
