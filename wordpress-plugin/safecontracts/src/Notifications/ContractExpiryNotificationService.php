@@ -178,6 +178,156 @@ final class ContractExpiryNotificationService
         return $dispatched;
     }
 
+    /**
+     * Build the contract-expiry occurrences that are still pending so the
+     * Notification Schedule page can show the same business cadence that the
+     * cron dispatcher evaluates.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function scheduledRows(?string $dateFrom = null, ?string $dateTo = null, string $status = '', int $limit = 300): array
+    {
+        if ($status !== '' && $status !== 'pending') {
+            return [];
+        }
+
+        $timezone = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
+        $today = new DateTimeImmutable('today', $timezone);
+        $settings = new NotificationScheduleSettings();
+        $rules = $this->rules->activeForTrigger(NotificationRule::TRIGGER_CONTRACT_EXPIRY);
+        $contracts = $this->candidateContracts();
+        $rows = [];
+
+        foreach ($rules as $rule) {
+            foreach ($contracts as $contract) {
+                if (! NotificationRule::matchesScope($rule, $contract)) {
+                    continue;
+                }
+
+                $endDate = self::date((string) ($contract['end_date'] ?? ''), $timezone);
+                if ($endDate === null || $today > $endDate) {
+                    continue;
+                }
+
+                $maxRepeats = max(0, (int) ($rule['max_repeats'] ?? 0));
+                for ($attemptNo = 0; $attemptNo <= $maxRepeats; $attemptNo++) {
+                    try {
+                        $target = NotificationRule::targetDate($rule, $endDate->format('Y-m-d'), $attemptNo);
+                    } catch (Throwable) {
+                        continue;
+                    }
+
+                    if ($target > $endDate) {
+                        continue;
+                    }
+
+                    $date = $target->format('Y-m-d');
+                    if ($dateFrom !== null && $dateFrom !== '' && $date < $dateFrom) {
+                        continue;
+                    }
+                    if ($dateTo !== null && $dateTo !== '' && $date > $dateTo) {
+                        continue;
+                    }
+
+                    $recipientIds = $this->recipients->resolve(
+                        $rule,
+                        isset($contract['accountant_user_id']) ? (int) $contract['accountant_user_id'] : null
+                    );
+                    if ($attemptNo > 0 && $attemptNo === $maxRepeats) {
+                        $escalationRoles = is_array($rule['escalation_roles'] ?? null) ? $rule['escalation_roles'] : [];
+                        if ($escalationRoles !== []) {
+                            $recipientIds = array_values(array_unique(array_merge(
+                                $recipientIds,
+                                $this->recipients->resolve([
+                                    'recipient_roles' => $escalationRoles,
+                                    'recipient_user_ids' => [],
+                                    'target_assigned_accountant' => false,
+                                ], null)
+                            )));
+                            sort($recipientIds, SORT_NUMERIC);
+                        }
+                    }
+                    if ($recipientIds === []) {
+                        continue;
+                    }
+
+                    $pendingRecipientIds = [];
+                    foreach ($recipientIds as $userId) {
+                        $userId = (int) $userId;
+                        if ($userId <= 0) {
+                            continue;
+                        }
+                        $occurrenceKey = $this->occurrenceKey(
+                            (int) ($rule['id'] ?? 0),
+                            (int) ($contract['id'] ?? 0),
+                            $attemptNo,
+                            $target->format('Y-m-d'),
+                            $userId
+                        );
+                        if (get_option($occurrenceKey, false) === false) {
+                            $pendingRecipientIds[] = $userId;
+                        }
+                    }
+                    if ($pendingRecipientIds === []) {
+                        continue;
+                    }
+                    $recipientIds = $pendingRecipientIds;
+
+                    $channels = [];
+                    if (! array_key_exists('push_enabled', $rule) || ! empty($rule['push_enabled'])) {
+                        $channels[] = 'push';
+                    }
+                    if (! empty($rule['email_enabled'])) {
+                        $channels[] = 'email';
+                    }
+
+                    $rows[] = [
+                        'id' => 0,
+                        'rule_id' => (int) ($rule['id'] ?? 0),
+                        'payment_id' => 0,
+                        'contract_id' => (int) ($contract['id'] ?? 0),
+                        'resource_type' => 'contract',
+                        'attempt_no' => $attemptNo,
+                        'recipient_ids' => $recipientIds,
+                        'template_code' => (string) ($rule['template_code'] ?? 'contract_expiry_soon'),
+                        'channel' => $channels !== [] ? implode('+', $channels) : 'none',
+                        'scheduled_date' => $date,
+                        'scheduled_for' => $settings->scheduledUtc($date),
+                        'status' => 'pending',
+                        'recipient_count' => count($recipientIds),
+                        'sent_count' => 0,
+                        'failed_count' => 0,
+                        'manual_attempts' => 0,
+                        'last_attempt_at' => '',
+                        'sent_at' => '',
+                        'last_error_code' => '',
+                        'rule_code' => (string) ($rule['code'] ?? 'contract_expiry'),
+                        'rule_name' => (string) ($rule['name'] ?? 'Contract expiry'),
+                        'payment_reference' => '',
+                        'due_date' => $endDate->format('Y-m-d'),
+                        'end_date' => $endDate->format('Y-m-d'),
+                        'financial_direction' => (string) ($contract['financial_direction'] ?? ''),
+                        'currency_code' => (string) ($contract['currency_code'] ?? ''),
+                        'contract_number' => (string) ($contract['contract_number'] ?? ''),
+                        'counterparty_type' => (string) ($contract['counterparty_type'] ?? ''),
+                        'counterparty_id' => (int) ($contract['counterparty_id'] ?? 0),
+                        'counterparty_name' => (string) ($contract['counterparty_name'] ?? ''),
+                        'customer_name' => (string) ($contract['customer_name'] ?? ''),
+                        'supplier_name' => (string) ($contract['supplier_name'] ?? ''),
+                    ];
+
+                    if (count($rows) >= max(1, min(1000, $limit))) {
+                        usort($rows, static fn (array $a, array $b): int => strcmp((string) $b['scheduled_for'], (string) $a['scheduled_for']));
+                        return $rows;
+                    }
+                }
+            }
+        }
+
+        usort($rows, static fn (array $a, array $b): int => strcmp((string) $b['scheduled_for'], (string) $a['scheduled_for']));
+        return $rows;
+    }
+
     /** @return list<array<string,mixed>> */
     private function candidateContracts(int $limit = 5000): array
     {
