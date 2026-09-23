@@ -21,9 +21,16 @@ void main() {
     expect(app, contains('SessionState.authenticated'));
     expect(app, contains('setPostAuthenticationError('));
     expect(app, contains('setState(() => _showLogin = true);'));
+    final callbackStart = app.indexOf('onAuthenticated: () async {');
+    final callbackEnd = app.indexOf('          );', callbackStart);
+    expect(callbackStart, greaterThanOrEqualTo(0));
+    expect(callbackEnd, greaterThan(callbackStart));
+    final callback = app.substring(callbackStart, callbackEnd);
+    expect(callback, contains('if (authenticated)'));
+    expect(callback, contains('setState(() => _showLogin = true);'));
     expect(
-      app.indexOf('if (authenticated)'),
-      lessThan(app.indexOf('setState(() => _showLogin = true);')),
+      callback.indexOf('if (authenticated)'),
+      lessThan(callback.lastIndexOf('setState(() => _showLogin = true);')),
     );
 
     expect(auth, contains('void setPostAuthenticationError(String message)'));
