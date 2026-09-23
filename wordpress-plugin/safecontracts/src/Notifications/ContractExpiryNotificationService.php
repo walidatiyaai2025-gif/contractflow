@@ -130,7 +130,7 @@ final class ContractExpiryNotificationService
                         }
 
                         try {
-                            $this->direct->send(
+                            $delivery = $this->direct->send(
                                 $userId,
                                 $rendered['title'],
                                 $rendered['body'],
@@ -146,6 +146,14 @@ final class ContractExpiryNotificationService
                                     'resource_id' => (int) ($contract['id'] ?? 0),
                                 ]
                             );
+                            $attempted = (int) ($delivery['push_sent'] ?? 0)
+                                + (int) ($delivery['push_failed'] ?? 0)
+                                + (int) ($delivery['email_sent'] ?? 0)
+                                + (int) ($delivery['email_failed'] ?? 0);
+                            if ($attempted === 0) {
+                                delete_option($occurrenceKey);
+                                continue;
+                            }
                             $dispatched++;
                         } catch (Throwable $error) {
                             delete_option($occurrenceKey);
