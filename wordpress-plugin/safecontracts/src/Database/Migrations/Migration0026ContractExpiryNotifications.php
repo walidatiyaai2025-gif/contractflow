@@ -55,7 +55,7 @@ final class Migration0026ContractExpiryNotifications implements ProductionMigrat
         }
 
         if ($this->insertedRule) {
-            $roles = wp_json_encode([RoleRegistrar::MANAGER]);
+            $roles = json_encode([RoleRegistrar::MANAGER], JSON_UNESCAPED_SLASHES);
             if (! is_string($roles)) {
                 $roles = '["safecontracts_manager"]';
             }
