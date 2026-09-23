@@ -217,7 +217,7 @@ final class ContractExpiryNotificationService
                         continue;
                     }
 
-                    if ($target < $today || $target > $endDate) {
+                    if ($target > $endDate) {
                         continue;
                     }
 
@@ -250,6 +250,28 @@ final class ContractExpiryNotificationService
                     if ($recipientIds === []) {
                         continue;
                     }
+
+                    $pendingRecipientIds = [];
+                    foreach ($recipientIds as $userId) {
+                        $userId = (int) $userId;
+                        if ($userId <= 0) {
+                            continue;
+                        }
+                        $occurrenceKey = $this->occurrenceKey(
+                            (int) ($rule['id'] ?? 0),
+                            (int) ($contract['id'] ?? 0),
+                            $attemptNo,
+                            $target->format('Y-m-d'),
+                            $userId
+                        );
+                        if (get_option($occurrenceKey, false) === false) {
+                            $pendingRecipientIds[] = $userId;
+                        }
+                    }
+                    if ($pendingRecipientIds === []) {
+                        continue;
+                    }
+                    $recipientIds = $pendingRecipientIds;
 
                     $channels = [];
                     if (! array_key_exists('push_enabled', $rule) || ! empty($rule['push_enabled'])) {
