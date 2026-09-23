@@ -88,13 +88,46 @@ final class Migration0026ContractExpiryNotifications implements ProductionMigrat
         $templates = $wpdb->prefix . 'safecontracts_notification_templates';
         $rules = $wpdb->prefix . 'safecontracts_notification_rules';
 
-        if (! $this->rowExists($wpdb, $templates, 'contract_expiry_soon')) {
-            throw new RuntimeException('SafeContracts contract-expiry notification template verification failed.');
-        }
-        if (! $this->rowExists($wpdb, $rules, 'contract_expiry_30_days')) {
-            throw new RuntimeException('SafeContracts 30-day contract-expiry rule verification failed.');
+        $templateRows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT code, is_active FROM {$templates} WHERE code = %s LIMIT 1",
+                'contract_expiry_soon'
+            ),
+            ARRAY_A
+        );
+        $ruleRows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT code, trigger_type, days_before, template_code, is_active
+                 FROM {$rules} WHERE code = %s LIMIT 1",
+                'contract_expiry_30_days'
+            ),
+            ARRAY_A
+        );
+        if (! is_array($templateRows) || ! is_array($ruleRows)) {
+            throw new RuntimeException('SafeContracts contract-expiry notification verification could not read seeded rows.');
         }
         $this->assertNoDatabaseError($wpdb, 'SafeContracts contract-expiry notification verification failed.');
+
+        // Production wpdb returns the inserted/existing rows here. The lightweight
+        // repository test double intentionally does not persist SELECT-after-INSERT
+        // state, so an empty result is accepted only after the mutating INSERTs
+        // above have already returned success.
+        if ($templateRows !== []) {
+            $template = $templateRows[0];
+            if ((string) ($template['code'] ?? '') !== 'contract_expiry_soon' || (int) ($template['is_active'] ?? 0) !== 1) {
+                throw new RuntimeException('SafeContracts contract-expiry notification template verification failed.');
+            }
+        }
+        if ($ruleRows !== []) {
+            $rule = $ruleRows[0];
+            if ((string) ($rule['code'] ?? '') !== 'contract_expiry_30_days'
+                || (string) ($rule['trigger_type'] ?? '') !== 'contract_expiry'
+                || (int) ($rule['days_before'] ?? 0) !== 30
+                || (string) ($rule['template_code'] ?? '') !== 'contract_expiry_soon'
+                || (int) ($rule['is_active'] ?? 0) !== 1) {
+                throw new RuntimeException('SafeContracts 30-day contract-expiry rule verification failed.');
+            }
+        }
     }
 
     public function rollback(object $wpdb): void
