@@ -292,7 +292,23 @@ final class _BootstrapViewState extends State<_BootstrapView> {
             onBack: () => setState(() => _showLogin = false),
             onAuthenticated: () async {
               await widget.onAuthenticated();
-              if (mounted) setState(() => _showLogin = false);
+              if (!mounted) return;
+
+              final authenticated =
+                  widget.controller.state == MobileBootstrapState.ready &&
+                      widget.controller.sessionController?.state ==
+                          SessionState.authenticated;
+              if (authenticated) {
+                setState(() => _showLogin = false);
+                return;
+              }
+
+              widget.loginController.setPostAuthenticationError(
+                widget.controller.message ??
+                    widget.controller.sessionController?.errorMessage ??
+                    'Sign-in succeeded, but the authenticated session could not be opened. Please retry.',
+              );
+              setState(() => _showLogin = true);
             },
           );
         }
