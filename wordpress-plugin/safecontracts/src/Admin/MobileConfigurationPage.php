@@ -69,6 +69,13 @@ final class MobileConfigurationPage
                 'excel_export_enabled' => isset($_POST['excel_export_enabled']),
                 'push_notifications_enabled' => isset($_POST['push_notifications_enabled']),
                 'collection_entry_enabled' => isset($_POST['collection_entry_enabled']),
+                'ads_enabled' => isset($_POST['ads_enabled']),
+                'ads_test_mode' => isset($_POST['ads_test_mode']),
+                'ads_banner_enabled' => isset($_POST['ads_banner_enabled']),
+                'ads_provider' => $_POST['ads_provider'] ?? MobileConfiguration::AD_PROVIDER_ADMOB,
+                'ads_admob_banner_unit_id' => $_POST['ads_admob_banner_unit_id'] ?? '',
+                'ads_applovin_sdk_key' => $_POST['ads_applovin_sdk_key'] ?? '',
+                'ads_applovin_banner_unit_id' => $_POST['ads_applovin_banner_unit_id'] ?? '',
             ]);
             $landingContent = new MobileLandingContent();
             $landingInput = self::landingInput($_POST);
@@ -134,6 +141,48 @@ final class MobileConfigurationPage
                         <label class="safecontracts-check-row"><input type="checkbox" name="push_notifications_enabled" value="1" <?php checked($config['push_notifications_enabled']); ?>><span><strong><?php echo esc_html__('Push notifications', 'safecontracts'); ?></strong><br><small class="description"><?php echo esc_html(self::text('Advertise push-notification availability to the mobile runtime.', 'إعلان توفر الإشعارات الفورية لتطبيق الموبايل.')); ?></small></span></label>
                         <label class="safecontracts-check-row"><input type="checkbox" name="collection_entry_enabled" value="1" <?php checked($config['collection_entry_enabled']); ?>><span><strong><?php echo esc_html__('Collection entry', 'safecontracts'); ?></strong><br><small class="description"><?php echo esc_html(self::text('Allow the existing mobile collection-entry capability when authorized.', 'السماح بإمكانية إدخال التحصيل الحالية من الموبايل عند وجود الصلاحية.')); ?></small></span></label>
                     </fieldset>
+
+                    <div class="safecontracts-section-heading" style="margin-top:24px"><div><h2><?php echo esc_html(self::text('Mobile advertising', 'إعلانات الموبايل')); ?></h2><p class="description"><?php echo esc_html(self::text('Control AdMob or AppLovin remotely. Changes take effect after the app refreshes its mobile configuration; no new APK is required.', 'تحكم في AdMob أو AppLovin عن بُعد. التغييرات تعمل بعد تحديث إعدادات الموبايل داخل التطبيق ولا تحتاج APK جديد.')); ?></p></div></div>
+                    <fieldset>
+                        <label class="safecontracts-check-row">
+                            <input type="checkbox" name="ads_enabled" value="1" <?php checked($config['ads_enabled']); ?>>
+                            <span><strong><?php echo esc_html(self::text('Enable mobile advertising', 'تفعيل إعلانات الموبايل')); ?></strong><br><small class="description"><?php echo esc_html(self::text('Master switch for all mobile ads.', 'المفتاح الرئيسي لكل إعلانات الموبايل.')); ?></small></span>
+                        </label>
+                        <label class="safecontracts-check-row">
+                            <input type="checkbox" name="ads_test_mode" value="1" <?php checked($config['ads_test_mode']); ?>>
+                            <span><strong><?php echo esc_html(self::text('Test / QA mode', 'وضع الاختبار / QA')); ?></strong><br><small class="description"><?php echo esc_html(self::text('Keep this enabled while testing. Turn it OFF to request production ads.', 'اتركه مفعلاً أثناء الاختبار. ألغِ تفعيله لتشغيل إعلانات الإنتاج الحقيقية.')); ?></small></span>
+                        </label>
+                        <label class="safecontracts-check-row">
+                            <input type="checkbox" name="ads_banner_enabled" value="1" <?php checked($config['ads_banner_enabled']); ?>>
+                            <span><strong><?php echo esc_html(self::text('Show banner ads', 'إظهار إعلانات البانر')); ?></strong><br><small class="description"><?php echo esc_html(self::text('Allow the mobile banner placement to load ads.', 'السماح لمكان البانر داخل التطبيق بتحميل الإعلانات.')); ?></small></span>
+                        </label>
+                    </fieldset>
+
+                    <p>
+                        <label for="safecontracts-ads-provider"><strong><?php echo esc_html(self::text('Advertising provider', 'مزود الإعلانات')); ?></strong></label><br>
+                        <select id="safecontracts-ads-provider" name="ads_provider">
+                            <option value="<?php echo esc_attr(MobileConfiguration::AD_PROVIDER_ADMOB); ?>" <?php selected($config['ads_provider'], MobileConfiguration::AD_PROVIDER_ADMOB); ?>>Google AdMob</option>
+                            <option value="<?php echo esc_attr(MobileConfiguration::AD_PROVIDER_APPLOVIN); ?>" <?php selected($config['ads_provider'], MobileConfiguration::AD_PROVIDER_APPLOVIN); ?>>AppLovin MAX</option>
+                        </select>
+                    </p>
+
+                    <h3><?php echo esc_html(self::text('Google AdMob', 'Google AdMob')); ?></h3>
+                    <p>
+                        <label for="safecontracts-admob-banner-unit"><strong><?php echo esc_html(self::text('Banner Ad Unit ID', 'معرّف Banner Ad Unit')); ?></strong></label><br>
+                        <input class="regular-text code" id="safecontracts-admob-banner-unit" type="text" name="ads_admob_banner_unit_id" placeholder="ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY" value="<?php echo esc_attr((string) $config['ads_admob_banner_unit_id']); ?>">
+                    </p>
+                    <p class="description"><?php echo esc_html(self::text('For production: enable advertising, enable banner ads, select Google AdMob, enter the production Banner Ad Unit ID, and turn Test / QA mode OFF. The AdMob App ID is embedded in the Android build.', 'للإنتاج: فعّل الإعلانات والبانر، اختر Google AdMob، أدخل Banner Ad Unit ID الخاص بالإنتاج، ثم ألغِ تفعيل وضع Test / QA. الـ AdMob App ID مضمّن بالفعل داخل نسخة Android.')); ?></p>
+
+                    <h3><?php echo esc_html(self::text('AppLovin MAX', 'AppLovin MAX')); ?></h3>
+                    <p>
+                        <label for="safecontracts-applovin-sdk-key"><strong><?php echo esc_html(self::text('SDK Key', 'SDK Key')); ?></strong></label><br>
+                        <input class="large-text code" id="safecontracts-applovin-sdk-key" type="text" name="ads_applovin_sdk_key" autocomplete="off" value="<?php echo esc_attr((string) $config['ads_applovin_sdk_key']); ?>">
+                    </p>
+                    <p>
+                        <label for="safecontracts-applovin-banner-unit"><strong><?php echo esc_html(self::text('Banner Ad Unit ID', 'معرّف Banner Ad Unit')); ?></strong></label><br>
+                        <input class="regular-text code" id="safecontracts-applovin-banner-unit" type="text" name="ads_applovin_banner_unit_id" value="<?php echo esc_attr((string) $config['ads_applovin_banner_unit_id']); ?>">
+                    </p>
+                    <p class="description"><?php echo esc_html(self::text('AppLovin is optional. Do not paste Management/API/Ad Review keys here; only the MAX SDK Key and Banner Ad Unit ID are supported.', 'AppLovin اختياري. لا تضع Management/API/Ad Review keys هنا؛ المدعوم فقط MAX SDK Key وBanner Ad Unit ID.')); ?></p>
                 </section>
 
                 <section id="safecontracts-mobile-landing-content" class="safecontracts-admin-card safecontracts-settings-card safecontracts-landing-editor">

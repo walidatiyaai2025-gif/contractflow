@@ -1,0 +1,7 @@
+*.jks
+*.keystore
+*PRIVATE*
+*RECOVERY*
+*SECRETS*
+reviewer-credentials*
+service-account*.json

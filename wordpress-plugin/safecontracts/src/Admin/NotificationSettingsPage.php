@@ -311,7 +311,7 @@ final class NotificationSettingsPage
                         <p><label class="safecontracts-check-row"><input type="checkbox" name="is_active" value="1" <?php checked($selected === null || ! empty($selected['is_active'])); ?>><?php echo esc_html__('Active', 'safecontracts'); ?></label></p>
                         <?php submit_button($selected ? __('Save Notification Rule', 'safecontracts') : __('Add Notification Rule', 'safecontracts')); ?>
                     </form>
-                    <p class="description"><?php echo esc_html__('Settled-payment suppression, contractual due-date matching and recipient scope remain enforced by the notification engine.', 'safecontracts'); ?></p>
+                    <p class="description"><?php echo esc_html__('For Contract expiry, Days before is calculated from the contract End Date. Payment reminders continue to use the contractual payment due date. Recipient scope and delivery safeguards remain enforced by the notification engine.', 'safecontracts'); ?></p>
                 </section>
             </div>
         </div>
@@ -338,6 +338,7 @@ final class NotificationSettingsPage
             'before_due', 'due_before' => 'Before due',
             'due_today', 'on_due' => 'Due today',
             'overdue', 'after_due' => 'Overdue',
+            'contract_expiry' => 'Contract expiry',
             default => ucwords(str_replace('_', ' ', $normalized)),
         };
         return RuntimeLabels::text($source);

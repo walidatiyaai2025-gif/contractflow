@@ -1,0 +1,37 @@
+STORE MEDIA BINARY DELIVERY MANIFEST
+
+app-icon-512.png
+size=119306
+sha256=bed1648133fb30603806269c6df3e67ec016b00eb9ab5f63ac04308273bcf204
+Google Play slot=App icon 512x512 PNG
+
+feature-graphic-1024x500.jpg
+size=107801
+sha256=62818268f62f47c7df2bafbacb7ad6bfeefe1c48987a3754e5e6fca092bb8133
+Google Play slot=Feature graphic 1024x500 JPEG
+
+phone/01-dashboard-1080x1920.jpg
+size=174744
+sha256=2cde52d46b875e22bbd515c7e0aeb57fbdb7b78e13b6f921795c1fc960f01061
+
+phone/02-customers-1080x1920.jpg
+size=199068
+sha256=8170a3e9529457fdf4ae3b6ceee7706cbb675ad88753ce835a021772eeb15750
+
+phone/03-contracts-1080x1920.jpg
+size=178557
+sha256=6097a5e219c24a9db2ad4aae149bf6d9a824138b9ee432845722f8f2f766a746
+
+phone/04-payments-1080x1920.jpg
+size=123599
+sha256=0047cea11d3f1b81f877a4944633d97f23a68ea725ded1b103767b54b46f354b
+
+phone/05-finance-1080x1920.jpg
+size=208018
+sha256=42ce8f2b0c5edce18d5134e68118d09a0e084a563c15cb359ef13149720cc2fe
+
+phone/06-profile-1080x1920.jpg
+size=170831
+sha256=24083c848f0cac54f2c5f42c81d1bc22ee6462983493c1ddc075ee2e597f8be9
+
+The actual binary files are included in the owner delivery bundle `Alkenzy-ADV-store-media-PUBLIC.zip`. This manifest exists in Git so the exact approved media can be verified after download/upload.

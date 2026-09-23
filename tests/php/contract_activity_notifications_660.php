@@ -83,9 +83,10 @@ foreach ([
 }
 
 $migrator = $read('wordpress-plugin/safecontracts/src/Database/Migrator.php');
-$assertContains("public const LATEST_VERSION = '1.24.0';", $migrator, 'notification activity context must remain in the current forward-only migration chain');
+$assertContains("public const LATEST_VERSION = '1.25.0';", $migrator, 'notification activity context must remain in the current forward-only migration chain');
 $assertContains("'1.23.0' => Migration0024NotificationActivityContext::class", $migrator, 'notification activity migration must remain registered at 1.23.0');
 $assertContains("'1.24.0' => Migration0025NotificationRuleScope::class", $migrator, 'subsequent notification-rule scope migration must advance the chain without replacing activity context');
+$assertContains("'1.25.0' => Migration0026ContractExpiryNotifications::class", $migrator, 'contract-expiry notification seed must advance the production migration chain');
 
 $activityMigration = $read('wordpress-plugin/safecontracts/src/Database/Migrations/Migration0024NotificationActivityContext.php');
 $assertContains('implements ProductionMigration', $activityMigration, 'notification activity context must remain governed as a production migration');

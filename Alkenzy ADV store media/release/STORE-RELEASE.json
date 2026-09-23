@@ -1,0 +1,14 @@
+{
+  "product": "Alkenzy ADV",
+  "store_version_name": "0.3.29",
+  "store_version_code": 29,
+  "package": "com.safecontracts.safecontracts_mobile",
+  "target_sdk": 36,
+  "functional_source": "1a02545546efbfa979659e405070dce05906f443",
+  "store_branch": "release/alkenzy-0.3.29-google-play",
+  "upload_key_alias": "alkenzy-upload",
+  "upload_certificate_sha256": "DB:39:2F:08:2D:7E:9F:57:3D:25:5B:5F:2E:B9:83:3F:BA:F4:02:35:A8:1D:43:3B:99:74:D1:04:B3:6A:C3:D7",
+  "private_key_committed_to_git": false,
+  "media_bundle": "Alkenzy-ADV-store-media-PUBLIC.zip",
+  "private_signing_bundle": "Alkenzy-ADV-Google-Play-Upload-Key-PRIVATE.zip"
+}

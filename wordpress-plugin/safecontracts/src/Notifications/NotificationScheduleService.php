@@ -79,6 +79,9 @@ final class NotificationScheduleService
      */
     private function syncRule(array $rule, array $payments, ?DateTimeImmutable $notBefore): int
     {
+        if ((string) ($rule['trigger_type'] ?? '') === NotificationRule::TRIGGER_CONTRACT_EXPIRY) {
+            return 0;
+        }
         $count = 0;
         $repeatMax = max(0, (int) ($rule['max_repeats'] ?? 0));
         for ($attemptNo = 0; $attemptNo <= $repeatMax; $attemptNo++) {

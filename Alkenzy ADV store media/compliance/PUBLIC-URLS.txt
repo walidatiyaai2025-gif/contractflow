@@ -1,0 +1,6 @@
+Privacy: https://sys.alkenzy.com/alkenzy-adv/privacy/
+Account deletion: https://sys.alkenzy.com/alkenzy-adv/account-deletion/
+Support: https://sys.alkenzy.com/alkenzy-adv/support/
+Terms: https://sys.alkenzy.com/alkenzy-adv/terms/
+
+STATUS: Verify all four URLs return public HTTPS pages immediately before Play submission.
