@@ -65,6 +65,7 @@ $scheduler = (string) file_get_contents($root . 'Notifications/NotificationSched
 $schedule = (string) file_get_contents($root . 'Notifications/NotificationScheduleService.php');
 $service = (string) file_get_contents($root . 'Notifications/ContractExpiryNotificationService.php');
 $migration = (string) file_get_contents($root . 'Database/Migrations/Migration0026ContractExpiryNotifications.php');
+$schedulePage = (string) file_get_contents($root . 'Admin/NotificationSchedulePage.php');
 
 foreach (['contract_end_date', 'days_until_expiry'] as $placeholder) {
     sc_expiry_assert(str_contains($template, "'{$placeholder}'"), "expiry template supports {$placeholder}");
@@ -75,6 +76,10 @@ sc_expiry_assert(str_contains($service, "c.status = 'active'"), 'only active con
 sc_expiry_assert(str_contains($service, "c.end_date IS NOT NULL"), 'expiry processing requires a contract end date');
 sc_expiry_assert(str_contains($service, 'add_option($occurrenceKey'), 'expiry reminders claim a durable idempotency key before dispatch');
 sc_expiry_assert(str_contains($service, "'resource_type' => 'contract'"), 'expiry push context deep-links to the contract');
+sc_expiry_assert(str_contains($service, 'public function scheduledRows('), 'contract expiry exposes pending occurrences to the schedule screen');
+sc_expiry_assert(str_contains($schedulePage, 'new ContractExpiryNotificationService())->scheduledRows('), 'notification schedule merges contract-expiry occurrences');
+sc_expiry_assert(str_contains($schedulePage, "\$isContractExpiry"), 'notification schedule distinguishes contract reminders from payment reminders');
+sc_expiry_assert(str_contains($schedulePage, "self::text('Contract ends', 'ينتهي العقد')"), 'contract-expiry schedule row shows end date instead of Payment #0');
 sc_expiry_assert(str_contains($migration, "'contract_expiry_soon'"), 'production migration seeds the expiry template');
 sc_expiry_assert(str_contains($migration, "'contract_expiry_30_days'"), 'production migration seeds the 30-day rule');
 sc_expiry_assert(str_contains($migration, '30, 0, 0, 0'), 'seeded rule is exactly 30 days before expiry with no repeat by default');
