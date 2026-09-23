@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('approved 0.3.6 final APK contracts', () {
+  group('forward-only Alkenzy ADV release contracts', () {
     test('dashboard keeps the approved compact single-row KPI design', () {
       final source = File('lib/features/dashboard/dashboard_screen.dart')
           .readAsStringSync();
@@ -90,7 +90,7 @@ void main() {
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('safecontracts/files'));
       expect(activity, isNot(contains('safecontracts_exports')));
-      expect(pubspec, contains('version: 0.3.6+10'));
+      expect(pubspec, contains('version: 0.3.10+15'));
     });
   });
 }

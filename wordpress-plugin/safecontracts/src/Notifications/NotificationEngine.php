@@ -81,6 +81,16 @@ final class NotificationEngine
         ], $context);
         $rendered = $this->templates->render($templateCode, $renderContext);
 
+        $pushData = [
+            'payment_id' => $paymentId,
+            'rule_code' => (string) ($rule['code'] ?? ''),
+            'attempt_no' => $attemptNo,
+            'icon_key' => $rendered['icon_key'],
+        ];
+        if (in_array($direction, ['receivable', 'payable'], true)) {
+            $pushData['financial_direction'] = $direction;
+        }
+
         $plan = [
             'rule_id' => (int) ($rule['id'] ?? 0),
             'payment_id' => $paymentId,
@@ -97,13 +107,7 @@ final class NotificationEngine
                 'title' => $rendered['title'],
                 'body' => $rendered['body'],
                 'icon_key' => $rendered['icon_key'],
-                'data' => [
-                    'payment_id' => $paymentId,
-                    'rule_code' => (string) ($rule['code'] ?? ''),
-                    'attempt_no' => $attemptNo,
-                    'icon_key' => $rendered['icon_key'],
-                    'financial_direction' => $direction,
-                ],
+                'data' => $pushData,
             ],
         ];
         do_action('safecontracts_notification_planned', $plan['rule_id'], $paymentId, $recipientIds, $attemptNo);
