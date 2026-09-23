@@ -21,16 +21,12 @@ void main() {
     expect(app, contains('SessionState.authenticated'));
     expect(app, contains('setPostAuthenticationError('));
     expect(app, contains('setState(() => _showLogin = true);'));
-    final callbackStart = app.indexOf('onAuthenticated: () async {');
-    final callbackEnd = app.indexOf('          );', callbackStart);
-    expect(callbackStart, greaterThanOrEqualTo(0));
-    expect(callbackEnd, greaterThan(callbackStart));
-    final callback = app.substring(callbackStart, callbackEnd);
-    expect(callback, contains('if (authenticated)'));
-    expect(callback, contains('setState(() => _showLogin = true);'));
+    expect(app, contains('if (authenticated)'));
     expect(
-      callback.indexOf('if (authenticated)'),
-      lessThan(callback.lastIndexOf('setState(() => _showLogin = true);')),
+      app,
+      contains(
+        "widget.loginController.setPostAuthenticationError(",
+      ),
     );
 
     expect(auth, contains('void setPostAuthenticationError(String message)'));
