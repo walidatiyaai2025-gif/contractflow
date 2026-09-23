@@ -183,6 +183,12 @@ final class NotificationScheduler
         } catch (Throwable $error) {
             error_log('SafeContracts notification scheduler failed: ' . $error->getMessage());
         }
+
+        try {
+            (new ContractExpiryNotificationService())->run();
+        } catch (Throwable $error) {
+            error_log('SafeContracts contract expiry notification scheduler failed: ' . $error->getMessage());
+        }
     }
 
     public static function clear(): void

@@ -338,6 +338,7 @@ final class NotificationSettingsPage
             'before_due', 'due_before' => 'Before due',
             'due_today', 'on_due' => 'Due today',
             'overdue', 'after_due' => 'Overdue',
+            'contract_expiry' => 'Contract expiry',
             default => ucwords(str_replace('_', ' ', $normalized)),
         };
         return RuntimeLabels::text($source);

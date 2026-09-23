@@ -75,6 +75,7 @@ final class CompleteArabicDefaults
         'Collector: %s' => 'المحصل: %s',
         'Configured' => 'مهيأ',
         'Contract currency' => 'عملة العقد',
+        'Contract expiry' => 'انتهاء العقد',
         'Contract period filtering uses the contract start date, falling back to the record creation date when no start date exists.' => 'يستخدم فلتر فترة العقود تاريخ بداية العقد، وعند عدم وجوده يستخدم تاريخ إنشاء السجل.',
         'Contract status' => 'حالة العقد',
         'Contract was not saved. Check the counterparty, currency, lifecycle transition and assignment permissions.' => 'لم يتم حفظ العقد. راجع جهة التعاقد والعملة وانتقال الحالة وصلاحيات الإسناد.',

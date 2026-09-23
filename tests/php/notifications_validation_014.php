@@ -20,7 +20,7 @@ $activate = $GLOBALS['sc_test_activation_hooks'][SAFECONTRACTS_FILE] ?? null;
 sc_p5v_assert(is_callable($activate), 'P5 rule validation activation hook exists');
 $activate();
 sc_p5v_assert(version_compare(Migrator::LATEST_VERSION, '1.10.0', '>='), 'SC-P5-014 validates expanded rule schema version');
-sc_p5v_assert(NotificationRule::allowedTriggers() === ['before_due','due_day','overdue'], 'SC-P5-014 trigger allow-list is explicit and closed');
+sc_p5v_assert(NotificationRule::allowedTriggers() === ['before_due','due_day','overdue','contract_expiry'], 'SC-P5-014 trigger allow-list is explicit and closed');
 
 $legacy = NotificationRule::normalizeInput([
     'code'=>'legacy-10','name'=>'Legacy ten day','trigger_type'=>'before_due','days_before'=>10,

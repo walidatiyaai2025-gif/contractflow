@@ -24,6 +24,8 @@ final class NotificationTemplate
             'due_date',
             'remaining_amount',
             'days_overdue',
+            'contract_end_date',
+            'days_until_expiry',
         ];
     }
 
