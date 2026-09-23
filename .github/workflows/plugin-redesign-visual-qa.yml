@@ -148,6 +148,11 @@ jobs:
       - name: Seed controlled real-domain fixtures
         run: wp eval-file "$GITHUB_WORKSPACE/tests/plugin-redesign-visual-qa/seed.php" --path="$WP_DIR"
 
+      - name: Verify repeatable visible demo-data lifecycle
+        env:
+          SC_QA_SCOPE: ${{ steps.qa.outputs.scope }}
+        run: wp eval-file "$GITHUB_WORKSPACE/tests/plugin-redesign-visual-qa/demo-data-runtime.php" --path="$WP_DIR"
+
       - name: Install Arabic WordPress language pack
         shell: bash
         run: |

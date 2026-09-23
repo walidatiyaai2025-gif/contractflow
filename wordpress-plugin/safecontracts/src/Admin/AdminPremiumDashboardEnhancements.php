@@ -57,9 +57,27 @@ final class AdminPremiumDashboardEnhancements
             dashboard.dataset.premiumEnhanced = '1';
 
             dashboard.querySelectorAll('[data-safecontracts-confirm]').forEach((button) => {
-                button.closest('form')?.addEventListener('submit', (event) => {
+                const form = button.closest('form');
+                form?.addEventListener('submit', (event) => {
+                    if (form.dataset.safecontractsSubmitting === '1') {
+                        event.preventDefault();
+                        return;
+                    }
                     const message = button.getAttribute('data-safecontracts-confirm') || '';
-                    if (message && !window.confirm(message)) event.preventDefault();
+                    if (message && !window.confirm(message)) {
+                        event.preventDefault();
+                        return;
+                    }
+                    form.dataset.safecontractsSubmitting = '1';
+                    button.disabled = true;
+                    button.setAttribute('aria-busy', 'true');
+                    const busyLabel = button.getAttribute('data-safecontracts-busy-label') || '';
+                    if (busyLabel) {
+                        const icon = button.querySelector('.dashicons');
+                        button.replaceChildren();
+                        if (icon) button.append(icon);
+                        button.append(document.createTextNode(busyLabel));
+                    }
                 });
             });
 

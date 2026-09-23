@@ -171,6 +171,7 @@ final class CollectionsPage
         <section class="safecontracts-admin-card safecontracts-table-card safecontracts-settlement-panel safecontracts-settlement-panel--<?php echo esc_attr($class); ?>">
             <div class="safecontracts-payment-panel__heading"><div><h2><?php echo esc_html($title); ?></h2><p><?php echo esc_html($receivable ? __('Money coming in', 'safecontracts') : __('Money going out', 'safecontracts')); ?></p></div><span class="safecontracts-direction-pill safecontracts-direction-pill--<?php echo esc_attr($class); ?>"><?php echo esc_html($receivable ? '+' : '−'); ?></span></div>
             <?php if ($collections === []) : ?><p><?php echo esc_html(self::label('No collection activity matches the current filters.', 'لا توجد حركات تحصيل أو سداد مطابقة للفلاتر الحالية.')); ?></p><?php else : ?>
+            <div class="safecontracts-w2-table-scroll">
             <table class="widefat striped"><thead><tr><th><?php echo esc_html__('Date', 'safecontracts'); ?></th><th><?php echo esc_html__('Counterparty', 'safecontracts'); ?></th><th><?php echo esc_html__('Contract', 'safecontracts'); ?></th><th><?php echo esc_html__('Payment', 'safecontracts'); ?></th><th><?php echo esc_html__('Method', 'safecontracts'); ?></th><th><?php echo esc_html__('Amount', 'safecontracts'); ?></th><th><?php echo esc_html__('Files', 'safecontracts'); ?></th><th><?php echo esc_html__('Actions', 'safecontracts'); ?></th></tr></thead><tbody>
             <?php foreach ($collections as $collection) : ?>
                 <?php $collectionId = (int) ($collection['id'] ?? 0); $files = $attachmentsByCollection[$collectionId] ?? []; ?>
@@ -193,6 +194,7 @@ final class CollectionsPage
                 </tr>
             <?php endforeach; ?>
             </tbody></table>
+            </div>
             <?php endif; ?>
         </section>
         <?php
