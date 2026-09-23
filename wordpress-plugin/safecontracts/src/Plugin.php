@@ -50,6 +50,7 @@ use SafeContracts\Contracts\ContractHistoryRecorder;
 use SafeContracts\Database\MigrationGuard;
 use SafeContracts\Database\Migrator;
 use SafeContracts\Diagnostics\RuntimeInspector;
+use SafeContracts\Notifications\ContractActivityNotificationDispatcher;
 use SafeContracts\Notifications\FirebaseAccessTokenProvider;
 use SafeContracts\Notifications\NotificationScheduler;
 use SafeContracts\Presence\PresenceService;
@@ -58,6 +59,7 @@ use SafeContracts\Translations\AdminArabicDefaults;
 use SafeContracts\Translations\ControlledInputArabicDefaults;
 use SafeContracts\Translations\FeatureArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
+use SafeContracts\Translations\MobileAdvertisingArabicDefaults;
 use SafeContracts\Translations\NotificationCenterArabicDefaults;
 use SafeContracts\Translations\NotificationScheduleArabicDefaults;
 use SafeContracts\Translations\ProductionUxArabicDefaults;
@@ -93,6 +95,7 @@ final class Plugin
         ProductionUxArabicDefaults::register();
         MigrationRecoveryArabicDefaults::register();
         ControlledInputArabicDefaults::register();
+        MobileAdvertisingArabicDefaults::register();
         NotificationScheduleArabicDefaults::register();
         NotificationCenterArabicDefaults::register();
         RuntimeLabels::register();
@@ -115,6 +118,10 @@ final class Plugin
         NotificationCenterAuditRecorder::register();
         NotificationScheduleAuditRecorder::register();
         SafeDeletionAuditRecorder::register();
+        // Activity notifications observe committed domain events after all
+        // history/audit subscribers so notification delivery cannot interfere
+        // with authoritative audit recording or its isolated test fixtures.
+        ContractActivityNotificationDispatcher::register();
         LoginBranding::register();
         EmailSettingsPage::register();
         NavigationCleanup::register();

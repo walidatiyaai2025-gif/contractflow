@@ -7,6 +7,8 @@ namespace SafeContracts\Notifications;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use SafeContracts\Contracts\ContractMoney;
+use SafeContracts\Contracts\Counterparty;
+use SafeContracts\Payments\FinancialDirection;
 use SafeContracts\Payments\PaymentStatus;
 use SafeContracts\Roles\RoleRegistrar;
 
@@ -15,6 +17,7 @@ final class NotificationRule
     public const TRIGGER_BEFORE_DUE = 'before_due';
     public const TRIGGER_DUE_DAY = 'due_day';
     public const TRIGGER_OVERDUE = 'overdue';
+    public const SCOPE_ALL = 'all';
 
     /** @return list<string> */
     public static function allowedRecipientRoles(): array
@@ -31,6 +34,18 @@ final class NotificationRule
     public static function allowedTriggers(): array
     {
         return [self::TRIGGER_BEFORE_DUE, self::TRIGGER_DUE_DAY, self::TRIGGER_OVERDUE];
+    }
+
+    /** @return list<string> */
+    public static function allowedCounterpartyScopes(): array
+    {
+        return [self::SCOPE_ALL, Counterparty::CUSTOMER, Counterparty::SUPPLIER];
+    }
+
+    /** @return list<string> */
+    public static function allowedFinancialDirectionScopes(): array
+    {
+        return [self::SCOPE_ALL, FinancialDirection::RECEIVABLE, FinancialDirection::PAYABLE];
     }
 
     public static function normalizeCode(mixed $value): string
@@ -58,6 +73,30 @@ final class NotificationRule
             throw new InvalidArgumentException('Unsupported notification trigger type.');
         }
         return $trigger;
+    }
+
+    public static function normalizeCounterpartyScope(mixed $value): string
+    {
+        $scope = strtolower(trim((string) $value));
+        if ($scope === '') {
+            $scope = self::SCOPE_ALL;
+        }
+        if (! in_array($scope, self::allowedCounterpartyScopes(), true)) {
+            throw new InvalidArgumentException('Notification counterparty scope must be all, customer or supplier.');
+        }
+        return $scope;
+    }
+
+    public static function normalizeFinancialDirectionScope(mixed $value): string
+    {
+        $scope = strtolower(trim((string) $value));
+        if ($scope === '') {
+            $scope = self::SCOPE_ALL;
+        }
+        if (! in_array($scope, self::allowedFinancialDirectionScopes(), true)) {
+            throw new InvalidArgumentException('Notification financial-direction scope must be all, receivable or payable.');
+        }
+        return $scope;
     }
 
     public static function normalizeDaysBefore(mixed $value): int
@@ -170,6 +209,8 @@ final class NotificationRule
             'code' => self::normalizeCode($input['code'] ?? ''),
             'name' => self::normalizeName($input['name'] ?? ''),
             'trigger_type' => $trigger,
+            'counterparty_type' => self::normalizeCounterpartyScope($input['counterparty_type'] ?? self::SCOPE_ALL),
+            'financial_direction' => self::normalizeFinancialDirectionScope($input['financial_direction'] ?? self::SCOPE_ALL),
             'days_before' => $daysBefore,
             'days_after' => $daysAfter,
             'repeat_interval_days' => $repeatInterval,
@@ -207,6 +248,9 @@ final class NotificationRule
         if ($attemptNo < 0) {
             throw new InvalidArgumentException('Notification attempt number cannot be negative.');
         }
+        if (! self::matchesScope($rule, $payment)) {
+            return false;
+        }
 
         $status = PaymentStatus::normalize((string) ($payment['status'] ?? ''));
         $remaining = ContractMoney::normalizeNonNegative($payment['remaining_amount'] ?? '');
@@ -222,6 +266,27 @@ final class NotificationRule
 
         $target = self::targetDate($rule, $payment['due_date'] ?? '', $attemptNo);
         return $target->format('Y-m-d') === $today->format('Y-m-d');
+    }
+
+    /** @param array<string,mixed> $rule @param array<string,mixed> $payment */
+    public static function matchesScope(array $rule, array $payment): bool
+    {
+        $counterpartyScope = self::normalizeCounterpartyScope($rule['counterparty_type'] ?? self::SCOPE_ALL);
+        $directionScope = self::normalizeFinancialDirectionScope($rule['financial_direction'] ?? self::SCOPE_ALL);
+
+        if ($counterpartyScope !== self::SCOPE_ALL) {
+            $paymentCounterparty = strtolower(trim((string) ($payment['counterparty_type'] ?? '')));
+            if ($paymentCounterparty !== $counterpartyScope) {
+                return false;
+            }
+        }
+        if ($directionScope !== self::SCOPE_ALL) {
+            $paymentDirection = strtolower(trim((string) ($payment['financial_direction'] ?? '')));
+            if ($paymentDirection !== $directionScope) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** @param array<string, mixed> $rule */
@@ -269,6 +334,8 @@ final class NotificationRule
             'code' => (string) ($row['code'] ?? ''),
             'name' => (string) ($row['name'] ?? ''),
             'trigger_type' => $trigger,
+            'counterparty_type' => self::normalizeCounterpartyScope($row['counterparty_type'] ?? self::SCOPE_ALL),
+            'financial_direction' => self::normalizeFinancialDirectionScope($row['financial_direction'] ?? self::SCOPE_ALL),
             'days_before' => (int) ($row['days_before'] ?? 0),
             'days_after' => (int) ($row['days_after'] ?? 0),
             'repeat_interval_days' => (int) ($row['repeat_interval_days'] ?? 0),

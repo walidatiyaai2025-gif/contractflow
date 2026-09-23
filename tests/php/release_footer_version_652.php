@@ -30,11 +30,11 @@ $assert(AdminShell::footerVersion('WordPress 7.1') === 'WordPress 7.1', 'unrelat
 
 $_GET['page'] = 'safecontracts';
 $assert(AdminShell::footerText('WordPress footer') === 'ALKENZY ADV — Approved release', 'SafeContracts footer identifies the approved Alkenzy ADV release');
-$assert(AdminShell::footerVersion('WordPress 7.1') === 'Version 0.3.6', 'SafeContracts footer renders the canonical plugin version');
+$assert(AdminShell::footerVersion('WordPress 7.1') === 'Version 0.3.13', 'SafeContracts footer renders the canonical plugin version');
 
 $GLOBALS['sc_652_locale'] = 'ar_KW';
 $assert(AdminShell::footerText('WordPress footer') === 'ALKENZY ADV — النسخة المعتمدة', 'approved footer label is Arabic on Arabic WordPress profiles');
-$assert(AdminShell::footerVersion('WordPress 7.1') === 'الإصدار 0.3.6', 'approved footer version is Arabic on Arabic WordPress profiles');
+$assert(AdminShell::footerVersion('WordPress 7.1') === 'الإصدار 0.3.13', 'approved footer version is Arabic on Arabic WordPress profiles');
 
 $shell = (string) file_get_contents(dirname(__DIR__, 2) . '/wordpress-plugin/safecontracts/src/Admin/AdminShell.php');
 $assert(str_contains($shell, "add_filter('admin_footer_text'") && str_contains($shell, "add_filter('update_footer'"), 'AdminShell registers both WordPress footer filters');

@@ -7,6 +7,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -19,6 +21,9 @@ class MainActivity : FlutterFragmentActivity() {
         private const val FILE_METHOD_CHANNEL = "safecontracts/files"
         private const val SAVE_DOCUMENT_REQUEST = 7012
         private const val NOTIFICATION_CHANNEL_ID = "safe_contracts_alerts"
+        private const val BANKNOTE_CHANNEL_ID = "safe_contracts_alerts_banknote_counter"
+        private const val CASHIER_CHANNEL_ID = "safe_contracts_alerts_cashier_ka_ching"
+        private const val COIN_CHANNEL_ID = "safe_contracts_alerts_coin_drop"
         private const val NOTIFICATION_CHANNEL_NAME = "Safe Contracts Alerts"
     }
 
@@ -27,7 +32,11 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ensureNotificationChannel()
+        // Startup must never depend on custom notification sound support. Some
+        // Android/OEM builds resolve channel sound URIs eagerly and can throw
+        // while the Activity is starting. Create only the sound-free fallback
+        // channel here; custom channels are created lazily when actually used.
+        ensureDefaultNotificationChannelSafely()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -43,13 +52,24 @@ class MainActivity : FlutterFragmentActivity() {
             val title = call.argument<String>("title")?.trim().orEmpty()
             val body = call.argument<String>("body")?.trim().orEmpty()
             val iconKey = call.argument<String>("iconKey")?.trim().orEmpty()
+            val soundKey = call.argument<String>("soundKey")?.trim().orEmpty()
             val id = call.argument<Int>("id") ?: (System.currentTimeMillis() and 0x7fffffff).toInt()
             if (title.isEmpty() || body.isEmpty()) {
                 result.error("invalid_notification", "Notification title and body are required.", null)
                 return@setMethodCallHandler
             }
-            showNotification(id, title, body, iconKey)
-            result.success(true)
+            try {
+                showNotification(id, title, body, iconKey, soundKey)
+                result.success(true)
+            } catch (error: Exception) {
+                // Notification presentation is auxiliary. Never allow an OEM
+                // channel/permission failure to terminate the application.
+                result.error(
+                    "notification_unavailable",
+                    error.message ?: "Unable to present the notification.",
+                    null,
+                )
+            }
         }
 
         MethodChannel(
@@ -125,27 +145,97 @@ class MainActivity : FlutterFragmentActivity() {
         pendingSaveBytes = null
     }
 
-    private fun ensureNotificationChannel() {
+    private fun ensureDefaultNotificationChannelSafely() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(
-            NOTIFICATION_CHANNEL_ID,
-            NOTIFICATION_CHANNEL_NAME,
+        try {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(
+                notificationChannel(
+                    NOTIFICATION_CHANNEL_ID,
+                    NOTIFICATION_CHANNEL_NAME,
+                    null,
+                ),
+            )
+        } catch (_: Exception) {
+            // Notifications are non-critical and must never break app startup.
+        }
+    }
+
+    private fun ensureNotificationChannel(soundKey: String): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return NOTIFICATION_CHANNEL_ID
+        }
+        ensureDefaultNotificationChannelSafely()
+        val spec = when (soundKey) {
+            "banknote_counter" -> Triple(
+                BANKNOTE_CHANNEL_ID,
+                "Safe Contracts · Banknote Counter",
+                R.raw.banknote_counter,
+            )
+            "cashier_ka_ching" -> Triple(
+                CASHIER_CHANNEL_ID,
+                "Safe Contracts · Cashier Ka-ching",
+                R.raw.cashier_ka_ching,
+            )
+            "coin_drop" -> Triple(
+                COIN_CHANNEL_ID,
+                "Safe Contracts · Coin Drop",
+                R.raw.coin_drop,
+            )
+            else -> return NOTIFICATION_CHANNEL_ID
+        }
+
+        return try {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (manager.getNotificationChannel(spec.first) == null) {
+                manager.createNotificationChannel(
+                    notificationChannel(
+                        spec.first,
+                        spec.second,
+                        rawSoundUri(spec.third),
+                    ),
+                )
+            }
+            spec.first
+        } catch (_: Exception) {
+            NOTIFICATION_CHANNEL_ID
+        }
+    }
+
+    private fun notificationChannel(id: String, name: String, soundUri: Uri?): NotificationChannel {
+        return NotificationChannel(
+            id,
+            name,
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = "Contract, payment and collection alerts from Safe Contracts"
             enableVibration(true)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            if (soundUri != null) {
+                val audioAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                setSound(soundUri, audioAttributes)
+            }
         }
-        manager.createNotificationChannel(channel)
     }
 
+    private fun rawSoundUri(resourceId: Int): Uri =
+        Uri.parse("android.resource://$packageName/$resourceId")
+
     @Suppress("DEPRECATION")
-    private fun showNotification(id: Int, title: String, body: String, iconKey: String) {
-        ensureNotificationChannel()
+    private fun showNotification(
+        id: Int,
+        title: String,
+        body: String,
+        iconKey: String,
+        soundKey: String,
+    ) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = ensureNotificationChannel(soundKey)
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
+            Notification.Builder(this, channelId)
         } else {
             Notification.Builder(this)
                 .setPriority(Notification.PRIORITY_HIGH)

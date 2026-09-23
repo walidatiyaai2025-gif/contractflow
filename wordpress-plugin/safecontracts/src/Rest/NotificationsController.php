@@ -56,20 +56,23 @@ final class NotificationsController
             $items = array_map(
                 static function (array $row) use ($readSet): array {
                     $id = (int) ($row['id'] ?? 0);
-                    $paymentId = (int) ($row['payment_id'] ?? 0);
+                    $paymentId = max(0, (int) ($row['payment_id'] ?? 0));
+                    $contractId = max(0, (int) ($row['contract_id'] ?? 0));
+                    $resourceType = strtolower(trim((string) ($row['resource_type'] ?? '')));
+                    $resourceId = max(0, (int) ($row['resource_id'] ?? 0));
+                    $deepLink = self::deepLink($resourceType, $resourceId, $paymentId);
+
                     return [
                         'id' => $id,
                         'payment_id' => $paymentId,
+                        'contract_id' => $contractId,
+                        'resource_type' => $resourceType !== '' ? $resourceType : null,
+                        'resource_id' => $resourceId > 0 ? $resourceId : null,
                         'template_code' => (string) ($row['template_code'] ?? ''),
                         'scheduled_for' => (string) ($row['scheduled_for'] ?? ''),
                         'created_at' => (string) ($row['created_at'] ?? ''),
                         'is_read' => isset($readSet[$id]),
-                        'deep_link' => $paymentId > 0
-                            ? [
-                                'destination' => 'payments',
-                                'resource_id' => $paymentId,
-                            ]
-                            : null,
+                        'deep_link' => $deepLink,
                     ];
                 },
                 $rows
@@ -113,6 +116,34 @@ final class NotificationsController
         } catch (Throwable $error) {
             return RequestGuard::failure($error, 'safecontracts_notification_read_failed');
         }
+    }
+
+    /** @return array{destination:string,resource_id:int}|null */
+    private static function deepLink(string $resourceType, int $resourceId, int $paymentId): ?array
+    {
+        if ($resourceId > 0) {
+            $destination = match ($resourceType) {
+                'contract' => 'contracts',
+                'payment' => 'payments',
+                'followup' => 'followups',
+                default => null,
+            };
+            if ($destination !== null) {
+                return [
+                    'destination' => $destination,
+                    'resource_id' => $resourceId,
+                ];
+            }
+        }
+
+        // Backward-compatible path for historical due-date notifications that
+        // predate generic resource context.
+        return $paymentId > 0
+            ? [
+                'destination' => 'payments',
+                'resource_id' => $paymentId,
+            ]
+            : null;
     }
 
     private static function currentUserId(): int

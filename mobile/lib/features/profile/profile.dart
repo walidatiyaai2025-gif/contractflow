@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
@@ -76,6 +78,38 @@ final class ProfileRepository {
     final envelope = await client.get('devices');
     return DevicesSnapshot.fromEnvelope(envelope);
   }
+
+  Future<String> uploadAvatar({
+    required Uint8List bytes,
+    required String mimeType,
+  }) async {
+    if (bytes.isEmpty || bytes.length > 2097152) {
+      throw ArgumentError('Profile image must be 2 MB or smaller.');
+    }
+    if (!const <String>{'image/jpeg', 'image/png', 'image/webp'}
+        .contains(mimeType)) {
+      throw ArgumentError('Profile image must be JPEG, PNG, or WebP.');
+    }
+    final envelope = await client.post(
+      'profile/avatar',
+      body: <String, Object?>{
+        'mime_type': mimeType,
+        'base64': base64Encode(bytes),
+      },
+    );
+    final data = apiObjectMap(envelope.data, 'profile.avatar.data');
+    final value = data['avatar_url'];
+    if (value is! String || value.trim().isEmpty) {
+      throw const FormatException('Profile avatar response is invalid.');
+    }
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null ||
+        !uri.hasAuthority ||
+        (uri.scheme != 'https' && uri.scheme != 'http')) {
+      throw const FormatException('Profile avatar URL is invalid.');
+    }
+    return value.trim();
+  }
 }
 
 final class ProfileController extends ChangeNotifier {
@@ -86,6 +120,8 @@ final class ProfileController extends ChangeNotifier {
   ProfileDeviceLoadState state = ProfileDeviceLoadState.idle;
   DevicesSnapshot? snapshot;
   String? errorMessage;
+  String? avatarUrlOverride;
+  bool avatarUploadInFlight = false;
 
   Future<void> ensureLoaded() async {
     if (state == ProfileDeviceLoadState.idle) {
@@ -110,6 +146,38 @@ final class ProfileController extends ChangeNotifier {
       state = ProfileDeviceLoadState.error;
     }
     notifyListeners();
+  }
+
+  Future<void> refreshSilently() async {
+    try {
+      snapshot = await repository.loadDevices();
+      state = ProfileDeviceLoadState.ready;
+      errorMessage = null;
+      notifyListeners();
+    } on Object {
+      // Keep the last profile snapshot during background refresh failures.
+    }
+  }
+
+  Future<String> uploadAvatar({
+    required Uint8List bytes,
+    required String mimeType,
+  }) async {
+    if (avatarUploadInFlight) {
+      throw StateError('A profile image upload is already in progress.');
+    }
+    avatarUploadInFlight = true;
+    errorMessage = null;
+    notifyListeners();
+    try {
+      final url =
+          await repository.uploadAvatar(bytes: bytes, mimeType: mimeType);
+      avatarUrlOverride = url;
+      return url;
+    } finally {
+      avatarUploadInFlight = false;
+      notifyListeners();
+    }
   }
 }
 

@@ -51,6 +51,7 @@ final class RuntimeLabels
         'Details' => 'التفاصيل',
         'Recent runtime failures' => 'أحدث أخطاء وقت التشغيل',
         'Retention is bounded to the most recent 50 events. Secrets, tokens, passwords, cookies, authorization headers, nonces and raw request bodies are never stored.' => 'يُحتفظ بأحدث 50 حدثاً فقط. لا يتم أبداً تخزين الأسرار أو الرموز أو كلمات المرور أو ملفات تعريف الارتباط أو ترويسات التفويض أو قيم nonce أو أجسام الطلبات الخام.',
+        'Export runtime JSON' => 'تصدير تشخيص وقت التشغيل بصيغة JSON',
         'Clear runtime history' => 'مسح سجل وقت التشغيل',
         'No runtime failures have been recorded.' => 'لم يتم تسجيل أخطاء وقت تشغيل.',
         'Correlation ID' => 'معرّف التتبع',

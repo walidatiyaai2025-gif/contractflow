@@ -30,6 +30,15 @@ $demo = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Support/DemoD
 $controller = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Admin/DemoDataController.php');
 $plugin = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Plugin.php');
 $enhancement = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Admin/AdminPremiumDashboardEnhancements.php');
+$runtimeQa = sc_658_source($root . '/tests/plugin-redesign-visual-qa/demo-data-runtime.php');
+$collectionsPage = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Admin/CollectionsPage.php');
+$paymentsPage = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Admin/PaymentsPage.php');
+$financePage = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Admin/FinancePage.php');
+$reportsPage = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Admin/ReportsPage.php');
+$importsPage = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Admin/ImportsPage.php');
+$paymentMethodsPage = sc_658_source($root . '/wordpress-plugin/safecontracts/src/Admin/PaymentMethodsPage.php');
+$worker2States = sc_658_source($root . '/wordpress-plugin/safecontracts/assets/admin/plugin-redesign/worker-2/route-states.css');
+$visualWorkflow = sc_658_source($root . '/.github/workflows/plugin-redesign-visual-qa.yml');
 
 sc_658_assert(str_contains($dashboard, 'DashboardMonthlyFlowRepository') && str_contains($dashboard, 'safecontracts-dashboard-monthly-flow'), 'Dashboard renders the real monthly financial-flow surface');
 sc_658_assert(str_contains($dashboard, '(new FollowUpService())->recent') && str_contains($dashboard, 'Latest employee payment notes'), 'Dashboard surfaces recent employee follow-up notes');
@@ -49,6 +58,15 @@ sc_658_assert(substr_count($demo, "'safecontracts_") >= 22, 'demo service covers
 sc_658_assert(str_contains($demo, "'START TRANSACTION'") && str_contains($demo, "'ROLLBACK'") && str_contains($demo, "'COMMIT'"), 'demo create/delete operations are transactional');
 sc_658_assert(str_contains($demo, 'REGISTRY_OPTION') && str_contains($demo, 'tables' . "' => \$tables"), 'demo rows are recorded by exact primary-key registry');
 sc_658_assert(str_contains($demo, 'WHERE id IN') && ! str_contains(strtoupper($demo), 'TRUNCATE TABLE'), 'demo deletion uses exact IDs and never truncates tables');
+sc_658_assert(str_contains($demo, "'batches' => \$valid") && str_contains($demo, "'batch_count' => count(\$valid)"), 'demo registry accumulates repeatable 500-row batches');
+sc_658_assert(! str_contains($demo, 'Delete it before creating another batch') && str_contains($demo, 'GET_LOCK'), 'demo creation supports sequential batches while serializing concurrent mutations');
+sc_658_assert(str_contains($controller, 'Add 500 rows per table') && str_contains($controller, 'Delete all demo data'), 'dashboard keeps both repeatable-create and delete-all actions visible');
+sc_658_assert(str_contains($controller, 'screenLinks') && str_contains($controller, 'Technical reason:'), 'dashboard links directly to visible demo screens and explains a failed transaction');
+sc_658_assert(str_contains($runtimeQa, 'Repeated demo creation') && str_contains($runtimeQa, 'real admin read model') && str_contains($runtimeQa, 'exact pre-demo row count'), 'real WordPress QA proves repeated creation, screen visibility and exact deletion');
+sc_658_assert(str_contains($visualWorkflow, 'demo-data-runtime.php'), 'visual QA executes the demo lifecycle against real WordPress and MySQL');
+sc_658_assert(str_contains($collectionsPage, 'safecontracts-w2-table-scroll'), 'collection controls remain inside the responsive table scroller when demo rows are visible');
+sc_658_assert(str_contains($paymentsPage, 'safecontracts-w2-table-scroll') && str_contains($worker2States, 'position: static'), 'payment actions remain reachable in the normal table flow at narrow RTL widths');
+sc_658_assert(substr_count($financePage, 'safecontracts-w2-table-scroll') === 3 && substr_count($reportsPage, 'safecontracts-w2-table-scroll') === 2 && str_contains($importsPage, 'safecontracts-w2-table-scroll') && str_contains($paymentMethodsPage, 'safecontracts-w2-table-scroll'), 'all visible worker-two data tables own a deterministic RTL scroll boundary');
 sc_658_assert(str_contains($controller, 'Capabilities::MANAGE_SYSTEM') && str_contains($controller, 'check_admin_referer'), 'demo actions require system capability and nonces');
 sc_658_assert(str_contains($plugin, 'DemoDataController::CREATE_ACTION') && str_contains($plugin, 'DemoDataController::DELETE_ACTION'), 'demo admin-post handlers are registered');
 

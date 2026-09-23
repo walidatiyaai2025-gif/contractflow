@@ -8,17 +8,31 @@ FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
 ALKENZY_APP_ASSET="$ROOT/mobile/assets/brand/alkenzy_adv.png"
 ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.png"
 MAIN_ACTIVITY_TEMPLATE="$ROOT/mobile/android-release/MainActivity.kt"
+APPLOVIN_PATCHER="$ROOT/scripts/patch_applovin_compile_sdk.py"
+SOUND_MATERIALIZER="$ROOT/scripts/materialize_notification_sounds.sh"
+ANDROID_SOUND_SOURCE="$ROOT/mobile/android-release/raw"
+ADMOB_APP_ID="ca-app-pub-3218037275900725~7401372044"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "FAIL: flutter is required to bootstrap the Android platform" >&2
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE"; do
+for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE" "$APPLOVIN_PATCHER" "$SOUND_MATERIALIZER"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
   fi
+done
+
+# Reconstruct the exact owner-supplied notification sounds from immutable,
+# pinned source commits and fail closed on any checksum drift.
+bash "$SOUND_MATERIALIZER"
+for sound in banknote_counter cashier_ka_ching coin_drop; do
+  test -s "$ANDROID_SOUND_SOURCE/$sound.mp3" || {
+    echo "FAIL: verified Android notification sound is missing: $sound" >&2
+    exit 1
+  }
 done
 
 cmp -s "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" || {
@@ -60,8 +74,8 @@ cd "$MOBILE"
 
 # Flutter owns the platform boilerplate version. Recreate it from the exact
 # Flutter stable toolchain used by CI, then restore the repository's release
-# signing, networking, Firebase, notification presentation, biometric access,
-# explicit document download, and Safe Contracts runtime contracts.
+# signing, networking, Firebase, ads, notification presentation, biometric
+# access, explicit document download, and Safe Contracts runtime contracts.
 rm -rf android
 flutter create \
   --platforms=android \
@@ -74,6 +88,16 @@ cp "$FIREBASE_CONFIG" android/app/google-services.json
 MAIN_ACTIVITY_TARGET="android/app/src/main/kotlin/com/safecontracts/safecontracts_mobile/MainActivity.kt"
 mkdir -p "$(dirname "$MAIN_ACTIVITY_TARGET")"
 cp "$MAIN_ACTIVITY_TEMPLATE" "$MAIN_ACTIVITY_TARGET"
+
+RAW_TARGET="android/app/src/main/res/raw"
+mkdir -p "$RAW_TARGET"
+for sound in banknote_counter cashier_ka_ching coin_drop; do
+  cp "$ANDROID_SOUND_SOURCE/$sound.mp3" "$RAW_TARGET/$sound.mp3"
+  cmp -s "$ANDROID_SOUND_SOURCE/$sound.mp3" "$RAW_TARGET/$sound.mp3" || {
+    echo "FAIL: generated Android raw sound differs from verified source: $sound" >&2
+    exit 1
+  }
+done
 
 SETTINGS="android/settings.gradle.kts"
 python3 - "$SETTINGS" <<'PY'
@@ -106,12 +130,13 @@ if [[ ! -f "$MANIFEST" ]]; then
   echo "FAIL: Flutter did not generate AndroidManifest.xml" >&2
   exit 1
 fi
-python3 - "$MANIFEST" <<'PY'
+python3 - "$MANIFEST" "$ADMOB_APP_ID" <<'PY'
 from pathlib import Path
 import re
 import sys
 
 path = Path(sys.argv[1])
+admob_app_id = sys.argv[2]
 text = path.read_text(encoding="utf-8")
 text = text.replace('android:label="safecontracts_mobile"', 'android:label="Alkenzy ADV"')
 text = re.sub(
@@ -149,7 +174,7 @@ for permission in permissions:
     permission_line = f'{indent}<uses-permission android:name="{permission}" />\n'
     text = text[: application.start()] + permission_line + text[application.start() :]
 
-metadata = '''
+firebase_metadata = '''
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="safe_contracts_alerts" />
@@ -161,7 +186,22 @@ if 'com.google.firebase.messaging.default_notification_channel_id' not in text:
     match = re.search(r'(?m)^([ \t]*)</application>', text)
     if match is None:
         raise SystemExit("FAIL: AndroidManifest.xml does not contain </application>")
-    text = text[:match.start()] + metadata + text[match.start():]
+    text = text[:match.start()] + firebase_metadata + text[match.start():]
+
+# google_mobile_ads registers an Android ContentProvider that starts before
+# MainActivity. The SDK throws during process startup when APPLICATION_ID is
+# missing, so this metadata is a mandatory launch contract even when ads are
+# remotely disabled for the current account.
+admob_metadata = f'''
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="{admob_app_id}" />
+'''
+if 'com.google.android.gms.ads.APPLICATION_ID' not in text:
+    match = re.search(r'(?m)^([ \t]*)</application>', text)
+    if match is None:
+        raise SystemExit("FAIL: AndroidManifest.xml does not contain </application>")
+    text = text[:match.start()] + admob_metadata + text[match.start():]
 
 for permission in permissions:
     if permission not in text:
@@ -174,6 +214,8 @@ if 'android:roundIcon="@drawable/alkenzy_launcher"' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Alkenzy round launcher icon")
 if 'safe_contracts_alerts' not in text:
     raise SystemExit("FAIL: Android release manifest is missing Safe Contracts notification channel metadata")
+if 'com.google.android.gms.ads.APPLICATION_ID' not in text or admob_app_id not in text:
+    raise SystemExit("FAIL: Android release manifest is missing the production AdMob application ID")
 
 path.write_text(text, encoding="utf-8")
 PY
@@ -186,7 +228,10 @@ for required in \
   android/app/google-services.json \
   android/app/src/main/AndroidManifest.xml \
   "$MAIN_ACTIVITY_TARGET" \
-  "$LAUNCHER_ICON"; do
+  "$LAUNCHER_ICON" \
+  "$RAW_TARGET/banknote_counter.mp3" \
+  "$RAW_TARGET/cashier_ka_ching.mp3" \
+  "$RAW_TARGET/coin_drop.mp3"; do
   if [[ ! -e "$required" ]]; then
     echo "FAIL: generated Android scaffold missing $required" >&2
     exit 1
@@ -221,6 +266,26 @@ grep -Fq 'safe_contracts_alerts' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing high-importance notification channel metadata" >&2
   exit 1
 }
+grep -Fq 'com.google.android.gms.ads.APPLICATION_ID' "$MANIFEST" || {
+  echo "FAIL: Android release manifest is missing Google Mobile Ads APPLICATION_ID" >&2
+  exit 1
+}
+grep -Fq "$ADMOB_APP_ID" "$MANIFEST" || {
+  echo "FAIL: Android release manifest does not contain the production AdMob application ID" >&2
+  exit 1
+}
+grep -Fq 'safe_contracts_alerts_banknote_counter' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity is missing banknote notification channel" >&2
+  exit 1
+}
+grep -Fq 'safe_contracts_alerts_cashier_ka_ching' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity is missing cashier notification channel" >&2
+  exit 1
+}
+grep -Fq 'safe_contracts_alerts_coin_drop' "$MAIN_ACTIVITY_TARGET" || {
+  echo "FAIL: Android release activity is missing coin-drop notification channel" >&2
+  exit 1
+}
 grep -Fq 'safecontracts/notifications' "$MAIN_ACTIVITY_TARGET" || {
   echo "FAIL: Android release activity is missing foreground notification bridge" >&2
   exit 1
@@ -242,4 +307,9 @@ grep -Fq 'id("com.google.gms.google-services") version "4.4.4" apply false' "$SE
   exit 1
 }
 
-echo "Alkenzy ADV Android scaffold bootstrapped with launcher identity, biometric login, explicit document Save As, high-importance notifications, release signing, INTERNET, and Firebase contracts."
+# AppLovin MAX 4.6.4 still declares compileSdk 31 in its cached Android
+# plugin. Patch it immediately after Flutter materializes the dependency index
+# so every build path (Quality Gates, release APK, AAB) compiles against API 36.
+python3 "$APPLOVIN_PATCHER"
+
+echo "Alkenzy ADV Android scaffold bootstrapped with launcher identity, biometric login, explicit document Save As, per-sound high-importance notifications, production AdMob application identity, release signing, INTERNET, Firebase contracts, and AppLovin API 36 compatibility."
