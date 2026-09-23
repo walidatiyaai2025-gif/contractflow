@@ -17,6 +17,7 @@ final class NotificationRule
     public const TRIGGER_BEFORE_DUE = 'before_due';
     public const TRIGGER_DUE_DAY = 'due_day';
     public const TRIGGER_OVERDUE = 'overdue';
+    public const TRIGGER_CONTRACT_EXPIRY = 'contract_expiry';
     public const SCOPE_ALL = 'all';
 
     /** @return list<string> */
@@ -33,7 +34,7 @@ final class NotificationRule
     /** @return list<string> */
     public static function allowedTriggers(): array
     {
-        return [self::TRIGGER_BEFORE_DUE, self::TRIGGER_DUE_DAY, self::TRIGGER_OVERDUE];
+        return [self::TRIGGER_BEFORE_DUE, self::TRIGGER_DUE_DAY, self::TRIGGER_OVERDUE, self::TRIGGER_CONTRACT_EXPIRY];
     }
 
     /** @return list<string> */
@@ -191,7 +192,7 @@ final class NotificationRule
 
         $daysBefore = 0;
         $daysAfter = 0;
-        if ($trigger === self::TRIGGER_BEFORE_DUE) {
+        if ($trigger === self::TRIGGER_BEFORE_DUE || $trigger === self::TRIGGER_CONTRACT_EXPIRY) {
             $daysBefore = self::normalizeDaysBefore($input['days_before'] ?? 0);
         } elseif ($trigger === self::TRIGGER_OVERDUE) {
             $daysAfter = self::normalizeDaysAfter($input['days_after'] ?? 0);
@@ -245,6 +246,9 @@ final class NotificationRule
         if (! self::normalizeBool($rule['is_active'] ?? true)) {
             return false;
         }
+        if (self::normalizeTrigger($rule['trigger_type'] ?? '') === self::TRIGGER_CONTRACT_EXPIRY) {
+            return false;
+        }
         if ($attemptNo < 0) {
             throw new InvalidArgumentException('Notification attempt number cannot be negative.');
         }
@@ -296,7 +300,7 @@ final class NotificationRule
         $trigger = self::normalizeTrigger($rule['trigger_type'] ?? '');
 
         $base = match ($trigger) {
-            self::TRIGGER_BEFORE_DUE => $due->modify('-' . self::normalizeDaysBefore($rule['days_before'] ?? 0) . ' days'),
+            self::TRIGGER_BEFORE_DUE, self::TRIGGER_CONTRACT_EXPIRY => $due->modify('-' . self::normalizeDaysBefore($rule['days_before'] ?? 0) . ' days'),
             self::TRIGGER_DUE_DAY => $due,
             self::TRIGGER_OVERDUE => $due->modify('+' . self::normalizeDaysAfter($rule['days_after'] ?? 0) . ' days'),
         };
@@ -360,6 +364,7 @@ final class NotificationRule
         return match ($trigger) {
             self::TRIGGER_DUE_DAY => 'payment_due_today',
             self::TRIGGER_OVERDUE => 'payment_overdue',
+            self::TRIGGER_CONTRACT_EXPIRY => 'contract_expiry_soon',
             default => 'payment_due_soon',
         };
     }
