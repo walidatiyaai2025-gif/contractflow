@@ -1,0 +1,122 @@
+name: Build Alkenzy 0.3.29 Login Hotfix APK
+
+on:
+  push:
+    branches:
+      - "fix/alkenzy-0.3.29-login-session-after-production-ads"
+    paths:
+      - ".github/workflows/build-alkenzy-login-hotfix-apk.yml"
+      - "mobile/**"
+      - "wordpress-plugin/safecontracts/src/Auth/MobileBearerAuthentication.php"
+      - "scripts/bootstrap_android.sh"
+
+permissions:
+  contents: read
+
+jobs:
+  build-production-test-apk:
+    runs-on: ubuntu-latest
+    env:
+      API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Validate production API target
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          url = os.environ['API_BASE_URL'].strip()
+          expected = 'https://sys.alkenzy.com/wp-json/safecontracts/v1/'
+          if url != expected:
+              raise SystemExit(f'FAIL: test APK must target exactly {expected}')
+          parsed = urlparse(url)
+          if parsed.scheme != 'https' or parsed.hostname != 'sys.alkenzy.com':
+              raise SystemExit('FAIL: production API host must be sys.alkenzy.com over HTTPS')
+          PY
+
+      - name: Verify production API health
+        run: python3 scripts/verify_production_health.py "$API_BASE_URL"
+
+      - name: Create isolated test signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/alkenzy-test-signing"
+          keytool -genkeypair -v             -keystore "$RUNNER_TEMP/alkenzy-test-signing/test.jks"             -storepass "alkenzy-test-029"             -keypass "alkenzy-test-029"             -alias "alkenzy-test"             -keyalg RSA -keysize 2048 -validity 30             -dname "CN=Alkenzy ADV Test,O=Alkenzy,C=KW"
+
+      - name: Bootstrap Android with production AdMob identity
+        shell: bash
+        env:
+          SC_REQUIRE_PRODUCTION_ADMOB: "1"
+        run: |
+          set -euo pipefail
+          ./scripts/bootstrap_android.sh
+
+      - name: Install dependencies and verify hotfix tests
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f test/widget_test.dart
+          flutter pub get
+          flutter analyze
+          flutter test test/post_auth_session_guard_test.dart
+          flutter test test/mobile_login_firebase_test.dart
+          flutter test test/mobile_login_live_refresh_057_058_test.dart
+
+      - name: Build installable release APK against sys production
+        working-directory: mobile
+        shell: bash
+        env:
+          SC_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/alkenzy-test-signing/test.jks
+          SC_ANDROID_KEYSTORE_PASSWORD: alkenzy-test-029
+          SC_ANDROID_KEY_ALIAS: alkenzy-test
+          SC_ANDROID_KEY_PASSWORD: alkenzy-test-029
+        run: |
+          set -euo pipefail
+          flutter build apk --release             --dart-define=SC_ENV=production             --dart-define=SC_API_BASE_URL="$API_BASE_URL"
+
+      - name: Verify APK production contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
+          OUT="Alkenzy-ADV-0.3.29-login-hotfix-SYS-PRODUCTION-TEST.apk"
+          test -s "$APK"
+          cp "$APK" "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+          cat > ALKENZY-LOGIN-HOTFIX-TEST.txt <<EOF
+          product=Alkenzy ADV
+          version_name=0.3.29
+          version_code=29
+          source_branch=fix/alkenzy-0.3.29-login-session-after-production-ads
+          source_commit=$GITHUB_SHA
+          api_base_url=$API_BASE_URL
+          environment=production
+          admob_app_id=ca-app-pub-3218037275900725~7401372044
+          signing=test-only-temporary
+          purpose=pre-merge-login-hotfix-UAT
+          artifact=$OUT
+          EOF
+          jarsigner -verify "$OUT"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-0.3.29-login-hotfix-sys-production-test
+          path: |
+            Alkenzy-ADV-0.3.29-login-hotfix-SYS-PRODUCTION-TEST.apk
+            Alkenzy-ADV-0.3.29-login-hotfix-SYS-PRODUCTION-TEST.apk.sha256
+            ALKENZY-LOGIN-HOTFIX-TEST.txt
+          if-no-files-found: error
+          retention-days: 7
