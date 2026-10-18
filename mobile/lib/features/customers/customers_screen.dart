@@ -292,10 +292,22 @@ final class _CustomerBody extends StatelessWidget {
       );
     }
 
-    final list = _CustomerList(
-      controller: controller,
-      customers: customers,
-      hasQuery: hasQuery,
+    final list = NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        final page = controller.currentPage;
+        if (notification.metrics.extentAfter <= 360 &&
+            page != null &&
+            page.hasMore &&
+            controller.state != CustomersLoadState.loading) {
+          unawaited(controller.nextPage());
+        }
+        return false;
+      },
+      child: _CustomerList(
+        controller: controller,
+        customers: customers,
+        hasQuery: hasQuery,
+      ),
     );
     final detail = _CustomerDetail(controller: controller, onEdit: onEdit);
     if (split) {
@@ -332,14 +344,13 @@ final class _CustomerList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final page = controller.currentPage!;
     if (customers.isEmpty) {
       return _StateMessage(
         icon: Icons.manage_search_rounded,
         message: hasQuery
             ? (context.scL10n.isArabic
                 ? 'لا توجد نتائج مطابقة في الصفحة الحالية.'
-                : 'No matching customers on this page.')
+                : 'No matching customers in the loaded data.')
             : context.scL10n.t('No customers are available in your scope.'),
         action: controller.refresh,
       );
@@ -367,12 +378,6 @@ final class _CustomerList extends StatelessWidget {
               },
             ),
           ),
-        ),
-        _Pagination(
-          page: page,
-          busy: controller.state == CustomersLoadState.loading,
-          onPrevious: controller.previousPage,
-          onNext: controller.nextPage,
         ),
       ],
     );
@@ -1158,55 +1163,6 @@ final class _CustomerEditorState extends State<_CustomerEditor> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-final class _Pagination extends StatelessWidget {
-  const _Pagination({
-    required this.page,
-    required this.busy,
-    required this.onPrevious,
-    required this.onNext,
-  });
-  final CustomerPage page;
-  final bool busy;
-  final Future<void> Function() onPrevious;
-  final Future<void> Function() onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: WrapAlignment.center,
-          children: [
-            OutlinedButton.icon(
-              onPressed:
-                  busy || page.page <= 1 ? null : () => unawaited(onPrevious()),
-              icon: const Icon(
-                Icons.chevron_left_rounded,
-              ),
-              label: Text(context.scL10n.t('Previous')),
-            ),
-            Text(context.scL10n.pageShown(page.page, page.customers.length)),
-            OutlinedButton.icon(
-              onPressed: busy || !page.hasMore || page.page >= 5
-                  ? null
-                  : () => unawaited(onNext()),
-              icon: const Icon(
-                Icons.chevron_right_rounded,
-              ),
-              label: Text(context.scL10n.t('Next')),
-            ),
-          ],
         ),
       ),
     );

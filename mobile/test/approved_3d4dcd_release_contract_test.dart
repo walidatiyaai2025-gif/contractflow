@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('approved 0.3.6 final APK contracts', () {
+  group('forward-only Alkenzy ADV release contracts', () {
     test('dashboard keeps the approved compact single-row KPI design', () {
       final source = File('lib/features/dashboard/dashboard_screen.dart')
           .readAsStringSync();
@@ -32,7 +32,8 @@ void main() {
       );
     });
 
-    test('contracts keep compact filters sort pagination and working tabs', () {
+    test('contracts keep compact filters sort infinite paging and working tabs',
+        () {
       final contracts = File('lib/features/contracts/contracts_screen.dart')
           .readAsStringSync();
       final details = File(
@@ -41,9 +42,10 @@ void main() {
 
       expect(contracts, contains('_CustomerFilterMenu('));
       expect(contracts, contains('_SortMenu('));
-      expect(contracts, contains('CompactPagination('));
-      expect(contracts, contains('controller.previousPage()'));
+      expect(contracts, contains('ScrollController'));
+      expect(contracts, contains('_loadNextOnScroll'));
       expect(contracts, contains('controller.nextPage()'));
+      expect(contracts, isNot(contains('CompactPagination(')));
       expect(details, contains('DefaultTabController('));
       expect(details, contains('length: 4'));
       expect(details, contains('TabBarView('));
@@ -84,13 +86,13 @@ void main() {
       expect(report, contains('MobileReportFormat.pdf'));
       expect(report, contains('ArabicReshaper.instance.reshape'));
       expect(report, contains('pw.TextDirection.rtl'));
-      expect(report, contains('PdfPageFormat.a4.landscape'));
+      expect(report, contains('PdfPageFormat.a4'));
       expect(report, contains('<w:bidi/>'));
       expect(report, contains('readingOrder="2"'));
       expect(activity, contains('Intent.ACTION_CREATE_DOCUMENT'));
       expect(activity, contains('safecontracts/files'));
       expect(activity, isNot(contains('safecontracts_exports')));
-      expect(pubspec, contains('version: 0.3.6+10'));
+      expect(pubspec, contains('version: 0.3.13+18'));
     });
   });
 }
