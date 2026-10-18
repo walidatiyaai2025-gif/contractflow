@@ -110,3 +110,15 @@ Arabic RTL remains the primary acceptance direction. The final integration canno
 3. Integrate accepted worker branches in a controlled sequence without QA-only overlays.
 4. After integration, rerun Plugin Design Reference Guard, repository Quality Gates and real WordPress Visual QA on the exact integrated head.
 5. Only after integrated ALL GREEN, advance the LEAD release candidate to `main` and package the user-visible plugin release.
+
+## LEAD demo-data visibility correction — 2026-08-25
+
+- Candidate branch: `bugfix/demo-data-visible-repeatable`
+- Candidate unified version: `0.3.7+11` (plugin `0.3.7`); approved `0.3.6+10` remains the locked baseline until owner acceptance.
+- Scope: SC-001 Dashboard demo-data controls and the existing business tables/read models they exercise. No locked visual reference was changed.
+- Creation now accumulates independent 500-row-per-table batches instead of blocking after the first batch; an advisory database lock serializes rapid/concurrent mutations.
+- The Dashboard keeps Create and Delete visible together, shows batch/table/row totals, links directly to Customers, Suppliers, Contracts, Payments and Follow-ups, and displays the sanitized technical reason when a transaction fails.
+- Seeded values now cover realistic customer/supplier identities, AP/AR contracts, coherent paid/partial/unpaid payment states, matching settlement totals, employee follow-up states/dates, notifications and import outcomes.
+- Delete-all still uses exact stored primary keys plus per-batch markers in reverse dependency order; it never truncates a table or selects rows by broad business values.
+- Added real WordPress + MySQL runtime QA for first batch, repeated second batch, read-model visibility, exact delete/restore, and a final retained batch for screenshot capture.
+- Pending: exact-head repository Quality Gates and Plugin Redesign Visual QA on the PR before merge or approval.
