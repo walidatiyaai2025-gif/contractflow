@@ -11,7 +11,7 @@ use Throwable;
 final class PushDeliveryService
 {
     public const MAX_TRANSPORT_RETRIES = 3;
-    private const ALLOWED_DATA_KEYS = ['payment_id', 'rule_code', 'attempt_no', 'icon_key'];
+    private const ALLOWED_DATA_KEYS = ['payment_id', 'rule_code', 'attempt_no', 'icon_key', 'financial_direction'];
 
     public function __construct(
         private PushTransport $transport,
@@ -169,6 +169,10 @@ final class PushDeliveryService
                 } elseif ($key === 'attempt_no') {
                     if (! is_int($value) || $value < 0 || $value > 100) {
                         throw new InvalidArgumentException('Notification attempt metadata is invalid.');
+                    }
+                } elseif ($key === 'financial_direction') {
+                    if (! is_string($value) || ! in_array($value, ['receivable', 'payable'], true)) {
+                        throw new InvalidArgumentException('Notification financial direction metadata is invalid.');
                     }
                 } else {
                     if (! is_string($value) || $value === '' || strlen($value) > 100 || ! preg_match('/^[a-z0-9_.-]+$/', $value)) {
