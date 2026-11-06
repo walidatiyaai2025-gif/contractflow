@@ -10,6 +10,7 @@ use SafeContracts\Translations\CompleteArabicDefaults;
 use SafeContracts\Translations\ControlledInputArabicDefaults;
 use SafeContracts\Translations\FeatureArabicDefaults;
 use SafeContracts\Translations\MigrationRecoveryArabicDefaults;
+use SafeContracts\Translations\MobileAdvertisingArabicDefaults;
 use SafeContracts\Translations\NavigationArabicDefaults;
 use SafeContracts\Translations\PremiumPolishArabicDefaults;
 use SafeContracts\Translations\PluginRedesignArabicDefaults;
@@ -52,7 +53,7 @@ foreach ($catalog as $source => $row) {
         $arabic = PluginRedesignArabicDefaults::default($source);
     }
     if ($arabic === $source) {
-        $arabic = PluginRedesignArabicDefaults::default($source);
+        $arabic = MobileAdvertisingArabicDefaults::default($source);
     }
     if ($arabic === $source) {
         $arabic = CompleteArabicDefaults::default($source);

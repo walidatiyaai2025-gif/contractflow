@@ -45,6 +45,7 @@ final class _SafeContractsLoginScreenState
   bool _biometricAvailable = false;
   bool _biometricCredentialAvailable = false;
   bool _biometricBusy = false;
+  bool _autoBiometricAttempted = false;
 
   @override
   void initState() {
@@ -62,6 +63,12 @@ final class _SafeContractsLoginScreenState
         _biometricAvailable = available;
         _biometricCredentialAvailable = remembered;
       });
+      if (remembered && !_autoBiometricAttempted) {
+        _autoBiometricAttempted = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_submitBiometric());
+        });
+      }
     }
   }
 

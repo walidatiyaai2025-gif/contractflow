@@ -19,24 +19,43 @@ final class DeliveryLogRepository
         string $status,
         ?int $responseCode,
         ?string $errorCode,
-        string $channel = 'push'
+        string $channel = 'push',
+        ?string $resourceType = null,
+        ?int $resourceId = null,
+        ?int $contractId = null
     ): void {
         global $wpdb;
         if (! in_array($status, ['sent', 'failed'], true)) {
             throw new InvalidArgumentException('Notification delivery status is invalid.');
         }
+        if ($paymentId < 0) {
+            throw new InvalidArgumentException('Notification payment ID cannot be negative.');
+        }
         $channel = strtolower(trim($channel));
         if (! in_array($channel, ['push', 'email'], true)) {
             throw new InvalidArgumentException('Notification delivery channel is invalid.');
         }
+        $resourceType = $this->normalizeResourceType($resourceType);
+        if ($resourceType === null) {
+            $resourceId = null;
+        } elseif ($resourceId === null || $resourceId <= 0) {
+            throw new InvalidArgumentException('Notification resource ID must be positive when resource type is set.');
+        }
+        if ($contractId !== null && $contractId <= 0) {
+            throw new InvalidArgumentException('Notification contract ID must be positive when supplied.');
+        }
+
         $errorCode = $this->normalizeErrorCode($errorCode);
         $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
         $wpdb->query($wpdb->prepare(
             "INSERT INTO {$table}
-                (rule_id, payment_id, user_id, device_token_id, channel, template_code, scheduled_for, attempt_no, status, response_code, error_code, created_at)
-             VALUES (%d, %d, %d, NULLIF(%d, 0), %s, %s, %s, %d, %s, %d, %s, %s)",
+                (rule_id, payment_id, resource_type, resource_id, contract_id, user_id, device_token_id, channel, template_code, scheduled_for, attempt_no, status, response_code, error_code, created_at)
+             VALUES (%d, %d, NULLIF(%s, ''), NULLIF(%d, 0), NULLIF(%d, 0), %d, NULLIF(%d, 0), %s, %s, %s, %d, %s, %d, %s, %s)",
             $ruleId ?? 0,
             $paymentId,
+            $resourceType ?? '',
+            $resourceId ?? 0,
+            $contractId ?? 0,
             $userId,
             $deviceTokenId ?? 0,
             $channel,
@@ -67,7 +86,7 @@ final class DeliveryLogRepository
             $args[] = $dateTo;
         }
         $args[] = $limit;
-        $sql = "SELECT id, rule_id, payment_id, user_id, device_token_id, channel, template_code,
+        $sql = "SELECT id, rule_id, payment_id, resource_type, resource_id, contract_id, user_id, device_token_id, channel, template_code,
                        scheduled_for, attempt_no, status, response_code, error_code, created_at
                 FROM {$table}
                 WHERE " . implode(' AND ', $where) . '
@@ -89,7 +108,7 @@ final class DeliveryLogRepository
         $table = $wpdb->prefix . 'safecontracts_notification_deliveries';
         $rows = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT id, payment_id, user_id, channel, template_code, scheduled_for, created_at
+                "SELECT id, payment_id, resource_type, resource_id, contract_id, user_id, channel, template_code, scheduled_for, created_at
                  FROM {$table}
                  WHERE user_id = %d AND status = 'sent'
                  ORDER BY created_at DESC, id DESC
@@ -157,6 +176,18 @@ final class DeliveryLogRepository
             ];
         }
         return $result;
+    }
+
+    private function normalizeResourceType(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        $value = strtolower(trim($value));
+        if (! in_array($value, ['contract', 'payment', 'followup'], true)) {
+            throw new InvalidArgumentException('Notification resource type is invalid.');
+        }
+        return $value;
     }
 
     private function normalizeErrorCode(?string $value): ?string

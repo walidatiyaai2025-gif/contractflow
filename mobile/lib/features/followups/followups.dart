@@ -71,7 +71,7 @@ final class FollowUpQueuePage {
     }
     return FollowUpQueuePage(
       items: List<FollowUpQueueItem>.unmodifiable(items),
-      page: _boundedInt(meta['page'], 'meta.page', 1, 5),
+      page: _boundedInt(meta['page'], 'meta.page', 1, 1000000),
       perPage: _boundedInt(meta['per_page'], 'meta.per_page', 1, 100),
       hasMore: _boolish(meta['has_more'], 'meta.has_more'),
     );
@@ -141,8 +141,8 @@ final class FollowUpsRepository {
     required int perPage,
     required DashboardFilters filters,
   }) async {
-    if (page < 1 || page > 5) {
-      throw ArgumentError('Follow-up page must be between 1 and 5.');
+    if (page < 1) {
+      throw ArgumentError('Follow-up page must be positive.');
     }
     filters.validate();
     final envelope = await client.get(

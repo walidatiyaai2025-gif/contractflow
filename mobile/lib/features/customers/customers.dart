@@ -100,7 +100,12 @@ final class CustomerPage {
     final customers =
         values.map(SafeContractsCustomer.fromData).toList(growable: false);
     final meta = envelope.meta;
-    final page = _boundedInt(meta['page'], 'meta.page', minimum: 1, maximum: 5);
+    final page = _boundedInt(
+      meta['page'],
+      'meta.page',
+      minimum: 1,
+      maximum: 1000000,
+    );
     final perPage = _boundedInt(
       meta['per_page'],
       'meta.per_page',
@@ -155,8 +160,8 @@ final class CustomersRepository {
     required int perPage,
     required String order,
   }) async {
-    if (page < 1 || page > 5) {
-      throw ArgumentError('Customer page must be between 1 and 5.');
+    if (page < 1 || page > 1000000) {
+      throw ArgumentError('Customer page is outside the supported range.');
     }
     if (perPage < 1 || perPage > 100) {
       throw ArgumentError('Customer page size must be between 1 and 100.');
@@ -258,28 +263,49 @@ final class CustomersController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (page < 1 || page > 5) return;
+    if (page < 1 || (page - 1) * pageSize > 1000000) return;
+    final previous = currentPage;
     state = CustomersLoadState.loading;
     errorMessage = null;
     notifyListeners();
     try {
-      currentPage = await repository.loadPage(
+      final next = await repository.loadPage(
         page: page,
         perPage: pageSize,
         order: order,
       );
+      if (page > 1 && previous != null) {
+        final merged = <int, SafeContractsCustomer>{
+          for (final item in previous.customers) item.id: item,
+          for (final item in next.customers) item.id: item,
+        };
+        currentPage = CustomerPage(
+          customers: List<SafeContractsCustomer>.unmodifiable(merged.values),
+          page: next.page,
+          perPage: next.perPage,
+          sort: next.sort,
+          order: next.order,
+          hasMore: next.hasMore,
+          boundedWindow: next.boundedWindow,
+          scope: next.scope,
+        );
+      } else {
+        currentPage = next;
+      }
       state = CustomersLoadState.ready;
     } on SafeContractsApiException catch (error) {
+      currentPage = previous;
       errorMessage = error.message;
       state = CustomersLoadState.error;
     } on Object catch (error) {
+      currentPage = previous;
       errorMessage = error.toString();
       state = CustomersLoadState.error;
     }
     notifyListeners();
   }
 
-  Future<void> refresh() => loadPage(currentPage?.page ?? 1);
+  Future<void> refresh() => loadPage(1);
 
   Future<void> previousPage() async {
     final page = currentPage?.page ?? 1;
@@ -288,7 +314,7 @@ final class CustomersController extends ChangeNotifier {
 
   Future<void> nextPage() async {
     final page = currentPage;
-    if (page != null && page.hasMore && page.page < 5) {
+    if (page != null && page.hasMore) {
       await loadPage(page.page + 1);
     }
   }

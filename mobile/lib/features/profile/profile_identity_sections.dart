@@ -29,9 +29,14 @@ final class ProfileSectionTitle extends StatelessWidget {
 }
 
 final class ProfileHero extends StatelessWidget {
-  const ProfileHero({required this.session, super.key});
+  const ProfileHero({
+    required this.session,
+    this.avatarUrlOverride,
+    super.key,
+  });
 
   final SafeContractsSession session;
+  final String? avatarUrlOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +56,10 @@ final class ProfileHero extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _ProfileAvatar(session: session),
+          _ProfileAvatar(
+            session: session,
+            avatarUrlOverride: avatarUrlOverride,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -95,13 +103,17 @@ final class ProfileHero extends StatelessWidget {
 }
 
 final class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.session});
+  const _ProfileAvatar({
+    required this.session,
+    required this.avatarUrlOverride,
+  });
 
   final SafeContractsSession session;
+  final String? avatarUrlOverride;
 
   @override
   Widget build(BuildContext context) {
-    final avatarUrl = session.avatarUrl;
+    final avatarUrl = avatarUrlOverride ?? session.avatarUrl;
     return Container(
       width: 58,
       height: 58,

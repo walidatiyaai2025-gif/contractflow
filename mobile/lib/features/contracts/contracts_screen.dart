@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/localization/safecontracts_localizations.dart';
-import '../../core/widgets/compact_pagination.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_models.dart';
 import '../suppliers/suppliers.dart';
@@ -32,6 +31,7 @@ final class ContractsScreen extends StatefulWidget {
 
 final class _ContractsScreenState extends State<ContractsScreen> {
   late final TextEditingController _search;
+  final ScrollController _scrollController = ScrollController();
   final Map<int, Future<ContractMedia?>> _media = {};
   Timer? _searchDebounce;
   String _searchText = '';
@@ -41,6 +41,7 @@ final class _ContractsScreenState extends State<ContractsScreen> {
     super.initState();
     _searchText = widget.controller.searchQuery;
     _search = TextEditingController(text: _searchText);
+    _scrollController.addListener(_loadNextOnScroll);
     unawaited(widget.controller.ensureLoaded());
   }
 
@@ -62,8 +63,23 @@ final class _ContractsScreenState extends State<ContractsScreen> {
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _scrollController.dispose();
     _search.dispose();
     super.dispose();
+  }
+
+  void _loadNextOnScroll() {
+    final page = widget.controller.currentPage;
+    if (page == null ||
+        !page.hasMore ||
+        widget.controller.pageRequestInFlight) {
+      return;
+    }
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentAfter > 360) {
+      return;
+    }
+    unawaited(widget.controller.nextPage());
   }
 
   Future<ContractMedia?> _loadMedia(int id) async {
@@ -154,6 +170,7 @@ final class _ContractsScreenState extends State<ContractsScreen> {
               Expanded(
                 child: _ContractsContent(
                   controller: widget.controller,
+                  scrollController: _scrollController,
                   contracts: contracts,
                   hasSearch: widget.controller.searchQuery.isNotEmpty,
                   mediaFor: _mediaFor,
@@ -523,6 +540,7 @@ final class _ToolbarAction extends StatelessWidget {
 final class _ContractsContent extends StatelessWidget {
   const _ContractsContent({
     required this.controller,
+    required this.scrollController,
     required this.contracts,
     required this.hasSearch,
     required this.mediaFor,
@@ -530,6 +548,7 @@ final class _ContractsContent extends StatelessWidget {
   });
 
   final ContractsController controller;
+  final ScrollController scrollController;
   final List<SafeContractsContract> contracts;
   final bool hasSearch;
   final Future<ContractMedia?> Function(int id) mediaFor;
@@ -573,7 +592,6 @@ final class _ContractsContent extends StatelessWidget {
               action: controller.refresh,
             ),
           ),
-          _Pagination(controller: controller, page: page),
         ],
       );
     }
@@ -597,6 +615,7 @@ final class _ContractsContent extends StatelessWidget {
                 final columns = constraints.maxWidth >= 780 ? 2 : 1;
                 if (columns == 1) {
                   return ListView.separated(
+                    controller: scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(14, 2, 14, 12),
                     itemCount: contracts.length,
@@ -609,6 +628,7 @@ final class _ContractsContent extends StatelessWidget {
                   );
                 }
                 return GridView.builder(
+                  controller: scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(14, 2, 14, 12),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -628,7 +648,6 @@ final class _ContractsContent extends StatelessWidget {
             ),
           ),
         ),
-        _Pagination(controller: controller, page: page),
       ],
     );
   }
@@ -1115,34 +1134,6 @@ final class _ContractCreateSheetState extends State<_ContractCreateSheet> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-final class _Pagination extends StatelessWidget {
-  const _Pagination({required this.controller, required this.page});
-  final ContractsController controller;
-  final ContractPage page;
-
-  @override
-  Widget build(BuildContext context) {
-    final ar = context.scL10n.isArabic;
-    return SafeArea(
-      top: false,
-      child: CompactPagination(
-        page: page.page,
-        totalPages: page.totalPages,
-        total: page.total,
-        isLoading: controller.pageRequestInFlight,
-        previousLabel: context.scL10n.t('Previous'),
-        nextLabel: context.scL10n.t('Next'),
-        onPrevious:
-            page.page <= 1 ? null : () => unawaited(controller.previousPage()),
-        onNext: page.page >= page.totalPages
-            ? null
-            : () => unawaited(controller.nextPage()),
-        resultLabelBuilder: (total) => ar ? '$total نتيجة' : '$total results',
       ),
     );
   }

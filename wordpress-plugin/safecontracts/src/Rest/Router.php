@@ -35,6 +35,7 @@ final class Router
             ]);
         }
 
+        ProfileAvatarController::register();
         PaymentMethodsController::register();
         DataController::register();
         FinanceController::register();
@@ -78,6 +79,8 @@ final class Router
 
         $userId = get_current_user_id();
         $displayName = '';
+        $email = '';
+        $phone = '';
         $avatarUrl = null;
         if (function_exists('get_userdata')) {
             $user = get_userdata($userId);
@@ -86,9 +89,23 @@ final class Router
                 if ($displayName === '') {
                     $displayName = trim((string) ($user->user_login ?? ''));
                 }
+                $email = trim((string) ($user->user_email ?? ''));
             }
         }
-        if (function_exists('get_avatar_url')) {
+        if (function_exists('get_user_meta')) {
+            foreach (['phone', 'billing_phone', 'mobile', 'mobile_phone'] as $phoneKey) {
+                $value = trim((string) get_user_meta($userId, $phoneKey, true));
+                if ($value !== '') {
+                    $phone = $value;
+                    break;
+                }
+            }
+            $customAvatar = trim((string) get_user_meta($userId, 'safecontracts_mobile_avatar_url', true));
+            if ($customAvatar !== '') {
+                $avatarUrl = function_exists('esc_url_raw') ? esc_url_raw($customAvatar) : $customAvatar;
+            }
+        }
+        if ($avatarUrl === null && function_exists('get_avatar_url')) {
             $resolvedAvatarUrl = get_avatar_url($userId, ['size' => 160]);
             if (is_string($resolvedAvatarUrl) && $resolvedAvatarUrl !== '') {
                 $avatarUrl = function_exists('esc_url_raw')
@@ -101,6 +118,8 @@ final class Router
             'authenticated' => true,
             'user_id' => $userId,
             'display_name' => $displayName !== '' ? $displayName : null,
+            'email' => $email !== '' ? $email : null,
+            'phone' => $phone !== '' ? $phone : null,
             'avatar_url' => $avatarUrl,
             'scope' => AccessScope::current(),
             'capabilities' => $capabilities,

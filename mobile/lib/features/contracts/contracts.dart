@@ -538,13 +538,33 @@ final class ContractsController extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
     try {
-      currentPage = await repository.loadPage(
+      final nextPage = await repository.loadPage(
         page: page,
         perPage: pageSize,
         filters: filters,
         sort: sort,
         search: searchQuery,
       );
+      if (page > 1 && previousPage != null) {
+        final merged = <int, SafeContractsContract>{
+          for (final item in previousPage.contracts) item.id: item,
+          for (final item in nextPage.contracts) item.id: item,
+        };
+        currentPage = ContractPage(
+          contracts: List<SafeContractsContract>.unmodifiable(merged.values),
+          page: nextPage.page,
+          perPage: nextPage.perPage,
+          total: nextPage.total,
+          totalPages: nextPage.totalPages,
+          sort: nextPage.sort,
+          order: nextPage.order,
+          hasMore: nextPage.hasMore,
+          boundedWindow: nextPage.boundedWindow,
+          scope: nextPage.scope,
+        );
+      } else {
+        currentPage = nextPage;
+      }
       state = ContractsLoadState.ready;
     } on SafeContractsApiException catch (error) {
       currentPage = previousPage;
@@ -560,23 +580,44 @@ final class ContractsController extends ChangeNotifier {
     }
   }
 
-  Future<void> refresh() => loadPage(currentPage?.page ?? 1);
+  Future<void> refresh() => loadPage(1);
 
   Future<void> refreshSilently() async {
     if (!canAccess || _pageRequestInFlight) return;
+    final previous = currentPage;
     try {
-      currentPage = await repository.loadPage(
-        page: currentPage?.page ?? 1,
+      final first = await repository.loadPage(
+        page: 1,
         perPage: pageSize,
         filters: filters,
         sort: sort,
         search: searchQuery,
       );
+      if (previous != null && previous.page > 1) {
+        final merged = <int, SafeContractsContract>{
+          for (final item in first.contracts) item.id: item,
+          for (final item in previous.contracts) item.id: item,
+        };
+        currentPage = ContractPage(
+          contracts: List<SafeContractsContract>.unmodifiable(merged.values),
+          page: previous.page.clamp(1, first.totalPages).toInt(),
+          perPage: first.perPage,
+          total: first.total,
+          totalPages: first.totalPages,
+          sort: first.sort,
+          order: first.order,
+          hasMore: previous.page < first.totalPages,
+          boundedWindow: first.boundedWindow,
+          scope: first.scope,
+        );
+      } else {
+        currentPage = first;
+      }
       state = ContractsLoadState.ready;
       errorMessage = null;
       notifyListeners();
     } on Object {
-      // Keep the last authorized snapshot on silent refresh failure.
+      // Preserve the last authorized snapshot on silent refresh failure.
     }
   }
 

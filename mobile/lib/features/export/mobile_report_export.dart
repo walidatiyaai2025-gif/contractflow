@@ -419,6 +419,12 @@ final class MobileReportDocumentBuilder {
     final medium = pw.Font.ttf(
       await rootBundle.load('assets/fonts/Cairo-Medium.ttf'),
     );
+    final brand = pw.MemoryImage(
+      (await rootBundle.load('assets/brand/alkenzy_adv.png'))
+          .buffer
+          .asUint8List(),
+    );
+    final generatedDate = DateTime.now().toIso8601String().substring(0, 10);
     final document = pw.Document();
     final limitedRows = data.rows.take(250).toList(growable: false);
 
@@ -433,7 +439,7 @@ final class MobileReportDocumentBuilder {
           textAlign: rtl ? pw.TextAlign.right : pw.TextAlign.left,
           style: pw.TextStyle(
             font: header ? medium : regular,
-            fontSize: header ? 7 : 6,
+            fontSize: header ? 5.4 : 4.8,
           ),
         ),
       );
@@ -446,25 +452,62 @@ final class MobileReportDocumentBuilder {
 
     document.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4.landscape,
-        margin: const pw.EdgeInsets.all(18),
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.fromLTRB(16, 18, 16, 18),
         theme: pw.ThemeData.withFont(base: regular, bold: medium),
-        build: (context) => <pw.Widget>[
-          pw.Text(
-            data.type.title,
-            textDirection: pw.TextDirection.ltr,
-            style: pw.TextStyle(font: medium, fontSize: 16),
+        header: (context) => pw.Container(
+          padding: const pw.EdgeInsets.only(bottom: 7),
+          margin: const pw.EdgeInsets.only(bottom: 7),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(
+              bottom: pw.BorderSide(width: 0.5, color: PdfColors.grey400),
+            ),
           ),
-          pw.SizedBox(height: 10),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: <pw.Widget>[
+              pw.Image(brand, width: 72),
+              pw.SizedBox(width: 10),
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: <pw.Widget>[
+                    pw.Text(
+                      'ALKENZY ADV',
+                      style: pw.TextStyle(font: medium, fontSize: 12),
+                    ),
+                    pw.Text(
+                      data.type.title,
+                      style: pw.TextStyle(font: medium, fontSize: 9),
+                    ),
+                    pw.Text(
+                      'Generated: $generatedDate',
+                      style: pw.TextStyle(font: regular, fontSize: 6),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        footer: (context) => pw.Container(
+          alignment: pw.Alignment.center,
+          padding: const pw.EdgeInsets.only(top: 6),
+          child: pw.Text(
+            'ALKENZY ADV | $generatedDate',
+            style: pw.TextStyle(font: regular, fontSize: 6),
+          ),
+        ),
+        build: (context) => <pw.Widget>[
           pw.Table(
             columnWidths: widths,
-            border: pw.TableBorder.all(width: 0.35),
+            border: pw.TableBorder.all(width: 0.3),
             children: <pw.TableRow>[
               pw.TableRow(
                 children: data.columns
                     .map(
                       (value) => pw.Padding(
-                        padding: const pw.EdgeInsets.all(3),
+                        padding: const pw.EdgeInsets.all(2),
                         child: cellText(value, header: true),
                       ),
                     )
@@ -475,7 +518,7 @@ final class MobileReportDocumentBuilder {
                   children: row
                       .map(
                         (value) => pw.Padding(
-                          padding: const pw.EdgeInsets.all(3),
+                          padding: const pw.EdgeInsets.all(2),
                           child: cellText(value, header: false),
                         ),
                       )
