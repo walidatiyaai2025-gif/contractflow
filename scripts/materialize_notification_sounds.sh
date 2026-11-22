@@ -41,9 +41,11 @@ fetch_verified \
   "https://raw.githubusercontent.com/Rahmid93421/Runner_Game/5c2e48cf15c3257824108f144c94fa4abcc07017/assets/sounds/cashier-quotka-chingquot-sound-effect-129698.mp3" \
   "ae6702f67ca39475db2f82ea71cb93e681049785813e12b0dd5b801485a45ee7"
 
+# This immutable mirror was independently SHA-256 verified against the
+# originally owner-approved coin-drop bytes on 2026-11-22. No audio is changed.
 fetch_verified \
   coin_drop \
-  "https://raw.githubusercontent.com/tahmidislam2-star/millie_jam/01cc0e104c2cf32033bc5785a3abdccf79051d73/two-pieces-in-a-cup/sounds/universfield-coin-drop-229314.mp3" \
+  "https://raw.githubusercontent.com/discover3d/big_repos_105/a0a652edfbb51c7b839167240bd8c55d6e3ffb65/mat-shur__orbit-sonic/godot_project/Assets/coin-drop-229314.mp3" \
   "af8a9ec4d8b718703980c28b58c851aacf515da9fc1e2d90ac592d1295d0ef76"
 
 if [[ "$MISMATCH" -ne 0 ]]; then
