@@ -1,0 +1,63 @@
+name: Build Alkenzy WordPress Auth Hotfix Plugin ZIP
+
+on:
+  push:
+    branches:
+      - fix/alkenzy-0.3.29-login-session-after-production-ads
+    paths:
+      - .github/workflows/build-alkenzy-auth-hotfix-plugin.yml
+      - wordpress-plugin/safecontracts/**
+      - scripts/package_plugin.py
+      - tests/php/mobile_auth_firebase_release.php
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  plugin-auth-hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+      - name: Verify auth hotfix in package source
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l wordpress-plugin/safecontracts/src/Auth/MobileBearerAuthentication.php
+          php -l wordpress-plugin/safecontracts/src/Auth/MobileSessionStore.php
+          php -l wordpress-plugin/safecontracts/src/Rest/AuthController.php
+          php tests/php/mobile_auth_firebase_release.php
+          grep -Fq "'REDIRECT_HTTP_AUTHORIZATION'" wordpress-plugin/safecontracts/src/Auth/MobileBearerAuthentication.php
+          grep -Fq "'getallheaders'" wordpress-plugin/safecontracts/src/Auth/MobileBearerAuthentication.php
+          grep -Fq "'apache_request_headers'" wordpress-plugin/safecontracts/src/Auth/MobileBearerAuthentication.php
+      - name: Build deterministic WordPress plugin upgrade ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/package_plugin.py build --output dist/Alkenzy-ADV-WordPress-Auth-Hotfix.zip
+          python3 scripts/package_plugin.py check dist/Alkenzy-ADV-WordPress-Auth-Hotfix.zip
+          unzip -p dist/Alkenzy-ADV-WordPress-Auth-Hotfix.zip safecontracts/src/Auth/MobileBearerAuthentication.php | grep -Fq "'REDIRECT_HTTP_AUTHORIZATION'"
+          unzip -p dist/Alkenzy-ADV-WordPress-Auth-Hotfix.zip safecontracts/src/Auth/MobileBearerAuthentication.php | grep -Fq "'getallheaders'"
+          sha256sum dist/Alkenzy-ADV-WordPress-Auth-Hotfix.zip > dist/Alkenzy-ADV-WordPress-Auth-Hotfix.zip.sha256
+          cat > dist/README-AUTH-HOTFIX.txt <<EOF
+          Alkenzy ADV WordPress SafeContracts auth hotfix
+          source_commit=$GITHUB_SHA
+          scope=server-side bearer authorization header forwarding and mobile session authentication
+          package_folder=safecontracts/
+          deployment=WordPress dashboard Plugins > Add New > Upload Plugin > Replace current
+          IMPORTANT=Backup site and database; verify auth/login and authenticated session against production with approved test account
+          NOTE=This build does not deploy to WordPress and cannot prove production auth runtime
+          EOF
+      - name: Upload plugin ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-wordpress-auth-hotfix-${{ github.sha }}
+          path: |
+            dist/Alkenzy-ADV-WordPress-Auth-Hotfix.zip
+            dist/Alkenzy-ADV-WordPress-Auth-Hotfix.zip.sha256
+            dist/README-AUTH-HOTFIX.txt
+          if-no-files-found: error
+          retention-days: 30
