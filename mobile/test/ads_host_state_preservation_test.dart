@@ -1,8 +1,50 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:safecontracts_mobile/features/ads/mobile_ads.dart';
 
 void main() {
+  test('production entrypoint does not wrap auth root in ads', () {
+    final main = File('lib/main.dart').readAsStringSync();
+    expect(main, contains('runApp(SafeContractsApp('));
+    expect(main, isNot(contains('SafeContractsAdsHost(')));
+  });
+
+  testWidgets('privacy controls stay in footer without remounting navigation', (
+    tester,
+  ) async {
+    final visible = ValueNotifier<bool>(false);
+    addTearDown(visible.dispose);
+    var mounts = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: ValueListenableBuilder<bool>(
+            valueListenable: visible,
+            child: _AppProbe(onMount: () => mounts++),
+            builder: (context, showPrivacy, footer) =>
+                SafeContractsAdsAboveFooterLayout(
+              privacyOptions: showPrivacy
+                  ? const SizedBox(key: Key('privacy-in-footer'), height: 28)
+                  : null,
+              footer: footer!,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(mounts, 1);
+    visible.value = true;
+    await tester.pump();
+    expect(find.byKey(const Key('privacy-in-footer')), findsOneWidget);
+    expect(mounts, 1);
+    visible.value = false;
+    await tester.pump();
+    expect(mounts, 1);
+  });
+
+
   testWidgets('first banner load and removal preserve the app state', (
     tester,
   ) async {
