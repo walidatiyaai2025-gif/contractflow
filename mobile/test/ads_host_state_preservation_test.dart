@@ -17,7 +17,6 @@ void main() {
           valueListenable: showBanner,
           child: rootApp,
           builder: (context, enabled, child) => SafeContractsAdsLayout(
-            child: child!,
             banner: enabled
                 ? const SizedBox(
                     key: Key('production-banner'),
@@ -25,6 +24,7 @@ void main() {
                     width: 320,
                   )
                 : null,
+            child: child!,
           ),
         ),
       ),
@@ -57,10 +57,10 @@ void main() {
           valueListenable: privacy,
           child: _AppProbe(onMount: () => appMounts++),
           builder: (context, enabled, child) => SafeContractsAdsLayout(
-            child: child!,
             privacyOptions: enabled
                 ? const SizedBox(key: Key('privacy-options'), height: 28)
                 : null,
+            child: child!,
           ),
         ),
       ),
