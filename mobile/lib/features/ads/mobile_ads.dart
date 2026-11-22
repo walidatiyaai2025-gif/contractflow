@@ -51,11 +51,20 @@ final class SafeContractsMobileAds extends ChangeNotifier {
       return;
     }
 
-    switch (config.provider) {
-      case MobileAdProvider.admob:
-        await _configureAdMob(config, generation);
-      case MobileAdProvider.applovin:
-        await _configureAppLovin(config, generation);
+    // Advertising is auxiliary. Provider/consent SDK failures may hide an ad
+    // placement, but must never disrupt the authenticated application.
+    try {
+      switch (config.provider) {
+        case MobileAdProvider.admob:
+          await _configureAdMob(config, generation);
+        case MobileAdProvider.applovin:
+          await _configureAppLovin(config, generation);
+      }
+    } on Object {
+      if (generation != _generation) return;
+      _disposeAdMobBanner();
+      _appLovinBannerActive = false;
+      notifyListeners();
     }
   }
 
