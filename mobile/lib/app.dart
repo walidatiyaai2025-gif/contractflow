@@ -179,6 +179,19 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   }
 }
 
+/// Keep sign-in available after an unsuccessful authenticated bootstrap.
+/// A fresh cold-start failure still uses the retry/error surface.
+bool shouldOfferMobileLogin({
+  required bool loginRequested,
+  required MobileBootstrapState bootstrapState,
+  required SessionState? sessionState,
+}) {
+  return sessionState == SessionState.unauthenticated ||
+      (loginRequested &&
+          (bootstrapState == MobileBootstrapState.blocked ||
+              bootstrapState == MobileBootstrapState.error));
+}
+
 final class _BootstrapView extends StatefulWidget {
   const _BootstrapView({
     required this.environment,
@@ -275,8 +288,11 @@ final class _BootstrapViewState extends State<_BootstrapView> {
           }
         }
 
-        if (widget.controller.sessionController?.state ==
-            SessionState.unauthenticated) {
+        if (shouldOfferMobileLogin(
+          loginRequested: _showLogin,
+          bootstrapState: widget.controller.state,
+          sessionState: widget.controller.sessionController?.state,
+        )) {
           if (!_showLogin) {
             return AlkenzyCompanyWelcomeScreen(
               controller: widget.landingController,
