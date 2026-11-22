@@ -250,6 +250,101 @@ final class SafeContractsAdsLayout extends StatelessWidget {
   }
 }
 
+
+Widget? _buildSafeContractsBanner(SafeContractsMobileAds ads) {
+  final adMobBanner = ads.adMobBanner;
+  final showAppLovin = ads.appLovinBannerActive;
+  Widget? banner;
+  if (adMobBanner != null) {
+    banner = SizedBox(
+      width: adMobBanner.size.width.toDouble(),
+      height: adMobBanner.size.height.toDouble(),
+      child: gma.AdWidget(ad: adMobBanner),
+    );
+  } else if (showAppLovin) {
+    banner = Center(
+      child: SizedBox(
+        width: 320,
+        height: 50,
+        child: max.MaxAdView(
+          key: ValueKey(ads.appLovinBannerAdUnitId),
+          adUnitId: ads.appLovinBannerAdUnitId,
+          adFormat: max.AdFormat.banner,
+          width: 320,
+          height: 50,
+          isAdaptiveBannerEnabled: false,
+          listener: max.AdViewAdListener(
+            onAdLoadedCallback: (ad) {},
+            onAdLoadFailedCallback: (adUnitId, error) {},
+            onAdClickedCallback: (ad) {},
+            onAdExpandedCallback: (ad) {},
+            onAdCollapsedCallback: (ad) {},
+            onAdRevenuePaidCallback: (ad) {},
+          ),
+        ),
+      ),
+    );
+  }
+
+  return banner;
+}
+
+/// The ad belongs to the authenticated shell, immediately ABOVE its footer.
+/// Keeping it in the shell avoids displaying it beneath system navigation
+/// and never changes the MaterialApp/root session identity as ads load.
+final class SafeContractsAdsAboveFooter extends StatelessWidget {
+  const SafeContractsAdsAboveFooter({
+    required this.footer,
+    this.controller,
+    super.key,
+  });
+
+  final Widget footer;
+  final SafeContractsMobileAds? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final ads = controller ?? SafeContractsMobileAds.instance;
+    return AnimatedBuilder(
+      animation: ads,
+      child: footer,
+      builder: (context, child) => SafeContractsAdsAboveFooterLayout(
+        banner: _buildSafeContractsBanner(ads),
+        footer: child ?? const SizedBox.shrink(),
+      ),
+    );
+  }
+}
+
+/// Separate placement widget to exercise footer ordering without ad SDK calls.
+final class SafeContractsAdsAboveFooterLayout extends StatelessWidget {
+  const SafeContractsAdsAboveFooterLayout({
+    required this.footer,
+    this.banner,
+    super.key,
+  });
+
+  final Widget footer;
+  final Widget? banner;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (banner != null)
+          Container(
+            width: double.infinity,
+            color: const Color(0xFFF5F3EE),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(child: banner),
+          ),
+        footer,
+      ],
+    );
+  }
+}
+
 final class SafeContractsAdsHost extends StatelessWidget {
   const SafeContractsAdsHost({
     required this.child,
@@ -267,41 +362,7 @@ final class SafeContractsAdsHost extends StatelessWidget {
       animation: ads,
       child: child,
       builder: (context, child) {
-        final adMobBanner = ads.adMobBanner;
-        final showAppLovin = ads.appLovinBannerActive;
         final showPrivacy = ads.privacyOptionsRequired;
-
-        Widget? banner;
-        if (adMobBanner != null) {
-          banner = SizedBox(
-            width: adMobBanner.size.width.toDouble(),
-            height: adMobBanner.size.height.toDouble(),
-            child: gma.AdWidget(ad: adMobBanner),
-          );
-        } else if (showAppLovin) {
-          banner = Center(
-            child: SizedBox(
-              width: 320,
-              height: 50,
-              child: max.MaxAdView(
-                key: ValueKey(ads.appLovinBannerAdUnitId),
-                adUnitId: ads.appLovinBannerAdUnitId,
-                adFormat: max.AdFormat.banner,
-                width: 320,
-                height: 50,
-                isAdaptiveBannerEnabled: false,
-                listener: max.AdViewAdListener(
-                  onAdLoadedCallback: (ad) {},
-                  onAdLoadFailedCallback: (adUnitId, error) {},
-                  onAdClickedCallback: (ad) {},
-                  onAdExpandedCallback: (ad) {},
-                  onAdCollapsedCallback: (ad) {},
-                  onAdRevenuePaidCallback: (ad) {},
-                ),
-              ),
-            ),
-          );
-        }
 
         final Widget? privacyOptions = showPrivacy
             ? GestureDetector(
@@ -323,11 +384,10 @@ final class SafeContractsAdsHost extends StatelessWidget {
               )
             : null;
 
-        // Preserve the same layout and child slot when banners or privacy
-        // options appear. Returning the bare child while ads are unloaded
-        // destroyed SafeContractsApp State on first production ad load.
+        // Keep the root child in the same slot while privacy controls change.
+        // Banner presentation now lives above the authenticated shell footer,
+        // never outside MaterialApp or below the bottom navigation.
         return SafeContractsAdsLayout(
-          banner: banner,
           privacyOptions: privacyOptions,
           child: child ?? const SizedBox.shrink(),
         );
