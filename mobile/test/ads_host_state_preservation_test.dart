@@ -70,6 +70,62 @@ void main() {
     expect(find.byKey(const Key('privacy-options')), findsOneWidget);
     expect(appMounts, 1);
   });
+
+  testWidgets('banner renders above footer and does not restart navigation', (
+    tester,
+  ) async {
+    final showBanner = ValueNotifier<bool>(false);
+    addTearDown(showBanner.dispose);
+
+    var footerMounts = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: const Center(child: Text('workspace')),
+          bottomNavigationBar: ValueListenableBuilder<bool>(
+            valueListenable: showBanner,
+            child: _AppProbe(onMount: () => footerMounts++),
+            builder: (context, visible, footer) =>
+                SafeContractsAdsAboveFooterLayout(
+              banner: visible
+                  ? const SizedBox(
+                      key: Key('banner-above-footer'),
+                      height: 50,
+                      width: 320,
+                    )
+                  : null,
+              footer: SizedBox(
+                key: const Key('authenticated-footer'),
+                height: 64,
+                child: footer!,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(footerMounts, 1);
+    expect(find.byKey(const Key('banner-above-footer')), findsNothing);
+
+    showBanner.value = true;
+    await tester.pump();
+    final banner = find.byKey(const Key('banner-above-footer'));
+    final footer = find.byKey(const Key('authenticated-footer'));
+    expect(banner, findsOneWidget);
+    expect(
+      tester.getBottomLeft(banner).dy,
+      lessThan(tester.getTopLeft(footer).dy),
+      reason: 'Ads belong immediately ABOVE navigation, never underneath it',
+    );
+    expect(footerMounts, 1, reason: 'An arriving ad must not remount nav');
+
+    showBanner.value = false;
+    await tester.pump();
+    expect(banner, findsNothing);
+    expect(footerMounts, 1, reason: 'Turning ads off preserves nav state');
+  });
+
 }
 
 final class _AppProbe extends StatefulWidget {
