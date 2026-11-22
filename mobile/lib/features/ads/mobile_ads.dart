@@ -327,9 +327,9 @@ final class SafeContractsAdsHost extends StatelessWidget {
         // options appear. Returning the bare child while ads are unloaded
         // destroyed SafeContractsApp State on first production ad load.
         return SafeContractsAdsLayout(
-          child: child ?? const SizedBox.shrink(),
           banner: banner,
           privacyOptions: privacyOptions,
+          child: child ?? const SizedBox.shrink(),
         );
       },
     );
