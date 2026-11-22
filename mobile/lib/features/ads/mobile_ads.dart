@@ -310,6 +310,26 @@ final class SafeContractsAdsAboveFooter extends StatelessWidget {
       child: footer,
       builder: (context, child) => SafeContractsAdsAboveFooterLayout(
         banner: _buildSafeContractsBanner(ads),
+        privacyOptions: ads.privacyOptionsRequired
+            ? GestureDetector(
+                key: const Key('ad-privacy-options'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => unawaited(ads.showPrivacyOptions()),
+                child: const SizedBox(
+                  height: 28,
+                  child: Center(
+                    child: Text(
+                      'Ad privacy options',
+                      style: TextStyle(
+                        color: Color(0xFF42526A),
+                        fontSize: 11,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            : null,
         footer: child ?? const SizedBox.shrink(),
       ),
     );
@@ -321,11 +341,13 @@ final class SafeContractsAdsAboveFooterLayout extends StatelessWidget {
   const SafeContractsAdsAboveFooterLayout({
     required this.footer,
     this.banner,
+    this.privacyOptions,
     super.key,
   });
 
   final Widget footer;
   final Widget? banner;
+  final Widget? privacyOptions;
 
   @override
   Widget build(BuildContext context) {
@@ -339,6 +361,7 @@ final class SafeContractsAdsAboveFooterLayout extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Center(child: banner),
           ),
+        if (privacyOptions != null) privacyOptions!,
         footer,
       ],
     );
