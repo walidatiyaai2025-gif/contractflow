@@ -222,6 +222,34 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   }
 }
 
+/// A stable root layout: ad loading/unloading must not remount the app.
+final class SafeContractsAdsLayout extends StatelessWidget {
+  const SafeContractsAdsLayout({
+    required this.child,
+    this.banner,
+    this.privacyOptions,
+    super.key,
+  });
+
+  final Widget child;
+  final Widget? banner;
+  final Widget? privacyOptions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Column(
+        children: [
+          Expanded(child: child),
+          if (banner != null) banner!,
+          if (privacyOptions != null) privacyOptions!,
+        ],
+      ),
+    );
+  }
+}
+
 final class SafeContractsAdsHost extends StatelessWidget {
   const SafeContractsAdsHost({
     required this.child,
@@ -242,64 +270,66 @@ final class SafeContractsAdsHost extends StatelessWidget {
         final adMobBanner = ads.adMobBanner;
         final showAppLovin = ads.appLovinBannerActive;
         final showPrivacy = ads.privacyOptionsRequired;
-        if (adMobBanner == null && !showAppLovin && !showPrivacy) {
-          return child ?? const SizedBox.shrink();
+
+        Widget? banner;
+        if (adMobBanner != null) {
+          banner = SizedBox(
+            width: adMobBanner.size.width.toDouble(),
+            height: adMobBanner.size.height.toDouble(),
+            child: gma.AdWidget(ad: adMobBanner),
+          );
+        } else if (showAppLovin) {
+          banner = Center(
+            child: SizedBox(
+              width: 320,
+              height: 50,
+              child: max.MaxAdView(
+                key: ValueKey(ads.appLovinBannerAdUnitId),
+                adUnitId: ads.appLovinBannerAdUnitId,
+                adFormat: max.AdFormat.banner,
+                width: 320,
+                height: 50,
+                isAdaptiveBannerEnabled: false,
+                listener: max.AdViewAdListener(
+                  onAdLoadedCallback: (ad) {},
+                  onAdLoadFailedCallback: (adUnitId, error) {},
+                  onAdClickedCallback: (ad) {},
+                  onAdExpandedCallback: (ad) {},
+                  onAdCollapsedCallback: (ad) {},
+                  onAdRevenuePaidCallback: (ad) {},
+                ),
+              ),
+            ),
+          );
         }
 
-        return Directionality(
-          textDirection: TextDirection.ltr,
-          child: Column(
-            children: [
-              Expanded(child: child ?? const SizedBox.shrink()),
-              if (adMobBanner != null)
-                SizedBox(
-                  width: adMobBanner.size.width.toDouble(),
-                  height: adMobBanner.size.height.toDouble(),
-                  child: gma.AdWidget(ad: adMobBanner),
-                ),
-              if (showAppLovin)
-                Center(
-                  child: SizedBox(
-                    width: 320,
-                    height: 50,
-                    child: max.MaxAdView(
-                      key: ValueKey(ads.appLovinBannerAdUnitId),
-                      adUnitId: ads.appLovinBannerAdUnitId,
-                      adFormat: max.AdFormat.banner,
-                      width: 320,
-                      height: 50,
-                      isAdaptiveBannerEnabled: false,
-                      listener: max.AdViewAdListener(
-                        onAdLoadedCallback: (ad) {},
-                        onAdLoadFailedCallback: (adUnitId, error) {},
-                        onAdClickedCallback: (ad) {},
-                        onAdExpandedCallback: (ad) {},
-                        onAdCollapsedCallback: (ad) {},
-                        onAdRevenuePaidCallback: (ad) {},
+        final Widget? privacyOptions = showPrivacy
+            ? GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => unawaited(ads.showPrivacyOptions()),
+                child: const SizedBox(
+                  height: 28,
+                  child: Center(
+                    child: Text(
+                      'Ad privacy options',
+                      style: TextStyle(
+                        color: Color(0xFF42526A),
+                        fontSize: 11,
+                        decoration: TextDecoration.underline,
                       ),
                     ),
                   ),
                 ),
-              if (showPrivacy)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => unawaited(ads.showPrivacyOptions()),
-                  child: const SizedBox(
-                    height: 28,
-                    child: Center(
-                      child: Text(
-                        'Ad privacy options',
-                        style: TextStyle(
-                          color: Color(0xFF42526A),
-                          fontSize: 11,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+              )
+            : null;
+
+        // Preserve the same layout and child slot when banners or privacy
+        // options appear. Returning the bare child while ads are unloaded
+        // destroyed SafeContractsApp State on first production ad load.
+        return SafeContractsAdsLayout(
+          child: child ?? const SizedBox.shrink(),
+          banner: banner,
+          privacyOptions: privacyOptions,
         );
       },
     );
