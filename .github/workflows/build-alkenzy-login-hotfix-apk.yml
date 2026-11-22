@@ -9,6 +9,7 @@ on:
       - "mobile/**"
       - "wordpress-plugin/safecontracts/src/Auth/MobileBearerAuthentication.php"
       - "scripts/bootstrap_android.sh"
+      - "scripts/materialize_notification_sounds.sh"
 
 permissions:
   contents: read
@@ -69,7 +70,11 @@ jobs:
           set -euo pipefail
           rm -f test/widget_test.dart
           flutter pub get
+          # Match the certified 0.3.29 formatting baseline before analyzing.
+          dart format lib/app.dart lib/features/ads/mobile_ads.dart lib/features/bootstrap/mobile_bootstrap_controller.dart test/alkenzy_production_ads_login_regression_test.dart test/post_auth_session_guard_test.dart
+          dart format lib/features/contracts/contracts.dart lib/features/contracts/premium_contract_details_screen.dart lib/features/diagnostics/mobile_runtime_diagnostics.dart lib/features/diagnostics/runtime_inspector_screen.dart lib/features/navigation/app_shell.dart lib/features/profile/profile_screen.dart lib/features/profile/modern_profile_content.dart
           flutter analyze
+          flutter test test/alkenzy_production_ads_login_regression_test.dart
           flutter test test/post_auth_session_guard_test.dart
           flutter test test/mobile_login_firebase_test.dart
           flutter test test/mobile_login_live_refresh_057_058_test.dart
