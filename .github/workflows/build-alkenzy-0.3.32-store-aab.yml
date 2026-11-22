@@ -247,8 +247,14 @@ jobs:
           APK=Alkenzy-ADV-0.3.32-SAME-SOURCE-DIAGNOSTIC.apk
           test -s "$APK"
           EXPECTED="$(cat "$RUNNER_TEMP/alkenzy-play-signing/cert_sha256" | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
-          keytool -printcert -jarfile "$APK" > "$RUNNER_TEMP/apk-cert.txt"
-          ACTUAL="$(sed -n 's/^[[:space:]]*SHA256: //p' "$RUNNER_TEMP/apk-cert.txt" | head -1 | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
+          # Release APK signatures commonly use Android APK Signature Scheme v2/v3.
+          # keytool -printcert -jarfile only understands JAR/v1 signatures and
+          # returns no signer for v2/v3-only APKs. Verify the actual APK with
+          # Android SDK apksigner instead of silently assuming a mismatch.
+          APK_SIGNER="$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/opt/android-sdk}}/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          test -x "$APK_SIGNER"
+          "$APK_SIGNER" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-cert.txt"
+          ACTUAL="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apk-cert.txt" | head -1 | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
           if [[ -z "$ACTUAL" || "$ACTUAL" != "$EXPECTED" ]]; then
             echo 'FAIL: paired diagnostic APK signer differs from AAB upload signer' >&2
             exit 1
