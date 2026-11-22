@@ -181,13 +181,13 @@ for permission in permissions:
 # transitive Android permissions after manifest merging.
 wifi_feature = '<uses-feature android:name="android.hardware.wifi" android:required="false" />'
 if 'android.hardware.wifi' not in text:
-    application = re.search(r'(?m)^([ \\t]*)<application\\b', text)
+    application = re.search(r'(?m)^([ \t]*)<application\b', text)
     if application is None:
         raise SystemExit("FAIL: AndroidManifest.xml does not contain an <application> element")
     indent = application.group(1)
-    text = text[:application.start()] + f'{indent}{wifi_feature}\\n' + text[application.start():]
+    text = text[:application.start()] + f'{indent}{wifi_feature}\n' + text[application.start():]
 else:
-    feature_matches = re.findall(r'<uses-feature\\b[^>]*android:name="android\\.hardware\\.wifi"[^>]*/>', text)
+    feature_matches = re.findall(r'<uses-feature\b[^>]*android:name="android\.hardware\.wifi"[^>]*/>', text)
     if len(feature_matches) != 1 or 'android:required="false"' not in feature_matches[0]:
         raise SystemExit('FAIL: Wi-Fi hardware must be declared optional, never mandatory')
 
