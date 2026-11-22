@@ -13,8 +13,6 @@ on:
       - fix/alkenzy-0.3.29-login-session-after-production-ads
     paths:
       - .github/workflows/build-alkenzy-0.3.31-store-aab.yml
-      - mobile/**
-      - scripts/bootstrap_android.sh
 
 permissions:
   contents: read
