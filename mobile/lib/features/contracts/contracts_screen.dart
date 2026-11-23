@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../ads/alkenzy_ad_placements.dart';
+import '../ads/alkenzy_ad_units.dart';
+
 import '../../core/api/api_client.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../config/mobile_config.dart';
@@ -167,6 +170,7 @@ final class _ContractsScreenState extends State<ContractsScreen> {
                     ? () => unawaited(_openCreate())
                     : null,
               ),
+              const AlkenzyInlineBanner(slot: AlkenzyBannerSlot.contractsList),
               Expanded(
                 child: _ContractsContent(
                   controller: widget.controller,
