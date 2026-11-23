@@ -34,6 +34,11 @@ final class MobileConfiguration
             'excel_export_enabled' => $this->readBool($stored['excel_export_enabled'] ?? $defaults['excel_export_enabled']),
             'push_notifications_enabled' => $this->readBool($stored['push_notifications_enabled'] ?? $defaults['push_notifications_enabled']),
             'collection_entry_enabled' => $this->readBool($stored['collection_entry_enabled'] ?? $defaults['collection_entry_enabled']),
+            'force_update_enabled' => $this->readBool($stored['force_update_enabled'] ?? $defaults['force_update_enabled']),
+            'force_update_min_android_build' => $this->readAndroidBuild($stored['force_update_min_android_build'] ?? $defaults['force_update_min_android_build']),
+            'force_update_latest_android_build' => $this->readAndroidBuild($stored['force_update_latest_android_build'] ?? $defaults['force_update_latest_android_build']),
+            'force_update_message_ar' => $this->readUpdateMessage($stored['force_update_message_ar'] ?? $defaults['force_update_message_ar']),
+            'force_update_message_en' => $this->readUpdateMessage($stored['force_update_message_en'] ?? $defaults['force_update_message_en']),
             'ads_enabled' => $this->readBool($stored['ads_enabled'] ?? $defaults['ads_enabled']),
             'ads_test_mode' => $this->readBool($stored['ads_test_mode'] ?? $defaults['ads_test_mode']),
             'ads_banner_enabled' => $this->readBool($stored['ads_banner_enabled'] ?? $defaults['ads_banner_enabled']),
@@ -55,12 +60,24 @@ final class MobileConfiguration
         $appLovinSdkKey = $this->normalizeAppLovinToken($input['ads_applovin_sdk_key'] ?? '', 'AppLovin SDK key', 20, 256);
         $appLovinBannerUnit = $this->normalizeAppLovinToken($input['ads_applovin_banner_unit_id'] ?? '', 'AppLovin banner ad unit ID', 8, 128);
 
+        $minimumBuild = $this->normalizeAndroidBuild($input['force_update_min_android_build'] ?? 0);
+        $latestBuild = $this->normalizeAndroidBuild($input['force_update_latest_android_build'] ?? 0);
+        $forceEnabled = $this->normalizeBool($input['force_update_enabled'] ?? false);
+        if ($forceEnabled && ($minimumBuild < 1 || $latestBuild < $minimumBuild)) {
+            throw new InvalidArgumentException('Force update requires a published latest build greater than or equal to the minimum Android build.');
+        }
+
         $config = [
             'support_text' => $this->normalizeText($input['support_text'] ?? ''),
             'default_page_size' => $this->normalizePageSize($input['default_page_size'] ?? 25),
             'excel_export_enabled' => $this->normalizeBool($input['excel_export_enabled'] ?? false),
             'push_notifications_enabled' => $this->normalizeBool($input['push_notifications_enabled'] ?? false),
             'collection_entry_enabled' => $this->normalizeBool($input['collection_entry_enabled'] ?? false),
+            'force_update_enabled' => $forceEnabled,
+            'force_update_min_android_build' => $minimumBuild,
+            'force_update_latest_android_build' => $latestBuild,
+            'force_update_message_ar' => $this->normalizeUpdateMessage($input['force_update_message_ar'] ?? ''),
+            'force_update_message_en' => $this->normalizeUpdateMessage($input['force_update_message_en'] ?? ''),
             'ads_enabled' => $this->normalizeBool($input['ads_enabled'] ?? false),
             'ads_test_mode' => $this->normalizeBool($input['ads_test_mode'] ?? true),
             'ads_banner_enabled' => $this->normalizeBool($input['ads_banner_enabled'] ?? true),
@@ -94,6 +111,13 @@ final class MobileConfiguration
             'excel_export_enabled' => false,
             'push_notifications_enabled' => false,
             'collection_entry_enabled' => false,
+            // Disabled until the required Google Play release is actually live.
+            // Never strand production users waiting for a build not in Play.
+            'force_update_enabled' => false,
+            'force_update_min_android_build' => 0,
+            'force_update_latest_android_build' => 0,
+            'force_update_message_ar' => '',
+            'force_update_message_en' => '',
             'ads_enabled' => false,
             'ads_test_mode' => true,
             'ads_banner_enabled' => true,
@@ -103,6 +127,39 @@ final class MobileConfiguration
             'ads_applovin_sdk_key' => '',
             'ads_applovin_banner_unit_id' => '',
         ];
+    }
+
+    private function normalizeAndroidBuild(mixed $value): int
+    {
+        $build = filter_var($value, FILTER_VALIDATE_INT);
+        if ($build === false || $build < 0 || $build > 1000000000) {
+            throw new InvalidArgumentException('Android build number must be between 0 and 1000000000.');
+        }
+        return (int) $build;
+    }
+
+    private function readAndroidBuild(mixed $value): int
+    {
+        $build = filter_var($value, FILTER_VALIDATE_INT);
+        return $build !== false && $build >= 0 && $build <= 1000000000 ? (int) $build : 0;
+    }
+
+    private function normalizeUpdateMessage(mixed $value): string
+    {
+        $message = trim(strip_tags(Input::string($value, 'Force update message')));
+        if (mb_strlen($message) > 300 || preg_match('/[\\x00]/', $message)) {
+            throw new InvalidArgumentException('Force update message exceeds 300 characters.');
+        }
+        return $message;
+    }
+
+    private function readUpdateMessage(mixed $value): string
+    {
+        if (! is_scalar($value) && $value !== null) {
+            return '';
+        }
+        $message = trim(strip_tags((string) $value));
+        return mb_strlen($message) <= 300 ? $message : '';
     }
 
     private function normalizeText(mixed $value): string
