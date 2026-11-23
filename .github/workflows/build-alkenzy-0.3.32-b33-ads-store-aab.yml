@@ -13,7 +13,6 @@ on:
       - feat/alkenzy-032-mobile-ad-units-b33
     paths:
       - .github/workflows/build-alkenzy-0.3.32-b33-ads-store-aab.yml
-      - mobile/**
 
 permissions:
   contents: read
