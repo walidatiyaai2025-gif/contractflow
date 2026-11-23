@@ -16,6 +16,8 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   gma.BannerAd? _adMobBanner;
   bool _adMobBannerLoaded = false;
   bool _consentRequested = false;
+  Future<void>? _consentInFlight;
+  Future<bool>? _placementsInFlight;
   bool _privacyOptionsRequired = false;
   bool _adMobSdkInitialized = false;
   bool _appLovinSdkInitialized = false;
@@ -24,6 +26,43 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   int _generation = 0;
 
   MobileAdProvider get provider => _config.provider;
+  bool get testMode => _config.testMode;
+
+  bool get canUseGooglePlacements =>
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.android &&
+      _config.enabled &&
+      _config.provider == MobileAdProvider.admob;
+
+  /// Shared UMP consent + SDK initialization, without touching session state.
+  Future<bool> ensureGooglePlacementsReady() async {
+    if (!canUseGooglePlacements) return false;
+    final existing = _placementsInFlight;
+    if (existing != null) return existing;
+    final operation = _prepareGooglePlacements();
+    _placementsInFlight = operation;
+    try {
+      return await operation;
+    } finally {
+      if (identical(_placementsInFlight, operation)) _placementsInFlight = null;
+    }
+  }
+
+  Future<bool> _prepareGooglePlacements() async {
+    try {
+      if (!await _ensureGoogleConsent() || !canUseGooglePlacements) {
+        return false;
+      }
+      if (!_adMobSdkInitialized) {
+        await gma.MobileAds.instance.initialize();
+        _adMobSdkInitialized = true;
+      }
+      return canUseGooglePlacements;
+    } on Object {
+      return false; // Advertising is never a reason to sign out or crash.
+    }
+  }
+
   gma.BannerAd? get adMobBanner =>
       _config.provider == MobileAdProvider.admob && _adMobBannerLoaded
           ? _adMobBanner
@@ -72,17 +111,12 @@ final class SafeContractsMobileAds extends ChangeNotifier {
     MobileAdvertisingConfig config,
     int generation,
   ) async {
-    final canRequestAds = await _ensureGoogleConsent();
+    final canRequestAds = await ensureGooglePlacementsReady();
     if (generation != _generation ||
         !canRequestAds ||
         !_config.canRequestBanner ||
         _config.provider != MobileAdProvider.admob) {
       return;
-    }
-
-    if (!_adMobSdkInitialized) {
-      await gma.MobileAds.instance.initialize();
-      _adMobSdkInitialized = true;
     }
     if (generation != _generation ||
         !_config.canRequestBanner ||
@@ -181,24 +215,31 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   }
 
   Future<bool> _ensureGoogleConsent() async {
-    if (!_consentRequested) {
-      _consentRequested = true;
-      final completer = Completer<void>();
-      gma.ConsentInformation.instance.requestConsentInfoUpdate(
-        gma.ConsentRequestParameters(),
-        () {
-          if (!completer.isCompleted) completer.complete();
-        },
-        (formError) {
-          if (!completer.isCompleted) completer.complete();
-        },
-      );
-      await completer.future;
-      await gma.ConsentForm.loadAndShowConsentFormIfRequired((formError) {});
+    if (_consentInFlight != null) {
+      await _consentInFlight;
+    } else if (!_consentRequested) {
+      final request = _requestGoogleConsent();
+      _consentInFlight = request;
+      try {
+        await request;
+      } finally {
+        _consentInFlight = null;
+      }
     }
-
     await _refreshPrivacyOptionsRequirement();
     return gma.ConsentInformation.instance.canRequestAds();
+  }
+
+  Future<void> _requestGoogleConsent() async {
+    _consentRequested = true;
+    final completer = Completer<void>();
+    gma.ConsentInformation.instance.requestConsentInfoUpdate(
+      gma.ConsentRequestParameters(),
+      () { if (!completer.isCompleted) completer.complete(); },
+      (error) { if (!completer.isCompleted) completer.complete(); },
+    );
+    await completer.future;
+    await gma.ConsentForm.loadAndShowConsentFormIfRequired((error) {});
   }
 
   Future<void> _refreshPrivacyOptionsRequirement() async {
