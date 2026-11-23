@@ -69,6 +69,11 @@ final class MobileConfigurationPage
                 'excel_export_enabled' => isset($_POST['excel_export_enabled']),
                 'push_notifications_enabled' => isset($_POST['push_notifications_enabled']),
                 'collection_entry_enabled' => isset($_POST['collection_entry_enabled']),
+                'force_update_enabled' => isset($_POST['force_update_enabled']),
+                'force_update_min_android_build' => $_POST['force_update_min_android_build'] ?? 0,
+                'force_update_latest_android_build' => $_POST['force_update_latest_android_build'] ?? 0,
+                'force_update_message_ar' => $_POST['force_update_message_ar'] ?? '',
+                'force_update_message_en' => $_POST['force_update_message_en'] ?? '',
                 'ads_enabled' => isset($_POST['ads_enabled']),
                 'ads_test_mode' => isset($_POST['ads_test_mode']),
                 'ads_banner_enabled' => isset($_POST['ads_banner_enabled']),
@@ -141,6 +146,16 @@ final class MobileConfigurationPage
                         <label class="safecontracts-check-row"><input type="checkbox" name="push_notifications_enabled" value="1" <?php checked($config['push_notifications_enabled']); ?>><span><strong><?php echo esc_html__('Push notifications', 'safecontracts'); ?></strong><br><small class="description"><?php echo esc_html(self::text('Advertise push-notification availability to the mobile runtime.', 'إعلان توفر الإشعارات الفورية لتطبيق الموبايل.')); ?></small></span></label>
                         <label class="safecontracts-check-row"><input type="checkbox" name="collection_entry_enabled" value="1" <?php checked($config['collection_entry_enabled']); ?>><span><strong><?php echo esc_html__('Collection entry', 'safecontracts'); ?></strong><br><small class="description"><?php echo esc_html(self::text('Allow the existing mobile collection-entry capability when authorized.', 'السماح بإمكانية إدخال التحصيل الحالية من الموبايل عند وجود الصلاحية.')); ?></small></span></label>
                     </fieldset>
+
+                    <div class="safecontracts-section-heading" style="margin-top:24px"><div><h2><?php echo esc_html(self::text('Google Play — Force Update', 'تحديث Google Play الإجباري')); ?></h2><p class="description"><?php echo esc_html(self::text('Enable only AFTER the required Android build is published and accessible in Google Play. Older builds are blocked before login and shown an Update button. The new public /mobile-version endpoint must be deployed to WordPress before enabling.', 'فعّل فقط بعد نشر رقم البناء المطلوب وإتاحته على Google Play. سيتم إيقاف الإصدارات الأقدم قبل تسجيل الدخول مع زر تحديث. يجب نشر مسار /mobile-version على WordPress أولاً.')); ?></p></div></div>
+                    <fieldset>
+                        <label class="safecontracts-check-row"><input type="checkbox" name="force_update_enabled" value="1" <?php checked($config['force_update_enabled']); ?>><span><strong><?php echo esc_html(self::text('Enable mandatory Android update', 'تفعيل التحديث الإجباري لأندرويد')); ?></strong></span></label>
+                    </fieldset>
+                    <p><label><strong><?php echo esc_html(self::text('Minimum supported Android build (versionCode)', 'الحد الأدنى لرقم بناء أندرويد')); ?></strong><br><input type="number" min="0" max="1000000000" name="force_update_min_android_build" value="<?php echo esc_attr((string) $config['force_update_min_android_build']); ?>"></label></p>
+                    <p><label><strong><?php echo esc_html(self::text('Latest published Android build (versionCode)', 'آخر رقم بناء منشور على Google Play')); ?></strong><br><input type="number" min="0" max="1000000000" name="force_update_latest_android_build" value="<?php echo esc_attr((string) $config['force_update_latest_android_build']); ?>"></label></p>
+                    <p><label><strong><?php echo esc_html(self::text('Update message — Arabic', 'رسالة التحديث — العربية')); ?></strong><br><textarea class="large-text" name="force_update_message_ar" maxlength="300" rows="2"><?php echo esc_textarea((string) $config['force_update_message_ar']); ?></textarea></label></p>
+                    <p><label><strong><?php echo esc_html(self::text('Update message — English', 'رسالة التحديث — الإنجليزية')); ?></strong><br><textarea class="large-text" name="force_update_message_en" maxlength="300" rows="2"><?php echo esc_textarea((string) $config['force_update_message_en']); ?></textarea></label></p>
+                    <p class="description"><?php echo esc_html(self::text('Do not enable or raise the minimum version until that version is actually available in Google Play. Defaults to OFF to avoid locking out existing customers.', 'لا تفعّل أو ترفع الحد الأدنى إلا بعد توفر الإصدار المطلوب فعليًا في Google Play. الوضع الافتراضي غير مفعل لحماية المستخدمين.')); ?></p>
 
                     <div class="safecontracts-section-heading" style="margin-top:24px"><div><h2><?php echo esc_html(self::text('Mobile advertising', 'إعلانات الموبايل')); ?></h2><p class="description"><?php echo esc_html(self::text('Control AdMob or AppLovin remotely. Changes take effect after the app refreshes its mobile configuration; no new APK is required.', 'تحكم في AdMob أو AppLovin عن بُعد. التغييرات تعمل بعد تحديث إعدادات الموبايل داخل التطبيق ولا تحتاج APK جديد.')); ?></p></div></div>
                     <fieldset>
