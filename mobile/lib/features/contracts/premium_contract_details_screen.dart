@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/localization/safecontracts_localizations.dart';
+import '../ads/alkenzy_ad_placements.dart';
+import '../ads/alkenzy_ad_units.dart';
 import '../config/mobile_config.dart';
 import '../dashboard/dashboard_models.dart';
 import '../finance/finance.dart';
@@ -182,6 +184,11 @@ final class _PremiumContractBody extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
               child: _ContractHero(bundle: bundle),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: AlkenzyInlineBanner(
+              slot: AlkenzyBannerSlot.contractDetails,
             ),
           ),
           SliverPersistentHeader(

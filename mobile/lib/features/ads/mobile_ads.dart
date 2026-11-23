@@ -16,6 +16,8 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   gma.BannerAd? _adMobBanner;
   bool _adMobBannerLoaded = false;
   bool _consentRequested = false;
+  Future<void>? _consentInFlight;
+  Future<bool>? _placementsInFlight;
   bool _privacyOptionsRequired = false;
   bool _adMobSdkInitialized = false;
   bool _appLovinSdkInitialized = false;
@@ -24,6 +26,58 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   int _generation = 0;
 
   MobileAdProvider get provider => _config.provider;
+
+  // The owner-supplied in-app AdMob inventory is deliberately independent
+  // from the WordPress-controlled legacy footer banner/provider settings.
+  // A stale/disabled WP ads payload must not silently hide Android app units.
+  // Emergency release opt-out: --dart-define=SC_ALKENZY_ADS_ENABLED=false.
+  static const bool _ownedUnitsEnabled = bool.fromEnvironment(
+    'SC_ALKENZY_ADS_ENABLED',
+    defaultValue: true,
+  );
+  // Production Play builds always use real IDs. Backend test_mode only
+  // controls the legacy footer and must not redirect app-owned units to
+  // Google test inventory. CI/QA explicitly opts in with this dart-define.
+  static const bool _ownedUnitsTestMode = bool.fromEnvironment(
+    'SC_ALKENZY_ADS_TEST_MODE',
+    defaultValue: false,
+  );
+
+  bool get testMode => _ownedUnitsTestMode;
+  bool get canUseGooglePlacements =>
+      _ownedUnitsEnabled &&
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.android;
+
+  /// Shared UMP consent + SDK initialization, without touching session state.
+  Future<bool> ensureGooglePlacementsReady() async {
+    if (!canUseGooglePlacements) return false;
+    final existing = _placementsInFlight;
+    if (existing != null) return existing;
+    final operation = _prepareGooglePlacements();
+    _placementsInFlight = operation;
+    try {
+      return await operation;
+    } finally {
+      if (identical(_placementsInFlight, operation)) _placementsInFlight = null;
+    }
+  }
+
+  Future<bool> _prepareGooglePlacements() async {
+    try {
+      if (!await _ensureGoogleConsent() || !canUseGooglePlacements) {
+        return false;
+      }
+      if (!_adMobSdkInitialized) {
+        await gma.MobileAds.instance.initialize();
+        _adMobSdkInitialized = true;
+      }
+      return canUseGooglePlacements;
+    } on Object {
+      return false; // Advertising is never a reason to sign out or crash.
+    }
+  }
+
   gma.BannerAd? get adMobBanner =>
       _config.provider == MobileAdProvider.admob && _adMobBannerLoaded
           ? _adMobBanner
@@ -35,8 +89,8 @@ final class SafeContractsMobileAds extends ChangeNotifier {
       _config.canRequestBanner;
   String get appLovinBannerAdUnitId => _config.appLovinBannerAdUnitId;
   bool get privacyOptionsRequired =>
-      _config.provider == MobileAdProvider.admob &&
-      _config.enabled &&
+      (canUseGooglePlacements ||
+          (_config.enabled && _config.provider == MobileAdProvider.admob)) &&
       _privacyOptionsRequired;
 
   Future<void> configure(MobileAdvertisingConfig config) async {
@@ -72,17 +126,12 @@ final class SafeContractsMobileAds extends ChangeNotifier {
     MobileAdvertisingConfig config,
     int generation,
   ) async {
-    final canRequestAds = await _ensureGoogleConsent();
+    final canRequestAds = await ensureGooglePlacementsReady();
     if (generation != _generation ||
         !canRequestAds ||
         !_config.canRequestBanner ||
         _config.provider != MobileAdProvider.admob) {
       return;
-    }
-
-    if (!_adMobSdkInitialized) {
-      await gma.MobileAds.instance.initialize();
-      _adMobSdkInitialized = true;
     }
     if (generation != _generation ||
         !_config.canRequestBanner ||
@@ -181,24 +230,34 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   }
 
   Future<bool> _ensureGoogleConsent() async {
-    if (!_consentRequested) {
-      _consentRequested = true;
-      final completer = Completer<void>();
-      gma.ConsentInformation.instance.requestConsentInfoUpdate(
-        gma.ConsentRequestParameters(),
-        () {
-          if (!completer.isCompleted) completer.complete();
-        },
-        (formError) {
-          if (!completer.isCompleted) completer.complete();
-        },
-      );
-      await completer.future;
-      await gma.ConsentForm.loadAndShowConsentFormIfRequired((formError) {});
+    if (_consentInFlight != null) {
+      await _consentInFlight;
+    } else if (!_consentRequested) {
+      final request = _requestGoogleConsent();
+      _consentInFlight = request;
+      try {
+        await request;
+      } finally {
+        _consentInFlight = null;
+      }
     }
-
     await _refreshPrivacyOptionsRequirement();
+    // The footer privacy-options control must become visible even if the
+    // WordPress legacy banner is switched off.
+    notifyListeners();
     return gma.ConsentInformation.instance.canRequestAds();
+  }
+
+  Future<void> _requestGoogleConsent() async {
+    _consentRequested = true;
+    final completer = Completer<void>();
+    gma.ConsentInformation.instance.requestConsentInfoUpdate(
+      gma.ConsentRequestParameters(),
+      () { if (!completer.isCompleted) completer.complete(); },
+      (error) { if (!completer.isCompleted) completer.complete(); },
+    );
+    await completer.future;
+    await gma.ConsentForm.loadAndShowConsentFormIfRequired((error) {});
   }
 
   Future<void> _refreshPrivacyOptionsRequirement() async {
@@ -296,11 +355,13 @@ final class SafeContractsAdsAboveFooter extends StatelessWidget {
   const SafeContractsAdsAboveFooter({
     required this.footer,
     this.controller,
+    this.showBanner = true,
     super.key,
   });
 
   final Widget footer;
   final SafeContractsMobileAds? controller;
+  final bool showBanner;
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +370,7 @@ final class SafeContractsAdsAboveFooter extends StatelessWidget {
       animation: ads,
       child: footer,
       builder: (context, child) => SafeContractsAdsAboveFooterLayout(
-        banner: _buildSafeContractsBanner(ads),
+        banner: showBanner ? _buildSafeContractsBanner(ads) : null,
         privacyOptions: ads.privacyOptionsRequired
             ? GestureDetector(
                 key: const Key('ad-privacy-options'),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../ads/mobile_ads.dart';
+import '../ads/alkenzy_ad_placements.dart';
 import '../collections/collections.dart';
 import '../collections/collections_screen.dart';
 import '../config/mobile_config.dart';
@@ -93,6 +94,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   bool _liveRefreshInFlight = false;
   bool _foreground = true;
   int _liveRefreshRevision = 0;
+  DateTime? _backgroundAt;
+  bool _adNavigationInFlight = false;
 
   @override
   void initState() {
@@ -102,15 +105,31 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       _liveRefreshInterval,
       (_) => unawaited(_refreshActiveSurface()),
     );
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => unawaited(_refreshActiveSurface()),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_refreshActiveSurface());
+      unawaited(AlkenzyFullScreenAds.instance.prepare());
+    });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _backgroundAt = DateTime.now();
+    }
     _foreground = state == AppLifecycleState.resumed;
     if (_foreground) {
+      final backgroundAt = _backgroundAt;
+      _backgroundAt = null;
+      // App-open is permitted only on a genuine return from background.
+      // Never show during login, first app launch, edit forms or over dialogs.
+      if (backgroundAt != null &&
+          DateTime.now().difference(backgroundAt) >=
+              const Duration(minutes: 2) &&
+          (_selected == MobileDestination.dashboard ||
+              _selected == MobileDestination.dashboardTwo) &&
+          ModalRoute.of(context)?.isCurrent == true) {
+        unawaited(AlkenzyFullScreenAds.instance.showAppOpenOnForeground());
+      }
       unawaited(_refreshActiveSurface());
     }
   }
@@ -119,6 +138,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   void dispose() {
     _liveRefreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    AlkenzyFullScreenAds.instance.reset();
     super.dispose();
   }
 
@@ -182,10 +202,41 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 
   void _selectDestination(MobileDestination destination) {
+    if (_adNavigationInFlight) return;
     if (_selected != destination) {
+      final previous = _selected;
+      AlkenzyFullScreenAds.instance.recordNavigation();
+      // Only before leaving a completed reading/report surface.
+      if (destination == MobileDestination.dashboard &&
+          (previous == MobileDestination.contracts ||
+              previous == MobileDestination.export)) {
+        unawaited(_navigateAtNaturalBreak(
+          destination,
+          reports: previous == MobileDestination.export,
+        ));
+        return;
+      }
       setState(() => _selected = destination);
     }
     unawaited(_refreshActiveSurface());
+  }
+
+  Future<void> _navigateAtNaturalBreak(
+    MobileDestination destination, {
+    required bool reports,
+  }) async {
+    _adNavigationInFlight = true;
+    try {
+      await AlkenzyFullScreenAds.instance.maybeShowAtNaturalBreak(
+        reports: reports,
+      );
+    } finally {
+      _adNavigationInFlight = false;
+      if (mounted) {
+        setState(() => _selected = destination);
+        unawaited(_refreshActiveSurface());
+      }
+    }
   }
 
   @override
@@ -379,6 +430,14 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       bottomNavigationBar: bottomDestinations.isEmpty
           ? null
           : SafeContractsAdsAboveFooter(
+              // Keep only one visible banner on each phone-sized screen.
+              showBanner: !{
+                MobileDestination.dashboard,
+                MobileDestination.dashboardTwo,
+                MobileDestination.contracts,
+                MobileDestination.customers,
+                MobileDestination.suppliers,
+              }.contains(_selected),
               footer: _SafeContractsBottomNavigation(
                 destinations: bottomDestinations,
                 selected: _selected,
