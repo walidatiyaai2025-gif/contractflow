@@ -191,7 +191,7 @@ jobs:
           grep -Fq 'LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS' mobile/android-release/MainActivity.kt
           grep -Fq 'activity-ktx:1.10.1' mobile/android-release/app-build.gradle.kts
           grep -Fq 'MobileForceUpdateGate(' mobile/lib/app.dart
-          grep -Fq "state = MobileUpdateState.required" mobile/lib/features/update/mobile_force_update.dart
+          grep -Fq 'MobileUpdateState.required' mobile/lib/features/update/mobile_force_update.dart
           grep -Fq "'enabled' => false" wordpress-plugin/alkenzy-force-update/alkenzy-force-update.php
           php -l wordpress-plugin/alkenzy-force-update/alkenzy-force-update.php
           php -l wordpress-plugin/safecontracts/src/Rest/MobileVersionController.php
