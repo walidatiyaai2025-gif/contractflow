@@ -337,11 +337,13 @@ final class SafeContractsAdsAboveFooter extends StatelessWidget {
   const SafeContractsAdsAboveFooter({
     required this.footer,
     this.controller,
+    this.showBanner = true,
     super.key,
   });
 
   final Widget footer;
   final SafeContractsMobileAds? controller;
+  final bool showBanner;
 
   @override
   Widget build(BuildContext context) {
@@ -350,7 +352,7 @@ final class SafeContractsAdsAboveFooter extends StatelessWidget {
       animation: ads,
       child: footer,
       builder: (context, child) => SafeContractsAdsAboveFooterLayout(
-        banner: _buildSafeContractsBanner(ads),
+        banner: showBanner ? _buildSafeContractsBanner(ads) : null,
         privacyOptions: ads.privacyOptionsRequired
             ? GestureDetector(
                 key: const Key('ad-privacy-options'),
