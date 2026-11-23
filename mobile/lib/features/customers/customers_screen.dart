@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../ads/alkenzy_ad_placements.dart';
+import '../ads/alkenzy_ad_units.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/localization/safecontracts_localizations.dart';
@@ -121,6 +124,12 @@ final class _CustomersScreenState extends State<CustomersScreen> {
                           ? () => unawaited(_openEditor())
                           : null,
                     ),
+                  AlkenzyInlineBanner(
+                    slot: mobileDetail
+                        ? AlkenzyBannerSlot.customersDetail
+                        : AlkenzyBannerSlot.customersList,
+                    key: ValueKey(mobileDetail),
+                  ),
                   Expanded(
                     child: _CustomerBody(
                       controller: widget.controller,
