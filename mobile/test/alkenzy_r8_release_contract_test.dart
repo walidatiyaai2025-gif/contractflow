@@ -25,6 +25,14 @@ void main() {
     expect(directives, isNot(contains('-dontobfuscate')));
     expect(directives, isNot(contains('-dontshrink')));
     expect(directives, isNot(contains('-dontoptimize')));
+    expect(
+      directives.where((line) => line.startsWith('-dontwarn ')).toList(),
+      [
+        '-dontwarn com.amazon.privacypass.PrivacyPass',
+        '-dontwarn com.amazon.privacypass.VerificationContext',
+        '-dontwarn com.amazon.privacypass.callback.AttestAPICallback',
+      ],
+    );
     expect(directives.any((line) => line.startsWith('-keep class **')),
         isFalse);
   });
