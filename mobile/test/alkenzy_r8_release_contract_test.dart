@@ -50,7 +50,7 @@ void main() {
     final app = File('lib/main.dart').readAsStringSync();
     final ads = File('lib/features/ads/alkenzy_ad_units.dart')
         .readAsStringSync();
-    expect(pubspec, contains('version: 0.3.34+35'));
+    expect(pubspec, contains('version: 0.3.35+36'));
     expect(app, contains('runApp(SafeContractsApp('));
     expect(app, isNot(contains('runApp(SafeContractsAdsHost(')));
     expect(ads, contains('ca-app-pub-3218037275900725/1295000750'));
