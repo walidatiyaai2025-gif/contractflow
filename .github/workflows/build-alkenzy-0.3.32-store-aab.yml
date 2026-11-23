@@ -240,6 +240,17 @@ jobs:
           artifact=$OUT
           EOF
 
+      - name: Upload verified Google Play AAB independently of diagnostic APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-adv-0.3.32-google-play-aab-${{ github.sha }}
+          path: |
+            Alkenzy-ADV-0.3.32-GOOGLE-PLAY.aab
+            Alkenzy-ADV-0.3.32-GOOGLE-PLAY.aab.sha256
+            ALKENZY-GOOGLE-PLAY-RELEASE.txt
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Verify signed APK certificate and parity
         shell: bash
         run: |
@@ -259,10 +270,16 @@ jobs:
           import re
           import sys
           raw = pathlib.Path(sys.argv[1]).read_text()
-          match = re.search(r'(?im)^\s*Signer #1 certificate SHA-256 digest:\s*([0-9a-f: ]{64,})\s*$', raw)
-          if not match:
-              raise SystemExit('FAIL: cannot extract v2/v3 APK signer SHA-256 digest')
-          print(re.sub(r'[^0-9A-F]', '', match.group(1).upper()))
+          # apksigner output varies across installed Android build-tools.
+          # Search all SHA-256 digest lines without assuming exact prefix text.
+          lines = [line for line in raw.splitlines() if 'SHA-256' in line.upper()]
+          fingerprints = []
+          for line in lines:
+              for token in re.findall(r'(?:[0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}|[0-9A-Fa-f]{64}', line):
+                  fingerprints.append(token.replace(':', '').upper())
+          if not fingerprints:
+              raise SystemExit('FAIL: APK signer SHA-256 missing in apksigner certificate report')
+          print(fingerprints[0])
           PY
           )"
           echo "APK signing certificate sha256=$ACTUAL"
