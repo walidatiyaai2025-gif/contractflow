@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart' as gma;
 
@@ -48,33 +47,36 @@ class _AlkenzyInlineBannerState extends State<AlkenzyInlineBanner> {
     _requestedUnit = null;
     _loading = false;
     // AdWidget must be detached from the tree before its native ad is disposed.
-    if (mounted) setState(() {});
+    if (mounted) { setState(() {}); }
     if (previous != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => previous.dispose());
     }
   }
 
   void _onAdsChanged() {
-    if (!mounted) return;
+    if (!mounted) { return; }
     if (!_ads.canUseGooglePlacements) {
-      if (_banner != null || _requestedUnit != null) _clear();
+      if (_banner != null || _requestedUnit != null) { _clear(); }
       return;
     }
     final unit = AlkenzyAdUnits.banner(widget.slot, testMode: _ads.testMode);
-    if (unit != _requestedUnit) _clear();
-    if (!_loading && _banner == null) unawaited(_load(unit));
+    if (unit != _requestedUnit) { _clear(); }
+    if (!_loading && _banner == null) { unawaited(_load(unit)); }
   }
 
   Future<void> _load(String unit) async {
     _loading = true;
     _requestedUnit = unit;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _loading) { setState(() {}); }
+    });
     final revision = ++_revision;
     try {
       if (!await _ads.ensureGooglePlacementsReady() ||
           !mounted ||
           !_ads.canUseGooglePlacements ||
           revision != _revision) {
-        if (revision == _revision) _loading = false;
+        if (revision == _revision) { _loading = false; }
         return;
       }
       final banner = gma.BannerAd(
@@ -120,11 +122,11 @@ class _AlkenzyInlineBannerState extends State<AlkenzyInlineBanner> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_ads.canUseGooglePlacements) return const SizedBox.shrink();
+    if (!_ads.canUseGooglePlacements) { return const SizedBox.shrink(); }
     final ad = _banner;
     // Reserve space as soon as the request starts: do not shift action buttons
     // when the ad creative arrives and cause accidental taps.
-    if (ad == null && !_loading) return const SizedBox.shrink();
+    if (ad == null && !_loading) { return const SizedBox.shrink(); }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Center(
@@ -166,11 +168,11 @@ class AlkenzyFullScreenAds {
   void recordNavigation() => _naturalActions++;
 
   Future<void> prepare() async {
-    if (_preparing || !_ads.canUseGooglePlacements) return;
+    if (_preparing || !_ads.canUseGooglePlacements) { return; }
     _preparing = true;
     try {
       if (!await _ads.ensureGooglePlacementsReady() ||
-          !_ads.canUseGooglePlacements) return;
+          !_ads.canUseGooglePlacements) { return; }
       _loadInterstitial(reports: false);
       _loadInterstitial(reports: true);
       _loadAppOpen();
@@ -182,9 +184,9 @@ class AlkenzyFullScreenAds {
   }
 
   void _loadInterstitial({required bool reports}) {
-    if (!_ads.canUseGooglePlacements) return;
+    if (!_ads.canUseGooglePlacements) { return; }
     if (reports ? (_reports != null || _reportsLoading)
-                : (_main != null || _mainLoading)) return;
+                : (_main != null || _mainLoading)) { return; }
     if (reports) { _reportsLoading = true; } else { _mainLoading = true; }
     final unit = AlkenzyAdUnits.interstitial(
       reports: reports, testMode: _ads.testMode,
@@ -210,10 +212,10 @@ class AlkenzyFullScreenAds {
   /// Never fires on login, screen load, idle timers, data entry, or payment.
   Future<void> maybeShowAtNaturalBreak({required bool reports}) async {
     if (!_ads.canUseGooglePlacements || _showing ||
-        _naturalActions < 3 || _interstitialsShown >= 2) return;
+        _naturalActions < 3 || _interstitialsShown >= 2) { return; }
     final now = DateTime.now();
     if (_lastFullScreenAt != null &&
-        now.difference(_lastFullScreenAt!) < _minInterstitialGap) return;
+        now.difference(_lastFullScreenAt!) < _minInterstitialGap) { return; }
     final ad = reports ? _reports : _main;
     if (ad == null) { unawaited(prepare()); return; }
     if (reports) { _reports = null; } else { _main = null; }
@@ -246,7 +248,7 @@ class AlkenzyFullScreenAds {
   }
 
   void _loadAppOpen() {
-    if (!_ads.canUseGooglePlacements || _appOpenLoading || _appOpen != null) return;
+    if (!_ads.canUseGooglePlacements || _appOpenLoading || _appOpen != null) { return; }
     _appOpenLoading = true;
     gma.AppOpenAd.load(
       adUnitId: AlkenzyAdUnits.appOpenUnit(testMode: _ads.testMode),
@@ -266,7 +268,7 @@ class AlkenzyFullScreenAds {
   /// Only on foreground return to the dashboard after a real background pause;
   /// never on first launch or when a modal/contract/editing page is active.
   Future<void> showAppOpenOnForeground() async {
-    if (!_ads.canUseGooglePlacements || _showing || _appOpen == null) return;
+    if (!_ads.canUseGooglePlacements || _showing || _appOpen == null) { return; }
     final now = DateTime.now();
     if (_appOpenLoadedAt == null ||
         now.difference(_appOpenLoadedAt!) >= _appOpenTtl) {
@@ -276,7 +278,7 @@ class AlkenzyFullScreenAds {
       return;
     }
     if (_lastAppOpenAt != null &&
-        now.difference(_lastAppOpenAt!) < _minAppOpenGap) return;
+        now.difference(_lastAppOpenAt!) < _minAppOpenGap) { return; }
     final ad = _appOpen!;
     _appOpen = null;
     _showing = true;
