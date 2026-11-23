@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/localization/safecontracts_localizations.dart';
+import '../ads/alkenzy_ad_placements.dart';
+import '../ads/alkenzy_ad_units.dart';
 import '../config/mobile_config.dart';
 import '../contracts/contracts.dart';
 import '../contracts/premium_contract_details_screen.dart';
@@ -49,6 +51,9 @@ final class DashboardTwoScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 96),
             children: [
               _Hero(kpis: overview.kpis, currency: currency),
+              const AlkenzyInlineBanner(
+                slot: AlkenzyBannerSlot.homeFinancial,
+              ),
               const SizedBox(height: 14),
               _ContractKinds(overview: overview),
               const SizedBox(height: 14),
