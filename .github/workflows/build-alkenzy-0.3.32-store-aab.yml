@@ -1,0 +1,304 @@
+name: Build Alkenzy ADV 0.3.32 Google Play AAB
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Alkenzy ADV production SafeContracts API"
+        required: true
+        default: "https://sys.alkenzy.com/wp-json/safecontracts/v1/"
+        type: string
+  push:
+    branches:
+      - fix/alkenzy-0.3.29-login-session-after-production-ads
+    paths:
+      - .github/workflows/build-alkenzy-0.3.32-store-aab.yml
+      - mobile/**
+
+permissions:
+  contents: read
+
+jobs:
+  google-play-aab:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      API_BASE_URL: https://sys.alkenzy.com/wp-json/safecontracts/v1/
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Verify forward-only Alkenzy store build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 9171f1c357822f9118eb8058aab6fb145c475fc3 HEAD
+          test "$(awk '/^version:/{print $2; exit}' mobile/pubspec.yaml)" = "0.3.32+32"
+          grep -Fq 'applicationId = "com.safecontracts.safecontracts_mobile"' mobile/android-release/app-build.gradle.kts
+          grep -Fq 'targetSdk = maxOf(flutter.targetSdkVersion, 36)' mobile/android-release/app-build.gradle.kts
+
+      - name: Enforce ad-root isolation and store source parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'runApp(SafeContractsApp(' mobile/lib/main.dart
+          if grep -Fq 'SafeContractsAdsHost(' mobile/lib/main.dart; then
+            echo 'FAIL: AdMob must never wrap the authentication app root' >&2
+            exit 1
+          fi
+          grep -Fq "privacyOptions: ads.privacyOptionsRequired" mobile/lib/features/ads/mobile_ads.dart
+
+      - name: Prepare Google Play upload signing material
+        shell: bash
+        env:
+          SIGNING_BUNDLE_B64: ${{ secrets.SC_ANDROID_SIGNING_BUNDLE_B64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_BUNDLE_B64:-}" ]]; then
+            echo "FAIL: production environment secret SC_ANDROID_SIGNING_BUNDLE_B64 is missing" >&2
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/alkenzy-play-signing"
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ['RUNNER_TEMP']) / 'alkenzy-play-signing'
+          payload = json.loads(base64.b64decode(os.environ['SIGNING_BUNDLE_B64']).decode('utf-8'))
+          required = ('keystore_b64', 'store_password', 'key_alias', 'key_password', 'cert_sha256')
+          missing = [key for key in required if not str(payload.get(key, '')).strip()]
+          if missing:
+              raise SystemExit('FAIL: signing bundle is missing: ' + ', '.join(missing))
+
+          (root / 'upload.jks').write_bytes(base64.b64decode(payload['keystore_b64']))
+          for key in ('store_password', 'key_alias', 'key_password', 'cert_sha256'):
+              value = str(payload[key]).strip()
+              print(f'::add-mask::{value}')
+              (root / key).write_text(value, encoding='utf-8')
+          if not (root / 'upload.jks').stat().st_size:
+              raise SystemExit('FAIL: decoded upload keystore is empty')
+          PY
+          chmod 600 "$RUNNER_TEMP/alkenzy-play-signing/"*
+
+      - name: Validate exact production API URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          url = os.environ['API_BASE_URL'].strip()
+          expected = 'https://sys.alkenzy.com/wp-json/safecontracts/v1/'
+          if url != expected:
+              raise SystemExit(f'FAIL: store build must target exactly {expected}')
+          parsed = urlparse(url)
+          if parsed.scheme != 'https' or parsed.hostname != 'sys.alkenzy.com':
+              raise SystemExit('FAIL: production API host must be sys.alkenzy.com over HTTPS')
+          if parsed.username or parsed.password or parsed.query or parsed.fragment:
+              raise SystemExit('FAIL: production API URL must not contain credentials/query/fragment')
+          PY
+
+      - name: Verify production API before signing
+        run: python3 scripts/verify_production_health.py "$API_BASE_URL"
+
+      - name: Bootstrap Android release scaffold
+        shell: bash
+        env:
+          SC_REQUIRE_PRODUCTION_ADMOB: "1"
+        run: |
+          set -euo pipefail
+          test -s "$RUNNER_TEMP/alkenzy-play-signing/upload.jks"
+          ./scripts/bootstrap_android.sh
+
+      - name: Format and test latest ads plus login hotfix
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f test/widget_test.dart
+          flutter pub get
+          dart format \
+            lib/app.dart \
+            lib/features/ads/mobile_ads.dart \
+            lib/features/bootstrap/mobile_bootstrap_controller.dart \
+            lib/features/contracts/contracts.dart \
+            lib/features/contracts/premium_contract_details_screen.dart \
+            lib/features/diagnostics/mobile_runtime_diagnostics.dart \
+            lib/features/diagnostics/runtime_inspector_screen.dart \
+            lib/features/navigation/app_shell.dart \
+            lib/features/profile/profile_screen.dart \
+            lib/features/profile/modern_profile_content.dart \
+            test/ads_host_state_preservation_test.dart \
+            test/alkenzy_production_ads_login_regression_test.dart \
+            test/post_auth_session_guard_test.dart
+          flutter analyze
+          flutter test test/ads_host_state_preservation_test.dart
+          flutter test test/alkenzy_production_ads_login_regression_test.dart
+          flutter test test/post_auth_session_guard_test.dart
+          flutter test test/mobile_login_firebase_test.dart
+          flutter test test/mobile_login_live_refresh_057_058_test.dart
+
+      - name: Analyze and build production AAB
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          SIGNING_DIR="$RUNNER_TEMP/alkenzy-play-signing"
+          export SC_ANDROID_KEYSTORE_PATH="$SIGNING_DIR/upload.jks"
+          export SC_ANDROID_KEYSTORE_PASSWORD="$(cat "$SIGNING_DIR/store_password")"
+          export SC_ANDROID_KEY_ALIAS="$(cat "$SIGNING_DIR/key_alias")"
+          export SC_ANDROID_KEY_PASSWORD="$(cat "$SIGNING_DIR/key_password")"
+          # Only build with the configured production Play upload key.
+          flutter build appbundle --release \
+            --dart-define=SC_ENV=production \
+            --dart-define=SC_API_BASE_URL="$API_BASE_URL"
+
+      - name: Build same-commit signed diagnostic APK
+        working-directory: mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          SIGNING_DIR="$RUNNER_TEMP/alkenzy-play-signing"
+          export SC_ANDROID_KEYSTORE_PATH="$SIGNING_DIR/upload.jks"
+          export SC_ANDROID_KEYSTORE_PASSWORD="$(cat "$SIGNING_DIR/store_password")"
+          export SC_ANDROID_KEY_ALIAS="$(cat "$SIGNING_DIR/key_alias")"
+          export SC_ANDROID_KEY_PASSWORD="$(cat "$SIGNING_DIR/key_password")"
+          flutter build apk --release \
+            --dart-define=SC_ENV=production \
+            --dart-define=SC_API_BASE_URL="$API_BASE_URL"
+          test -s build/app/outputs/flutter-apk/app-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/Alkenzy-ADV-0.3.32-SAME-SOURCE-DIAGNOSTIC.apk"
+
+      - name: Verify release merged manifest permits devices without Wi-Fi
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          ns = '{http://schemas.android.com/apk/res/android}'
+          root = Path('mobile/build/app/intermediates')
+          candidates = sorted(
+              p for p in root.rglob('AndroidManifest.xml')
+              if 'release' in str(p).lower()
+              and ('merged_manifest' in str(p).lower() or 'merged_manifests' in str(p).lower())
+          )
+          if not candidates:
+              raise SystemExit('FAIL: no release merged AndroidManifest.xml available to verify')
+          for p in candidates:
+              manifest = ET.parse(p).getroot()
+              wifi = [
+                  x for x in manifest.findall('uses-feature')
+                  if x.get(f'{ns}name') == 'android.hardware.wifi'
+              ]
+              if len(wifi) != 1 or wifi[0].get(f'{ns}required') != 'false':
+                  raise SystemExit(f'FAIL: Wi-Fi still required in merged release manifest: {p}')
+              print(f'PASS: Wi-Fi is explicitly optional in {p}')
+          PY
+
+      - name: Verify AAB signature and Play release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAB="mobile/build/app/outputs/bundle/release/app-release.aab"
+          OUT="Alkenzy-ADV-0.3.32-GOOGLE-PLAY.aab"
+          EXPECTED_CERT_SHA256="$(cat "$RUNNER_TEMP/alkenzy-play-signing/cert_sha256")"
+          test -s "$AAB"
+          jarsigner -verify "$AAB"
+          keytool -printcert -jarfile "$AAB" > "$RUNNER_TEMP/aab-cert.txt"
+          ACTUAL="$(sed -n 's/^[[:space:]]*SHA256: //p' "$RUNNER_TEMP/aab-cert.txt" | head -1 | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
+          EXPECTED="$(printf '%s' "$EXPECTED_CERT_SHA256" | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
+          if [[ -z "$ACTUAL" || "$ACTUAL" != "$EXPECTED" ]]; then
+            echo "FAIL: AAB upload signer does not match the configured production upload certificate" >&2
+            cat "$RUNNER_TEMP/aab-cert.txt" >&2
+            exit 1
+          fi
+          cp "$AAB" "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+          cat > ALKENZY-GOOGLE-PLAY-RELEASE.txt <<EOF
+          product=Alkenzy ADV
+          version_name=0.3.32
+          version_code=32
+          package=com.safecontracts.safecontracts_mobile
+          target_api=36
+          functional_source_commit=$GITHUB_SHA
+          store_release_commit=$GITHUB_SHA
+          api_base_url=$API_BASE_URL
+          upload_cert_sha256=$EXPECTED
+          admob_app_id=ca-app-pub-3218037275900725~7401372044
+          release_gate=ad_root_isolation_and_same_commit_apk_aab_and_login_regression_tests
+          apk_same_commit=Alkenzy-ADV-0.3.32-SAME-SOURCE-DIAGNOSTIC.apk
+          artifact=$OUT
+          EOF
+
+      - name: Upload verified Google Play AAB independently of diagnostic APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-adv-0.3.32-google-play-aab-${{ github.sha }}
+          path: |
+            Alkenzy-ADV-0.3.32-GOOGLE-PLAY.aab
+            Alkenzy-ADV-0.3.32-GOOGLE-PLAY.aab.sha256
+            ALKENZY-GOOGLE-PLAY-RELEASE.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Verify signed APK certificate and parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=Alkenzy-ADV-0.3.32-SAME-SOURCE-DIAGNOSTIC.apk
+          test -s "$APK"
+          EXPECTED="$(cat "$RUNNER_TEMP/alkenzy-play-signing/cert_sha256" | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')"
+          # Release APK signatures commonly use Android APK Signature Scheme v2/v3.
+          # keytool -printcert -jarfile only understands JAR/v1 signatures and
+          # returns no signer for v2/v3-only APKs. Verify the actual APK with
+          # Android SDK apksigner instead of silently assuming a mismatch.
+          APK_SIGNER="$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/opt/android-sdk}}/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          test -x "$APK_SIGNER"
+          "$APK_SIGNER" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-cert.txt"
+          ACTUAL="$(python3 - "$RUNNER_TEMP/apk-cert.txt" <<'PY'
+          import pathlib
+          import re
+          import sys
+          raw = pathlib.Path(sys.argv[1]).read_text()
+          # apksigner output varies across installed Android build-tools.
+          # Search all SHA-256 digest lines without assuming exact prefix text.
+          lines = [line for line in raw.splitlines() if 'SHA-256' in line.upper()]
+          fingerprints = []
+          for line in lines:
+              for token in re.findall(r'(?:[0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}|[0-9A-Fa-f]{64}', line):
+                  fingerprints.append(token.replace(':', '').upper())
+          if not fingerprints:
+              raise SystemExit('FAIL: APK signer SHA-256 missing in apksigner certificate report')
+          print(fingerprints[0])
+          PY
+          )"
+          echo "APK signing certificate sha256=$ACTUAL"
+          echo "AAB signing certificate sha256=$EXPECTED"
+          if [[ -z "$ACTUAL" || "$ACTUAL" != "$EXPECTED" ]]; then
+            echo 'FAIL: paired diagnostic APK signer differs from AAB upload signer' >&2
+            exit 1
+          fi
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: Upload Google Play 0.3.32 AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: alkenzy-adv-0.3.32-google-play-${{ github.sha }}
+          path: |
+            Alkenzy-ADV-0.3.32-GOOGLE-PLAY.aab
+            Alkenzy-ADV-0.3.32-GOOGLE-PLAY.aab.sha256
+            ALKENZY-GOOGLE-PLAY-RELEASE.txt
+            Alkenzy-ADV-0.3.32-SAME-SOURCE-DIAGNOSTIC.apk
+            Alkenzy-ADV-0.3.32-SAME-SOURCE-DIAGNOSTIC.apk.sha256
+          if-no-files-found: error
+          retention-days: 30

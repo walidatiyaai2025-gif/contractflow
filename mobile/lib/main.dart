@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 
 import 'app.dart';
 import 'core/config/app_environment.dart';
-import 'features/ads/mobile_ads.dart';
 import 'features/notifications/notification_presenter.dart';
 
 Future<void> main() async {
@@ -14,11 +13,10 @@ Future<void> main() async {
   // Render the application first. Firebase/FCM are auxiliary runtime services
   // and must never prevent the login/bootstrap UI from starting on a device
   // with an OEM-specific Firebase or notification integration failure.
-  runApp(
-    SafeContractsAdsHost(
-      child: SafeContractsApp(environment: AppEnvironment.fromCompileTime()),
-    ),
-  );
+  // Ads are rendered only inside the authenticated shell footer.
+  // Never wrap the app root in an ad-driven AnimatedBuilder: SDK callbacks
+  // must not influence the lifecycle of the authentication/session tree.
+  runApp(SafeContractsApp(environment: AppEnvironment.fromCompileTime()));
 
   unawaited(_initializeRuntimeServices());
 }

@@ -179,6 +179,19 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   }
 }
 
+/// Keep sign-in available after an unsuccessful authenticated bootstrap.
+/// A fresh cold-start failure still uses the retry/error surface.
+bool shouldOfferMobileLogin({
+  required bool loginRequested,
+  required MobileBootstrapState bootstrapState,
+  required SessionState? sessionState,
+}) {
+  return sessionState == SessionState.unauthenticated ||
+      (loginRequested &&
+          (bootstrapState == MobileBootstrapState.blocked ||
+              bootstrapState == MobileBootstrapState.error));
+}
+
 final class _BootstrapView extends StatefulWidget {
   const _BootstrapView({
     required this.environment,
@@ -275,8 +288,11 @@ final class _BootstrapViewState extends State<_BootstrapView> {
           }
         }
 
-        if (widget.controller.sessionController?.state ==
-            SessionState.unauthenticated) {
+        if (shouldOfferMobileLogin(
+          loginRequested: _showLogin,
+          bootstrapState: widget.controller.state,
+          sessionState: widget.controller.sessionController?.state,
+        )) {
           if (!_showLogin) {
             return AlkenzyCompanyWelcomeScreen(
               controller: widget.landingController,
@@ -292,7 +308,23 @@ final class _BootstrapViewState extends State<_BootstrapView> {
             onBack: () => setState(() => _showLogin = false),
             onAuthenticated: () async {
               await widget.onAuthenticated();
-              if (mounted) setState(() => _showLogin = false);
+              if (!mounted) return;
+
+              final authenticated =
+                  widget.controller.state == MobileBootstrapState.ready &&
+                      widget.controller.sessionController?.state ==
+                          SessionState.authenticated;
+              if (authenticated) {
+                setState(() => _showLogin = false);
+                return;
+              }
+
+              widget.loginController.setPostAuthenticationError(
+                widget.controller.message ??
+                    widget.controller.sessionController?.errorMessage ??
+                    'Sign-in succeeded, but the authenticated session could not be opened. Please retry.',
+              );
+              setState(() => _showLogin = true);
             },
           );
         }

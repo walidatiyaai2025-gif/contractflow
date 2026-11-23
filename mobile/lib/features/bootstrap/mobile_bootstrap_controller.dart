@@ -146,6 +146,13 @@ final class MobileBootstrapController extends ChangeNotifier {
 
       state = MobileBootstrapState.ready;
       notifyListeners();
+    } on Object {
+      // An unexpected downstream bootstrap failure must not strand the UI in
+      // loading or make an unrelated ad/configuration exception look like logout.
+      SafeContractsMobileAds.instance.disable();
+      message = 'Unable to prepare your workspace. Please retry.';
+      state = MobileBootstrapState.error;
+      notifyListeners();
     } finally {
       _bootstrapInFlight = false;
     }

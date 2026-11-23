@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
+import '../ads/mobile_ads.dart';
 import '../collections/collections.dart';
 import '../collections/collections_screen.dart';
 import '../config/mobile_config.dart';
@@ -377,11 +378,13 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: bottomDestinations.isEmpty
           ? null
-          : _SafeContractsBottomNavigation(
-              destinations: bottomDestinations,
-              selected: _selected,
-              labelFor: (destination) => _label(l10n, destination),
-              onSelected: _selectDestination,
+          : SafeContractsAdsAboveFooter(
+              footer: _SafeContractsBottomNavigation(
+                destinations: bottomDestinations,
+                selected: _selected,
+                labelFor: (destination) => _label(l10n, destination),
+                onSelected: _selectDestination,
+              ),
             ),
     );
   }

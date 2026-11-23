@@ -34,19 +34,42 @@ final class MobileBearerAuthentication
 
     public static function bearerToken(): ?string
     {
-        $header = '';
-        foreach (['HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION'] as $key) {
-            $value = $_SERVER[$key] ?? '';
-            if (is_string($value) && trim($value) !== '') {
-                $header = trim($value);
-                break;
-            }
-        }
-        if ($header === '' || ! preg_match('/^Bearer\s+(.+)$/i', $header, $matches)) {
+        $header = self::authorizationHeader();
+        if ($header === '' || ! preg_match('/^Bearer\\s+(.+)$/i', $header, $matches)) {
             return null;
         }
 
         $token = trim((string) ($matches[1] ?? ''));
         return MobileSessionStore::looksLikeToken($token) ? $token : null;
+    }
+
+    private static function authorizationHeader(): string
+    {
+        foreach (['HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION', 'Authorization'] as $key) {
+            $value = $_SERVER[$key] ?? '';
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        foreach (['getallheaders', 'apache_request_headers'] as $reader) {
+            if (! function_exists($reader)) {
+                continue;
+            }
+            $headers = $reader();
+            if (! is_array($headers)) {
+                continue;
+            }
+            foreach ($headers as $name => $value) {
+                if (! is_string($name) || strcasecmp($name, 'Authorization') !== 0) {
+                    continue;
+                }
+                if (is_string($value) && trim($value) !== '') {
+                    return trim($value);
+                }
+            }
+        }
+
+        return '';
     }
 }

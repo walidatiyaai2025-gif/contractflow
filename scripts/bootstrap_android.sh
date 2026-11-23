@@ -174,6 +174,23 @@ for permission in permissions:
     permission_line = f'{indent}<uses-permission android:name="{permission}" />\n'
     text = text[: application.start()] + permission_line + text[application.start() :]
 
+# Google Play must not exclude devices without physical Wi-Fi. Alkenzy
+# uses ordinary internet connectivity (including mobile data); network
+# availability is handled at runtime and does not require Wi-Fi hardware.
+# An explicit optional uses-feature also overrides features inferred from
+# transitive Android permissions after manifest merging.
+wifi_feature = '<uses-feature android:name="android.hardware.wifi" android:required="false" />'
+if 'android.hardware.wifi' not in text:
+    application = re.search(r'(?m)^([ \t]*)<application\b', text)
+    if application is None:
+        raise SystemExit("FAIL: AndroidManifest.xml does not contain an <application> element")
+    indent = application.group(1)
+    text = text[:application.start()] + f'{indent}{wifi_feature}\n' + text[application.start():]
+else:
+    feature_matches = re.findall(r'<uses-feature\b[^>]*android:name="android\.hardware\.wifi"[^>]*/>', text)
+    if len(feature_matches) != 1 or 'android:required="false"' not in feature_matches[0]:
+        raise SystemExit('FAIL: Wi-Fi hardware must be declared optional, never mandatory')
+
 firebase_metadata = '''
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
@@ -217,6 +234,16 @@ if 'safe_contracts_alerts' not in text:
 if 'com.google.android.gms.ads.APPLICATION_ID' not in text or admob_app_id not in text:
     raise SystemExit("FAIL: Android release manifest is missing the production AdMob application ID")
 
+import xml.etree.ElementTree as ET
+android_namespace = '{http://schemas.android.com/apk/res/android}'
+manifest_root = ET.fromstring(text)
+wifi_features = [
+    feature for feature in manifest_root.findall('uses-feature')
+    if feature.get(f'{android_namespace}name') == 'android.hardware.wifi'
+]
+if len(wifi_features) != 1 or wifi_features[0].get(f'{android_namespace}required') != 'false':
+    raise SystemExit('FAIL: Android manifest must have exactly one optional Wi-Fi hardware declaration')
+
 path.write_text(text, encoding="utf-8")
 PY
 
@@ -248,6 +275,10 @@ grep -Fq 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || {
 }
 grep -Fq 'android.permission.USE_BIOMETRIC' "$MANIFEST" || {
   echo "FAIL: Android release manifest is missing USE_BIOMETRIC permission" >&2
+  exit 1
+}
+grep -Fq '<uses-feature android:name="android.hardware.wifi" android:required="false" />' "$MANIFEST" || {
+  echo "FAIL: Android release manifest would restrict app availability to Wi-Fi hardware" >&2
   exit 1
 }
 grep -Fq 'android:label="Alkenzy ADV"' "$MANIFEST" || {

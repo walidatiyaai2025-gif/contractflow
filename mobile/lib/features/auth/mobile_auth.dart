@@ -114,6 +114,14 @@ final class MobileLoginController extends ChangeNotifier {
     }
   }
 
+  void setPostAuthenticationError(String message) {
+    state = MobileLoginState.error;
+    errorMessage = message.trim().isEmpty
+        ? 'Sign-in succeeded, but the authenticated session could not be opened. Please retry.'
+        : message.trim();
+    notifyListeners();
+  }
+
   void resetError() {
     errorMessage = null;
     rememberMe = false;
