@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../ads/alkenzy_ad_placements.dart';
+import '../ads/alkenzy_ad_units.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/localization/safecontracts_localizations.dart';
@@ -159,6 +162,10 @@ final class _SuppliersScreenState extends State<SuppliersScreen> {
                       onCreate: widget.controller.canCreate
                           ? () => unawaited(_openEditor())
                           : null,
+                    ),
+                  if (!mobileDetail)
+                    const AlkenzyInlineBanner(
+                      slot: AlkenzyBannerSlot.suppliersList,
                     ),
                   Expanded(
                     child: NotificationListener<ScrollNotification>(
