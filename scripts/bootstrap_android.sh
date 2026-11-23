@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MOBILE="$ROOT/mobile"
 TEMPLATE="$ROOT/mobile/android-release/app-build.gradle.kts"
+PROGUARD_TEMPLATE="$ROOT/mobile/android-release/proguard-rules.pro"
 FIREBASE_CONFIG="$ROOT/mobile/android-release/google-services.json"
 ALKENZY_APP_ASSET="$ROOT/mobile/assets/brand/alkenzy_adv.png"
 ALKENZY_ICON_SOURCE="$ROOT/mobile/android-release/alkenzy_launcher.png"
@@ -18,7 +19,7 @@ if ! command -v flutter >/dev/null 2>&1; then
   exit 1
 fi
 
-for required_source in "$TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE" "$APPLOVIN_PATCHER" "$SOUND_MATERIALIZER"; do
+for required_source in "$TEMPLATE" "$PROGUARD_TEMPLATE" "$FIREBASE_CONFIG" "$ALKENZY_APP_ASSET" "$ALKENZY_ICON_SOURCE" "$MAIN_ACTIVITY_TEMPLATE" "$APPLOVIN_PATCHER" "$SOUND_MATERIALIZER"; do
   if [[ ! -f "$required_source" ]]; then
     echo "FAIL: committed Android release source is missing: $required_source" >&2
     exit 1
@@ -84,6 +85,7 @@ flutter create \
   .
 
 cp "$TEMPLATE" android/app/build.gradle.kts
+cp "$PROGUARD_TEMPLATE" android/app/proguard-rules.pro
 cp "$FIREBASE_CONFIG" android/app/google-services.json
 MAIN_ACTIVITY_TARGET="android/app/src/main/kotlin/com/safecontracts/safecontracts_mobile/MainActivity.kt"
 mkdir -p "$(dirname "$MAIN_ACTIVITY_TARGET")"
@@ -252,6 +254,7 @@ for required in \
   android/gradlew \
   android/gradle/wrapper/gradle-wrapper.jar \
   android/app/build.gradle.kts \
+  android/app/proguard-rules.pro \
   android/app/google-services.json \
   android/app/src/main/AndroidManifest.xml \
   "$MAIN_ACTIVITY_TARGET" \
