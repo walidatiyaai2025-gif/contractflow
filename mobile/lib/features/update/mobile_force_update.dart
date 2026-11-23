@@ -93,6 +93,11 @@ final class MobileForceUpdateController extends ChangeNotifier {
   bool _pending = false;
   String? error;
 
+  void allowNonProduction() {
+    state = MobileUpdateState.allowed;
+    notifyListeners();
+  }
+
   Future<void> refresh() async {
     if (_pending) return;
     _pending = true;
