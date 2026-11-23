@@ -64,8 +64,15 @@ android {
             if (hasAllSigningInputs) {
                 signingConfig = signingConfigs.getByName("safecontractsRelease")
             }
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // Play Console Android vitals requires meaningful DEX optimization.
+            // Keep R8 code shrinking/obfuscation and resource shrinking ON for
+            // signed release AAB/APK. Never relax this to silence build errors.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
