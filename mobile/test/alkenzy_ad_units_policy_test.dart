@@ -41,6 +41,21 @@ void main() {
         AlkenzyAdUnits.testAppOpen);
   });
 
+  test('owner in-app placements never inherit WordPress provider or test mode', () {
+    final source = File('lib/features/ads/mobile_ads.dart').readAsStringSync();
+    final guardStart = source.indexOf('bool get canUseGooglePlacements =>');
+    final guardEnd = source.indexOf('/// Shared UMP consent', guardStart);
+    expect(guardStart, greaterThan(-1));
+    expect(guardEnd, greaterThan(guardStart));
+    final guard = source.substring(guardStart, guardEnd);
+    expect(guard, contains('_ownedUnitsEnabled'));
+    expect(guard, isNot(contains('_config.enabled')));
+    expect(guard, isNot(contains('_config.provider')));
+    expect(source, contains("'SC_ALKENZY_ADS_TEST_MODE'"));
+    expect(source, contains('defaultValue: false'));
+    expect(source, contains('showPrivacyOptions()'));
+  });
+
   test('full-screen formats have the owner IDs and no dashboard-only unit', () {
     expect(AlkenzyAdUnits.appId,
         'ca-app-pub-3218037275900725~7401372044');
