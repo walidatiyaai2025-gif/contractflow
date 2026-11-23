@@ -8,6 +8,11 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// Required for FlutterFragmentActivity.enableEdgeToEdge() on Android < 15.
+dependencies {
+    implementation("androidx.activity:activity-ktx:1.10.1")
+}
+
 android {
     namespace = "com.safecontracts.safecontracts_mobile"
     compileSdk = maxOf(flutter.compileSdkVersion, 36)

@@ -26,6 +26,7 @@ final class Router
 
         AuthController::register();
         MobileLandingController::register();
+        MobileVersionController::register();
 
         foreach (['/me', '/session'] as $route) {
             register_rest_route(self::NAMESPACE, $route, [
