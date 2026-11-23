@@ -26,13 +26,28 @@ final class SafeContractsMobileAds extends ChangeNotifier {
   int _generation = 0;
 
   MobileAdProvider get provider => _config.provider;
-  bool get testMode => _config.testMode;
 
+  // The owner-supplied in-app AdMob inventory is deliberately independent
+  // from the WordPress-controlled legacy footer banner/provider settings.
+  // A stale/disabled WP ads payload must not silently hide Android app units.
+  // Emergency release opt-out: --dart-define=SC_ALKENZY_ADS_ENABLED=false.
+  static const bool _ownedUnitsEnabled = bool.fromEnvironment(
+    'SC_ALKENZY_ADS_ENABLED',
+    defaultValue: true,
+  );
+  // Production Play builds always use real IDs. Backend test_mode only
+  // controls the legacy footer and must not redirect app-owned units to
+  // Google test inventory. CI/QA explicitly opts in with this dart-define.
+  static const bool _ownedUnitsTestMode = bool.fromEnvironment(
+    'SC_ALKENZY_ADS_TEST_MODE',
+    defaultValue: false,
+  );
+
+  bool get testMode => _ownedUnitsTestMode;
   bool get canUseGooglePlacements =>
+      _ownedUnitsEnabled &&
       !kIsWeb &&
-      defaultTargetPlatform == TargetPlatform.android &&
-      _config.enabled &&
-      _config.provider == MobileAdProvider.admob;
+      defaultTargetPlatform == TargetPlatform.android;
 
   /// Shared UMP consent + SDK initialization, without touching session state.
   Future<bool> ensureGooglePlacementsReady() async {
@@ -74,8 +89,8 @@ final class SafeContractsMobileAds extends ChangeNotifier {
       _config.canRequestBanner;
   String get appLovinBannerAdUnitId => _config.appLovinBannerAdUnitId;
   bool get privacyOptionsRequired =>
-      _config.provider == MobileAdProvider.admob &&
-      _config.enabled &&
+      (canUseGooglePlacements ||
+          (_config.enabled && _config.provider == MobileAdProvider.admob)) &&
       _privacyOptionsRequired;
 
   Future<void> configure(MobileAdvertisingConfig config) async {
@@ -227,6 +242,9 @@ final class SafeContractsMobileAds extends ChangeNotifier {
       }
     }
     await _refreshPrivacyOptionsRequirement();
+    // The footer privacy-options control must become visible even if the
+    // WordPress legacy banner is switched off.
+    notifyListeners();
     return gma.ConsentInformation.instance.canRequestAds();
   }
 
