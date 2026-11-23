@@ -11,6 +11,8 @@ import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
+import androidx.activity.enableEdgeToEdge
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -31,7 +33,19 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingSaveBytes: ByteArray? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Use the AndroidX edge-to-edge API before Flutter starts drawing.
+        // Android 15/16 already enforce edge-to-edge; this enables the same
+        // window contract on older Android versions without opt-out hacks.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            @Suppress("DEPRECATION")
+            val params = window.attributes
+            @Suppress("DEPRECATION")
+            params.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            window.attributes = params
+        }
         // Startup must never depend on custom notification sound support. Some
         // Android/OEM builds resolve channel sound URIs eagerly and can throw
         // while the Activity is starting. Create only the sound-free fallback
