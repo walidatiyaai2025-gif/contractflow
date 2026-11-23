@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/localization/safecontracts_localizations.dart';
+import '../ads/alkenzy_ad_placements.dart';
+import '../ads/alkenzy_ad_units.dart';
 import '../config/mobile_config.dart';
 import '../ui/safecontracts_design.dart';
 import 'dashboard_controller.dart';
@@ -80,6 +82,7 @@ final class DashboardScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                 ],
                 _CompactSummary(kpis: overview.kpis, currency: currency),
+                const AlkenzyInlineBanner(slot: AlkenzyBannerSlot.homeFinancial),
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 70,
@@ -103,6 +106,10 @@ final class DashboardScreen extends StatelessWidget {
                     onOpenPayments: onOpenPayments,
                   ),
                 ),
+                if (controller.selectedTab == DashboardTab.overview)
+                  const AlkenzyInlineBanner(
+                    slot: AlkenzyBannerSlot.homeActivity,
+                  ),
               ],
             ),
           ),
