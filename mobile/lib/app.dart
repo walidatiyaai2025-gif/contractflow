@@ -17,6 +17,7 @@ import 'features/bootstrap/mobile_bootstrap_controller.dart';
 import 'features/navigation/app_shell.dart';
 import 'features/notifications/push_registration.dart';
 import 'features/session/session_controller.dart';
+import 'features/update/mobile_force_update.dart';
 import 'features/ui/mobile_layout.dart';
 import 'features/ui/safecontracts_splash.dart';
 import 'features/ui/safecontracts_theme.dart';
@@ -38,6 +39,7 @@ class SafeContractsApp extends StatefulWidget {
     this.client,
     this.tokenStore,
     this.languageCode = 'en',
+    this.forceUpdateController,
     super.key,
   });
 
@@ -45,6 +47,7 @@ class SafeContractsApp extends StatefulWidget {
   final SafeContractsApiClient? client;
   final MobileTokenStore? tokenStore;
   final String languageCode;
+  final MobileForceUpdateController? forceUpdateController;
 
   @override
   State<SafeContractsApp> createState() => _SafeContractsAppState();
@@ -59,6 +62,7 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
   late final MobilePushRegistration _pushRegistration;
   late final MobileLocaleController _localeController;
   late final MobileLandingController _landingController;
+  late final MobileForceUpdateController _forceUpdateController;
 
   @override
   void initState() {
@@ -82,6 +86,15 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
                 : <String, String>{'Authorization': 'Bearer $token'};
           },
         );
+    _forceUpdateController = widget.forceUpdateController ??
+        MobileForceUpdateController.forClient(_client);
+    if (widget.environment.name == AppEnvironmentName.production) {
+      unawaited(_forceUpdateController.refresh());
+    } else {
+      // Dev/staging app versions must not be blocked by production Play policy.
+      _forceUpdateController.allowNonProduction();
+    }
+
     _authRepository = MobileAuthRepository(
       client: _client,
       tokenStore: _tokenStore,
@@ -139,6 +152,9 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
     _landingController.dispose();
     _loginController.dispose();
     _bootstrap.dispose();
+    if (widget.forceUpdateController == null) {
+      _forceUpdateController.dispose();
+    }
     super.dispose();
   }
 
@@ -160,7 +176,11 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
         theme: _theme(_localeController.languageCode),
         builder: (context, child) => SafeContractsDirectionScope(
           languageCode: _localeController.languageCode,
-          child: child ?? const SizedBox.shrink(),
+          child: MobileForceUpdateGate(
+            controller: _forceUpdateController,
+            languageCode: _localeController.languageCode,
+            child: child ?? const SizedBox.shrink(),
+          ),
         ),
         home: _BootstrapView(
           environment: widget.environment,
