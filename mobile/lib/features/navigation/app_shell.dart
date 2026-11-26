@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../ads/mobile_ads.dart';
+import '../ads/alkenzy_rewarded_fun_service.dart';
 import '../ads/alkenzy_rewarded_fun.dart';
 import '../ads/alkenzy_ad_placements.dart';
 import '../collections/collections.dart';
@@ -128,6 +129,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               const Duration(minutes: 2) &&
           (_selected == MobileDestination.dashboard ||
               _selected == MobileDestination.dashboardTwo) &&
+          !AlkenzyRewardedFun.instance.busy &&
+          !AlkenzyFullScreenAds.instance.isShowing &&
           ModalRoute.of(context)?.isCurrent == true) {
         unawaited(AlkenzyFullScreenAds.instance.showAppOpenOnForeground());
       }

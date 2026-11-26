@@ -147,14 +147,15 @@ class AlkenzyFullScreenAds {
   static final instance = AlkenzyFullScreenAds._();
 
   final SafeContractsMobileAds _ads = SafeContractsMobileAds.instance;
-  static const _minInterstitialGap = Duration(minutes: 3);
-  static const _minAppOpenGap = Duration(minutes: 15);
+  static const _minInterstitialGap = Duration(minutes: 5);
+  static const _minAppOpenGap = Duration(minutes: 20);
   static const _appOpenTtl = Duration(hours: 4);
 
   gma.InterstitialAd? _main;
   gma.InterstitialAd? _reports;
   gma.AppOpenAd? _appOpen;
   DateTime? _appOpenLoadedAt;
+  final DateTime _appStartedAt = DateTime.now();
   DateTime? _lastFullScreenAt;
   DateTime? _lastAppOpenAt;
   bool _preparing = false;
@@ -163,9 +164,22 @@ class AlkenzyFullScreenAds {
   bool _appOpenLoading = false;
   bool _showing = false;
   int _naturalActions = 0;
-  int _interstitialsShown = 0;
 
+  bool get isShowing => _showing;
   void recordNavigation() => _naturalActions++;
+
+  /// For unauthenticated Landing: prepare only App Open, not Interstitial.
+  Future<void> prepareAppOpen() async {
+    if (!_ads.canUseGooglePlacements) return;
+    try {
+      if (await _ads.ensureGooglePlacementsReady() &&
+          _ads.canUseGooglePlacements) {
+        _loadAppOpen();
+      }
+    } on Object {
+      // No login or landing feature should fail due to unavailable ads.
+    }
+  }
 
   Future<void> prepare() async {
     if (_preparing || !_ads.canUseGooglePlacements) { return; }
@@ -211,17 +225,24 @@ class AlkenzyFullScreenAds {
   /// Called only BEFORE navigation after finishing the contract/report view.
   /// Never fires on login, screen load, idle timers, data entry, or payment.
   Future<void> maybeShowAtNaturalBreak({required bool reports}) async {
-    if (!_ads.canUseGooglePlacements || _showing ||
-        _naturalActions < 3 || _interstitialsShown >= 2) { return; }
+    if (!_ads.canUseGooglePlacements || _showing || _naturalActions < 3) {
+      return;
+    }
     final now = DateTime.now();
-    if (_lastFullScreenAt != null &&
-        now.difference(_lastFullScreenAt!) < _minInterstitialGap) { return; }
+    // Frequency is a floor, never a timer: only the existing completed
+    // Contracts/Reports -> Dashboard user navigation calls this method.
+    if (now.difference(_appStartedAt) < _minInterstitialGap ||
+        (_lastFullScreenAt != null &&
+            now.difference(_lastFullScreenAt!) < _minInterstitialGap) ||
+        (_lastAppOpenAt != null &&
+            now.difference(_lastAppOpenAt!) < _minInterstitialGap)) {
+      return;
+    }
     final ad = reports ? _reports : _main;
     if (ad == null) { unawaited(prepare()); return; }
     if (reports) { _reports = null; } else { _main = null; }
     _showing = true;
     _lastFullScreenAt = now;
-    _interstitialsShown++;
     _naturalActions = 0;
     final done = Completer<void>();
     ad.fullScreenContentCallback = gma.FullScreenContentCallback(
@@ -265,8 +286,8 @@ class AlkenzyFullScreenAds {
     );
   }
 
-  /// Only on foreground return to the dashboard after a real background pause;
-  /// never on first launch or when a modal/contract/editing page is active.
+  /// Only on foreground return to Landing or Dashboard after background;
+  /// never on first launch or when a modal, game, login or edit form is active.
   Future<void> showAppOpenOnForeground() async {
     if (!_ads.canUseGooglePlacements || _showing || _appOpen == null) { return; }
     final now = DateTime.now();
@@ -274,11 +295,15 @@ class AlkenzyFullScreenAds {
         now.difference(_appOpenLoadedAt!) >= _appOpenTtl) {
       _appOpen?.dispose();
       _appOpen = null;
-      unawaited(prepare());
+      unawaited(prepareAppOpen());
       return;
     }
-    if (_lastAppOpenAt != null &&
-        now.difference(_lastAppOpenAt!) < _minAppOpenGap) { return; }
+    if ((_lastAppOpenAt != null &&
+            now.difference(_lastAppOpenAt!) < _minAppOpenGap) ||
+        (_lastFullScreenAt != null &&
+            now.difference(_lastFullScreenAt!) < _minInterstitialGap)) {
+      return;
+    }
     final ad = _appOpen!;
     _appOpen = null;
     _showing = true;
@@ -287,12 +312,12 @@ class AlkenzyFullScreenAds {
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _showing = false;
-        unawaited(prepare());
+        unawaited(prepareAppOpen());
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         ad.dispose();
         _showing = false;
-        unawaited(prepare());
+        unawaited(prepareAppOpen());
       },
     );
     try { await ad.show(); }
@@ -301,11 +326,10 @@ class AlkenzyFullScreenAds {
 
   void reset() {
     _naturalActions = 0;
-    _interstitialsShown = 0;
-    _lastFullScreenAt = null;
-    _lastAppOpenAt = null;
+    // Preserve ad pacing across logout/login; this is a process-wide manager.
     _main?.dispose(); _main = null;
     _reports?.dispose(); _reports = null;
     _appOpen?.dispose(); _appOpen = null;
+    _appOpenLoadedAt = null;
   }
 }

@@ -9,6 +9,9 @@ on:
       - mobile/lib/features/ads/alkenzy_rewarded_fun_service.dart
       - mobile/lib/features/ads/alkenzy_xo_match.dart
       - mobile/lib/features/ads/alkenzy_ad_units.dart
+      - mobile/lib/features/ads/alkenzy_ad_placements.dart
+      - mobile/lib/app.dart
+      - mobile/test/alkenzy_ad_units_policy_test.dart
       - mobile/lib/features/welcome/company_welcome_screen.dart
       - mobile/lib/features/navigation/app_shell.dart
       - mobile/test/alkenzy_rewarded_xo_038_test.dart
@@ -33,12 +36,12 @@ jobs:
       - name: Format only new feature and touched files
         working-directory: mobile
         run: |
-          dart format             lib/features/ads/alkenzy_rewarded_fun.dart             lib/features/ads/alkenzy_rewarded_fun_service.dart             lib/features/ads/alkenzy_xo_match.dart             lib/features/ads/alkenzy_ad_units.dart             lib/features/welcome/company_welcome_screen.dart             lib/features/navigation/app_shell.dart             test/alkenzy_rewarded_xo_038_test.dart
+          dart format             lib/features/ads/alkenzy_rewarded_fun.dart             lib/features/ads/alkenzy_rewarded_fun_service.dart             lib/features/ads/alkenzy_xo_match.dart             lib/features/ads/alkenzy_ad_units.dart             lib/features/welcome/company_welcome_screen.dart             lib/features/navigation/app_shell.dart             test/alkenzy_rewarded_xo_038_test.dart lib/app.dart lib/features/ads/alkenzy_ad_placements.dart test/alkenzy_ad_units_policy_test.dart
       - name: Commit formatting if needed
         shell: bash
         run: |
           set -euo pipefail
-          git add mobile/lib/features/ads/alkenzy_rewarded_fun.dart mobile/lib/features/ads/alkenzy_rewarded_fun_service.dart mobile/lib/features/ads/alkenzy_xo_match.dart mobile/lib/features/ads/alkenzy_ad_units.dart mobile/lib/features/welcome/company_welcome_screen.dart mobile/lib/features/navigation/app_shell.dart mobile/test/alkenzy_rewarded_xo_038_test.dart
+          git add mobile/lib/features/ads/alkenzy_rewarded_fun.dart mobile/lib/features/ads/alkenzy_rewarded_fun_service.dart mobile/lib/features/ads/alkenzy_xo_match.dart mobile/lib/features/ads/alkenzy_ad_units.dart mobile/lib/features/welcome/company_welcome_screen.dart mobile/lib/features/navigation/app_shell.dart mobile/test/alkenzy_rewarded_xo_038_test.dart mobile/lib/app.dart mobile/lib/features/ads/alkenzy_ad_placements.dart mobile/test/alkenzy_ad_units_policy_test.dart
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

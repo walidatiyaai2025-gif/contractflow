@@ -36,6 +36,9 @@ final class _AlkenzyCompanyWelcomeScreenState
   void initState() {
     super.initState();
     unawaited(widget.controller.ensureLoaded());
+    // App Open is preloaded for anonymous landing visitors, never shown
+    // automatically on initial page load.
+    unawaited(AlkenzyFullScreenAds.instance.prepareAppOpen());
   }
 
   @override

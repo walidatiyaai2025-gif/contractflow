@@ -86,9 +86,11 @@ void main() {
         'ca-app-pub-3218037275900725/9633937038');
     final source = File('lib/features/ads/alkenzy_ad_placements.dart')
         .readAsStringSync();
-    expect(source, contains('_minInterstitialGap = Duration(minutes: 3)'));
+    expect(source, contains('_minInterstitialGap = Duration(minutes: 5)'));
     expect(source, contains('_naturalActions < 3'));
-    expect(source, contains('_interstitialsShown >= 2'));
+    expect(source, isNot(contains('_interstitialsShown')));
+    expect(source, contains('_minAppOpenGap = Duration(minutes: 20)'));
+    expect(source, contains('now.difference(_appStartedAt) < _minInterstitialGap'));
     expect(source, isNot(contains('Timer.periodic(')));
   });
 
@@ -114,6 +116,13 @@ void main() {
     final source = File('lib/features/navigation/app_shell.dart')
         .readAsStringSync();
     expect(source, contains('showAppOpenOnForeground()'));
+    final app = File('lib/app.dart').readAsStringSync();
+    expect(app, contains('onGuestLanding'));
+    expect(app, contains('SessionState.unauthenticated'));
+    expect(app, contains('AlkenzyRewardedFun.instance.busy'));
+    final landing = File('lib/features/welcome/company_welcome_screen.dart')
+        .readAsStringSync();
+    expect(landing, contains('AlkenzyFullScreenAds.instance.prepareAppOpen()'));
     expect(source, contains('ModalRoute.of(context)?.isCurrent == true'));
   });
 }
