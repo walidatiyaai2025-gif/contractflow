@@ -141,6 +141,7 @@ jobs:
             lib/features/ads/alkenzy_rewarded_fun_service.dart \
             lib/features/ads/alkenzy_xo_match.dart \
             lib/features/welcome/company_welcome_screen.dart \
+            test/mobile_landing_images_test.dart \
             test/alkenzy_rewarded_xo_038_test.dart \
             lib/features/bootstrap/mobile_bootstrap_controller.dart \
             lib/features/contracts/contracts.dart \
@@ -158,6 +159,7 @@ jobs:
           flutter test test/alkenzy_ad_units_policy_test.dart
           flutter test test/alkenzy_b37_crash_rescue_contract_test.dart
           flutter test test/alkenzy_rewarded_xo_038_test.dart
+          flutter test test/mobile_landing_images_test.dart
           flutter test test/alkenzy_production_ads_login_regression_test.dart
           flutter test test/post_auth_session_guard_test.dart
           flutter test test/mobile_login_firebase_test.dart
