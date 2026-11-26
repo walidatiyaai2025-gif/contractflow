@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('crash rescue is a strictly newer Play update from pre-R8 build 34', () {
+  test('Build 38 remains a newer Play update based on pre-R8 rescue 37', () {
     final spec = File('pubspec.yaml').readAsStringSync();
-    expect(spec, contains('version: 0.3.37+37'));
+    expect(spec, contains('version: 0.3.38+38'));
     expect(spec, isNot(contains('version: 0.3.34+35')));
     expect(spec, isNot(contains('version: 0.3.35+36')));
   });

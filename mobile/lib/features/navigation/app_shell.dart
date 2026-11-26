@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../ads/mobile_ads.dart';
+import '../ads/alkenzy_rewarded_fun_service.dart';
+import '../ads/alkenzy_rewarded_fun.dart';
 import '../ads/alkenzy_ad_placements.dart';
 import '../collections/collections.dart';
 import '../collections/collections_screen.dart';
@@ -127,6 +129,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
               const Duration(minutes: 2) &&
           (_selected == MobileDestination.dashboard ||
               _selected == MobileDestination.dashboardTwo) &&
+          !AlkenzyRewardedFun.instance.busy &&
+          !AlkenzyFullScreenAds.instance.isShowing &&
           ModalRoute.of(context)?.isCurrent == true) {
         unawaited(AlkenzyFullScreenAds.instance.showAppOpenOnForeground());
       }
@@ -210,10 +214,12 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
       if (destination == MobileDestination.dashboard &&
           (previous == MobileDestination.contracts ||
               previous == MobileDestination.export)) {
-        unawaited(_navigateAtNaturalBreak(
-          destination,
-          reports: previous == MobileDestination.export,
-        ));
+        unawaited(
+          _navigateAtNaturalBreak(
+            destination,
+            reports: previous == MobileDestination.export,
+          ),
+        );
         return;
       }
       setState(() => _selected = destination);
@@ -338,9 +344,9 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                       Text(
                         SafeContractsBrand.name,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -348,8 +354,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                             ? 'مساحة العمل التنفيذية'
                             : 'Executive workspace',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.70),
-                            ),
+                          color: Colors.white.withValues(alpha: 0.70),
+                        ),
                       ),
                     ],
                   ),
@@ -363,10 +369,7 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                 _icon(destination),
                 color: Colors.white.withValues(alpha: 0.84),
               ),
-              selectedIcon: Icon(
-                _icon(destination),
-                color: Colors.white,
-              ),
+              selectedIcon: Icon(_icon(destination), color: Colors.white),
               label: Text(
                 _label(l10n, destination),
                 style: TextStyle(
@@ -379,6 +382,10 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                 ),
               ),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: AlkenzyRewardedFunButton(languageCode: widget.languageCode),
           ),
         ],
       ),
@@ -466,80 +473,80 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
     final apiClient = widget.contractsController.repository.client;
     return switch (_selected) {
       MobileDestination.dashboard => DashboardContextScreen(
-          controller: widget.dashboardController,
-          currency: widget.config.currency,
-          onOpenPayments:
-              widget.policy.destinations.contains(MobileDestination.payments)
-                  ? () => _selectDestination(MobileDestination.payments)
-                  : null,
-        ),
+        controller: widget.dashboardController,
+        currency: widget.config.currency,
+        onOpenPayments:
+            widget.policy.destinations.contains(MobileDestination.payments)
+            ? () => _selectDestination(MobileDestination.payments)
+            : null,
+      ),
       MobileDestination.dashboardTwo => DashboardTwoScreen(
-          controller: widget.dashboardController,
-          currency: widget.config.currency,
-          onOpenPayments:
-              widget.policy.destinations.contains(MobileDestination.payments)
-                  ? () => _selectDestination(MobileDestination.payments)
-                  : null,
-          onOpenContract: _openContract,
-        ),
+        controller: widget.dashboardController,
+        currency: widget.config.currency,
+        onOpenPayments:
+            widget.policy.destinations.contains(MobileDestination.payments)
+            ? () => _selectDestination(MobileDestination.payments)
+            : null,
+        onOpenContract: _openContract,
+      ),
       MobileDestination.customers => CustomersScreen(
-          controller: widget.customersController,
-        ),
+        controller: widget.customersController,
+      ),
       MobileDestination.suppliers => SuppliersScreen(
-          controller: widget.suppliersController,
-        ),
+        controller: widget.suppliersController,
+      ),
       MobileDestination.contracts => ContractsScreen(
-          controller: widget.contractsController,
-          customers: widget.dashboardController.overview?.customers ??
-              const <CustomerOption>[],
-          currency: widget.config.currency,
-          onOpenContract: _openContract,
-        ),
+        controller: widget.contractsController,
+        customers:
+            widget.dashboardController.overview?.customers ??
+            const <CustomerOption>[],
+        currency: widget.config.currency,
+        onOpenContract: _openContract,
+      ),
       MobileDestination.payments => PaymentsScreen(
-          repository: PaymentsRepository(apiClient),
-          pageSize: widget.config.defaultPageSize,
-          filters: widget.dashboardController.filters,
-          currency: widget.config.currency,
-          canManagePayments:
-              widget.session.can('safecontracts_manage_payments'),
-          canEnterCollection: widget.policy.canEnterCollection,
-          onDataChanged: () =>
-              unawaited(widget.dashboardController.refreshSilently()),
-          refreshRevision: _liveRefreshRevision,
-        ),
+        repository: PaymentsRepository(apiClient),
+        pageSize: widget.config.defaultPageSize,
+        filters: widget.dashboardController.filters,
+        currency: widget.config.currency,
+        canManagePayments: widget.session.can('safecontracts_manage_payments'),
+        canEnterCollection: widget.policy.canEnterCollection,
+        onDataChanged: () =>
+            unawaited(widget.dashboardController.refreshSilently()),
+        refreshRevision: _liveRefreshRevision,
+      ),
       MobileDestination.collections => CollectionsScreen(
-          repository: CollectionsRepository(apiClient),
-          pageSize: widget.config.defaultPageSize,
-          filters: widget.dashboardController.filters,
-          refreshRevision: _liveRefreshRevision,
-        ),
+        repository: CollectionsRepository(apiClient),
+        pageSize: widget.config.defaultPageSize,
+        filters: widget.dashboardController.filters,
+        refreshRevision: _liveRefreshRevision,
+      ),
       MobileDestination.finance => FinanceScreen(
-          controller: widget.financeController,
-        ),
+        controller: widget.financeController,
+      ),
       MobileDestination.followUps => FollowUpsScreen(
-          repository: FollowUpsRepository(apiClient),
-          pageSize: widget.config.defaultPageSize,
-          filters: widget.dashboardController.filters,
-          currency: widget.config.currency,
-          canManage: widget.policy.canManageFollowUps,
-          refreshRevision: _liveRefreshRevision,
-        ),
+        repository: FollowUpsRepository(apiClient),
+        pageSize: widget.config.defaultPageSize,
+        filters: widget.dashboardController.filters,
+        currency: widget.config.currency,
+        canManage: widget.policy.canManageFollowUps,
+        refreshRevision: _liveRefreshRevision,
+      ),
       MobileDestination.notifications => NotificationsScreen(
-          controller: widget.notificationsController,
-          onOpenDeepLink: _openDeepLink,
-        ),
+        controller: widget.notificationsController,
+        onOpenDeepLink: _openDeepLink,
+      ),
       MobileDestination.export => MobileExcelExportScreen(
-          controller: widget.excelExportController,
-        ),
+        controller: widget.excelExportController,
+      ),
       MobileDestination.profile => ProfileScreen(
-          session: widget.session,
-          config: widget.config,
-          controller: widget.profileController,
-          pushRegistration: widget.pushRegistration,
-          languageCode: widget.languageCode,
-          onLanguageChanged: widget.onLanguageChanged,
-          onClearSession: widget.onClearSession,
-        ),
+        session: widget.session,
+        config: widget.config,
+        controller: widget.profileController,
+        pushRegistration: widget.pushRegistration,
+        languageCode: widget.languageCode,
+        onLanguageChanged: widget.onLanguageChanged,
+        onClearSession: widget.onClearSession,
+      ),
     };
   }
 
@@ -613,7 +620,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 
   void _openContract(int contractId) {
-    final canOpenContractEditor = widget.contractsController.canEditContract ||
+    final canOpenContractEditor =
+        widget.contractsController.canEditContract ||
         widget.session.can('safecontracts_assign_contracts');
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -633,7 +641,8 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
   }
 
   void _openLegacyContract(int contractId) {
-    final canOpenContractEditor = widget.contractsController.canEditContract ||
+    final canOpenContractEditor =
+        widget.contractsController.canEditContract ||
         widget.session.can('safecontracts_assign_contracts');
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -722,10 +731,7 @@ final class _QuickAddFabState extends State<_QuickAddFab>
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(
-            color: SafeContractsVisual.roseGoldSoft,
-            width: 3,
-          ),
+          border: Border.all(color: SafeContractsVisual.roseGoldSoft, width: 3),
           boxShadow: [
             BoxShadow(
               color: SafeContractsVisual.roseGold.withValues(alpha: 0.30),
@@ -764,19 +770,18 @@ final class _QuickAddSheet extends StatelessWidget {
           Text(
             arabic ? 'إضافة جديدة' : 'Quick add',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: SafeContractsVisual.navy,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: SafeContractsVisual.navy,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             arabic
                 ? 'المتاح هنا حسب صلاحيات الإضافة الخاصة بحسابك.'
                 : 'Only create actions allowed for your account appear here.',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: SafeContractsVisual.muted),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: SafeContractsVisual.muted),
           ),
           const SizedBox(height: 16),
           ...actions.indexed.map((entry) {
@@ -826,9 +831,7 @@ final class _QuickAddSheet extends StatelessWidget {
                               children: [
                                 Text(
                                   mobileQuickAddLabel(context, action),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
+                                  style: Theme.of(context).textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: 2),
@@ -836,9 +839,7 @@ final class _QuickAddSheet extends StatelessWidget {
                                   mobileQuickAddDescription(context, action),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
+                                  style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
                                         color: SafeContractsVisual.muted,
                                       ),
@@ -887,9 +888,7 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
       child: DecoratedBox(
         decoration: const BoxDecoration(
           color: SafeContractsVisual.surface,
-          border: Border(
-            top: BorderSide(color: SafeContractsVisual.outline),
-          ),
+          border: Border(top: BorderSide(color: SafeContractsVisual.outline)),
           boxShadow: [
             BoxShadow(
               color: Color(0x205E5142),
@@ -901,45 +900,46 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(6, 8, 6, 6),
           child: Row(
-            children: destinations.map((destination) {
-              final isSelected = destination == selected;
-              return Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => onSelected(destination),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? SafeContractsVisual.roseGoldSoft.withValues(
-                              alpha: 0.86,
-                            )
-                          : Colors.transparent,
+            children: destinations
+                .map((destination) {
+                  final isSelected = destination == selected;
+                  return Expanded(
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedScale(
-                          scale: isSelected ? 1.08 : 1,
-                          duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeOutBack,
-                          child: Icon(
-                            _icon(destination),
-                            color: isSelected
-                                ? SafeContractsVisual.navy
-                                : SafeContractsVisual.muted,
-                          ),
+                      onTap: () => onSelected(destination),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? SafeContractsVisual.roseGoldSoft.withValues(
+                                  alpha: 0.86,
+                                )
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          labelFor(destination),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedScale(
+                              scale: isSelected ? 1.08 : 1,
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutBack,
+                              child: Icon(
+                                _icon(destination),
+                                color: isSelected
+                                    ? SafeContractsVisual.navy
+                                    : SafeContractsVisual.muted,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              labelFor(destination),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
                                     color: isSelected
                                         ? SafeContractsVisual.navy
                                         : SafeContractsVisual.muted,
@@ -947,13 +947,14 @@ final class _SafeContractsBottomNavigation extends StatelessWidget {
                                         ? FontWeight.w800
                                         : FontWeight.w500,
                                   ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(growable: false),
+                  );
+                })
+                .toList(growable: false),
           ),
         ),
       ),

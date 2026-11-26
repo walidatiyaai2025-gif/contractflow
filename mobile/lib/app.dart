@@ -11,6 +11,8 @@ import 'core/branding/safe_contracts_brand.dart';
 import 'core/config/app_environment.dart';
 import 'core/localization/mobile_locale_controller.dart';
 import 'core/localization/safecontracts_localizations.dart';
+import 'features/ads/alkenzy_ad_placements.dart';
+import 'features/ads/alkenzy_rewarded_fun_service.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/mobile_auth.dart';
 import 'features/bootstrap/mobile_bootstrap_controller.dart';
@@ -67,11 +69,13 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
       initialLanguageCode: widget.languageCode,
     );
     unawaited(_localeController.load());
-    _tokenStore = widget.tokenStore ??
+    _tokenStore =
+        widget.tokenStore ??
         (widget.client == null
             ? SecureMobileTokenStore()
             : MemoryMobileTokenStore());
-    _client = widget.client ??
+    _client =
+        widget.client ??
         SafeContractsApiClient(
           environment: widget.environment,
           transport: IoApiTransport(),
@@ -221,9 +225,48 @@ final class _BootstrapView extends StatefulWidget {
   State<_BootstrapView> createState() => _BootstrapViewState();
 }
 
-final class _BootstrapViewState extends State<_BootstrapView> {
+final class _BootstrapViewState extends State<_BootstrapView>
+    with WidgetsBindingObserver {
   bool _showLogin = false;
   bool _logoutInFlight = false;
+  DateTime? _guestBackgroundAt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _guestBackgroundAt = DateTime.now();
+    }
+    if (state != AppLifecycleState.resumed) return;
+    final backgroundAt = _guestBackgroundAt;
+    _guestBackgroundAt = null;
+    // Public landing only; never login, an active dialog/XO, or the signed-in
+    // workspace. An actual background interval is always required.
+    final onGuestLanding =
+        mounted &&
+        !_showLogin &&
+        widget.controller.sessionController?.state ==
+            SessionState.unauthenticated &&
+        !AlkenzyRewardedFun.instance.busy &&
+        !AlkenzyFullScreenAds.instance.isShowing &&
+        ModalRoute.of(context)?.isCurrent == true;
+    if (onGuestLanding &&
+        backgroundAt != null &&
+        DateTime.now().difference(backgroundAt) >= const Duration(minutes: 2)) {
+      unawaited(AlkenzyFullScreenAds.instance.showAppOpenOnForeground());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   Future<void> _logoutFromAuthenticatedShell() async {
     if (_logoutInFlight) return;
@@ -312,8 +355,8 @@ final class _BootstrapViewState extends State<_BootstrapView> {
 
               final authenticated =
                   widget.controller.state == MobileBootstrapState.ready &&
-                      widget.controller.sessionController?.state ==
-                          SessionState.authenticated;
+                  widget.controller.sessionController?.state ==
+                      SessionState.authenticated;
               if (authenticated) {
                 setState(() => _showLogin = false);
                 return;
@@ -331,7 +374,7 @@ final class _BootstrapViewState extends State<_BootstrapView> {
 
         final isLoading =
             widget.controller.state == MobileBootstrapState.idle ||
-                widget.controller.state == MobileBootstrapState.loading;
+            widget.controller.state == MobileBootstrapState.loading;
         return SafeContractsSplash(
           label: isLoading
               ? l10n.t('Loading')
@@ -351,8 +394,9 @@ final class _BootstrapViewState extends State<_BootstrapView> {
                       'SafeContracts mobile is unavailable.',
                 ),
           retryLabel: l10n.t('Retry session'),
-          onRetry:
-              isLoading ? null : () => unawaited(widget.controller.bootstrap()),
+          onRetry: isLoading
+              ? null
+              : () => unawaited(widget.controller.bootstrap()),
         );
       },
     );

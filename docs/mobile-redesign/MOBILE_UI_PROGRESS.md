@@ -135,3 +135,11 @@ This documentation checkpoint must itself pass the full Quality Gates on its exa
 - Latest comparison-confirmed remaining source deltas are bounded to navigation drawer navy treatment, centered Quick Add, Arabic navigation labels, unnecessary whole-number `.00` display, supplier fixture fidelity, and reconciliation of the reachable Collections destination with the existing authoritative payment/collection flow.
 - No unrelated redesign or business-rule changes are authorized during this closure pass.
 - Final completion remains blocked until those bounded deltas are committed, exact-head Quality Gates and Mobile Reference Capture are GREEN, post-fix screenshot artifacts are re-compared to all six references, progress/matrix are updated from that evidence, and ZERO remaining redesign items is verified.
+
+## 2026-11-26 — Alkenzy ADV 0.3.38 guest Landing viewport fit
+
+- Replaced the guest Landing root `SingleChildScrollView` / pull-to-refresh with a screen-height `LayoutBuilder` composition; refresh remains available via the header refresh action. The image carousel remains horizontally swipeable.
+- Fixed-size **native AdMob banner 320×50** remains directly beneath the slider with its original 12px vertical padding. Slim phones (320–351px wide) use edge-to-edge landing content to avoid clipping or scaling the banner.
+- The hero image and branded fallback shrink with viewport height; the three large feature cards become a compact, accessible three-column strip. Tap any card for its full description in a modal; full landing summary is still reachable from **Learn More**. Main CTA, guest Rewarded XO and play counter remain in the visible viewport.
+- Added AR + EN Flutter widget assertions for 320×568, 360×640 and 390×844, plus no-image fallback. These check absence of vertical scrolling, preserved banner/reward/CTA, in-bounds buttons and layout exceptions. Bundled into the signed B38 build workflow.
+- Kept the locked cream/navy/rose-gold palette, existing API contract and production AdMob unit. Matrix AUTH-01 marked **IMPL** until final exact-head CI, screenshots and physical-device acceptance; no visual completion claim.
