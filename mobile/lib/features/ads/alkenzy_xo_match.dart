@@ -1,13 +1,14 @@
 /// One X/O game is a non-transferable, in-app Rewarded Ad benefit.
 /// The board does not depend on WordPress, accounts or internet requests.
 enum XoPiece { empty, human, computer }
+
 enum XoOutcome { playing, humanWon, computerWon, draw }
 
 final class AlkenzyXoMatch {
   AlkenzyXoMatch({List<XoPiece>? initial})
-      : cells = List<XoPiece>.of(
-          initial ?? List<XoPiece>.filled(9, XoPiece.empty),
-        ) {
+    : cells = List<XoPiece>.of(
+        initial ?? List<XoPiece>.filled(9, XoPiece.empty),
+      ) {
     if (cells.length != 9) {
       throw ArgumentError.value(cells.length, 'initial', 'Expected 9 cells');
     }
@@ -16,9 +17,14 @@ final class AlkenzyXoMatch {
   final List<XoPiece> cells;
 
   static const _winningLines = <List<int>>[
-    [0, 1, 2], [3, 4, 5], [6, 7, 8],
-    [0, 3, 6], [1, 4, 7], [2, 5, 8],
-    [0, 4, 8], [2, 4, 6],
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
   ];
 
   XoOutcome get outcome {
@@ -32,9 +38,7 @@ final class AlkenzyXoMatch {
             : XoOutcome.computerWon;
       }
     }
-    return cells.contains(XoPiece.empty)
-        ? XoOutcome.playing
-        : XoOutcome.draw;
+    return cells.contains(XoPiece.empty) ? XoOutcome.playing : XoOutcome.draw;
   }
 
   bool humanMove(int index) {
@@ -60,10 +64,8 @@ final class AlkenzyXoMatch {
         cells[i] = piece;
         final result = outcome;
         cells[i] = XoPiece.empty;
-        if ((piece == XoPiece.computer &&
-                result == XoOutcome.computerWon) ||
-            (piece == XoPiece.human &&
-                result == XoOutcome.humanWon)) {
+        if ((piece == XoPiece.computer && result == XoOutcome.computerWon) ||
+            (piece == XoPiece.human && result == XoOutcome.humanWon)) {
           return i;
         }
       }

@@ -86,10 +86,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                               children: [
                                 _ReferenceHeader(
                                   languageCode: widget.languageCode,
-                                  learnMoreLabel:
-                                      content.learnMoreLabel.resolve(
-                                    widget.languageCode,
-                                  ),
+                                  learnMoreLabel: content.learnMoreLabel
+                                      .resolve(widget.languageCode),
                                   onLearnMore: () => _showAbout(content),
                                   onLanguageChanged: widget.onLanguageChanged,
                                 ),
@@ -141,9 +139,7 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
+                                  style: Theme.of(context).textTheme.titleSmall
                                       ?.copyWith(
                                         color: SafeContractsVisual.roseGoldDark,
                                         fontWeight: FontWeight.w800,
@@ -155,9 +151,7 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   textAlign: TextAlign.center,
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
+                                  style: Theme.of(context).textTheme.bodyMedium
                                       ?.copyWith(
                                         color: SafeContractsVisual.muted,
                                         height: 1.6,
@@ -166,12 +160,14 @@ final class _AlkenzyCompanyWelcomeScreenState
                                 if (widget.controller.state ==
                                     MobileLandingState.loading) ...[
                                   const SizedBox(
-                                      height: SafeContractsSpacing.sm),
+                                    height: SafeContractsSpacing.sm,
+                                  ),
                                   const LinearProgressIndicator(minHeight: 2),
                                 ],
                                 if (widget.controller.usingFallback) ...[
                                   const SizedBox(
-                                      height: SafeContractsSpacing.sm),
+                                    height: SafeContractsSpacing.sm,
+                                  ),
                                   _FallbackNotice(
                                     arabic: arabic,
                                     onRetry: () =>
@@ -253,9 +249,9 @@ final class _AlkenzyCompanyWelcomeScreenState
             children: [
               Text(
                 content.summary.resolve(widget.languageCode),
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 1.6,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(height: 1.6),
               ),
               if (content.phones.isNotEmpty) ...[
                 const SizedBox(height: SafeContractsSpacing.md),
@@ -482,10 +478,7 @@ final class _LandingImageGalleryState extends State<_LandingImageGallery> {
                   const PositionedDirectional(
                     top: 10,
                     start: 10,
-                    child: SafeContractsBrandMark(
-                      size: 42,
-                      borderRadius: 12,
-                    ),
+                    child: SafeContractsBrandMark(size: 42, borderRadius: 12),
                   ),
                 ],
               ),
@@ -513,8 +506,9 @@ final class _LandingImageGalleryState extends State<_LandingImageGallery> {
                     color: index == _currentPage
                         ? SafeContractsVisual.navy
                         : SafeContractsVisual.outline,
-                    borderRadius:
-                        BorderRadius.circular(SafeContractsRadii.pill),
+                    borderRadius: BorderRadius.circular(
+                      SafeContractsRadii.pill,
+                    ),
                   ),
                 ),
               ),
@@ -527,10 +521,7 @@ final class _LandingImageGalleryState extends State<_LandingImageGallery> {
 }
 
 final class _LandingImageFallback extends StatelessWidget {
-  const _LandingImageFallback({
-    required this.label,
-    required this.arabic,
-  });
+  const _LandingImageFallback({required this.label, required this.arabic});
 
   final String label;
   final bool arabic;
@@ -566,16 +557,16 @@ final class _LandingImageFallback extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: SafeContractsVisual.navy,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  color: SafeContractsVisual.navy,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: SafeContractsSpacing.xxs),
               Text(
                 arabic ? 'تعذر تحميل الصورة' : 'Image unavailable',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SafeContractsVisual.muted,
-                    ),
+                  color: SafeContractsVisual.muted,
+                ),
               ),
             ],
           ),
@@ -622,9 +613,9 @@ final class _ReferenceFeatureTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: SafeContractsVisual.navyDeep,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: SafeContractsVisual.navyDeep,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: SafeContractsSpacing.xxs),
                 Text(
@@ -632,9 +623,9 @@ final class _ReferenceFeatureTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SafeContractsVisual.muted,
-                        height: 1.4,
-                      ),
+                    color: SafeContractsVisual.muted,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),

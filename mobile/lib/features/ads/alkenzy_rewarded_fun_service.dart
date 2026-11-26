@@ -11,7 +11,7 @@ import 'mobile_ads.dart';
 /// Tickets survive app restarts; they are never granted for skipped/failed ads.
 final class AlkenzyRewardedFun extends ChangeNotifier {
   AlkenzyRewardedFun({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   static final instance = AlkenzyRewardedFun();
   static const cooldown = Duration(minutes: 2);
@@ -39,8 +39,7 @@ final class AlkenzyRewardedFun extends ChangeNotifier {
     return value.isNegative ? Duration.zero : value;
   }
 
-  bool get canStart =>
-      !_busy && (_hasTicket || remaining() == Duration.zero);
+  bool get canStart => !_busy && (_hasTicket || remaining() == Duration.zero);
 
   Future<void> ensureLoaded() => _restoring ??= _restore();
 
@@ -124,6 +123,7 @@ final class AlkenzyRewardedFun extends ChangeNotifier {
         ad.dispose();
         if (!finished.isCompleted) finished.complete();
       }
+
       ad.fullScreenContentCallback = gma.FullScreenContentCallback(
         onAdDismissedFullScreenContent: close,
         onAdFailedToShowFullScreenContent: (ad, error) => close(ad),

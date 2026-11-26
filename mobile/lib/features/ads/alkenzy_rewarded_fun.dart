@@ -8,10 +8,7 @@ import 'alkenzy_xo_match.dart';
 
 /// Available before login as well as in the authenticated navigation drawer.
 final class AlkenzyRewardedFunButton extends StatefulWidget {
-  const AlkenzyRewardedFunButton({
-    required this.languageCode,
-    super.key,
-  });
+  const AlkenzyRewardedFunButton({required this.languageCode, super.key});
   final String languageCode;
 
   @override
@@ -75,9 +72,11 @@ final class _AlkenzyRewardedFunButtonState
       if (accepted != true || !mounted) return;
       if (!await _fun.watchForOneGame()) {
         if (mounted) {
-          setState(() => _error = _ar
-              ? 'الإعلان غير متاح الآن، حاول لاحقاً.'
-              : 'No ad is available right now. Try again later.');
+          setState(
+            () => _error = _ar
+                ? 'الإعلان غير متاح الآن، حاول لاحقاً.'
+                : 'No ad is available right now. Try again later.',
+          );
         }
         return;
       }
@@ -86,17 +85,18 @@ final class _AlkenzyRewardedFunButtonState
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlkenzyXoGameDialog(
-        languageCode: widget.languageCode,
-      ),
+      builder: (dialogContext) =>
+          AlkenzyXoGameDialog(languageCode: widget.languageCode),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final duration = _fun.remaining();
-    final seconds = duration.inSeconds + (duration.inMilliseconds % 1000 > 0 ? 1 : 0);
-    final countdown = '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
+    final seconds =
+        duration.inSeconds + (duration.inMilliseconds % 1000 > 0 ? 1 : 0);
+    final countdown =
+        '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
     final cooling = !_fun.hasTicket && seconds > 0;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -124,11 +124,17 @@ final class _AlkenzyRewardedFunButtonState
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 11),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 11,
+                ),
                 child: Text(
                   _ar ? 'عدد المرات: ${_fun.count}' : 'Plays: ${_fun.count}',
                   key: const Key('alkenzyFunCount'),
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -137,20 +143,28 @@ final class _AlkenzyRewardedFunButtonState
         const SizedBox(height: 3),
         Text(
           _fun.hasTicket
-              ? (_ar ? 'جولة XO جاهزة — اضغط للعب' : 'One XO game is ready — tap to play')
+              ? (_ar
+                    ? 'جولة XO جاهزة — اضغط للعب'
+                    : 'One XO game is ready — tap to play')
               : cooling
-                  ? (_ar ? 'متاح مجدداً بعد $countdown' : 'Available in $countdown')
-                  : (_ar
-                      ? 'إعلان اختياري = جولة XO واحدة ضد الكمبيوتر'
-                      : 'Optional ad = one XO game against the computer'),
+              ? (_ar ? 'متاح مجدداً بعد $countdown' : 'Available in $countdown')
+              : (_ar
+                    ? 'إعلان اختياري = جولة XO واحدة ضد الكمبيوتر'
+                    : 'Optional ad = one XO game against the computer'),
           textAlign: TextAlign.center,
-          style: const TextStyle(color: SafeContractsVisual.muted, fontSize: 11),
+          style: const TextStyle(
+            color: SafeContractsVisual.muted,
+            fontSize: 11,
+          ),
         ),
         if (_error != null)
           Text(
             _error!,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: SafeContractsVisual.red, fontSize: 11),
+            style: const TextStyle(
+              color: SafeContractsVisual.red,
+              fontSize: 11,
+            ),
           ),
       ],
     );
@@ -172,11 +186,12 @@ final class _AlkenzyXoGameDialogState extends State<AlkenzyXoGameDialog> {
   bool get _ar => widget.languageCode.toLowerCase().startsWith('ar');
 
   String get _status => switch (_match.outcome) {
-        XoOutcome.playing => _ar ? 'أنت X — الكمبيوتر O' : 'You are X — Computer is O',
-        XoOutcome.humanWon => _ar ? 'مبروك! فزت 🎉' : 'You won! 🎉',
-        XoOutcome.computerWon => _ar ? 'الكمبيوتر فاز' : 'The computer won',
-        XoOutcome.draw => _ar ? 'تعادل!' : 'Draw!',
-      };
+    XoOutcome.playing =>
+      _ar ? 'أنت X — الكمبيوتر O' : 'You are X — Computer is O',
+    XoOutcome.humanWon => _ar ? 'مبروك! فزت 🎉' : 'You won! 🎉',
+    XoOutcome.computerWon => _ar ? 'الكمبيوتر فاز' : 'The computer won',
+    XoOutcome.draw => _ar ? 'تعادل!' : 'Draw!',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -188,8 +203,10 @@ final class _AlkenzyXoGameDialogState extends State<AlkenzyXoGameDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_ar ? 'لعبة إكس أو' : 'Tic-Tac-Toe',
-                style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                _ar ? 'لعبة إكس أو' : 'Tic-Tac-Toe',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 6),
               Text(_status, key: const Key('alkenzyXoStatus')),
               const SizedBox(height: 14),
@@ -199,7 +216,10 @@ final class _AlkenzyXoGameDialogState extends State<AlkenzyXoGameDialog> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: 9,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3, mainAxisSpacing: 5, crossAxisSpacing: 5),
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 5,
+                    crossAxisSpacing: 5,
+                  ),
                   itemBuilder: (context, index) {
                     final piece = _match.cells[index];
                     final symbol = switch (piece) {
@@ -213,17 +233,22 @@ final class _AlkenzyXoGameDialogState extends State<AlkenzyXoGameDialog> {
                       child: InkWell(
                         key: Key('alkenzyXoCell$index'),
                         borderRadius: BorderRadius.circular(10),
-                        onTap: _match.outcome == XoOutcome.playing &&
+                        onTap:
+                            _match.outcome == XoOutcome.playing &&
                                 piece == XoPiece.empty
                             ? () => setState(() => _match.humanMove(index))
                             : null,
                         child: Center(
-                          child: Text(symbol,
+                          child: Text(
+                            symbol,
                             style: TextStyle(
                               color: piece == XoPiece.human
                                   ? SafeContractsVisual.navy
                                   : SafeContractsVisual.roseGoldDark,
-                              fontSize: 38, fontWeight: FontWeight.w900)),
+                              fontSize: 38,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -233,9 +258,11 @@ final class _AlkenzyXoGameDialogState extends State<AlkenzyXoGameDialog> {
               const SizedBox(height: 12),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(_match.outcome == XoOutcome.playing
-                    ? (_ar ? 'إنهاء الجولة' : 'End game')
-                    : (_ar ? 'تم' : 'Done')),
+                child: Text(
+                  _match.outcome == XoOutcome.playing
+                      ? (_ar ? 'إنهاء الجولة' : 'End game')
+                      : (_ar ? 'تم' : 'Done'),
+                ),
               ),
             ],
           ),

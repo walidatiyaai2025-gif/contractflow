@@ -21,20 +21,13 @@ abstract final class AlkenzyAdUnits {
   // Two distinct customer IDs were supplied with the SAME AdMob label.
   // Keep both: the second is used in the customer details surface.
   static const Map<AlkenzyBannerSlot, String> banners = {
-    AlkenzyBannerSlot.homeFinancial:
-        'ca-app-pub-3218037275900725/1295000750',
-    AlkenzyBannerSlot.homeActivity:
-        'ca-app-pub-3218037275900725/2203711564',
-    AlkenzyBannerSlot.contractsList:
-        'ca-app-pub-3218037275900725/8512427056',
-    AlkenzyBannerSlot.contractDetails:
-        'ca-app-pub-3218037275900725/3865323776',
-    AlkenzyBannerSlot.customersList:
-        'ca-app-pub-3218037275900725/3882916907',
-    AlkenzyBannerSlot.customersDetail:
-        'ca-app-pub-3218037275900725/6979853539',
-    AlkenzyBannerSlot.suppliersList:
-        'ca-app-pub-3218037275900725/5666771860',
+    AlkenzyBannerSlot.homeFinancial: 'ca-app-pub-3218037275900725/1295000750',
+    AlkenzyBannerSlot.homeActivity: 'ca-app-pub-3218037275900725/2203711564',
+    AlkenzyBannerSlot.contractsList: 'ca-app-pub-3218037275900725/8512427056',
+    AlkenzyBannerSlot.contractDetails: 'ca-app-pub-3218037275900725/3865323776',
+    AlkenzyBannerSlot.customersList: 'ca-app-pub-3218037275900725/3882916907',
+    AlkenzyBannerSlot.customersDetail: 'ca-app-pub-3218037275900725/6979853539',
+    AlkenzyBannerSlot.suppliersList: 'ca-app-pub-3218037275900725/5666771860',
   };
 
   static const testBanner = 'ca-app-pub-3940256099942544/6300978111';
@@ -51,10 +44,10 @@ abstract final class AlkenzyAdUnits {
 
   static String interstitial({required bool reports, required bool testMode}) =>
       testMode
-          ? testInterstitial
-          : reports
-              ? interstitialReports
-              : interstitialMain;
+      ? testInterstitial
+      : reports
+      ? interstitialReports
+      : interstitialMain;
 
   static String appOpenUnit({required bool testMode}) =>
       testMode ? testAppOpen : appOpen;
