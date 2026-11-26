@@ -69,7 +69,7 @@ final class _AlkenzyCompanyWelcomeScreenState
                     // The public landing is a single viewport, never a list.
                     final height = constraints.maxHeight;
                     final narrow = constraints.maxWidth < 352;
-                    final veryShort = height < 550;
+                    final veryShort = height < 620;
                     final compact = height < 690;
                     final gap = veryShort ? 4.0 : compact ? 7.0 : 10.0;
                     // A standard AdMob 320x50 creative must remain unscaled.
