@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../ui/safecontracts_design.dart';
 import 'alkenzy_rewarded_fun_service.dart';
+import 'mobile_ads.dart';
 import 'alkenzy_xo_match.dart';
 
 /// Available before login as well as in the authenticated navigation drawer.
@@ -157,6 +158,15 @@ final class _AlkenzyRewardedFunButtonState
             fontSize: 11,
           ),
         ),
+        if (SafeContractsMobileAds.instance.privacyOptionsRequired)
+          TextButton(
+            onPressed: () => unawaited(
+              SafeContractsMobileAds.instance.showPrivacyOptions(),
+            ),
+            child: Text(
+              _ar ? 'خيارات خصوصية الإعلانات' : 'Ad privacy options',
+            ),
+          ),
         if (_error != null)
           Text(
             _error!,

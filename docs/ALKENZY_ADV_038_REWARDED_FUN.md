@@ -11,7 +11,7 @@ Base: signed build 37 source c8b87e91641b4de6d32db35098c9705fc2245b2d (R8 disabl
 - 2-minute cooldown starts when a reward is earned; no automatic ad pop-up. Failed/unavailable ads do not start a cooldown.
 - Android native AdMob app ID remains ca-app-pub-3218037275900725~7401372044, and UMP consent/init uses existing SafeContractsMobileAds service.
 - One XO popup against computer per earned ticket. Closing it ends the round. There are no in-game purchases, balances or transferable rewards.
-- No new API endpoint/WordPress changes are required.
+- No new API endpoint, WordPress runtime behavior, or server deployment is required. Plugin version header and stable tag are synchronized to 0.3.38 solely to satisfy the repository's unified release-version validation.
 
 QA: test guest (without token), login/logout, consent denied, ad unavailable, skipped ad, earned ad, pending ticket on app restart, exactly one game, count persistence, 2-minute gating, RTL/narrow screens, Android 13–16, Google Play signed Internal Testing. Review AdMob reward-policy disclosure before production rollout.
 
