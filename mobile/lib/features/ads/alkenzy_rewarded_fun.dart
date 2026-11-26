@@ -160,12 +160,9 @@ final class _AlkenzyRewardedFunButtonState
         ),
         if (SafeContractsMobileAds.instance.privacyOptionsRequired)
           TextButton(
-            onPressed: () => unawaited(
-              SafeContractsMobileAds.instance.showPrivacyOptions(),
-            ),
-            child: Text(
-              _ar ? 'خيارات خصوصية الإعلانات' : 'Ad privacy options',
-            ),
+            onPressed: () =>
+                unawaited(SafeContractsMobileAds.instance.showPrivacyOptions()),
+            child: Text(_ar ? 'خيارات خصوصية الإعلانات' : 'Ad privacy options'),
           ),
         if (_error != null)
           Text(
