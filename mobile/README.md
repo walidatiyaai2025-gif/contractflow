@@ -59,3 +59,19 @@ exact-head Flutter tests, signed AAB + diagnostic APK, AdMob privacy consent,
 and Google Play-installed UAT before promoting this feature to Production.
 An unavailable ad must leave the app functional and should never be counted as
 a confirmed impression or game.
+
+## Landing viewport acceptance — 0.3.38 revision
+
+The public welcome screen is **not vertically scrollable**. It uses a
+height-aware, responsive layout preserving the real-size 320×50 AdMob banner
+immediately below the image carousel, with the Rewarded XO action/counter and
+the sign-in action visible in the initial viewport. The three commercial
+features appear in one row; tapping a feature or **Learn More** opens the full
+copy without scrolling the landing itself. A separate refresh action replaces
+the obsolete pull-to-refresh gesture. Small-screen gallery load errors show a
+compact accessible icon instead of overflowing the hero.
+
+Exact-source Flutter widget QA: Arabic + English at logical sizes
+320×568, 360×640, and 390×844, plus no-image fallback, no vertical Scrollable,
+in-bounds CTAs, and no layout exceptions. Device QA and all required
+repository-wide CI gates remain mandatory before store production promotion.
