@@ -63,177 +63,208 @@ final class _AlkenzyCompanyWelcomeScreenState
             children: [
               const _ReferenceBackdrop(),
               SafeArea(
-                child: RefreshIndicator(
-                  onRefresh: widget.controller.refresh,
-                  color: SafeContractsVisual.roseGold,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final compact = constraints.maxWidth < 360;
-                      final horizontal = compact
-                          ? SafeContractsSpacing.screenNarrow
-                          : SafeContractsSpacing.screen;
-                      return SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(
-                          horizontal,
-                          SafeContractsSpacing.xs,
-                          horizontal,
-                          SafeContractsSpacing.lg,
-                        ),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: 520,
-                              minHeight: constraints.maxHeight - 28,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _ReferenceHeader(
-                                  languageCode: widget.languageCode,
-                                  learnMoreLabel: content.learnMoreLabel
-                                      .resolve(widget.languageCode),
-                                  onLearnMore: () => _showAbout(content),
-                                  onLanguageChanged: widget.onLanguageChanged,
-                                ),
-                                const SizedBox(height: SafeContractsSpacing.xl),
-                                if (content.images.isEmpty)
-                                  const _BrandMedallion()
-                                else
-                                  _LandingImageGallery(
-                                    key: ValueKey<String>(
-                                      content.images
-                                          .map((image) => image.id)
-                                          .join(','),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Account for system insets before choosing the density.
+                    // The public landing is a single viewport, never a list.
+                    final height = constraints.maxHeight;
+                    final narrow = constraints.maxWidth < 352;
+                    final veryShort = height < 550;
+                    final compact = height < 690;
+                    final gap = veryShort ? 4.0 : compact ? 7.0 : 10.0;
+                    // A standard AdMob 320x50 creative must remain unscaled.
+                    // On 320-351px phones remove horizontal page margins.
+                    final horizontal = narrow
+                        ? 0.0
+                        : constraints.maxWidth < 390
+                        ? SafeContractsSpacing.screenNarrow
+                        : SafeContractsSpacing.screen;
+                    final heroHeight = (height * (veryShort ? 0.14 : 0.22))
+                        .clamp(64.0, compact ? 140.0 : 196.0);
+                    return Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 520),
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontal,
+                            veryShort ? 0 : 4,
+                            horizontal,
+                            veryShort ? 0 : 6,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _ReferenceHeader(
+                                languageCode: widget.languageCode,
+                                learnMoreLabel: content.learnMoreLabel
+                                    .resolve(widget.languageCode),
+                                onLearnMore: () => _showAbout(content),
+                                onRefresh: () =>
+                                    unawaited(widget.controller.refresh()),
+                                onLanguageChanged: widget.onLanguageChanged,
+                              ),
+                              SizedBox(height: gap),
+                              if (content.images.isEmpty)
+                                SizedBox(
+                                  height: heroHeight,
+                                  child: Center(
+                                    child: _BrandMedallion(
+                                      size: (heroHeight - 4).clamp(60.0, 92.0),
                                     ),
-                                    images: content.images,
-                                    languageCode: widget.languageCode,
                                   ),
-                                const AlkenzyInlineBanner(
+                                )
+                              else
+                                _LandingImageGallery(
+                                  key: ValueKey<String>(
+                                    content.images
+                                        .map((image) => image.id)
+                                        .join(','),
+                                  ),
+                                  images: content.images,
+                                  languageCode: widget.languageCode,
+                                  imageHeight: heroHeight,
+                                ),
+                              // Keep a full 320x50 banner plus its native
+                              // 12px vertical insets. No overlapping buttons
+                              // while the asynchronous creative is loading.
+                              const SizedBox(
+                                height: 74,
+                                child: AlkenzyInlineBanner(
                                   key: Key('alkenzyLandingSliderBanner'),
                                   slot: AlkenzyBannerSlot.landingSlider,
                                 ),
-                                const SizedBox(height: SafeContractsSpacing.lg),
-                                Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: arabic
-                                            ? 'مرحباً بك في\n'
-                                            : 'Welcome to\n',
-                                      ),
-                                      const TextSpan(
-                                        text: SafeContractsBrand.name,
-                                        style: TextStyle(
-                                          color: SafeContractsVisual.navy,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(
-                                        color: SafeContractsVisual.ink,
+                              ),
+                              SizedBox(height: gap / 2),
+                              Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: arabic
+                                          ? 'مرحباً بك في '
+                                          : 'Welcome to ',
+                                    ),
+                                    const TextSpan(
+                                      text: SafeContractsBrand.name,
+                                      style: TextStyle(
+                                        color: SafeContractsVisual.navy,
                                         fontWeight: FontWeight.w900,
-                                        height: 1.18,
-                                        letterSpacing: -0.5,
                                       ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: SafeContractsSpacing.xs),
-                                Text(
-                                  content.headline.resolve(widget.languageCode),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(
-                                        color: SafeContractsVisual.roseGoldDark,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                ),
-                                const SizedBox(height: SafeContractsSpacing.xs),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(
+                                      fontSize: veryShort ? 17 : 19,
+                                      color: SafeContractsVisual.ink,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1.12,
+                                    ),
+                              ),
+                              SizedBox(height: gap / 2),
+                              Text(
+                                content.headline.resolve(widget.languageCode),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(
+                                      color: SafeContractsVisual.roseGoldDark,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                              ),
+                              if (!veryShort) ...[
+                                SizedBox(height: gap / 2),
                                 Text(
                                   content.summary.resolve(widget.languageCode),
                                   textAlign: TextAlign.center,
-                                  maxLines: 3,
+                                  maxLines: compact ? 1 : 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodyMedium
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
                                       ?.copyWith(
                                         color: SafeContractsVisual.muted,
-                                        height: 1.6,
+                                        height: 1.2,
                                       ),
                                 ),
-                                if (widget.controller.state ==
-                                    MobileLandingState.loading) ...[
-                                  const SizedBox(
-                                    height: SafeContractsSpacing.sm,
-                                  ),
-                                  const LinearProgressIndicator(minHeight: 2),
-                                ],
-                                if (widget.controller.usingFallback) ...[
-                                  const SizedBox(
-                                    height: SafeContractsSpacing.sm,
-                                  ),
-                                  _FallbackNotice(
-                                    arabic: arabic,
-                                    onRetry: () =>
-                                        unawaited(widget.controller.refresh()),
-                                  ),
-                                ],
-                                const SizedBox(height: SafeContractsSpacing.lg),
-                                _ReferenceFeatureTile(
-                                  icon: Icons.description_outlined,
-                                  title: arabic
-                                      ? 'إدارة العقود بسهولة'
-                                      : 'Contract control',
-                                  description: arabic
-                                      ? 'أنشئ العقود وتابع حالتها من البداية حتى الإغلاق.'
-                                      : 'Create contracts and follow every stage through closure.',
-                                ),
-                                const SizedBox(height: SafeContractsSpacing.xs),
-                                _ReferenceFeatureTile(
-                                  icon: Icons.account_balance_wallet_outlined,
-                                  title: arabic
-                                      ? 'تحكم مالي ذكي'
-                                      : 'Smart finance',
-                                  description: arabic
-                                      ? 'تابع المستحقات والمدفوعات والتحصيلات في مساحة عمل واحدة.'
-                                      : 'Track receivables, payables and collections in one workspace.',
-                                ),
-                                const SizedBox(height: SafeContractsSpacing.xs),
-                                _ReferenceFeatureTile(
-                                  icon: Icons.analytics_outlined,
-                                  title: arabic
-                                      ? 'تقارير وبيانات دقيقة'
-                                      : 'Clear reporting',
-                                  description: arabic
-                                      ? 'استخدم بيانات النظام الحقيقية لاتخاذ قرارات تشغيلية أوضح.'
-                                      : 'Use live system data for focused operational decisions.',
-                                ),
-                                const SizedBox(height: SafeContractsSpacing.md),
-                                AlkenzyRewardedFunButton(
-                                  languageCode: widget.languageCode,
-                                ),
-                                const SizedBox(height: SafeContractsSpacing.md),
-                                SafeContractsButton(
-                                  key: const Key('companyWelcomeSignIn'),
-                                  label: arabic ? 'ابدأ الآن' : 'Get started',
-                                  icon: arabic
-                                      ? Icons.arrow_back_rounded
-                                      : Icons.arrow_forward_rounded,
-                                  onPressed: widget.onSignIn,
-                                  variant: SafeContractsButtonVariant.primary,
-                                ),
                               ],
-                            ),
+                              if (widget.controller.state ==
+                                  MobileLandingState.loading)
+                                const LinearProgressIndicator(minHeight: 2),
+                              if (widget.controller.usingFallback)
+                                _FallbackNotice(
+                                  arabic: arabic,
+                                  onRetry: () =>
+                                      unawaited(widget.controller.refresh()),
+                                ),
+                              SizedBox(height: gap),
+                              SizedBox(
+                                height: veryShort ? 54 : compact ? 62 : 68,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _ReferenceFeatureTile(
+                                        icon: Icons.description_outlined,
+                                        title: arabic
+                                            ? 'إدارة العقود'
+                                            : 'Contracts',
+                                        description: arabic
+                                            ? 'أنشئ العقود وتابع حالتها من البداية حتى الإغلاق.'
+                                            : 'Create contracts and follow every stage through closure.',
+                                      ),
+                                    ),
+                                    SizedBox(width: gap),
+                                    Expanded(
+                                      child: _ReferenceFeatureTile(
+                                        icon: Icons.account_balance_wallet_outlined,
+                                        title: arabic
+                                            ? 'الإدارة المالية'
+                                            : 'Finance',
+                                        description: arabic
+                                            ? 'تابع المستحقات والمدفوعات والتحصيلات في مساحة عمل واحدة.'
+                                            : 'Track receivables, payables and collections in one workspace.',
+                                      ),
+                                    ),
+                                    SizedBox(width: gap),
+                                    Expanded(
+                                      child: _ReferenceFeatureTile(
+                                        icon: Icons.analytics_outlined,
+                                        title: arabic
+                                            ? 'التقارير'
+                                            : 'Reports',
+                                        description: arabic
+                                            ? 'استخدم بيانات النظام الحقيقية لاتخاذ قرارات تشغيلية أوضح.'
+                                            : 'Use live system data for focused operational decisions.',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Spacer(),
+                              AlkenzyRewardedFunButton(
+                                languageCode: widget.languageCode,
+                              ),
+                              SizedBox(height: gap),
+                              SafeContractsButton(
+                                key: const Key('companyWelcomeSignIn'),
+                                label: arabic ? 'ابدأ الآن' : 'Get started',
+                                icon: arabic
+                                    ? Icons.arrow_back_rounded
+                                    : Icons.arrow_forward_rounded,
+                                onPressed: widget.onSignIn,
+                                variant: SafeContractsButtonVariant.primary,
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -299,12 +330,14 @@ final class _ReferenceHeader extends StatelessWidget {
     required this.languageCode,
     required this.learnMoreLabel,
     required this.onLearnMore,
+    required this.onRefresh,
     required this.onLanguageChanged,
   });
 
   final String languageCode;
   final String learnMoreLabel;
   final VoidCallback onLearnMore;
+  final VoidCallback onRefresh;
   final ValueChanged<String>? onLanguageChanged;
 
   @override
@@ -322,6 +355,12 @@ final class _ReferenceHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
+        IconButton(
+          tooltip: selected == 'ar' ? 'تحديث الصفحة' : 'Refresh landing',
+          onPressed: onRefresh,
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.refresh_rounded, size: 20),
+        ),
         SegmentedButton<String>(
           segments: const <ButtonSegment<String>>[
             ButtonSegment<String>(value: 'ar', label: Text('ع')),
@@ -352,22 +391,24 @@ final class _ReferenceHeader extends StatelessWidget {
 }
 
 final class _BrandMedallion extends StatelessWidget {
-  const _BrandMedallion();
+  const _BrandMedallion({this.size = 92});
+
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 92,
-        height: 92,
-        padding: const EdgeInsets.all(SafeContractsSpacing.sm),
+        width: size,
+        height: size,
+        padding: const EdgeInsets.all(SafeContractsSpacing.xs),
         decoration: BoxDecoration(
           color: SafeContractsVisual.surface,
           shape: BoxShape.circle,
           border: Border.all(color: SafeContractsVisual.champagne),
           boxShadow: SafeContractsShadows.card,
         ),
-        child: const SafeContractsBrandMark(size: 68, borderRadius: 20),
+        child: SafeContractsBrandMark(size: size * 0.66, borderRadius: 16),
       ),
     );
   }
@@ -377,11 +418,13 @@ final class _LandingImageGallery extends StatefulWidget {
   const _LandingImageGallery({
     required this.images,
     required this.languageCode,
+    required this.imageHeight,
     super.key,
   });
 
   final List<MobileLandingImage> images;
   final String languageCode;
+  final double imageHeight;
 
   @override
   State<_LandingImageGallery> createState() => _LandingImageGalleryState();
@@ -421,8 +464,8 @@ final class _LandingImageGalleryState extends State<_LandingImageGallery> {
     final arabic = widget.languageCode.toLowerCase().startsWith('ar');
     return Column(
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
+        SizedBox(
+          height: widget.imageHeight,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: SafeContractsVisual.surface,
@@ -585,6 +628,8 @@ final class _LandingImageFallback extends StatelessWidget {
   }
 }
 
+/// Three readable, tap-accessible feature cards share a single short row.
+/// Longer marketing copy is available in a modal, not hidden below the fold.
 final class _ReferenceFeatureTile extends StatelessWidget {
   const _ReferenceFeatureTile({
     required this.icon,
@@ -598,48 +643,54 @@ final class _ReferenceFeatureTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeContractsCard(
-      elevated: false,
-      padding: const EdgeInsets.all(SafeContractsSpacing.sm),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: SafeContractsVisual.surfaceWarm,
-              borderRadius: BorderRadius.circular(SafeContractsRadii.sm),
-            ),
-            child: Icon(icon, color: SafeContractsVisual.navy),
-          ),
-          const SizedBox(width: SafeContractsSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: SafeContractsVisual.navyDeep,
-                    fontWeight: FontWeight.w900,
+    return Tooltip(
+      message: description,
+      child: SafeContractsCard(
+        elevated: false,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        onTap: () => showModalBottomSheet<void>(
+          context: context,
+          showDragHandle: true,
+          builder: (dialogContext) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(SafeContractsSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: SafeContractsVisual.navy, size: 28),
+                  const SizedBox(height: SafeContractsSpacing.sm),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                ),
-                const SizedBox(height: SafeContractsSpacing.xxs),
-                Text(
-                  description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SafeContractsVisual.muted,
-                    height: 1.4,
+                  const SizedBox(height: SafeContractsSpacing.sm),
+                  Text(
+                    description,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: SafeContractsVisual.navy, size: 20),
+            const SizedBox(height: 2),
+            Text(
+              title,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: SafeContractsVisual.navyDeep,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -653,39 +704,32 @@ final class _FallbackNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(SafeContractsSpacing.sm),
-      decoration: BoxDecoration(
-        color: SafeContractsVisual.amberSoft,
-        borderRadius: BorderRadius.circular(SafeContractsRadii.sm),
-        border: Border.all(
-          color: SafeContractsVisual.amber.withValues(alpha: 0.32),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.cloud_off_outlined,
-            color: SafeContractsVisual.amber,
-            size: SafeContractsIconSizes.sm,
-          ),
-          const SizedBox(width: SafeContractsSpacing.xs),
-          Expanded(
-            child: Text(
-              arabic
-                  ? 'تعذر تحديث محتوى الصفحة؛ يتم عرض النسخة المدمجة مؤقتاً.'
-                  : 'Landing content is temporarily unavailable; bundled copy is shown.',
-              style: const TextStyle(
-                color: SafeContractsVisual.ink,
-                fontSize: 12,
+    final message = arabic
+        ? 'محتوى مؤقت؛ اضغط لإعادة التحميل'
+        : 'Offline content — tap to retry';
+    return Tooltip(
+      message: message,
+      child: InkWell(
+        onTap: onRetry,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.cloud_off_outlined,
+                size: 14, color: SafeContractsVisual.amber),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                message,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: SafeContractsVisual.ink,
+                  fontSize: 10,
+                ),
               ),
             ),
-          ),
-          TextButton(
-            onPressed: onRetry,
-            child: Text(arabic ? 'إعادة' : 'Retry'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
