@@ -69,11 +69,13 @@ final class _SafeContractsAppState extends State<SafeContractsApp> {
       initialLanguageCode: widget.languageCode,
     );
     unawaited(_localeController.load());
-    _tokenStore = widget.tokenStore ??
+    _tokenStore =
+        widget.tokenStore ??
         (widget.client == null
             ? SecureMobileTokenStore()
             : MemoryMobileTokenStore());
-    _client = widget.client ??
+    _client =
+        widget.client ??
         SafeContractsApiClient(
           environment: widget.environment,
           transport: IoApiTransport(),
@@ -255,8 +257,7 @@ final class _BootstrapViewState extends State<_BootstrapView>
         ModalRoute.of(context)?.isCurrent == true;
     if (onGuestLanding &&
         backgroundAt != null &&
-        DateTime.now().difference(backgroundAt) >=
-            const Duration(minutes: 2)) {
+        DateTime.now().difference(backgroundAt) >= const Duration(minutes: 2)) {
       unawaited(AlkenzyFullScreenAds.instance.showAppOpenOnForeground());
     }
   }
@@ -354,8 +355,8 @@ final class _BootstrapViewState extends State<_BootstrapView>
 
               final authenticated =
                   widget.controller.state == MobileBootstrapState.ready &&
-                      widget.controller.sessionController?.state ==
-                          SessionState.authenticated;
+                  widget.controller.sessionController?.state ==
+                      SessionState.authenticated;
               if (authenticated) {
                 setState(() => _showLogin = false);
                 return;
@@ -373,7 +374,7 @@ final class _BootstrapViewState extends State<_BootstrapView>
 
         final isLoading =
             widget.controller.state == MobileBootstrapState.idle ||
-                widget.controller.state == MobileBootstrapState.loading;
+            widget.controller.state == MobileBootstrapState.loading;
         return SafeContractsSplash(
           label: isLoading
               ? l10n.t('Loading')
@@ -393,8 +394,9 @@ final class _BootstrapViewState extends State<_BootstrapView>
                       'SafeContracts mobile is unavailable.',
                 ),
           retryLabel: l10n.t('Retry session'),
-          onRetry:
-              isLoading ? null : () => unawaited(widget.controller.bootstrap()),
+          onRetry: isLoading
+              ? null
+              : () => unawaited(widget.controller.bootstrap()),
         );
       },
     );

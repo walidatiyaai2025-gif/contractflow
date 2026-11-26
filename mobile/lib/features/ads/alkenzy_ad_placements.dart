@@ -47,28 +47,40 @@ class _AlkenzyInlineBannerState extends State<AlkenzyInlineBanner> {
     _requestedUnit = null;
     _loading = false;
     // AdWidget must be detached from the tree before its native ad is disposed.
-    if (mounted) { setState(() {}); }
+    if (mounted) {
+      setState(() {});
+    }
     if (previous != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => previous.dispose());
     }
   }
 
   void _onAdsChanged() {
-    if (!mounted) { return; }
+    if (!mounted) {
+      return;
+    }
     if (!_ads.canUseGooglePlacements) {
-      if (_banner != null || _requestedUnit != null) { _clear(); }
+      if (_banner != null || _requestedUnit != null) {
+        _clear();
+      }
       return;
     }
     final unit = AlkenzyAdUnits.banner(widget.slot, testMode: _ads.testMode);
-    if (unit != _requestedUnit) { _clear(); }
-    if (!_loading && _banner == null) { unawaited(_load(unit)); }
+    if (unit != _requestedUnit) {
+      _clear();
+    }
+    if (!_loading && _banner == null) {
+      unawaited(_load(unit));
+    }
   }
 
   Future<void> _load(String unit) async {
     _loading = true;
     _requestedUnit = unit;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _loading) { setState(() {}); }
+      if (mounted && _loading) {
+        setState(() {});
+      }
     });
     final revision = ++_revision;
     try {
@@ -76,7 +88,9 @@ class _AlkenzyInlineBannerState extends State<AlkenzyInlineBanner> {
           !mounted ||
           !_ads.canUseGooglePlacements ||
           revision != _revision) {
-        if (revision == _revision) { _loading = false; }
+        if (revision == _revision) {
+          _loading = false;
+        }
         return;
       }
       final banner = gma.BannerAd(
@@ -85,7 +99,8 @@ class _AlkenzyInlineBannerState extends State<AlkenzyInlineBanner> {
         size: gma.AdSize.banner,
         listener: gma.BannerAdListener(
           onAdLoaded: (ad) {
-            if (!mounted || revision != _revision ||
+            if (!mounted ||
+                revision != _revision ||
                 !_ads.canUseGooglePlacements) {
               ad.dispose();
               return;
@@ -98,7 +113,9 @@ class _AlkenzyInlineBannerState extends State<AlkenzyInlineBanner> {
           onAdFailedToLoad: (ad, error) {
             ad.dispose();
             if (mounted && revision == _revision) {
-              setState(() { _loading = false; });
+              setState(() {
+                _loading = false;
+              });
             }
           },
         ),
@@ -106,7 +123,9 @@ class _AlkenzyInlineBannerState extends State<AlkenzyInlineBanner> {
       await banner.load();
     } on Object {
       if (mounted && revision == _revision) {
-        setState(() { _loading = false; });
+        setState(() {
+          _loading = false;
+        });
       }
     }
   }
@@ -122,11 +141,15 @@ class _AlkenzyInlineBannerState extends State<AlkenzyInlineBanner> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_ads.canUseGooglePlacements) { return const SizedBox.shrink(); }
+    if (!_ads.canUseGooglePlacements) {
+      return const SizedBox.shrink();
+    }
     final ad = _banner;
     // Reserve space as soon as the request starts: do not shift action buttons
     // when the ad creative arrives and cause accidental taps.
-    if (ad == null && !_loading) { return const SizedBox.shrink(); }
+    if (ad == null && !_loading) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Center(
@@ -182,11 +205,15 @@ class AlkenzyFullScreenAds {
   }
 
   Future<void> prepare() async {
-    if (_preparing || !_ads.canUseGooglePlacements) { return; }
+    if (_preparing || !_ads.canUseGooglePlacements) {
+      return;
+    }
     _preparing = true;
     try {
       if (!await _ads.ensureGooglePlacementsReady() ||
-          !_ads.canUseGooglePlacements) { return; }
+          !_ads.canUseGooglePlacements) {
+        return;
+      }
       _loadInterstitial(reports: false);
       _loadInterstitial(reports: true);
       _loadAppOpen();
@@ -198,25 +225,46 @@ class AlkenzyFullScreenAds {
   }
 
   void _loadInterstitial({required bool reports}) {
-    if (!_ads.canUseGooglePlacements) { return; }
-    if (reports ? (_reports != null || _reportsLoading)
-                : (_main != null || _mainLoading)) { return; }
-    if (reports) { _reportsLoading = true; } else { _mainLoading = true; }
+    if (!_ads.canUseGooglePlacements) {
+      return;
+    }
+    if (reports
+        ? (_reports != null || _reportsLoading)
+        : (_main != null || _mainLoading)) {
+      return;
+    }
+    if (reports) {
+      _reportsLoading = true;
+    } else {
+      _mainLoading = true;
+    }
     final unit = AlkenzyAdUnits.interstitial(
-      reports: reports, testMode: _ads.testMode,
+      reports: reports,
+      testMode: _ads.testMode,
     );
     gma.InterstitialAd.load(
       adUnitId: unit,
       request: const gma.AdRequest(),
       adLoadCallback: gma.InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
-          if (!_ads.canUseGooglePlacements) { ad.dispose(); return; }
-          if (reports) { _reports = ad; _reportsLoading = false; }
-          else { _main = ad; _mainLoading = false; }
+          if (!_ads.canUseGooglePlacements) {
+            ad.dispose();
+            return;
+          }
+          if (reports) {
+            _reports = ad;
+            _reportsLoading = false;
+          } else {
+            _main = ad;
+            _mainLoading = false;
+          }
         },
         onAdFailedToLoad: (_) {
-          if (reports) { _reportsLoading = false; }
-          else { _mainLoading = false; }
+          if (reports) {
+            _reportsLoading = false;
+          } else {
+            _mainLoading = false;
+          }
         },
       ),
     );
@@ -239,8 +287,15 @@ class AlkenzyFullScreenAds {
       return;
     }
     final ad = reports ? _reports : _main;
-    if (ad == null) { unawaited(prepare()); return; }
-    if (reports) { _reports = null; } else { _main = null; }
+    if (ad == null) {
+      unawaited(prepare());
+      return;
+    }
+    if (reports) {
+      _reports = null;
+    } else {
+      _main = null;
+    }
     _showing = true;
     _lastFullScreenAt = now;
     _naturalActions = 0;
@@ -269,7 +324,9 @@ class AlkenzyFullScreenAds {
   }
 
   void _loadAppOpen() {
-    if (!_ads.canUseGooglePlacements || _appOpenLoading || _appOpen != null) { return; }
+    if (!_ads.canUseGooglePlacements || _appOpenLoading || _appOpen != null) {
+      return;
+    }
     _appOpenLoading = true;
     gma.AppOpenAd.load(
       adUnitId: AlkenzyAdUnits.appOpenUnit(testMode: _ads.testMode),
@@ -277,7 +334,10 @@ class AlkenzyFullScreenAds {
       adLoadCallback: gma.AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
           _appOpenLoading = false;
-          if (!_ads.canUseGooglePlacements) { ad.dispose(); return; }
+          if (!_ads.canUseGooglePlacements) {
+            ad.dispose();
+            return;
+          }
           _appOpen = ad;
           _appOpenLoadedAt = DateTime.now();
         },
@@ -289,7 +349,9 @@ class AlkenzyFullScreenAds {
   /// Only on foreground return to Landing or Dashboard after background;
   /// never on first launch or when a modal, game, login or edit form is active.
   Future<void> showAppOpenOnForeground() async {
-    if (!_ads.canUseGooglePlacements || _showing || _appOpen == null) { return; }
+    if (!_ads.canUseGooglePlacements || _showing || _appOpen == null) {
+      return;
+    }
     final now = DateTime.now();
     if (_appOpenLoadedAt == null ||
         now.difference(_appOpenLoadedAt!) >= _appOpenTtl) {
@@ -320,16 +382,23 @@ class AlkenzyFullScreenAds {
         unawaited(prepareAppOpen());
       },
     );
-    try { await ad.show(); }
-    on Object { ad.dispose(); _showing = false; }
+    try {
+      await ad.show();
+    } on Object {
+      ad.dispose();
+      _showing = false;
+    }
   }
 
   void reset() {
     _naturalActions = 0;
     // Preserve ad pacing across logout/login; this is a process-wide manager.
-    _main?.dispose(); _main = null;
-    _reports?.dispose(); _reports = null;
-    _appOpen?.dispose(); _appOpen = null;
+    _main?.dispose();
+    _main = null;
+    _reports?.dispose();
+    _reports = null;
+    _appOpen?.dispose();
+    _appOpen = null;
     _appOpenLoadedAt = null;
   }
 }
