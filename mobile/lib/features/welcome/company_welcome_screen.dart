@@ -71,7 +71,11 @@ final class _AlkenzyCompanyWelcomeScreenState
                     final narrow = constraints.maxWidth < 352;
                     final veryShort = height < 620;
                     final compact = height < 690;
-                    final gap = veryShort ? 4.0 : compact ? 7.0 : 10.0;
+                    final gap = veryShort
+                        ? 4.0
+                        : compact
+                        ? 7.0
+                        : 10.0;
                     // A standard AdMob 320x50 creative must remain unscaled.
                     // On 320-351px phones remove horizontal page margins.
                     final horizontal = narrow
@@ -96,8 +100,9 @@ final class _AlkenzyCompanyWelcomeScreenState
                             children: [
                               _ReferenceHeader(
                                 languageCode: widget.languageCode,
-                                learnMoreLabel: content.learnMoreLabel
-                                    .resolve(widget.languageCode),
+                                learnMoreLabel: content.learnMoreLabel.resolve(
+                                  widget.languageCode,
+                                ),
                                 onLearnMore: () => _showAbout(content),
                                 onRefresh: () =>
                                     unawaited(widget.controller.refresh()),
@@ -155,9 +160,7 @@ final class _AlkenzyCompanyWelcomeScreenState
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.center,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
+                                style: Theme.of(context).textTheme.headlineSmall
                                     ?.copyWith(
                                       fontSize: veryShort ? 17 : 19,
                                       color: SafeContractsVisual.ink,
@@ -184,9 +187,7 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   textAlign: TextAlign.center,
                                   maxLines: compact ? 1 : 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
+                                  style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
                                         color: SafeContractsVisual.muted,
                                         height: 1.2,
@@ -204,7 +205,11 @@ final class _AlkenzyCompanyWelcomeScreenState
                                 ),
                               SizedBox(height: gap),
                               SizedBox(
-                                height: veryShort ? 54 : compact ? 62 : 68,
+                                height: veryShort
+                                    ? 54
+                                    : compact
+                                    ? 62
+                                    : 68,
                                 child: Row(
                                   children: [
                                     Expanded(
@@ -221,7 +226,8 @@ final class _AlkenzyCompanyWelcomeScreenState
                                     SizedBox(width: gap),
                                     Expanded(
                                       child: _ReferenceFeatureTile(
-                                        icon: Icons.account_balance_wallet_outlined,
+                                        icon: Icons
+                                            .account_balance_wallet_outlined,
                                         title: arabic
                                             ? 'الإدارة المالية'
                                             : 'Finance',
@@ -234,9 +240,7 @@ final class _AlkenzyCompanyWelcomeScreenState
                                     Expanded(
                                       child: _ReferenceFeatureTile(
                                         icon: Icons.analytics_outlined,
-                                        title: arabic
-                                            ? 'التقارير'
-                                            : 'Reports',
+                                        title: arabic ? 'التقارير' : 'Reports',
                                         description: arabic
                                             ? 'استخدم بيانات النظام الحقيقية لاتخاذ قرارات تشغيلية أوضح.'
                                             : 'Use live system data for focused operational decisions.',
@@ -659,10 +663,7 @@ final class _ReferenceFeatureTile extends StatelessWidget {
                 children: [
                   Icon(icon, color: SafeContractsVisual.navy, size: 28),
                   const SizedBox(height: SafeContractsSpacing.sm),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: SafeContractsSpacing.sm),
                   Text(
                     description,
@@ -714,8 +715,11 @@ final class _FallbackNotice extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.cloud_off_outlined,
-                size: 14, color: SafeContractsVisual.amber),
+            const Icon(
+              Icons.cloud_off_outlined,
+              size: 14,
+              color: SafeContractsVisual.amber,
+            ),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
