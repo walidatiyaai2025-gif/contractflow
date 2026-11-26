@@ -349,13 +349,15 @@ final class _ReferenceHeader extends StatelessWidget {
     final selected = languageCode.toLowerCase().startsWith('ar') ? 'ar' : 'en';
     return Row(
       children: [
-        TextButton(
-          key: const Key('companyWelcomeLearnMore'),
-          onPressed: onLearnMore,
-          child: Text(
-            learnMoreLabel,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        Flexible(
+          child: TextButton(
+            key: const Key('companyWelcomeLearnMore'),
+            onPressed: onLearnMore,
+            child: Text(
+              learnMoreLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
         const Spacer(),
@@ -524,6 +526,7 @@ final class _LandingImageGalleryState extends State<_LandingImageGallery> {
                                     ? fallbackLabel
                                     : image.alt,
                                 arabic: arabic,
+                                compact: widget.imageHeight < 120,
                               );
                             },
                           ),
@@ -577,10 +580,15 @@ final class _LandingImageGalleryState extends State<_LandingImageGallery> {
 }
 
 final class _LandingImageFallback extends StatelessWidget {
-  const _LandingImageFallback({required this.label, required this.arabic});
+  const _LandingImageFallback({
+    required this.label,
+    required this.arabic,
+    required this.compact,
+  });
 
   final String label;
   final bool arabic;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -595,10 +603,21 @@ final class _LandingImageFallback extends StatelessWidget {
           ],
         ),
       ),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(SafeContractsSpacing.lg),
-          child: Column(
+      child: compact
+          ? Tooltip(
+              message: label,
+              child: const Center(
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  color: SafeContractsVisual.roseGoldDark,
+                  size: 24,
+                ),
+              ),
+            )
+          : Center(
+              child: Padding(
+                padding: const EdgeInsets.all(SafeContractsSpacing.lg),
+                child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
@@ -625,9 +644,9 @@ final class _LandingImageFallback extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
+                ),
+              ),
+            ),
     );
   }
 }
