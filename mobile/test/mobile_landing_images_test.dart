@@ -73,6 +73,74 @@ void main() {
     );
     expect(find.byKey(const Key('companyWelcomeSignIn')), findsOneWidget);
   });
+
+  for (final size in <Size>[
+    const Size(320, 568),
+    const Size(360, 640),
+    const Size(390, 844),
+  ]) {
+    for (final language in <String>['ar', 'en']) {
+      testWidgets(
+        'landing fits ${size.width.toInt()}x${size.height.toInt()} '
+        '$language with no vertical scrolling and actions visible',
+        (tester) async {
+          await tester.binding.setSurfaceSize(size);
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final controller = _readyController(_contentWithImages());
+          addTearDown(controller.dispose);
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: AlkenzyCompanyWelcomeScreen(
+                controller: controller,
+                languageCode: language,
+                onSignIn: () {},
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final vertical = tester
+              .widgetList<Scrollable>(find.byType(Scrollable))
+              .where((scroll) =>
+                  scroll.axisDirection == AxisDirection.down ||
+                  scroll.axisDirection == AxisDirection.up);
+          expect(vertical, isEmpty, reason: 'Guest landing must not scroll');
+          expect(find.byKey(const Key('companyWelcomeImageCarousel')),
+              findsOneWidget);
+          expect(find.byKey(const Key('alkenzyLandingSliderBanner')),
+              findsOneWidget);
+          expect(find.byKey(const Key('alkenzyStartFun')), findsOneWidget);
+          final start = find.byKey(const Key('companyWelcomeSignIn'));
+          expect(start, findsOneWidget);
+          expect(tester.getBottomRight(start).dy, lessThanOrEqualTo(size.height));
+          expect(tester.getTopLeft(start).dy, greaterThanOrEqualTo(0));
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  testWidgets('small landing retains fallback logo and no vertical scrolling',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = _readyController(MobileLandingContent.fallback);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AlkenzyCompanyWelcomeScreen(
+          controller: controller,
+          languageCode: 'ar',
+          onSignIn: () {},
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(SingleChildScrollView), findsNothing);
+    expect(find.byKey(const Key('companyWelcomeSignIn')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 MobileLandingController _readyController(MobileLandingContent content) {
