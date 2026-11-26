@@ -618,32 +618,32 @@ final class _LandingImageFallback extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(SafeContractsSpacing.lg),
                 child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.image_not_supported_outlined,
-                color: SafeContractsVisual.roseGoldDark,
-                size: 34,
-              ),
-              const SizedBox(height: SafeContractsSpacing.xs),
-              Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: SafeContractsVisual.navy,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: SafeContractsSpacing.xxs),
-              Text(
-                arabic ? 'تعذر تحميل الصورة' : 'Image unavailable',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SafeContractsVisual.muted,
-                ),
-              ),
-            ],
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.image_not_supported_outlined,
+                      color: SafeContractsVisual.roseGoldDark,
+                      size: 34,
+                    ),
+                    const SizedBox(height: SafeContractsSpacing.xs),
+                    Text(
+                      label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: SafeContractsVisual.navy,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: SafeContractsSpacing.xxs),
+                    Text(
+                      arabic ? 'تعذر تحميل الصورة' : 'Image unavailable',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SafeContractsVisual.muted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
