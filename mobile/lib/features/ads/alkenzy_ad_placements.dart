@@ -6,8 +6,8 @@ import 'package:google_mobile_ads/google_mobile_ads.dart' as gma;
 import 'alkenzy_ad_units.dart';
 import 'mobile_ads.dart';
 
-/// In-content banner. Keeps the ad's lifecycle below the authenticated shell,
-/// never in MaterialApp or the login/session root.
+/// In-content banner used by authenticated pages and the public landing slider.
+/// Each placement has its own lifecycle and never wraps the auth/session root.
 class AlkenzyInlineBanner extends StatefulWidget {
   const AlkenzyInlineBanner({required this.slot, super.key});
 

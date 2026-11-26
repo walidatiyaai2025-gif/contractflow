@@ -1,8 +1,9 @@
 # Alkenzy ADV 0.3.38 — optional rewarded XO
 
-Base: signed build 37 source c8b87e91641b4de6d32db35098c9705fc2245b2d (R8 disabled). This feature intentionally does not touch authentication, dashboard data, app IDs, WordPress API, existing banners, interstitials or app-open ads.
+Base: signed build 37 source c8b87e91641b4de6d32db35098c9705fc2245b2d (R8 disabled). This feature intentionally does not touch authentication, dashboard data, app IDs, WordPress API, existing in-app banner units, interstitials or app-open ads.
 
 - Entry points: public guest welcome screen and authenticated navigation drawer.
+- Owner-authorized additional banner `ca-app-pub-3218037275900725/8818395498` is displayed directly **under the image slider** on public landing (and under the fallback medallion if there are no images). This is a dedicated AdMob `landingSlider` placement, not a substitute for the existing dashboard/footer ad units; available without login. Official Google test-banner ID is used in test mode.
 - Arabic primary CTA: «ابدأ التسلية»; count label: «عدد المرات». Both are also localized to English.
 - Explicit opt-in dialog before each Rewarded ad, disclosing exactly **one** non-transferable XO game versus the computer.
 - AdMob rewarded: ca-app-pub-3218037275900725/1456680066; CI/test: ca-app-pub-3940256099942544/5224354917.

@@ -6,8 +6,9 @@ import 'package:safecontracts_mobile/features/ads/alkenzy_ad_placements.dart';
 import 'package:safecontracts_mobile/features/ads/alkenzy_ad_units.dart';
 
 void main() {
-  test('all seven banner placements use exactly the owner-supplied IDs', () {
+  test('owner-authorized guest landing banner plus seven existing placements have exact IDs', () {
     expect(AlkenzyAdUnits.banners, {
+      AlkenzyBannerSlot.landingSlider: 'ca-app-pub-3218037275900725/8818395498',
       AlkenzyBannerSlot.homeFinancial:
           'ca-app-pub-3218037275900725/1295000750',
       AlkenzyBannerSlot.homeActivity:
@@ -23,9 +24,27 @@ void main() {
       AlkenzyBannerSlot.suppliersList:
           'ca-app-pub-3218037275900725/5666771860',
     });
-    expect(AlkenzyAdUnits.banners.values.toSet().length, 7);
-    expect(AlkenzyAdUnits.banners.values,
-        isNot(contains('ca-app-pub-3218037275900725/8818395498')));
+    expect(AlkenzyAdUnits.banners.values.toSet().length, 8);
+    expect(AlkenzyAdUnits.banners[AlkenzyBannerSlot.landingSlider], 'ca-app-pub-3218037275900725/8818395498');
+    expect(AlkenzyAdUnits.banners.values.where((id) => id == 'ca-app-pub-3218037275900725/8818395498').length, 1);
+  });
+
+  test('guest landing banner is directly below slider, before headline', () {
+    final source =
+        File('lib/features/welcome/company_welcome_screen.dart').readAsStringSync();
+    final slider = source.indexOf('_LandingImageGallery(', source.indexOf('Widget build'));
+    final placement = source.indexOf("slot: AlkenzyBannerSlot.landingSlider");
+    final headline = source.indexOf('Text.rich(', placement);
+    expect(slider, greaterThan(-1));
+    expect(placement, greaterThan(slider));
+    expect(headline, greaterThan(placement));
+    expect(source, contains("key: Key('alkenzyLandingSliderBanner')"));
+    expect(AlkenzyAdUnits.banner(
+      AlkenzyBannerSlot.landingSlider, testMode: true),
+      AlkenzyAdUnits.testBanner);
+    expect(AlkenzyAdUnits.banner(
+      AlkenzyBannerSlot.landingSlider, testMode: false),
+      'ca-app-pub-3218037275900725/8818395498');
   });
 
   test('test mode always uses Google official test inventory', () {

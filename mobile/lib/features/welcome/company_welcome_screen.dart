@@ -8,6 +8,8 @@ import '../ui/safecontracts_design.dart';
 import '../ui/safecontracts_tokens.dart';
 import 'mobile_landing.dart';
 import '../ads/alkenzy_rewarded_fun.dart';
+import '../ads/alkenzy_ad_placements.dart';
+import '../ads/alkenzy_ad_units.dart';
 
 final class AlkenzyCompanyWelcomeScreen extends StatefulWidget {
   const AlkenzyCompanyWelcomeScreen({
@@ -104,6 +106,10 @@ final class _AlkenzyCompanyWelcomeScreenState
                                     images: content.images,
                                     languageCode: widget.languageCode,
                                   ),
+                                const AlkenzyInlineBanner(
+                                  key: Key('alkenzyLandingSliderBanner'),
+                                  slot: AlkenzyBannerSlot.landingSlider,
+                                ),
                                 const SizedBox(height: SafeContractsSpacing.lg),
                                 Text.rich(
                                   TextSpan(
