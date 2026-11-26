@@ -4,7 +4,7 @@ Legend: `DONE` = implemented and completed against the locked-reference acceptan
 
 | ID | Feature | Existing screen/state | Route / entry point | Reference | Required redesign | Status | RTL | Responsive | Empty | Loading | Error | Screenshot | QA |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| AUTH-01 | Welcome | `PremiumCompactWelcomeScreen` | app entry before sign-in | REF_01 | cream onboarding composition + feature tiles + CTA | DONE | pending | pending | N/A | yes | N/A | pending | pending |
+| AUTH-01 | Guest Landing / Welcome | `AlkenzyCompanyWelcomeScreen` | app entry before sign-in | REF_01 | cream/navy fixed-height, no-vertical-scroll composition; photo slider + native 320×50 banner + three accessible feature cards + voluntary Rewarded XO + sign-in CTA | IMPL | AR/EN widget test added | 320×568, 360×640, 390×844 tests added | N/A | yes | fallback/retry | pending | exact-head CI + physical-device QA pending |
 | AUTH-02 | Login | `SafeContractsLoginScreen` | welcome → sign in | REF_01 | compact premium login | BASE | pending | pending | N/A | yes | yes | pending | pending |
 | AUTH-03 | Bootstrap | blocking bootstrap splash | post-login | REF_01 | branded splash/loading | BASE | pending | pending | N/A | yes | yes | pending | pending |
 | AUTH-04 | Session | expired/auth error states | API/session controller | REF_01 | premium recovery state | TODO | pending | pending | N/A | N/A | required | pending | pending |
