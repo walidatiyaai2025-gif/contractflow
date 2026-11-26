@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/branding/safe_contracts_brand.dart';
 import '../../core/localization/safecontracts_localizations.dart';
 import '../ads/mobile_ads.dart';
+import '../ads/alkenzy_rewarded_fun.dart';
 import '../ads/alkenzy_ad_placements.dart';
 import '../collections/collections.dart';
 import '../collections/collections_screen.dart';
@@ -378,6 +379,12 @@ final class _SafeContractsShellState extends State<SafeContractsShell>
                       : FontWeight.w600,
                 ),
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: AlkenzyRewardedFunButton(
+              languageCode: widget.languageCode,
             ),
           ),
         ],

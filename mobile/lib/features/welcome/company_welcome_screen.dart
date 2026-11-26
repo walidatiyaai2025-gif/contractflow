@@ -7,6 +7,7 @@ import '../ui/safecontracts_components.dart';
 import '../ui/safecontracts_design.dart';
 import '../ui/safecontracts_tokens.dart';
 import 'mobile_landing.dart';
+import '../ads/alkenzy_rewarded_fun.dart';
 
 final class AlkenzyCompanyWelcomeScreen extends StatefulWidget {
   const AlkenzyCompanyWelcomeScreen({
@@ -206,6 +207,10 @@ final class _AlkenzyCompanyWelcomeScreenState
                                   description: arabic
                                       ? 'استخدم بيانات النظام الحقيقية لاتخاذ قرارات تشغيلية أوضح.'
                                       : 'Use live system data for focused operational decisions.',
+                                ),
+                                const SizedBox(height: SafeContractsSpacing.md),
+                                AlkenzyRewardedFunButton(
+                                  languageCode: widget.languageCode,
                                 ),
                                 const SizedBox(height: SafeContractsSpacing.md),
                                 SafeContractsButton(

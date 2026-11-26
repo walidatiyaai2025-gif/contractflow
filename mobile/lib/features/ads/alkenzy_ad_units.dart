@@ -39,6 +39,11 @@ abstract final class AlkenzyAdUnits {
 
   static const testBanner = 'ca-app-pub-3940256099942544/6300978111';
   static const testInterstitial = 'ca-app-pub-3940256099942544/1033173712';
+  static const rewarded = 'ca-app-pub-3218037275900725/1456680066';
+  static const testRewarded = 'ca-app-pub-3940256099942544/5224354917';
+  static String rewardedUnit({required bool testMode}) =>
+      testMode ? testRewarded : rewarded;
+
   static const testAppOpen = 'ca-app-pub-3940256099942544/9257395921';
 
   static String banner(AlkenzyBannerSlot slot, {required bool testMode}) =>
